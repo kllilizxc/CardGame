@@ -1,0 +1,22 @@
+{
+  "factions": [
+    {
+      "id": "sect_qingyun",
+      "type": "sect",
+      "name": "青云宗",
+      "level": "一流宗门",
+      "location": "青云山",
+      "alignment": "正道",
+      "description": "这里写宗门的历史、风格、门规、擅长功法体系等。"
+    },
+    {
+      "id": "country_x",
+      "type": "country",
+      "name": "某国",
+      "level": "凡人王朝",
+      "location": "凡界东域",
+      "alignment": "中立",
+      "description": "这里写国家的政权结构、与修士势力的关系等。"
+    }
+  ]
+}

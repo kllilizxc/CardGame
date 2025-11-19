@@ -1,0 +1,16 @@
+{
+  "id": "test_encounter_02",
+  "name": "邪教信徒与噬魂妖兽",
+  "description": "一名修士配合灵兽的小队组合",
+  "difficulty": 2,
+  "enemies": [
+    {
+      "cardId": "CR_001",
+      "position": 0
+    },
+    {
+      "cardId": "CR_002",
+      "position": 2
+    }
+  ]
+}

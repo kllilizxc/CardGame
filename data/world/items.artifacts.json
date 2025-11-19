@@ -1,0 +1,21 @@
+{
+  "artifacts": [
+    {
+      "id": "artifact_fly_sword_basic",
+      "name": "青云飞剑",
+      "grade": "下品法宝",
+      "type": "飞剑",
+      "factionId": "sect_qingyun",
+      "description": "青云宗外门常见飞剑，适合炼气弟子御使。"
+    }
+  ],
+  "tools": [
+    {
+      "id": "tool_talisman_basic",
+      "name": "基础符箓",
+      "grade": "下品法器",
+      "type": "符箓",
+      "description": "一次性消耗品，用于简单防御或攻击。"
+    }
+  ]
+}

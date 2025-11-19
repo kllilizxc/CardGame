@@ -1,0 +1,65 @@
+{
+  "talismans": [
+    {
+      "id": "TL_001",
+      "name": "火球符",
+      "kind": "talisman",
+      "description": "最基础的进攻符箓，灼烧目标单位。",
+      "rarity": "common",
+      "labels": ["攻击符", "火系"],
+      "limitPerDeck": 3,
+
+      "isInstant": true,
+      "duration": 0,
+      "target": "unit",
+
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "singleEnemy"
+          },
+          "actions": [
+            {
+              "type": "modifyHealth",
+              "value": -3
+            }
+          ],
+          "text": "对一个敌方单位造成3点伤害。",
+          "scriptId": "effect.TL_001.cast"
+        }
+      ]
+    },
+    {
+      "id": "TL_002",
+      "name": "护体符",
+      "kind": "talisman",
+      "description": "贴身护体，短时间内增强防护。",
+      "rarity": "uncommon",
+      "labels": ["防御符"],
+      "limitPerDeck": 2,
+
+      "isInstant": false,
+      "duration": 2,
+      "target": "unit",
+
+      "effects": [
+        {
+          "timing": "onSummon",
+          "target": {
+            "scope": "singleAlly"
+          },
+          "actions": [
+            {
+              "type": "applyStatus",
+              "statusId": "shield",
+              "value": 2
+            }
+          ],
+          "text": "为一个己方单位提供2点护盾，持续2回合。",
+          "scriptId": "effect.TL_002.shield"
+        }
+      ]
+    }
+  ]
+}

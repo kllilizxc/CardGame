@@ -1,0 +1,67 @@
+{
+  "pills": [
+    {
+      "id": "PL_001",
+      "name": "小回气丹",
+      "kind": "pill",
+      "description": "战斗中快速恢复一点精神与灵力，帮助稳定发挥。",
+      "rarity": "common",
+      "labels": ["恢复", "丹药"],
+      "limitPerDeck": 2,
+
+      "grade": 1,
+      "isInstant": true,
+      "duration": 0,
+      "target": "player",
+
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "ownerPlayer"
+          },
+          "actions": [
+            {
+              "type": "healPlayer",
+              "value": 5
+            }
+          ],
+          "text": "回复玩家5点生命值。",
+          "scriptId": "effect.PL_001.use.healPlayer"
+        }
+      ]
+    },
+    {
+      "id": "PL_002",
+      "name": "临阵锐气丸",
+      "kind": "pill",
+      "description": "临阵服用，可在短时间内提升己方全体灵兽的攻击欲望。",
+      "rarity": "uncommon",
+      "labels": ["灵兽", "增益", "丹药"],
+      "limitPerDeck": 2,
+
+      "grade": 2,
+      "isInstant": true,
+      "duration": 1,
+      "target": "allUnits",
+
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "allyUnits",
+            "requiredLabelsAllOf": ["灵兽"]
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 2
+            }
+          ],
+          "text": "本回合内，所有己方灵兽攻击力+2。",
+          "scriptId": "effect.PL_002.use.beastsBuff"
+        }
+      ]
+    }
+  ]
+}

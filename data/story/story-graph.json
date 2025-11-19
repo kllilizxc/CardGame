@@ -1,0 +1,70 @@
+{
+  "entryNodeId": "sect_entry_001",
+
+  "nodes": [
+    {
+      "id": "sect_entry_001",
+      "type": "story",
+      "title": "初到青云宗山门",
+      "summary": "玩家随凡人队伍抵达青云宗山门，准备参加入宗试炼。",
+      "detail": "远山云雾缥缈，青云宗山门高立云间……（此处省略具体描写，可供 AI 扩写）",
+
+      "tags": ["门派", "入门试炼", "主线"],
+      "chapter": "第一章·入宗",
+      "location": "青云宗山门",
+      "timeHint": "白日",
+
+      "worldPrecondition": "玩家尚未进入任一宗门，未通过任何入宗考核。",
+      "worldEffectHint": "若完成本节点后，将正式开始入宗试炼线路。",
+
+      "aiHints": {
+        "tone": "仙气缥缈, 带一点庄严",
+        "theme": ["初入仙门", "凡人对仙道的向往"],
+        "forbid": ["直接给予过强的实力", "无缘由的金手指掉落"]
+      }
+    }
+  ],
+
+  "choices": [
+    {
+      "id": "sect_entry_001_choice_1",
+      "from": "sect_entry_001",
+      "to": "sect_entry_002_wait_in_line",
+
+      "text": "老老实实排队等待入宗考核",
+      "description": "稳妥路线，符合谨慎性格。",
+
+      "condition": {
+        "expression": "无特殊条件，所有玩家可见。",
+        "worldStateHint": "玩家当前为凡人，未有特殊推荐或陪同。"
+      },
+
+      "effects": {
+        "worldChangeHint": "玩家在凡人弟子中名声平平，但留下稳重印象。",
+        "relationChangeHint": "可能与同队凡人建立普通同伴关系。"
+      },
+
+      "flags": ["主线", "正道倾向"]
+    },
+    {
+      "id": "sect_entry_001_choice_2",
+      "from": "sect_entry_001",
+      "to": "sect_entry_003_help_girl",
+
+      "text": "注意到队伍中有一名体弱少女，主动上前搭话。",
+      "description": "倾向善良/细心的选择。",
+
+      "condition": {
+        "expression": "若玩家心性 ≥ 50，则该选项更容易被 AI 推荐，但仍可展示。",
+        "worldStateHint": "玩家尚无明显冷漠或极端恶劣行为记录。"
+      },
+
+      "effects": {
+        "worldChangeHint": "未来有可能引出与该少女相关的支线或机缘。",
+        "relationChangeHint": "与少女和她背后势力的好感可能提升。"
+      },
+
+      "flags": ["支线", "善良倾向", "潜在机缘"]
+    }
+  ]
+}

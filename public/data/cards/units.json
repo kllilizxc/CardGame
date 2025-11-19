@@ -1,0 +1,93 @@
+{
+  "units": [
+    {
+      "id": "CR_001",
+      "name": "青云山灵狐",
+      "kind": "unit",
+      "description": "青云宗山门附近常见的灵狐，机敏多疑，擅长偷袭与撤退。",
+      "rarity": "common",
+      "labels": ["sect_qingyun", "青云宗山门附近", "灵狐"],
+      "limitPerDeck": 3,
+
+      "star": 2,
+      "race": "兽族",
+      "linggen": ["木"],
+      "factionId": "sect_qingyun",
+      "realm": {
+        "stage": "炼气期",
+        "phase": "初期",
+        "value": 1
+      },
+      "attack": 4,
+      "health": 22,
+      "effects": [
+        {
+          "timing": "onSummon",
+          "target": {
+            "scope": "self"
+          },
+          "conditions": [
+            {
+              "type": "unitCountAtLeast",
+              "labels": ["灵兽"],
+              "value": 2
+            }
+          ],
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 1
+            }
+          ],
+          "text": "登场时：若本回合你已召唤过其他灵兽，则本回合内本卡攻击力+1。",
+          "scriptId": "effect.CR_001.onSummon"
+        }
+      ]
+    },
+    {
+      "id": "CR_002",
+      "name": "青云外门师兄",
+      "kind": "unit",
+      "description": "青云宗外门弟子，对基础剑术与御兽之术略有涉猎，可在战斗中协助主角。",
+      "rarity": "uncommon",
+      "labels": ["sect_qingyun", "青云宗外门弟子院", "队友", "外门弟子"],
+      "limitPerDeck": 2,
+
+      "star": 3,
+      "race": "人族",
+      "linggen": ["金", "木"],
+      "factionId": "sect_qingyun",
+      "realm": {
+        "stage": "炼气期",
+        "phase": "中期",
+        "value": 2
+      },
+      "attack": 6,
+      "health": 28,
+      "effects": [
+        {
+          "timing": "turnStart",
+          "target": {
+            "scope": "allyUnits",
+            "requiredLabelsAllOf": ["灵兽"]
+          },
+          "conditions": [
+            {
+              "type": "unitCountAtLeast",
+              "labels": ["灵兽"],
+              "value": 1
+            }
+          ],
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 1
+            }
+          ],
+          "text": "我方回合开始时：若你场上存在至少1张灵兽卡，则本回合内所有己方灵兽攻击力+1。",
+          "scriptId": "effect.CR_002.turnStart.buffBeasts"
+        }
+      ]
+    }
+  ]
+}

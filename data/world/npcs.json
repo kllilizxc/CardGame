@@ -1,0 +1,14 @@
+{
+  "npcs": [
+    {
+      "id": "npc_qingyun_elder_1",
+      "name": "青云长老",
+      "gender": "male",
+      "realm": "金丹期",
+      "factionId": "sect_qingyun",
+      "roles": ["长老", "入门考核负责人"],
+      "tags": ["严厉", "负责"],
+      "description": "这里写人物外貌、性格、人设关键点。"
+    }
+  ]
+}

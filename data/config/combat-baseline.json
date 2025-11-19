@@ -1,0 +1,37 @@
+{
+  "description": "不同境界（大境界+小阶段）下，普通戰鬥單位推薦的攻擊/生命值區間。高星卡、精英、BOSS 可在此基礎上 1.5~5 倍放大。數值對應 config/realm-presets.json 的 value。",
+  "baselineFor": "normal_unit",
+  "realms": [
+    { "stage": "凡人", "phase": "初期", "value": 0,  "attackMin": 1,  "attackMax": 2,  "healthMin": 5,   "healthMax": 10 },
+    { "stage": "凡人", "phase": "中期", "value": 0,  "attackMin": 2,  "attackMax": 3,  "healthMin": 8,   "healthMax": 15 },
+    { "stage": "凡人", "phase": "后期", "value": 0,  "attackMin": 3,  "attackMax": 4,  "healthMin": 12,  "healthMax": 20 },
+
+    { "stage": "炼气期", "phase": "初期", "value": 1,  "attackMin": 4,  "attackMax": 6,  "healthMin": 20,  "healthMax": 30 },
+    { "stage": "炼气期", "phase": "中期", "value": 2,  "attackMin": 6,  "attackMax": 8,  "healthMin": 25,  "healthMax": 40 },
+    { "stage": "炼气期", "phase": "后期", "value": 3,  "attackMin": 8,  "attackMax": 10, "healthMin": 35,  "healthMax": 50 },
+
+    { "stage": "筑基期", "phase": "初期", "value": 4,  "attackMin": 10, "attackMax": 14, "healthMin": 50,  "healthMax": 70 },
+    { "stage": "筑基期", "phase": "中期", "value": 5,  "attackMin": 14, "attackMax": 18, "healthMin": 70,  "healthMax": 90 },
+    { "stage": "筑基期", "phase": "后期", "value": 6,  "attackMin": 18, "attackMax": 22, "healthMin": 90,  "healthMax": 120 },
+
+    { "stage": "金丹期", "phase": "初期", "value": 7,  "attackMin": 22, "attackMax": 30, "healthMin": 120, "healthMax": 160 },
+    { "stage": "金丹期", "phase": "中期", "value": 8,  "attackMin": 30, "attackMax": 38, "healthMin": 160, "healthMax": 210 },
+    { "stage": "金丹期", "phase": "后期", "value": 9,  "attackMin": 38, "attackMax": 46, "healthMin": 210, "healthMax": 260 },
+
+    { "stage": "元婴期", "phase": "初期", "value": 10, "attackMin": 46, "attackMax": 60, "healthMin": 260, "healthMax": 340 },
+    { "stage": "元婴期", "phase": "中期", "value": 11, "attackMin": 60, "attackMax": 80, "healthMin": 340, "healthMax": 430 },
+    { "stage": "元婴期", "phase": "后期", "value": 12, "attackMin": 80, "attackMax": 100,"healthMin": 430, "healthMax": 520 },
+
+    { "stage": "化神期", "phase": "初期", "value": 13, "attackMin": 100,"attackMax": 130,"healthMin": 520, "healthMax": 650 },
+    { "stage": "化神期", "phase": "中期", "value": 14, "attackMin": 130,"attackMax": 160,"healthMin": 650, "healthMax": 800 },
+    { "stage": "化神期", "phase": "后期", "value": 15, "attackMin": 160,"attackMax": 200,"healthMin": 800, "healthMax": 1000 },
+
+    { "stage": "合体期", "phase": "初期", "value": 16, "attackMin": 200,"attackMax": 260,"healthMin": 1000,"healthMax": 1300 },
+    { "stage": "合体期", "phase": "中期", "value": 17, "attackMin": 260,"attackMax": 320,"healthMin": 1300,"healthMax": 1600 },
+    { "stage": "合体期", "phase": "后期", "value": 18, "attackMin": 320,"attackMax": 400,"healthMin": 1600,"healthMax": 2000 },
+
+    { "stage": "大乘期", "phase": "初期", "value": 19, "attackMin": 400,"attackMax": 500,"healthMin": 2000,"healthMax": 2600 },
+    { "stage": "大乘期", "phase": "中期", "value": 20, "attackMin": 500,"attackMax": 650,"healthMin": 2600,"healthMax": 3400 },
+    { "stage": "大乘期", "phase": "后期", "value": 21, "attackMin": 650,"attackMax": 800,"healthMin": 3400,"healthMax": 4300 }
+  ]
+}

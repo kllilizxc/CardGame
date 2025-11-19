@@ -1,0 +1,62 @@
+{
+  "artifacts": [
+    {
+      "id": "AR_001",
+      "name": "青云剑",
+      "kind": "artifact",
+      "description": "青云宗外门弟子常用的飞剑，品阶不高，但胜在顺手易用。",
+      "rarity": "common",
+      "labels": ["sect_qingyun", "飞剑", "武器"],
+      "limitPerDeck": 3,
+
+      "equipTarget": "unit",
+      "durability": 3,
+      "attackBonus": 1,
+
+      "effects": [
+        {
+          "timing": "onAttack",
+          "target": {
+            "scope": "self"
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 1
+            }
+          ],
+          "text": "攻击时：本次攻击额外获得+1攻击力。",
+          "scriptId": "effect.AR_001.onAttack"
+        }
+      ]
+    },
+    {
+      "id": "AR_002",
+      "name": "聚灵小坠",
+      "kind": "artifact",
+      "description": "简单的聚灵坠饰，佩戴后能略微提高灵力恢复速度。",
+      "rarity": "uncommon",
+      "labels": ["饰品", "聚灵"],
+      "limitPerDeck": 2,
+
+      "equipTarget": "unit",
+
+      "effects": [
+        {
+          "timing": "turnStart",
+          "target": {
+            "scope": "ownerPlayer"
+          },
+          "actions": [
+            {
+              "type": "drawCards",
+              "value": 1
+            }
+          ],
+          "text": "我方回合开始时：额外抽1张牌。",
+          "scriptId": "effect.AR_002.turnStart.draw"
+        }
+      ]
+    }
+  ]
+}

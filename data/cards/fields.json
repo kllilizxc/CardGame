@@ -1,0 +1,59 @@
+{
+  "fields": [
+    {
+      "id": "FD_001",
+      "name": "青云山门广场",
+      "kind": "field",
+      "description": "青云宗山门广场，灵气平稳，适合基础切磋。",
+      "rarity": "common",
+      "labels": ["sect_qingyun", "青云宗山门附近"],
+
+      "symmetric": true,
+
+      "effects": [
+        {
+          "timing": "turnStart",
+          "target": {
+            "scope": "allUnits"
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 1
+            }
+          ],
+          "text": "所有单位在各自回合开始时，本回合内获得+1攻击力。",
+          "scriptId": "effect.FD_001.turnStart.allBuff"
+        }
+      ]
+    },
+    {
+      "id": "FD_002",
+      "name": "灵兽饲养场",
+      "kind": "field",
+      "description": "专门饲养灵兽的场地，灵兽在此更为活跃。",
+      "rarity": "uncommon",
+      "labels": ["sect_qingyun", "灵兽"],
+
+      "symmetric": false,
+
+      "effects": [
+        {
+          "timing": "turnStart",
+          "target": {
+            "scope": "allyUnits",
+            "requiredLabelsAllOf": ["灵兽"]
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 1
+            }
+          ],
+          "text": "我方回合开始时：本回合内所有己方灵兽攻击力+1。",
+          "scriptId": "effect.FD_002.turnStart.beastsBuff"
+        }
+      ]
+    }
+  ]
+}

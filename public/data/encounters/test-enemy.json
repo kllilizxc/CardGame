@@ -1,0 +1,12 @@
+{
+  "id": "test_encounter_01",
+  "name": "青云山灵狐",
+  "description": "一只野生灵兽，适合练手",
+  "difficulty": 1,
+  "enemies": [
+    {
+      "cardId": "CR_001",
+      "position": 1
+    }
+  ]
+}

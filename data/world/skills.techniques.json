@@ -1,0 +1,12 @@
+{
+  "techniques": [
+    {
+      "id": "skill_basic_flying_sword",
+      "name": "御剑术",
+      "type": "身法/飞行",
+      "grade": "黄级上品",
+      "factionId": "sect_qingyun",
+      "description": "基础御剑之术，可用于短途飞行与战斗。"
+    }
+  ]
+}

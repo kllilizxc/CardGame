@@ -1,0 +1,62 @@
+{
+  "skills": [
+    {
+      "id": "SK_001",
+      "name": "灵兽召唤练习",
+      "kind": "skill",
+      "description": "主角进行基础的灵兽召唤练习，稍微提升上手感。",
+      "rarity": "common",
+      "labels": ["训练", "灵兽"],
+      "limitPerDeck": 1,
+
+      "cooldownType": "perTurn",
+      "cooldownValue": 1,
+
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "ownerPlayer"
+          },
+          "actions": [
+            {
+              "type": "drawCards",
+              "value": 1
+            }
+          ],
+          "text": "本回合你可以发动一次：抽1张牌。",
+          "scriptId": "effect.SK_001.use.draw"
+        }
+      ]
+    },
+    {
+      "id": "SK_002",
+      "name": "灵兽鼓舞",
+      "kind": "skill",
+      "description": "主角鼓舞己方灵兽，使其斗志高昂。",
+      "rarity": "uncommon",
+      "labels": ["灵兽", "鼓舞"],
+      "limitPerDeck": 1,
+
+      "cooldownType": "perBattle",
+
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "allyUnits",
+            "requiredLabelsAllOf": ["灵兽"]
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 2
+            }
+          ],
+          "text": "本场战斗中，你可以发动一次：使所有己方灵兽本回合内攻击力+2。",
+          "scriptId": "effect.SK_002.use.beastsBuff"
+        }
+      ]
+    }
+  ]
+}
