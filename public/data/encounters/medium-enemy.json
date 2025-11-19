@@ -5,12 +5,12 @@
   "difficulty": 2,
   "enemies": [
     {
-      "cardId": "CR_001",
-      "position": 0
-    },
-    {
       "cardId": "CR_002",
       "position": 2
+    },
+    {
+      "cardId": "CR_001",
+      "position": 0
     }
   ]
 }

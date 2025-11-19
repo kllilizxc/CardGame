@@ -1,6 +1,8 @@
 import { Scene } from 'phaser';
 import { CardSprite } from '../objects/CardSprite';
-import type { UnitCard } from '../../../types/cards';
+import { ArtifactSprite } from '../objects/ArtifactSprite';
+import type { UnitCard } from '../../../data/types/cards/unit';
+import type { ArtifactCard } from '../../../data/types/cards/artifact';
 import type { BattleLog } from '../ui/BattleLog';
 
 export class CardManager {
@@ -15,7 +17,10 @@ export class CardManager {
     }
 
     // 抽一张卡
-    public drawCard(deck: UnitCard[], hand: CardSprite[]): { deck: UnitCard[]; hand: CardSprite[] } {
+    public drawCard(
+        deck: (UnitCard | ArtifactCard)[],
+        hand: (CardSprite | ArtifactSprite)[]
+    ): { deck: (UnitCard | ArtifactCard)[]; hand: (CardSprite | ArtifactSprite)[] } {
         if (deck.length === 0) {
             console.log('牌库已空');
             this.battleLog.addLog('牌库已空，无法抽卡');
@@ -23,16 +28,25 @@ export class CardManager {
         }
 
         const cardData = deck.shift()!;
-        const card = new CardSprite(this.scene, 0, 0, cardData, this.cardScale);
-        hand.push(card);
+        let sprite: CardSprite | ArtifactSprite;
         
-        this.battleLog.addLog(`抽取了一张【${cardData.name}】`, [card]);
+        if (cardData.kind === 'unit') {
+            sprite = new CardSprite(this.scene, 0, 0, cardData as UnitCard, this.cardScale);
+            this.battleLog.addLog(`抽取了一张【${cardData.name}】`, [sprite as CardSprite]);
+        } else if (cardData.kind === 'artifact') {
+            sprite = new ArtifactSprite(this.scene, 0, 0, cardData as ArtifactCard, this.cardScale);
+            this.battleLog.addLog(`抽取了【${cardData.name}】`);
+        } else {
+            console.warn(`不支持的卡牌类型: ${cardData.kind}`);
+            return { deck, hand };
+        }
         
+        hand.push(sprite);
         return { deck, hand };
     }
 
     // 排列手牌
-    public arrangeHand(hand: CardSprite[]): void {
+    public arrangeHand(hand: (CardSprite | ArtifactSprite)[]): void {
         const { width, height } = this.scene.scale;
         const handY = height * 0.8;  // 手牌Y位置相对化
         const spacing = width * 0.12; // 卡牌间距为屏幕宽度的12%

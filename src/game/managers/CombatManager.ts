@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import type { CardSprite } from '../objects/CardSprite';
+import type { ArtifactSprite } from '../objects/ArtifactSprite';
 import type { BattleLog } from '../ui/BattleLog';
 import { BattleAnimationManager } from './BattleAnimationManager';
 
@@ -19,8 +20,9 @@ export class CombatManager {
         isPlayerTurn: boolean,
         playerField: CardSprite[],
         enemyField: CardSprite[],
-        onPlayerDamaged: (damage: number) => void
-    ): void {
+        onPlayerDamaged: (damage: number) => void,
+        onComplete?: () => void
+    ): number {
         const attackers = isPlayerTurn ? playerField : enemyField;
         const defenders = isPlayerTurn ? enemyField : playerField;
 
@@ -28,14 +30,26 @@ export class CombatManager {
 
         // 创建攻击动画序列
         let delay = 0;
+        
+        // 创建防御者的临时生命值映射，用于预判死亡
+        const tempHealth = new Map<CardSprite, number>();
+        defenders.forEach(d => tempHealth.set(d, d.getCardData().health));
 
         attackers.forEach((attacker) => {
             const attackValue = attacker.getCardData().attack;
             
-            if (defenders.length > 0) {
-                // 攻击第一个敌方单位
-                const target = defenders[0];
+            // 找到第一个还活着的敌方单位（基于临时生命值判断）
+            const aliveDefenders = defenders.filter(d => (tempHealth.get(d) || 0) > 0);
+            
+            if (aliveDefenders.length > 0) {
+                // 攻击第一个还活着的敌方单位
+                const target = aliveDefenders[0];
                 const targetCard = target.getCardData();
+                
+                // 预先扣除生命值（仅用于判断，实际伤害仍在动画回调中应用）
+                const currentTempHealth = tempHealth.get(target) || 0;
+                tempHealth.set(target, Math.max(0, currentTempHealth - attackValue));
+                
                 console.log(`${attacker.getCardData().name} 攻击 ${targetCard.name}，造成 ${attackValue} 点伤害`);
                 
                 // 记录攻击日志
@@ -54,7 +68,7 @@ export class CombatManager {
                 );
                 delay += 600; // 每个攻击间隔600ms
             } else {
-                // 敌方无单位时，直接攻击玩家本体
+                // 没有存活的防御单位，直接攻击玩家本体（如果是敌人回合）
                 if (!isPlayerTurn) {
                     console.log(`${attacker.getCardData().name} 直接攻击你，造成 ${attackValue} 点伤害`);
                     
@@ -76,12 +90,29 @@ export class CombatManager {
                 // 玩家方无目标时不造成伤害（敌人没有本体生命）
             }
         });
+
+        // 在所有攻击完成后调用回调
+        if (onComplete && delay > 0) {
+            this.scene.time.delayedCall(delay + 200, onComplete);
+        }
+
+        return delay; // 返回总动画时长
     }
 
     // 对单位造成伤害
     public damageUnit(unit: CardSprite, damage: number): void {
+        // 检查单位是否还存活（未被销毁）
+        if (!unit.active) {
+            return;
+        }
+        
         const cardData = unit.getCardData();
         cardData.health -= damage;
+        
+        // 生命值不能低于0
+        if (cardData.health < 0) {
+            cardData.health = 0;
+        }
         
         // 实时更新卡牌显示
         unit.updateStats();
@@ -93,25 +124,98 @@ export class CombatManager {
         enemyField: CardSprite[],
         onArrange: () => void
     ): { playerField: CardSprite[]; enemyField: CardSprite[] } {
+        const battleScene = this.scene as any;
+        
         // 检查玩家场地
         const newPlayerField = playerField.filter(unit => {
             if (unit.getCardData().health <= 0) {
                 console.log(`${unit.getCardData().name} 被击败！`);
                 this.battleLog.addLog(`【${unit.getCardData().name}】被击败！`);
+                
+                // 获取装备的法器（在清理前）
+                const equippedArtifacts = battleScene.artifactManager 
+                    ? battleScene.artifactManager.getEquippedArtifacts(unit)
+                    : [];
+                
+                // 将单位卡数据添加到弃牌堆
+                if (battleScene.addToDiscardPile) {
+                    battleScene.addToDiscardPile(unit.getCardData());
+                }
+                
+                // 将装备的法器数据添加到弃牌堆
+                equippedArtifacts.forEach((artifact: ArtifactSprite) => {
+                    if (battleScene.addToDiscardPile) {
+                        battleScene.addToDiscardPile(artifact.getCardData());
+                    }
+                });
+                
+                // 播放死亡动画
                 this.animationManager.playDeathAnimation(unit);
-                this.scene.time.delayedCall(300, () => unit.destroy());
+                
+                // 延迟后播放飞向弃牌堆的动画
+                this.scene.time.delayedCall(300, () => {
+                    // 计算需要等待的动画数量
+                    let animationCount = 1 + equippedArtifacts.length;
+                    const onAnimationComplete = () => {
+                        animationCount--;
+                        if (animationCount === 0) {
+                            // 所有动画完成后清理装备记录
+                            if (battleScene.artifactManager) {
+                                battleScene.artifactManager.cleanupUnitArtifacts(unit);
+                            }
+                        }
+                    };
+                    
+                    // 单位卡飞向弃牌堆
+                    if (battleScene.playCardToDiscardPileAnimation) {
+                        battleScene.playCardToDiscardPileAnimation(unit, onAnimationComplete);
+                    } else {
+                        unit.destroy();
+                        onAnimationComplete();
+                    }
+                    
+                    // 法器卡飞向弃牌堆
+                    equippedArtifacts.forEach((artifact: ArtifactSprite) => {
+                        if (battleScene.playCardToDiscardPileAnimation) {
+                            battleScene.playCardToDiscardPileAnimation(artifact, onAnimationComplete);
+                        } else {
+                            artifact.destroy();
+                            onAnimationComplete();
+                        }
+                    });
+                });
+                
                 return false;
             }
             return true;
         });
 
-        // 检查敌人场地
+        // 检查敌人场地（敌人的卡不进入弃牌堆）
         const newEnemyField = enemyField.filter(unit => {
             if (unit.getCardData().health <= 0) {
                 console.log(`${unit.getCardData().name} 被击败！`);
                 this.battleLog.addLog(`【${unit.getCardData().name}】被击败！`);
+                
+                // 获取装备的法器并销毁（敌人不进入弃牌堆）
+                const equippedArtifacts = battleScene.artifactManager 
+                    ? battleScene.artifactManager.getEquippedArtifacts(unit)
+                    : [];
+                
                 this.animationManager.playDeathAnimation(unit);
-                this.scene.time.delayedCall(300, () => unit.destroy());
+                this.scene.time.delayedCall(300, () => {
+                    // 销毁装备的法器
+                    equippedArtifacts.forEach((artifact: ArtifactSprite) => {
+                        artifact.destroy();
+                    });
+                    
+                    // 销毁单位
+                    unit.destroy();
+                    
+                    // 清理装备记录
+                    if (battleScene.artifactManager) {
+                        battleScene.artifactManager.cleanupUnitArtifacts(unit);
+                    }
+                });
                 return false;
             }
             return true;

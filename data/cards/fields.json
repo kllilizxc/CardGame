@@ -54,6 +54,170 @@
           "scriptId": "effect.FD_002.turnStart.beastsBuff"
         }
       ]
+    },
+    {
+      "id": "FD_003",
+      "name": "炼狱火海",
+      "kind": "field",
+      "description": "火焰弥漫的战场，所有单位每回合受到灼烧伤害。",
+      "rarity": "rare",
+      "labels": ["火系", "伤害"],
+
+      "symmetric": true,
+
+      "effects": [
+        {
+          "timing": "turnEnd",
+          "target": {
+            "scope": "allUnits"
+          },
+          "actions": [
+            {
+              "type": "dealDamage",
+              "value": 2
+            }
+          ],
+          "text": "每回合结束时：所有单位受到2点火焰伤害。",
+          "scriptId": "effect.FD_003.turnEnd"
+        }
+      ]
+    },
+    {
+      "id": "FD_004",
+      "name": "灵泉圣地",
+      "kind": "field",
+      "description": "充满生机的灵泉，持续恢复所有单位生命。",
+      "rarity": "rare",
+      "labels": ["治疗", "中立"],
+
+      "symmetric": true,
+
+      "effects": [
+        {
+          "timing": "turnEnd",
+          "target": {
+            "scope": "allUnits"
+          },
+          "actions": [
+            {
+              "type": "heal",
+              "value": 3
+            }
+          ],
+          "text": "每回合结束时：所有单位恢复3点生命值。",
+          "scriptId": "effect.FD_004.turnEnd"
+        }
+      ]
+    },
+    {
+      "id": "FD_005",
+      "name": "剑气纵横阵",
+      "kind": "field",
+      "description": "青云宗的剑阵，强化剑修的战斗力。",
+      "rarity": "epic",
+      "labels": ["sect_qingyun", "剑修"],
+
+      "symmetric": false,
+
+      "effects": [
+        {
+          "timing": "permanent",
+          "target": {
+            "scope": "allyUnits",
+            "requiredLabelsAnyOf": ["剑修"]
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 3
+            }
+          ],
+          "text": "场上效果：所有己方剑修单位攻击力永久+3。",
+          "scriptId": "effect.FD_005.permanent"
+        }
+      ]
+    },
+    {
+      "id": "FD_006",
+      "name": "迷雾森林",
+      "kind": "field",
+      "description": "浓雾弥漫，降低所有单位的攻击精准度。",
+      "rarity": "uncommon",
+      "labels": ["控制", "中立"],
+
+      "symmetric": true,
+
+      "effects": [
+        {
+          "timing": "permanent",
+          "target": {
+            "scope": "allUnits"
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": -2
+            }
+          ],
+          "text": "场上效果：所有单位攻击力-2。",
+          "scriptId": "effect.FD_006.permanent"
+        }
+      ]
+    },
+    {
+      "id": "FD_007",
+      "name": "魔道血池",
+      "kind": "field",
+      "description": "魔道修士的邪恶法阵，击败敌人可恢复生命。",
+      "rarity": "epic",
+      "labels": ["魔道", "吸血"],
+
+      "symmetric": false,
+
+      "effects": [
+        {
+          "timing": "onKill",
+          "target": {
+            "scope": "ownerPlayer"
+          },
+          "actions": [
+            {
+              "type": "healPlayer",
+              "value": 5
+            }
+          ],
+          "text": "己方单位击败敌人时：玩家恢复5点生命值。",
+          "scriptId": "effect.FD_007.onKill"
+        }
+      ]
+    },
+    {
+      "id": "FD_008",
+      "name": "雷霆试炼场",
+      "kind": "field",
+      "description": "雷电交织的试炼场地，大幅提升雷系单位的力量。",
+      "rarity": "rare",
+      "labels": ["雷系"],
+
+      "symmetric": false,
+
+      "effects": [
+        {
+          "timing": "permanent",
+          "target": {
+            "scope": "allyUnits",
+            "requiredLabelsAnyOf": ["雷属性"]
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 4
+            }
+          ],
+          "text": "场上效果：所有己方雷系单位攻击力永久+4。",
+          "scriptId": "effect.FD_008.permanent"
+        }
+      ]
     }
   ]
 }

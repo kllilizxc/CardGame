@@ -1,41 +1,24 @@
 import { GameObjects } from 'phaser';
-import type { UnitCard } from '../../../types/cards';
+import type { UnitCard } from '../../../data/types/cards/unit';
+import { BaseCardSprite } from './BaseCardSprite';
 
-export class CardSprite extends GameObjects.Container {
+export class CardSprite extends BaseCardSprite {
     private cardData: UnitCard;
-    private background: GameObjects.Rectangle;
-    private nameText: GameObjects.Text;
     private starsText: GameObjects.Text;
     private realmText: GameObjects.Text;
     private attackText: GameObjects.Text;
     private healthText: GameObjects.Text;
     private descriptionText: GameObjects.Text;
-    private isDragging: boolean = false;
-    private originalX: number = 0;
-    private originalY: number = 0;
-    private cardScale: number = 1;
 
     constructor(scene: Phaser.Scene, x: number, y: number, cardData: UnitCard, scale: number = 0.7) {
-        super(scene, x, y);
+        super(scene, x, y, scale);
         this.cardData = cardData;
-        this.cardScale = scale;
 
-        // 卡牌尺寸
-        const width = 180;
-        const height = 260;
+        // 创建背景
+        this.createBackground(0x2d2d2d, 0xf39c12);
 
-        // 背景
-        this.background = scene.add.rectangle(0, 0, width, height, 0x2d2d2d);
-        this.background.setStrokeStyle(3, 0xf39c12);
-        this.add(this.background);
-
-        // 卡牌名称
-        this.nameText = scene.add.text(0, -110, cardData.name, {
-            fontSize: '16px',
-            color: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        this.add(this.nameText);
+        // 创建名称
+        this.createNameText(cardData.name);
 
         // 星级
         const stars = '★'.repeat(cardData.star);
@@ -46,7 +29,7 @@ export class CardSprite extends GameObjects.Container {
         this.add(this.starsText);
 
         // 境界
-        const realmInfo = `${cardData.realm.stage} ${cardData.realm.phase}`;
+        const realmInfo = `${cardData.realm?.stage || ''} ${cardData.realm?.phase || ''}`;
         this.realmText = scene.add.text(0, -60, realmInfo, {
             fontSize: '12px',
             color: '#9b59b6'
@@ -91,57 +74,12 @@ export class CardSprite extends GameObjects.Container {
         }).setOrigin(0.5);
         this.add(this.healthText);
 
-        // 设置交互
-        this.setSize(width, height);
-        this.setInteractive({ draggable: true, useHandCursor: true });
+        // 设置交互和缩放
+        this.setupInteractivity();
 
-        // 应用缩放
-        this.setScale(this.cardScale);
-
-        // 添加事件监听
-        this.setupInteraction();
-
-        scene.add.existing(this);
-    }
-
-    private setupInteraction() {
-        // 悬停效果 - 创建放大预览
-        this.on('pointerover', () => {
-            this.background.setStrokeStyle(3, 0xffd700);
-            // 通知场景显示预览
-            this.scene.events.emit('showCardPreview', this);
-        });
-
-        this.on('pointerout', () => {
-            if (!this.isDragging) {
-                this.background.setStrokeStyle(3, 0xf39c12);
-                // 通知场景隐藏预览
-                this.scene.events.emit('hideCardPreview');
-            }
-        });
-
-        // 拖拽开始
-        this.on('dragstart', () => {
-            this.isDragging = true;
-            this.originalX = this.x;
-            this.originalY = this.y;
-            this.setScale(this.cardScale * 1.2);
-            this.setDepth(1000);
-        });
-
-        // 拖拽中
-        this.on('drag', (pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
-            this.x = dragX;
-            this.y = dragY;
-        });
-
-        // 拖拽结束
-        this.on('dragend', () => {
-            this.isDragging = false;
-            this.setScale(this.cardScale);
-            this.setDepth(0);
-
-            // 检查是否在场地范围内
+        // 设置拖拽事件
+        this.setupDragEvents(() => {
+            // 拖拽结束后的处理
             const battleScene = this.scene as any; // BattleScene
             if (battleScene.isCardInPlayerField && battleScene.isCardInPlayerField(this.x, this.y)) {
                 // 尝试打出卡牌
@@ -161,23 +99,13 @@ export class CardSprite extends GameObjects.Container {
         return this.cardData;
     }
 
-    public returnToOriginalPosition() {
-        this.scene.tweens.add({
-            targets: this,
-            x: this.originalX,
-            y: this.originalY,
-            duration: 300,
-            ease: 'Back.easeOut'
-        });
-    }
-
-    public setOriginalPosition(x: number, y: number) {
-        this.originalX = x;
-        this.originalY = y;
-    }
-
     // 更新卡牌数值显示
     public updateStats() {
+        // 检查对象是否已被销毁
+        if (!this.active || !this.attackText || !this.healthText) {
+            return;
+        }
+        
         // 更新攻击力
         this.attackText.setText(`⚔${this.cardData.attack}`);
         
@@ -201,28 +129,8 @@ export class CardSprite extends GameObjects.Container {
         return this.cardData.health > 10 ? 10 : this.cardData.health;
     }
 
-    // 禁用拖拽但保留hover交互
-    public disableDragging() {
-        this.removeInteractive();
-        // 重新设置为可交互但不可拖拽
-        this.setInteractive({ useHandCursor: false });
-        
-        // 移除拖拽事件
-        this.off('dragstart');
-        this.off('drag');
-        this.off('dragend');
-        
-        // 重新添加hover效果
-        this.on('pointerover', () => {
-            this.background.setStrokeStyle(3, 0xffd700);
-            // 通知场景显示预览
-            this.scene.events.emit('showCardPreview', this);
-        });
-
-        this.on('pointerout', () => {
-            this.background.setStrokeStyle(3, 0xf39c12);
-            // 通知场景隐藏预览
-            this.scene.events.emit('hideCardPreview');
-        });
+    // 重写：获取默认边框颜色
+    protected getDefaultStrokeColor(): number {
+        return 0xf39c12;
     }
 }

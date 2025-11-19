@@ -19,7 +19,7 @@
         "value": 1
       },
       "attack": 4,
-      "health": 22,
+      "health": 2,
       "effects": [
         {
           "timing": "onSummon",
