@@ -268,7 +268,7 @@ export class ArtifactManager {
      * 视觉附着效果（使用父子结构实现实时跟随）
      */
     private attachArtifactVisual(artifact: ArtifactSprite, target: CardSprite) {
-        // 禁用拖拽
+        // 禁用拖拽但保留hover
         artifact.disableDragging();
         
         // 记录法器当前在世界坐标系中的位置
@@ -286,6 +286,9 @@ export class ArtifactManager {
         // 先设置为当前位置（避免跳变）
         artifact.setPosition(localX, localY);
         
+        // 提升深度确保在上层可以交互
+        artifact.setDepth(100);
+        
         // 目标相对位置（右上方偏移）
         const targetX = 80;
         const targetY = -60;
@@ -297,7 +300,13 @@ export class ArtifactManager {
             y: targetY,
             scale: 0.3,
             duration: 300,
-            ease: 'Power2'
+            ease: 'Power2',
+            onComplete: () => {
+                // 动画完成后确保交互性正常
+                if (artifact.input) {
+                    artifact.input.enabled = true;
+                }
+            }
         });
     }
 

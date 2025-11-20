@@ -130,7 +130,7 @@ export class PillManager {
         this.battleLog.addLog(`使用了【${pill.name}】`);
 
         // 播放使用动画和特效
-        this.playUseEffect(() => {
+        this.playUseEffect(target, () => {
             // 应用效果
             this.applyPillEffects(pill, target);
 
@@ -147,25 +147,62 @@ export class PillManager {
     /**
      * 播放丹药使用特效
      */
-    private playUseEffect(onComplete: () => void): void {
+    private playUseEffect(target: CardSprite | 'player' | undefined, onComplete: () => void): void {
         const { width, height } = this.scene.scale;
-        const centerX = width / 2;
-        const centerY = height / 2;
+        
+        // 确定特效位置
+        let effectX: number;
+        let effectY: number;
+        
+        if (target && target !== 'player' && target instanceof CardSprite) {
+            // 如果有目标单位，在目标位置播放
+            effectX = target.x;
+            effectY = target.y;
+        } else {
+            // 玩家或无目标，在下方中央播放
+            effectX = width / 2;
+            effectY = height * 0.85;
+        }
 
         // 添加光效
-        const light = this.scene.add.circle(centerX, centerY, 0, 0x27ae60, 0.6);
+        const light = this.scene.add.circle(effectX, effectY, 0, 0x2ecc71, 0.7);
         light.setDepth(999);
+        
+        // 扩散光圈
         this.scene.tweens.add({
             targets: light,
-            radius: 100,
+            radius: 80,
             alpha: 0,
-            duration: 400,
+            duration: 500,
             ease: 'Power2',
             onComplete: () => {
                 light.destroy();
-                if (onComplete) {
-                    onComplete();
+            }
+        });
+        
+        // 粒子效果
+        for (let i = 0; i < 8; i++) {
+            const angle = (Math.PI * 2 * i) / 8;
+            const particle = this.scene.add.circle(effectX, effectY, 4, 0x2ecc71, 0.8);
+            particle.setDepth(1000);
+            
+            this.scene.tweens.add({
+                targets: particle,
+                x: effectX + Math.cos(angle) * 60,
+                y: effectY + Math.sin(angle) * 60,
+                alpha: 0,
+                duration: 600,
+                ease: 'Power2',
+                onComplete: () => {
+                    particle.destroy();
                 }
+            });
+        }
+        
+        // 延迟后执行回调
+        this.scene.time.delayedCall(300, () => {
+            if (onComplete) {
+                onComplete();
             }
         });
     }

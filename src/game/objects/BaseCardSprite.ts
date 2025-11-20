@@ -202,14 +202,19 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         }
         
         this.isDraggingDisabled = true;
-        this.removeInteractive();
-        this.setInteractive({ useHandCursor: false });
         
+        // 移除拖拽相关的监听器
         this.off('dragstart');
         this.off('drag');
         this.off('dragend');
         
-        // 重新添加hover效果
+        // 重新设置为非拖拽的交互模式，但保持hitArea
+        if (this.input) {
+            this.input.draggable = false;
+            this.input.cursor = 'default';
+        }
+        
+        // 确保hover事件存在
         this.on('pointerover', () => {
             this.onPointerOver();
         });

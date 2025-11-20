@@ -48,6 +48,7 @@ export class BattleScene extends Scene {
     private turnNumber: number = 1;
     private cardScale: number = 1;
     private cardPreview: Phaser.GameObjects.Container | null = null;
+    private gameSpeed: number = 1; // 游戏速度倍率（1x 或 2x）
     
     // UI元素引用
     private deckButton?: Phaser.GameObjects.Rectangle;
@@ -928,6 +929,23 @@ export class BattleScene extends Scene {
         endTurnButton.on('pointerout', () => endTurnButton.setFillStyle(0xe74c3c));
         endTurnButton.on('pointerdown', () => this.endTurn());
 
+        // 速度切换按钮
+        const speedButton = this.add.rectangle(buttonX, height * 0.15, buttonWidth, buttonHeight, 0x3498db)
+            .setInteractive({ useHandCursor: true });
+        
+        const speedText = this.add.text(buttonX, height * 0.15, '速度 x1', {
+            fontSize: fontSize,
+            color: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        speedButton.on('pointerover', () => speedButton.setFillStyle(0x5dade2));
+        speedButton.on('pointerout', () => speedButton.setFillStyle(0x3498db));
+        speedButton.on('pointerdown', () => {
+            this.toggleGameSpeed();
+            speedText.setText(`速度 x${this.gameSpeed}`);
+        });
+
         // 统计信息
         const statsText = this.add.text(buttonX, height * 0.64, '', {
             fontSize: fontSize,
@@ -950,6 +968,21 @@ export class BattleScene extends Scene {
         };
         
         this.events.on('update', updateStats);
+    }
+
+    /**
+     * 切换游戏速度（1x 和 2x 之间切换）
+     */
+    private toggleGameSpeed() {
+        // 切换速度
+        this.gameSpeed = this.gameSpeed === 1 ? 2 : 1;
+        
+        // 设置 Phaser 时间缩放
+        this.time.timeScale = this.gameSpeed;
+        this.tweens.timeScale = this.gameSpeed;
+        
+        // 记录日志
+        this.battleLog.addLog(`游戏速度调整为 ${this.gameSpeed}x`);
     }
 
     private endTurn() {
