@@ -118,6 +118,21 @@ export class CombatManager {
         unit.updateStats();
     }
 
+    /**
+     * 统一的死亡判断方法
+     */
+    public isDead(unit: CardSprite): boolean {
+        return unit.getCardData().health <= 0;
+    }
+
+    /**
+     * 检查是否有单位需要死亡处理
+     */
+    public hasDeadUnits(playerField: CardSprite[], enemyField: CardSprite[]): boolean {
+        return playerField.some(unit => this.isDead(unit)) || 
+               enemyField.some(unit => this.isDead(unit));
+    }
+
     // 移除死亡单位
     public removeDeadUnits(
         playerField: CardSprite[],
@@ -128,7 +143,7 @@ export class CombatManager {
         
         // 检查玩家场地
         const newPlayerField = playerField.filter(unit => {
-            if (unit.getCardData().health <= 0) {
+            if (this.isDead(unit)) {
                 console.log(`${unit.getCardData().name} 被击败！`);
                 this.battleLog.addLog(`【${unit.getCardData().name}】被击败！`);
                 
@@ -192,7 +207,7 @@ export class CombatManager {
 
         // 检查敌人场地（敌人的卡不进入弃牌堆）
         const newEnemyField = enemyField.filter(unit => {
-            if (unit.getCardData().health <= 0) {
+            if (this.isDead(unit)) {
                 console.log(`${unit.getCardData().name} 被击败！`);
                 this.battleLog.addLog(`【${unit.getCardData().name}】被击败！`);
                 

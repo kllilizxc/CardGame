@@ -1,8 +1,10 @@
 import { Scene } from 'phaser';
 import { CardSprite } from '../objects/CardSprite';
 import { ArtifactSprite } from '../objects/ArtifactSprite';
+import { TalismanSprite } from '../objects/TalismanSprite';
 import type { UnitCard } from '../../../data/types/cards/unit';
 import type { ArtifactCard } from '../../../data/types/cards/artifact';
+import type { TalismanCard } from '../../../data/types/cards/talisman';
 import type { BattleLog } from '../ui/BattleLog';
 
 export class CardManager {
@@ -18,9 +20,9 @@ export class CardManager {
 
     // 抽一张卡
     public drawCard(
-        deck: (UnitCard | ArtifactCard)[],
-        hand: (CardSprite | ArtifactSprite)[]
-    ): { deck: (UnitCard | ArtifactCard)[]; hand: (CardSprite | ArtifactSprite)[] } {
+        deck: (UnitCard | ArtifactCard | TalismanCard)[],
+        hand: (CardSprite | ArtifactSprite | TalismanSprite)[]
+    ): { deck: (UnitCard | ArtifactCard | TalismanCard)[]; hand: (CardSprite | ArtifactSprite | TalismanSprite)[] } {
         if (deck.length === 0) {
             console.log('牌库已空');
             this.battleLog.addLog('牌库已空，无法抽卡');
@@ -28,13 +30,16 @@ export class CardManager {
         }
 
         const cardData = deck.shift()!;
-        let sprite: CardSprite | ArtifactSprite;
+        let sprite: CardSprite | ArtifactSprite | TalismanSprite;
         
         if (cardData.kind === 'unit') {
             sprite = new CardSprite(this.scene, 0, 0, cardData as UnitCard, this.cardScale);
             this.battleLog.addLog(`抽取了一张【${cardData.name}】`, [sprite as CardSprite]);
         } else if (cardData.kind === 'artifact') {
             sprite = new ArtifactSprite(this.scene, 0, 0, cardData as ArtifactCard, this.cardScale);
+            this.battleLog.addLog(`抽取了【${cardData.name}】`);
+        } else if (cardData.kind === 'talisman') {
+            sprite = new TalismanSprite(this.scene, 0, 0, cardData as TalismanCard, this.cardScale);
             this.battleLog.addLog(`抽取了【${cardData.name}】`);
         } else {
             console.warn(`不支持的卡牌类型: ${cardData.kind}`);
@@ -46,7 +51,7 @@ export class CardManager {
     }
 
     // 排列手牌
-    public arrangeHand(hand: (CardSprite | ArtifactSprite)[]): void {
+    public arrangeHand(hand: (CardSprite | ArtifactSprite | TalismanSprite)[]): void {
         const { width, height } = this.scene.scale;
         const handY = height * 0.8;  // 手牌Y位置相对化
         const spacing = width * 0.12; // 卡牌间距为屏幕宽度的12%

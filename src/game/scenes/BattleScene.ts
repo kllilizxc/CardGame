@@ -2,8 +2,10 @@ import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
 import { CardSprite } from '../objects/CardSprite';
 import { ArtifactSprite } from '../objects/ArtifactSprite';
+import { TalismanSprite } from '../objects/TalismanSprite';
 import type { UnitCard } from '../../../data/types/cards/unit';
 import type { ArtifactCard } from '../../../data/types/cards/artifact';
+import type { TalismanCard } from '../../../data/types/cards/talisman';
 import { BattleLog } from '../ui/BattleLog';
 import { CardListView } from '../ui/CardListView';
 import { BattleAnimationManager } from '../managers/BattleAnimationManager';
@@ -11,12 +13,13 @@ import { CombatManager } from '../managers/CombatManager';
 import { CardManager } from '../managers/CardManager';
 import { TurnManager } from '../managers/TurnManager';
 import { ArtifactManager } from '../managers/ArtifactManager';
+import { TalismanManager } from '../managers/TalismanManager';
 
 export class BattleScene extends Scene {
     // 游戏状态
-    private deck: (UnitCard | ArtifactCard)[] = [];
-    private discardPile: (UnitCard | ArtifactCard)[] = []; // 弃牌堆
-    private hand: (CardSprite | ArtifactSprite)[] = [];
+    private deck: (UnitCard | ArtifactCard | TalismanCard)[] = [];
+    private discardPile: (UnitCard | ArtifactCard | TalismanCard)[] = []; // 弃牌堆
+    private hand: (CardSprite | ArtifactSprite | TalismanSprite)[] = [];
     private playerField: CardSprite[] = [];
     private enemyField: CardSprite[] = [];
     
@@ -41,6 +44,7 @@ export class BattleScene extends Scene {
     private cardManager!: CardManager;
     private turnManager!: TurnManager;
     private artifactManager!: ArtifactManager;
+    private talismanManager!: TalismanManager;
 
     constructor() {
         super('BattleScene');
@@ -83,6 +87,7 @@ export class BattleScene extends Scene {
         this.cardManager = new CardManager(this, this.battleLog, this.cardScale);
         this.turnManager = new TurnManager(this);
         this.artifactManager = new ArtifactManager(this, this.battleLog);
+        this.talismanManager = new TalismanManager(this, this.battleLog);
 
         // 加载所有卡牌数据
         const unitCardsData = this.cache.json.get('unitCards') as { units: UnitCard[] };
@@ -116,6 +121,12 @@ export class BattleScene extends Scene {
                     const cardData = JSON.parse(JSON.stringify(cardDataTemplate));
                     this.deck.push(cardData as ArtifactCard);
                 }
+            } else if (cardDataTemplate && cardDataTemplate.kind === 'talisman') {
+                for (let i = 0; i < count; i++) {
+                    // 深拷贝卡牌数据，确保每张卡都有独立的数据对象
+                    const cardData = JSON.parse(JSON.stringify(cardDataTemplate));
+                    this.deck.push(cardData as TalismanCard);
+                }
             } else if (cardDataTemplate) {
                 console.warn(`卡牌 ${id} (${cardDataTemplate.kind}) 暂不支持，跳过`);
             } else {
@@ -138,9 +149,185 @@ export class BattleScene extends Scene {
         // 创建 UI
         this.createUI();
 
+        // 设置符箓使用事件监听
+        this.setupTalismanEvents();
+
+        // 监听效果应用完成事件（通用）
+        // 任何会改变单位状态的效果（攻击、符箓、法器、丹药等）都应触发此事件
+        this.events.on('effectApplied', () => {
+            // 效果应用后立即检查是否有死亡单位
+            if (this.combatManager.hasDeadUnits(this.playerField, this.enemyField)) {
+                this.events.emit('checkDeadUnits');
+            }
+        });
+
+        // 监听死亡检查事件
+        this.events.on('checkDeadUnits', () => {
+            const result = this.combatManager.removeDeadUnits(
+                this.playerField,
+                this.enemyField,
+                () => {
+                    // 死亡单位动画完成后，重新排列场上单位
+                    this.cardManager.arrangePlayerField(this.playerField);
+                    this.cardManager.arrangeEnemyField(this.enemyField);
+                }
+            );
+            
+            // 更新场上单位数组
+            this.playerField = result.playerField;
+            this.enemyField = result.enemyField;
+
+            // 检查战斗是否结束
+            this.combatManager.checkBattleEnd(
+                this.playerHealth,
+                this.enemyField.length,
+                () => this.turnManager.showVictory(() => this.scene.restart()),
+                () => this.turnManager.showDefeat(() => this.scene.restart())
+            );
+        });
+
+        // 场景关闭时清理所有事件监听器
+        this.events.once('shutdown', () => {
+            this.events.removeAllListeners('effectApplied');
+            this.events.removeAllListeners('checkDeadUnits');
+            this.events.removeAllListeners('talismanDragStart');
+            this.events.removeAllListeners('talismanDragging');
+            this.events.removeAllListeners('talismanDragEnd');
+            this.events.removeAllListeners('tryUseTalisman');
+            this.events.removeAllListeners('showCardPreview');
+            this.events.removeAllListeners('hideCardPreview');
+            this.events.removeAllListeners('update');
+        });
+
         this.battleLog.addLog('战斗开始！');
         
         EventBus.emit('current-scene-ready', this);
+    }
+
+    /**
+     * 设置符箓使用事件
+     */
+    private setupTalismanEvents(): void {
+        let highlightedTarget: CardSprite | null = null;
+        let targetHighlight: Phaser.GameObjects.Graphics | null = null;
+
+        // 拖拽开始
+        this.events.on('talismanDragStart', (_talisman: TalismanSprite) => {
+            // 创建目标高亮图形
+            targetHighlight = this.add.graphics();
+            targetHighlight.setDepth(999);
+        });
+
+        // 拖拽中 - 实时高亮目标
+        this.events.on('talismanDragging', (_talisman: TalismanSprite, pointer: Phaser.Input.Pointer) => {
+            const target = this.getEnemyUnitAtPosition(pointer.x, pointer.y);
+            
+            if (target !== highlightedTarget) {
+                // 清除之前的高亮
+                if (targetHighlight) {
+                    targetHighlight.clear();
+                }
+                
+                highlightedTarget = target;
+                
+                // 绘制新的高亮
+                if (target && targetHighlight) {
+                    const bounds = target.getBounds();
+                    targetHighlight.lineStyle(4, 0x00ff00, 0.8);
+                    targetHighlight.strokeRect(
+                        bounds.x,
+                        bounds.y,
+                        bounds.width,
+                        bounds.height
+                    );
+                    
+                    // 添加发光效果
+                    targetHighlight.fillStyle(0x00ff00, 0.2);
+                    targetHighlight.fillRect(
+                        bounds.x,
+                        bounds.y,
+                        bounds.width,
+                        bounds.height
+                    );
+                }
+            }
+        });
+
+        // 拖拽结束 - 清除高亮
+        this.events.on('talismanDragEnd', (_talisman: TalismanSprite) => {
+            if (targetHighlight) {
+                targetHighlight.destroy();
+                targetHighlight = null;
+            }
+            highlightedTarget = null;
+        });
+
+        // 监听符箓卡被拖拽结束
+        this.events.on('tryUseTalisman', (talisman: TalismanSprite) => {
+            // 检查是否在敌方单位上
+            const pointer = this.input.activePointer;
+            const target = this.getEnemyUnitAtPosition(pointer.x, pointer.y);
+
+            if (target) {
+                // 先启动符箓选择状态
+                this.talismanManager.startUseTalisman(talisman);
+                
+                // 尝试使用符箓
+                const success = this.talismanManager.useTalismanOnTarget(target);
+                
+                if (success) {
+                    // 从手牌中移除
+                    const index = this.hand.indexOf(talisman);
+                    if (index > -1) {
+                        this.hand.splice(index, 1);
+                    }
+                    
+                    // 加入弃牌堆数据
+                    const talismanData = talisman.getCardData();
+                    this.addToDiscardPile(talismanData);
+                    
+                    // 重新排列手牌
+                    this.cardManager.arrangeHand(this.hand);
+                    
+                    // 等待动画和死亡处理完成后，播放符箓飞向弃牌堆的动画
+                    this.time.delayedCall(900, () => {
+                        // 播放符箓飞向弃牌堆的动画
+                        if (talisman.active) {
+                            this.playCardToDiscardPileAnimation(talisman);
+                        }
+                    });
+                } else {
+                    // 使用失败，返回原位
+                    talisman.returnToOriginalPosition();
+                    talisman.setScale(talisman.scale / 1.2);
+                    talisman.setDepth(0);
+                }
+            } else {
+                // 没有拖到敌方单位上，返回原位
+                talisman.returnToOriginalPosition();
+                talisman.setScale(talisman.scale / 1.2);
+                talisman.setDepth(0);
+            }
+        });
+    }
+
+    /**
+     * 获取指定位置的敌方单位（扩大检测范围）
+     */
+    private getEnemyUnitAtPosition(x: number, y: number): CardSprite | null {
+        const expandRadius = 50; // 扩大检测范围
+        
+        for (const enemy of this.enemyField) {
+            const bounds = enemy.getBounds();
+            // 扩大检测区域
+            const expandedBounds = Phaser.Geom.Rectangle.Clone(bounds);
+            Phaser.Geom.Rectangle.Inflate(expandedBounds, expandRadius, expandRadius);
+            
+            if (Phaser.Geom.Rectangle.Contains(expandedBounds, x, y)) {
+                return enemy;
+            }
+        }
+        return null;
     }
 
     private createFieldZones() {
@@ -529,10 +716,15 @@ export class BattleScene extends Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        this.events.on('update', () => {
-            statsText.setText(`手牌: ${this.hand.length}\n牌库: ${this.deck.length}\n场地: ${this.playerField.length}/3\n敌人: ${this.enemyField.length}\n\n你的生命: ${this.playerHealth}`);
-            turnText.setText(`回合 ${this.turnNumber} - ${this.isPlayerTurn ? '你的回合' : '敌人回合'}`);
-        });
+        // 使用场景的 update 方法而不是事件，避免内存泄漏
+        const updateStats = () => {
+            if (statsText.active && turnText.active) {
+                statsText.setText(`手牌: ${this.hand.length}\n牌库: ${this.deck.length}\n场地: ${this.playerField.length}/3\n敌人: ${this.enemyField.length}\n\n你的生命: ${this.playerHealth}`);
+                turnText.setText(`回合 ${this.turnNumber} - ${this.isPlayerTurn ? '你的回合' : '敌人回合'}`);
+            }
+        };
+        
+        this.events.on('update', updateStats);
     }
 
     private endTurn() {
@@ -552,26 +744,8 @@ export class BattleScene extends Scene {
                 this.playerHealth -= damage;
             },
             () => {
-                // 攻击完成后立即检查死亡
-                const result = this.combatManager.removeDeadUnits(
-                    this.playerField,
-                    this.enemyField,
-                    () => {
-                        this.cardManager.arrangePlayerField(this.playerField);
-                        this.cardManager.arrangeEnemyField(this.enemyField);
-                    }
-                );
-                this.playerField = result.playerField;
-                this.enemyField = result.enemyField;
-
-                if (this.combatManager.checkBattleEnd(
-                    this.playerHealth,
-                    this.enemyField.length,
-                    () => this.turnManager.showVictory(() => this.scene.restart()),
-                    () => this.turnManager.showDefeat(() => this.scene.restart())
-                )) {
-                    return;
-                }
+                // 攻击完成后触发通用效果检查
+                this.events.emit('effectApplied');
 
                 this.isPlayerTurn = false;
                 
@@ -594,26 +768,8 @@ export class BattleScene extends Scene {
                 this.playerHealth -= damage;
             },
             () => {
-                // 攻击完成后立即检查死亡
-                const result = this.combatManager.removeDeadUnits(
-                    this.playerField,
-                    this.enemyField,
-                    () => {
-                        this.cardManager.arrangePlayerField(this.playerField);
-                        this.cardManager.arrangeEnemyField(this.enemyField);
-                    }
-                );
-                this.playerField = result.playerField;
-                this.enemyField = result.enemyField;
-
-                if (this.combatManager.checkBattleEnd(
-                    this.playerHealth,
-                    this.enemyField.length,
-                    () => this.turnManager.showVictory(() => this.scene.restart()),
-                    () => this.turnManager.showDefeat(() => this.scene.restart())
-                )) {
-                    return;
-                }
+                // 攻击完成后触发通用效果检查
+                this.events.emit('effectApplied');
 
                 this.isPlayerTurn = true;
                 this.turnNumber++;
@@ -723,7 +879,7 @@ export class BattleScene extends Scene {
     }
 
     // 添加卡牌到弃牌堆
-    public addToDiscardPile(cardData: UnitCard | ArtifactCard) {
+    public addToDiscardPile(cardData: UnitCard | ArtifactCard | TalismanCard) {
         this.discardPile.push(cardData);
         
         // 更新弃牌堆按钮数量显示
@@ -746,7 +902,7 @@ export class BattleScene extends Scene {
     }
 
     // 播放卡牌飞向弃牌堆的动画
-    public playCardToDiscardPileAnimation(card: CardSprite | ArtifactSprite, onComplete?: () => void) {
+    public playCardToDiscardPileAnimation(card: CardSprite | ArtifactSprite | TalismanSprite, onComplete?: () => void) {
         if (!this.discardPileButton) {
             if (onComplete) onComplete();
             return;
