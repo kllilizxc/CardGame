@@ -78,19 +78,21 @@ export class CardSprite extends BaseCardSprite {
         this.setupInteractivity();
 
         // 设置拖拽事件
-        this.setupDragEvents(() => {
-            // 拖拽结束后的处理
-            const battleScene = this.scene as any; // BattleScene
-            if (battleScene.isCardInPlayerField && battleScene.isCardInPlayerField(this.x, this.y)) {
-                // 尝试打出卡牌
-                const success = battleScene.playCardToField(this);
-                if (!success) {
-                    // 如果打出失败（比如场地已满），返回原位置
+        this.setupDragEvents({
+            onDragEnd: () => {
+                // 拖拽结束后的处理
+                const battleScene = this.scene as any; // BattleScene
+                if (battleScene.isCardInPlayerField && battleScene.isCardInPlayerField(this.x, this.y)) {
+                    // 尝试打出卡牌
+                    const success = battleScene.playCardToField(this);
+                    if (!success) {
+                        // 如果打出失败（比如场地已满），返回原位置
+                        this.returnToOriginalPosition();
+                    }
+                } else {
+                    // 不在场地范围内，返回原位置
                     this.returnToOriginalPosition();
                 }
-            } else {
-                // 不在场地范围内，返回原位置
-                this.returnToOriginalPosition();
             }
         });
     }

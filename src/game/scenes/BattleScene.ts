@@ -3,9 +3,11 @@ import { EventBus } from '../EventBus';
 import { CardSprite } from '../objects/CardSprite';
 import { ArtifactSprite } from '../objects/ArtifactSprite';
 import { TalismanSprite } from '../objects/TalismanSprite';
+import { FieldSprite } from '../objects/FieldSprite';
 import type { UnitCard } from '../../../data/types/cards/unit';
 import type { ArtifactCard } from '../../../data/types/cards/artifact';
 import type { TalismanCard } from '../../../data/types/cards/talisman';
+import type { FieldCard } from '../../../data/types/cards/field';
 import { BattleLog } from '../ui/BattleLog';
 import { CardListView } from '../ui/CardListView';
 import { BattleAnimationManager } from '../managers/BattleAnimationManager';
@@ -14,18 +16,26 @@ import { CardManager } from '../managers/CardManager';
 import { TurnManager } from '../managers/TurnManager';
 import { ArtifactManager } from '../managers/ArtifactManager';
 import { TalismanManager } from '../managers/TalismanManager';
+import { FieldManager } from '../managers/FieldManager';
+import { PillManager } from '../managers/PillManager';
+import { BattleEventManager } from '../managers/BattleEventManager';
+import { SacrificeManager } from '../managers/SacrificeManager';
+import { PillSlotUI } from '../ui/PillSlotUI';
+import { SacrificeSelectionUI } from '../ui/SacrificeSelectionUI';
+import type { PillCard } from '../../../data/types/cards/pill';
 
 export class BattleScene extends Scene {
     // 游戏状态
-    private deck: (UnitCard | ArtifactCard | TalismanCard)[] = [];
-    private discardPile: (UnitCard | ArtifactCard | TalismanCard)[] = []; // 弃牌堆
-    private hand: (CardSprite | ArtifactSprite | TalismanSprite)[] = [];
+    private deck: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[] = [];
+    private discardPile: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[] = []; // 弃牌堆
+    private hand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[] = [];
     private playerField: CardSprite[] = [];
     private enemyField: CardSprite[] = [];
     
     private handZone!: Phaser.GameObjects.Zone;
     private playerFieldZone!: Phaser.GameObjects.Zone;
     private enemyFieldZone!: Phaser.GameObjects.Zone;
+    private fieldZone!: Phaser.GameObjects.Zone;  // 场地卡放置区域
 
     private playerHealth: number = 100;
     private isPlayerTurn: boolean = true;
@@ -45,6 +55,12 @@ export class BattleScene extends Scene {
     private turnManager!: TurnManager;
     private artifactManager!: ArtifactManager;
     private talismanManager!: TalismanManager;
+    private fieldManager!: FieldManager;
+    private pillManager!: PillManager;
+    private pillSlotUI!: PillSlotUI;
+    private eventManager!: BattleEventManager;
+    private sacrificeManager!: SacrificeManager;
+    private sacrificeUI!: SacrificeSelectionUI;
 
     constructor() {
         super('BattleScene');
@@ -88,13 +104,28 @@ export class BattleScene extends Scene {
         this.turnManager = new TurnManager(this);
         this.artifactManager = new ArtifactManager(this, this.battleLog);
         this.talismanManager = new TalismanManager(this, this.battleLog);
+        this.fieldManager = new FieldManager(this, this.battleLog);
+        this.pillManager = new PillManager(this, this.battleLog, 3); // 默认3个丹药槽位
+        this.sacrificeManager = new SacrificeManager(this, this.battleLog);
+        
+        // 初始化事件管理器
+        this.eventManager = new BattleEventManager(
+            this,
+            this.combatManager,
+            this.cardManager,
+            this.fieldManager,
+            this.battleLog
+        );
+        
+        // 初始化献祭UI
+        this.sacrificeUI = new SacrificeSelectionUI(this);
 
         // 加载所有卡牌数据
         const unitCardsData = this.cache.json.get('unitCards') as { units: UnitCard[] };
         const artifactCardsData = this.cache.json.get('artifactCards') as { artifacts: any[] };
         const talismanCardsData = this.cache.json.get('talismanCards') as { talismans: any[] };
-        const pillCardsData = this.cache.json.get('pillCards') as { pills: any[] };
         const fieldCardsData = this.cache.json.get('fieldCards') as { fields: any[] };
+        const pillCardsData = this.cache.json.get('pillCards') as { pills: any[] };
         const starterDeckData = this.cache.json.get('starterDeck') as { cards: Array<{ id: string; count: number }> };
 
         // 创建卡牌索引
@@ -102,34 +133,20 @@ export class BattleScene extends Scene {
         unitCardsData.units.forEach(card => allCards.set(card.id, card));
         artifactCardsData.artifacts.forEach(card => allCards.set(card.id, card));
         talismanCardsData.talismans.forEach(card => allCards.set(card.id, card));
-        pillCardsData.pills.forEach(card => allCards.set(card.id, card));
         fieldCardsData.fields.forEach(card => allCards.set(card.id, card));
+        pillCardsData.pills.forEach(card => allCards.set(card.id, card));
 
         // 根据初始卡组配置构建牌库（支持 UnitCard 和 ArtifactCard）
         this.deck = [];
         starterDeckData.cards.forEach(({ id, count }) => {
             const cardDataTemplate = allCards.get(id);
-            if (cardDataTemplate && cardDataTemplate.kind === 'unit') {
+            if (cardDataTemplate) {
                 for (let i = 0; i < count; i++) {
                     // 深拷贝卡牌数据，确保每张卡都有独立的数据对象
                     const cardData = JSON.parse(JSON.stringify(cardDataTemplate));
-                    this.deck.push(cardData as UnitCard);
+                    this.deck.push(cardData);
                 }
-            } else if (cardDataTemplate && cardDataTemplate.kind === 'artifact') {
-                for (let i = 0; i < count; i++) {
-                    // 深拷贝卡牌数据，确保每张卡都有独立的数据对象
-                    const cardData = JSON.parse(JSON.stringify(cardDataTemplate));
-                    this.deck.push(cardData as ArtifactCard);
-                }
-            } else if (cardDataTemplate && cardDataTemplate.kind === 'talisman') {
-                for (let i = 0; i < count; i++) {
-                    // 深拷贝卡牌数据，确保每张卡都有独立的数据对象
-                    const cardData = JSON.parse(JSON.stringify(cardDataTemplate));
-                    this.deck.push(cardData as TalismanCard);
-                }
-            } else if (cardDataTemplate) {
-                console.warn(`卡牌 ${id} (${cardDataTemplate.kind}) 暂不支持，跳过`);
-            } else {
+            }  else {
                 console.warn(`找不到卡牌 ${id}`);
             }
         });
@@ -149,34 +166,25 @@ export class BattleScene extends Scene {
         // 创建 UI
         this.createUI();
 
-        // 设置符箓使用事件监听
-        this.setupTalismanEvents();
+        // 初始化丹药系统
+        this.setupPillSystem(pillCardsData.pills);
 
-        // 监听效果应用完成事件（通用）
-        // 任何会改变单位状态的效果（攻击、符箓、法器、丹药等）都应触发此事件
-        this.events.on('effectApplied', () => {
-            // 效果应用后立即检查是否有死亡单位
-            if (this.combatManager.hasDeadUnits(this.playerField, this.enemyField)) {
-                this.events.emit('checkDeadUnits');
-            }
-        });
+        // 设置事件管理器引用
+        this.eventManager.setReferences(
+            this.playerField,
+            this.enemyField,
+            this.hand,
+            this.fieldZone
+        );
 
-        // 监听死亡检查事件
+        // 设置所有战斗事件
+        this.eventManager.setupAllEvents();
+        
+        // 设置符箓使用逻辑
+        this.setupTalismanUsageLogic();
+
+        // 补充战斗结束检查逻辑
         this.events.on('checkDeadUnits', () => {
-            const result = this.combatManager.removeDeadUnits(
-                this.playerField,
-                this.enemyField,
-                () => {
-                    // 死亡单位动画完成后，重新排列场上单位
-                    this.cardManager.arrangePlayerField(this.playerField);
-                    this.cardManager.arrangeEnemyField(this.enemyField);
-                }
-            );
-            
-            // 更新场上单位数组
-            this.playerField = result.playerField;
-            this.enemyField = result.enemyField;
-
             // 检查战斗是否结束
             this.combatManager.checkBattleEnd(
                 this.playerHealth,
@@ -186,124 +194,44 @@ export class BattleScene extends Scene {
             );
         });
 
-        // 场景关闭时清理所有事件监听器
-        this.events.once('shutdown', () => {
-            this.events.removeAllListeners('effectApplied');
-            this.events.removeAllListeners('checkDeadUnits');
-            this.events.removeAllListeners('talismanDragStart');
-            this.events.removeAllListeners('talismanDragging');
-            this.events.removeAllListeners('talismanDragEnd');
-            this.events.removeAllListeners('tryUseTalisman');
-            this.events.removeAllListeners('showCardPreview');
-            this.events.removeAllListeners('hideCardPreview');
-            this.events.removeAllListeners('update');
-        });
-
         this.battleLog.addLog('战斗开始！');
         
         EventBus.emit('current-scene-ready', this);
     }
 
     /**
-     * 设置符箓使用事件
+     * 处理符箓使用逻辑（补充BattleEventManager）
      */
-    private setupTalismanEvents(): void {
-        let highlightedTarget: CardSprite | null = null;
-        let targetHighlight: Phaser.GameObjects.Graphics | null = null;
-
-        // 拖拽开始
-        this.events.on('talismanDragStart', (_talisman: TalismanSprite) => {
-            // 创建目标高亮图形
-            targetHighlight = this.add.graphics();
-            targetHighlight.setDepth(999);
-        });
-
-        // 拖拽中 - 实时高亮目标
-        this.events.on('talismanDragging', (_talisman: TalismanSprite, pointer: Phaser.Input.Pointer) => {
-            const target = this.getEnemyUnitAtPosition(pointer.x, pointer.y);
+    private setupTalismanUsageLogic(): void {
+        this.events.on('useTalisman', (talisman: TalismanSprite, target: CardSprite) => {
+            // 先启动符箓选择状态
+            this.talismanManager.startUseTalisman(talisman);
             
-            if (target !== highlightedTarget) {
-                // 清除之前的高亮
-                if (targetHighlight) {
-                    targetHighlight.clear();
+            // 尝试使用符箓
+            const success = this.talismanManager.useTalismanOnTarget(target);
+            
+            if (success) {
+                // 从手牌中移除
+                const index = this.hand.indexOf(talisman);
+                if (index > -1) {
+                    this.hand.splice(index, 1);
                 }
                 
-                highlightedTarget = target;
+                // 加入弃牌堆数据
+                const talismanData = talisman.getCardData();
+                this.addToDiscardPile(talismanData);
                 
-                // 绘制新的高亮
-                if (target && targetHighlight) {
-                    const bounds = target.getBounds();
-                    targetHighlight.lineStyle(4, 0x00ff00, 0.8);
-                    targetHighlight.strokeRect(
-                        bounds.x,
-                        bounds.y,
-                        bounds.width,
-                        bounds.height
-                    );
-                    
-                    // 添加发光效果
-                    targetHighlight.fillStyle(0x00ff00, 0.2);
-                    targetHighlight.fillRect(
-                        bounds.x,
-                        bounds.y,
-                        bounds.width,
-                        bounds.height
-                    );
-                }
-            }
-        });
-
-        // 拖拽结束 - 清除高亮
-        this.events.on('talismanDragEnd', (_talisman: TalismanSprite) => {
-            if (targetHighlight) {
-                targetHighlight.destroy();
-                targetHighlight = null;
-            }
-            highlightedTarget = null;
-        });
-
-        // 监听符箓卡被拖拽结束
-        this.events.on('tryUseTalisman', (talisman: TalismanSprite) => {
-            // 检查是否在敌方单位上
-            const pointer = this.input.activePointer;
-            const target = this.getEnemyUnitAtPosition(pointer.x, pointer.y);
-
-            if (target) {
-                // 先启动符箓选择状态
-                this.talismanManager.startUseTalisman(talisman);
+                // 重新排列手牌
+                this.cardManager.arrangeHand(this.hand);
                 
-                // 尝试使用符箓
-                const success = this.talismanManager.useTalismanOnTarget(target);
-                
-                if (success) {
-                    // 从手牌中移除
-                    const index = this.hand.indexOf(talisman);
-                    if (index > -1) {
-                        this.hand.splice(index, 1);
+                // 等待动画和死亡处理完成后，播放符箓飞向弃牌堆的动画
+                this.time.delayedCall(900, () => {
+                    if (talisman.active) {
+                        this.playCardToDiscardPileAnimation(talisman);
                     }
-                    
-                    // 加入弃牌堆数据
-                    const talismanData = talisman.getCardData();
-                    this.addToDiscardPile(talismanData);
-                    
-                    // 重新排列手牌
-                    this.cardManager.arrangeHand(this.hand);
-                    
-                    // 等待动画和死亡处理完成后，播放符箓飞向弃牌堆的动画
-                    this.time.delayedCall(900, () => {
-                        // 播放符箓飞向弃牌堆的动画
-                        if (talisman.active) {
-                            this.playCardToDiscardPileAnimation(talisman);
-                        }
-                    });
-                } else {
-                    // 使用失败，返回原位
-                    talisman.returnToOriginalPosition();
-                    talisman.setScale(talisman.scale / 1.2);
-                    talisman.setDepth(0);
-                }
+                });
             } else {
-                // 没有拖到敌方单位上，返回原位
+                // 使用失败，返回原位
                 talisman.returnToOriginalPosition();
                 talisman.setScale(talisman.scale / 1.2);
                 talisman.setDepth(0);
@@ -312,23 +240,63 @@ export class BattleScene extends Scene {
     }
 
     /**
-     * 获取指定位置的敌方单位（扩大检测范围）
+     * 初始化丹药系统
      */
-    private getEnemyUnitAtPosition(x: number, y: number): CardSprite | null {
-        const expandRadius = 50; // 扩大检测范围
+    private setupPillSystem(pillsData: PillCard[]): void {
+        const { width, height } = this.scale;
         
-        for (const enemy of this.enemyField) {
-            const bounds = enemy.getBounds();
-            // 扩大检测区域
-            const expandedBounds = Phaser.Geom.Rectangle.Clone(bounds);
-            Phaser.Geom.Rectangle.Inflate(expandedBounds, expandRadius, expandRadius);
+        // 创建丹药槽位UI（放在屏幕下方手牌区上方）
+        this.pillSlotUI = new PillSlotUI(
+            this,
+            width / 2,
+            height * 0.75,
+            (slotIndex: number) => {
+                // 点击槽位使用丹药
+                this.usePillFromSlot(slotIndex);
+            }
+        );
+
+        // 初始化槽位显示
+        this.pillSlotUI.createSlots(this.pillManager.getSlots());
+
+        // 给玩家添加初始丹药（测试：添加2个丹药）
+        if (pillsData.length > 0) {
+            // 添加第一个丹药
+            this.pillManager.addPill(pillsData[0]);
             
-            if (Phaser.Geom.Rectangle.Contains(expandedBounds, x, y)) {
-                return enemy;
+            // 添加第二个丹药（如果有）
+            if (pillsData.length > 1) {
+                this.pillManager.addPill(pillsData[1]);
             }
         }
-        return null;
     }
+
+    /**
+     * 使用指定槽位的丹药
+     */
+    private usePillFromSlot(slotIndex: number): void {
+        const pill = this.pillManager.getPillAt(slotIndex);
+        if (!pill) {
+            return;
+        }
+
+        // 根据丹药目标类型决定使用方式
+        if (pill.target === 'player') {
+            // 直接使用（作用于玩家）
+            this.pillManager.usePillFromSlot(slotIndex, 'player');
+        } else if (pill.target === 'unit') {
+            // 需要选择目标单位（暂时简化：对第一个友方单位生效）
+            if (this.playerField.length > 0) {
+                this.pillManager.usePillFromSlot(slotIndex, this.playerField[0]);
+            } else {
+                this.battleLog.addLog('没有可用的目标单位');
+            }
+        } else {
+            // 群体效果（allUnits, all），直接使用
+            this.pillManager.usePillFromSlot(slotIndex);
+        }
+    }
+
 
     private createFieldZones() {
         const { width, height } = this.scale;
@@ -350,6 +318,26 @@ export class BattleScene extends Scene {
         this.add.text(width / 2, height * 0.08, '敌方场地', {
             fontSize: fontSize,
             color: '#e74c3c'
+        }).setOrigin(0.5);
+
+        // 场地卡区域（左侧）
+        const fieldZoneWidth = width * 0.15;
+        const fieldZoneHeight = height * 0.35;
+        const fieldZoneX = width * 0.1;
+        const fieldZoneY = height * 0.35;
+        this.fieldZone = this.add.zone(fieldZoneX, fieldZoneY, fieldZoneWidth, fieldZoneHeight).setInteractive();
+        const fieldZoneGraphics = this.add.graphics();
+        fieldZoneGraphics.lineStyle(3, 0xf39c12, 0.8);
+        fieldZoneGraphics.strokeRect(
+            this.fieldZone.x - this.fieldZone.width / 2,
+            this.fieldZone.y - this.fieldZone.height / 2,
+            this.fieldZone.width,
+            this.fieldZone.height
+        );
+        this.add.text(fieldZoneX, fieldZoneY - fieldZoneHeight / 2 - 20, '场地', {
+            fontSize: fontSize,
+            color: '#f39c12',
+            fontStyle: 'bold'
         }).setOrigin(0.5);
 
         // 我方场地
@@ -400,7 +388,7 @@ export class BattleScene extends Scene {
     }
 
     private setupCardPreview() {
-        this.events.on('showCardPreview', (card: CardSprite | ArtifactSprite) => {
+        this.events.on('showCardPreview', (card: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite) => {
             this.showCardPreview(card);
         });
 
@@ -409,7 +397,7 @@ export class BattleScene extends Scene {
         });
     }
 
-    private showCardPreview(card: CardSprite | ArtifactSprite) {
+    private showCardPreview(card: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite) {
         // 先隐藏旧的预览
         this.hideCardPreview();
 
@@ -418,126 +406,34 @@ export class BattleScene extends Scene {
         
         const previewX = width * 0.15;
         const previewY = height * 0.5;
-        const previewScale = 1.5;
+        const previewScale = 1.8;
 
-        // 创建新预览
+        // 直接克隆原卡片作为预览，保持原样式
+        let previewCard: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite;
+        
+        if (cardData.kind === 'unit') {
+            previewCard = new CardSprite(this, 0, 0, cardData, 1);
+        } else if (cardData.kind === 'artifact') {
+            previewCard = new ArtifactSprite(this, 0, 0, cardData, 1);
+        } else if (cardData.kind === 'talisman') {
+            previewCard = new TalismanSprite(this, 0, 0, cardData, 1);
+        } else if (cardData.kind === 'field') {
+            previewCard = new FieldSprite(this, 0, 0, cardData, 1);
+        } else {
+            return; // 不支持的卡牌类型
+        }
+
+        // 创建预览容器
         this.cardPreview = this.add.container(previewX, previewY);
-        this.cardPreview.setDepth(6000); // 高于CardListView(5000)，确保预览不被遮挡
+        this.cardPreview.setDepth(6000);
 
-        const cardWidth = 180;
-        const cardHeight = 260;
-
-        const bgMask = this.add.rectangle(0, 0, cardWidth + 40, cardHeight + 40, 0x000000, 0.7);
+        // 添加背景遮罩
+        const bgMask = this.add.rectangle(0, 0, 220, 300, 0x000000, 0.8);
         bgMask.setStrokeStyle(4, 0xffd700);
         this.cardPreview.add(bgMask);
 
-        const borderColor = cardData.kind === 'artifact' ? 0xdaa520 : 0xffd700;
-        const background = this.add.rectangle(0, 0, cardWidth, cardHeight, 0x2d2d2d);
-        background.setStrokeStyle(3, borderColor);
-        this.cardPreview.add(background);
-
-        const nameText = this.add.text(0, -110, cardData.name, {
-            fontSize: '18px',
-            color: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        this.cardPreview.add(nameText);
-
-        // 星级（如果有）
-        if ('star' in cardData && cardData.star) {
-            const stars = '★'.repeat(cardData.star);
-            const starsText = this.add.text(0, -85, stars, {
-                fontSize: '16px',
-                color: '#f1c40f'
-            }).setOrigin(0.5);
-            this.cardPreview.add(starsText);
-        }
-
-        // 只有单位卡才有 realm、race、attack、health
-        if (cardData.kind === 'unit') {
-            const realmInfo = `${cardData.realm?.stage || ''} ${cardData.realm?.phase || ''}`;
-            const realmText = this.add.text(0, -60, realmInfo, {
-                fontSize: '14px',
-                color: '#9b59b6'
-            }).setOrigin(0.5);
-            this.cardPreview.add(realmText);
-
-            const raceBox = this.add.rectangle(0, -10, 150, 60, 0x34495e);
-            this.cardPreview.add(raceBox);
-            const raceText = this.add.text(0, -10, cardData.race, {
-                fontSize: '16px',
-                color: '#95a5a6'
-            }).setOrigin(0.5);
-            this.cardPreview.add(raceText);
-
-            const descriptionText = this.add.text(0, 60, cardData.description, {
-                fontSize: '13px',
-                color: '#bdc3c7',
-                wordWrap: { width: 160 },
-                align: 'center'
-            }).setOrigin(0.5);
-            this.cardPreview.add(descriptionText);
-
-            const attackBg = this.add.rectangle(-50, 110, 60, 30, 0x4d1a1a);
-            this.cardPreview.add(attackBg);
-            const attackText = this.add.text(-50, 110, `⚔${cardData.attack}`, {
-                fontSize: '16px',
-                color: '#e74c3c',
-                fontStyle: 'bold'
-            }).setOrigin(0.5);
-            this.cardPreview.add(attackText);
-
-            const healthBg = this.add.rectangle(50, 110, 60, 30, 0x1a4d2e);
-            this.cardPreview.add(healthBg);
-            const healthText = this.add.text(50, 110, `❤${cardData.health}`, {
-                fontSize: '16px',
-                color: cardData.health <= 0 ? '#666666' : (cardData.health <= 3 ? '#e74c3c' : '#2ecc71'),
-                fontStyle: 'bold'
-            }).setOrigin(0.5);
-            this.cardPreview.add(healthText);
-        } else if (cardData.kind === 'artifact') {
-            // 法器卡显示类型、加成、耐久度
-            const typeLabel = cardData.labels?.join(' ') || '法器';
-            const typeText = this.add.text(0, -60, typeLabel, {
-                fontSize: '14px',
-                color: '#daa520'
-            }).setOrigin(0.5);
-            this.cardPreview.add(typeText);
-
-            const descriptionText = this.add.text(0, 20, cardData.description, {
-                fontSize: '13px',
-                color: '#bdc3c7',
-                wordWrap: { width: 160 },
-                align: 'center'
-            }).setOrigin(0.5);
-            this.cardPreview.add(descriptionText);
-
-            // 显示加成
-            let yPos = 90;
-            if (cardData.attackBonus) {
-                const bonusText = this.add.text(0, yPos, `⚔ +${cardData.attackBonus} 攻击`, {
-                    fontSize: '14px',
-                    color: '#e74c3c'
-                }).setOrigin(0.5);
-                this.cardPreview.add(bonusText);
-                yPos += 25;
-            }
-            if (cardData.healthBonus) {
-                const bonusText = this.add.text(0, yPos, `❤ +${cardData.healthBonus} 生命`, {
-                    fontSize: '14px',
-                    color: '#2ecc71'
-                }).setOrigin(0.5);
-                this.cardPreview.add(bonusText);
-                yPos += 25;
-            }
-            if (cardData.durability) {
-                const durText = this.add.text(0, yPos, `耐久: ${cardData.durability}`, {
-                    fontSize: '14px',
-                    color: '#95a5a6'
-                }).setOrigin(0.5);
-                this.cardPreview.add(durText);
-            }
-        }
+        // 添加克隆的卡片
+        this.cardPreview.add(previewCard);
 
         this.cardPreview.setScale(previewScale);
         this.cardPreview.setAlpha(0);
@@ -577,6 +473,37 @@ export class BattleScene extends Scene {
     }
 
     public playCardToField(card: CardSprite): boolean {
+        const cardData = card.getCardData();
+        
+        // 检查是否需要献祭
+        const sacrificeRequired = this.sacrificeManager.getSacrificeRequired(cardData);
+        
+        if (sacrificeRequired > 0) {
+            // 需要献祭
+            if (!this.sacrificeManager.canSacrifice(this.playerField, sacrificeRequired)) {
+                // 场上单位不足，无法召唤
+                this.battleLog.addLog(`需要${sacrificeRequired}只场上单位进行献祭，但场上单位不足！`);
+                return false;
+            }
+            
+            // 显示献祭选择UI
+            this.sacrificeUI.show(
+                this.playerField,
+                sacrificeRequired,
+                (selectedUnits: CardSprite[]) => {
+                    // 献祭完成，执行召唤
+                    this.performSacrificeAndSummon(card, selectedUnits);
+                },
+                () => {
+                    // 取消献祭，卡牌返回原位
+                    card.returnToOriginalPosition();
+                }
+            );
+            
+            return false; // 暂时返回false，等待献祭完成
+        }
+        
+        // 不需要献祭，直接召唤
         const result = this.cardManager.playCardToField(card, this.hand.filter(c => c instanceof CardSprite) as CardSprite[], this.playerField);
         if (result.success) {
             // 过滤并更新手牌
@@ -589,6 +516,44 @@ export class BattleScene extends Scene {
             this.cardManager.arrangeHand(this.hand);
         }
         return result.success;
+    }
+    
+    /**
+     * 执行献祭并召唤单位
+     */
+    private performSacrificeAndSummon(card: CardSprite, sacrificeTargets: CardSprite[]): void {
+        // 执行献祭
+        this.sacrificeManager.performSacrifice(
+            sacrificeTargets,
+            this.playerField,
+            (remainingField: CardSprite[]) => {
+                // 献祭完成，更新场上单位
+                this.playerField = remainingField;
+                
+                // 重新排列场上单位
+                this.cardManager.arrangePlayerField(this.playerField);
+                
+                // 现在召唤新单位
+                const result = this.cardManager.playCardToField(
+                    card,
+                    this.hand.filter(c => c instanceof CardSprite) as CardSprite[],
+                    this.playerField
+                );
+                
+                if (result.success) {
+                    // 从手牌中移除
+                    const cardIndex = this.hand.indexOf(card);
+                    if (cardIndex > -1) {
+                        this.hand.splice(cardIndex, 1);
+                    }
+                    
+                    // 更新场上单位
+                    this.playerField = result.playerField;
+                    this.cardManager.arrangePlayerField(this.playerField);
+                    this.cardManager.arrangeHand(this.hand);
+                }
+            }
+        );
     }
 
     public tryEquipArtifact(artifact: ArtifactSprite): boolean {

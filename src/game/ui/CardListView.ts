@@ -2,9 +2,11 @@ import { GameObjects, Scene } from 'phaser';
 import { CardSprite } from '../objects/CardSprite';
 import { ArtifactSprite } from '../objects/ArtifactSprite';
 import { TalismanSprite } from '../objects/TalismanSprite';
+import { FieldSprite } from '../objects/FieldSprite';
 import type { UnitCard } from '../../../data/types/cards/unit';
 import type { ArtifactCard } from '../../../data/types/cards/artifact';
 import type { TalismanCard } from '../../../data/types/cards/talisman';
+import type { FieldCard } from '../../../data/types/cards/field';
 
 /**
  * 通用的卡片列表视图
@@ -12,12 +14,12 @@ import type { TalismanCard } from '../../../data/types/cards/talisman';
  */
 export class CardListView extends GameObjects.Container {
     private title: string;
-    private cards: (UnitCard | ArtifactCard | TalismanCard)[];
+    private cards: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[];
     private background!: GameObjects.Rectangle;
     private titleText!: GameObjects.Text;
     private closeButton!: GameObjects.Rectangle;
     private scrollContainer!: GameObjects.Container;
-    private cardSprites: (CardSprite | ArtifactSprite | TalismanSprite)[] = [];
+    private cardSprites: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[] = [];
     private maskShape!: GameObjects.Graphics;
     
     private scrollY: number = 0;
@@ -25,7 +27,7 @@ export class CardListView extends GameObjects.Container {
     private isDragging: boolean = false;
     private lastPointerY: number = 0;
 
-    constructor(scene: Scene, title: string, cards: (UnitCard | ArtifactCard | TalismanCard)[]) {
+    constructor(scene: Scene, title: string, cards: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[]) {
         super(scene, 0, 0);
         
         this.title = title;
@@ -140,13 +142,15 @@ export class CardListView extends GameObjects.Container {
             const x = col * (cardWidth + spacing) + cardWidth / 2;
             const y = row * (cardHeight + spacing) + cardHeight / 2;
 
-            let sprite: CardSprite | ArtifactSprite | TalismanSprite;
+            let sprite: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite;
             if (cardData.kind === 'unit') {
                 sprite = new CardSprite(this.scene, x, y, cardData as UnitCard, cardScale);
             } else if (cardData.kind === 'artifact') {
                 sprite = new ArtifactSprite(this.scene, x, y, cardData as ArtifactCard, cardScale);
             } else if (cardData.kind === 'talisman') {
                 sprite = new TalismanSprite(this.scene, x, y, cardData as TalismanCard, cardScale);
+            } else if (cardData.kind === 'field') {
+                sprite = new FieldSprite(this.scene, x, y, cardData as FieldCard, cardScale);
             } else {
                 return; // 暂不支持其他类型
             }

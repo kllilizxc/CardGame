@@ -11,12 +11,28 @@
       "count": 2
     },
     {
-      "id": "AR_001",
+      "id": "CR_003",
       "count": 2
     },
     {
+      "id": "AR_001",
+      "count": 1
+    },
+    {
       "id": "TL_001",
-      "count": 2
+      "count": 1
+    },
+    {
+      "id": "FD_001",
+      "count": 1
+    },
+    {
+      "id": "CR_HIGH_001",
+      "count": 1
+    },
+    {
+      "id": "CR_HIGH_002",
+      "count": 1
     }
   ]
 }

@@ -57,55 +57,24 @@ export class TalismanSprite extends BaseCardSprite {
         // 设置交互和缩放
         this.setupInteractivity();
 
-        // 设置符箓卡专用的拖拽事件
-        this.setupTalismanDragEvents();
-    }
-
-    /**
-     * 设置符箓卡专用的拖拽逻辑
-     */
-    private setupTalismanDragEvents(): void {
-        // 复用基类的hover效果
-        this.on('pointerover', () => {
-            this.onPointerOver();
-        });
-
-        this.on('pointerout', () => {
-            if (!this.isDragging) {
-                this.onPointerOut();
-            }
-        });
-
-        // 拖拽开始
-        this.on('dragstart', () => {
-            this.isDragging = true;
-            this.originalX = this.x;
-            this.originalY = this.y;
-            this.setScale(this.cardScale * 1.2);
-            this.setDepth(1000);
-            
-            // 通知场景开始拖拽符箓
-            this.scene.events.emit('talismanDragStart', this);
-        });
-
-        // 拖拽中 - 持续检测目标
-        this.on('drag', (pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
-            this.x = dragX;
-            this.y = dragY;
-            
-            // 通知场景更新目标高亮
-            this.scene.events.emit('talismanDragging', this, pointer);
-        });
-
-        // 拖拽结束 - 触发使用符箓
-        this.on('dragend', () => {
-            this.isDragging = false;
-            
-            // 通知场景结束拖拽
-            this.scene.events.emit('talismanDragEnd', this);
-            
-            // 通知场景尝试使用符箓
-            this.scene.events.emit('tryUseTalisman', this);
+        // 设置符箓卡专用的拖拽事件（使用统一的拖拽逻辑 + 自定义钩子）
+        this.setupDragEvents({
+            onDragStart: () => {
+                // 通知场景开始拖拽符箓
+                this.scene.events.emit('talismanDragStart', this);
+            },
+            onDragging: (pointer: Phaser.Input.Pointer) => {
+                // 通知场景更新目标高亮（持续检测目标）
+                this.scene.events.emit('talismanDragging', this, pointer);
+            },
+            onDragEnd: () => {
+                // 通知场景结束拖拽
+                this.scene.events.emit('talismanDragEnd', this);
+                
+                // 通知场景尝试使用符箓
+                this.scene.events.emit('tryUseTalisman', this);
+            },
+            emitSceneEvents: false // 符箓使用自己的场景事件，不需要通用的 cardDragEnd
         });
     }
 

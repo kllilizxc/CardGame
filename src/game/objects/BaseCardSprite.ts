@@ -50,8 +50,21 @@ export abstract class BaseCardSprite extends GameObjects.Container {
 
     /**
      * 设置通用的拖拽事件
+     * @param config 可选配置，支持自定义拖拽各阶段的行为
      */
-    protected setupDragEvents(onDragEnd?: () => void): void {
+    protected setupDragEvents(config?: {
+        onDragStart?: () => void;
+        onDragging?: (pointer: Phaser.Input.Pointer) => void;
+        onDragEnd?: () => void;
+        emitSceneEvents?: boolean; // 是否发送场景事件（默认true）
+    }): void {
+        const {
+            onDragStart,
+            onDragging,
+            onDragEnd,
+            emitSceneEvents = true
+        } = config || {};
+
         // 悬停效果
         this.on('pointerover', () => {
             this.onPointerOver();
@@ -70,12 +83,22 @@ export abstract class BaseCardSprite extends GameObjects.Container {
             this.originalY = this.y;
             this.setScale(this.cardScale * 1.2);
             this.setDepth(1000);
+            
+            // 执行自定义钩子
+            if (onDragStart) {
+                onDragStart();
+            }
         });
 
         // 拖拽中
-        this.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+        this.on('drag', (pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
             this.x = dragX;
             this.y = dragY;
+            
+            // 执行自定义钩子
+            if (onDragging) {
+                onDragging(pointer);
+            }
         });
 
         // 拖拽结束
@@ -84,6 +107,12 @@ export abstract class BaseCardSprite extends GameObjects.Container {
             this.setScale(this.cardScale);
             this.setDepth(0);
             
+            // 通知场景卡牌拖拽结束（用于场地卡等特殊处理）
+            if (emitSceneEvents) {
+                this.scene.events.emit('cardDragEnd', this);
+            }
+            
+            // 执行自定义钩子
             if (onDragEnd) {
                 onDragEnd();
             }
@@ -110,6 +139,12 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      * 获取默认边框颜色（子类需实现）
      */
     protected abstract getDefaultStrokeColor(): number;
+
+    /**
+     * 获取卡牌数据（子类需实现）
+     * 返回具体的卡牌数据对象，用于类型安全的数据访问
+     */
+    public abstract getCardData(): any;
 
     /**
      * 返回原始位置

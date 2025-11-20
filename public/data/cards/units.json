@@ -88,6 +88,113 @@
           "scriptId": "effect.CR_002.turnStart.buffBeasts"
         }
       ]
+    },
+    {
+      "id": "CR_003",
+      "name": "雷鸣幼鹰",
+      "kind": "unit",
+      "description": "栖息于青云峰顶的雷属性灵禽，速度奇快，能释放微弱的雷电之力。",
+      "rarity": "common",
+      "labels": ["sect_qingyun", "飞禽族", "雷属性"],
+      "limitPerDeck": 3,
+      "star": 2,
+      "race": "飞禽族",
+      "linggen": ["金"],
+      "factionId": "sect_qingyun",
+      "realm": {
+        "stage": "炼气期",
+        "phase": "初期",
+        "value": 1
+      },
+      "attack": 5,
+      "health": 20,
+      "effects": []
+    },
+    {
+      "id": "CR_HIGH_001",
+      "name": "金丹期剑修",
+      "kind": "unit",
+      "description": "强大的金丹期剑修，需要献祭1只灵兽才能召唤。",
+      "rarity": "rare",
+      "labels": ["sect_qingyun", "剑修", "金丹期"],
+      "limitPerDeck": 2,
+      "star": 5,
+      "race": "人族",
+      "linggen": ["金"],
+      "factionId": "sect_qingyun",
+      "realm": {
+        "stage": "金丹期",
+        "phase": "初期",
+        "value": 10
+      },
+      "attack": 12,
+      "health": 35,
+      "effects": [
+        {
+          "timing": "onSummon",
+          "target": {
+            "scope": "enemyUnits"
+          },
+          "actions": [
+            {
+              "type": "modifyHealth",
+              "value": -5
+            }
+          ],
+          "text": "登场时：对所有敌方单位造成5点伤害。",
+          "scriptId": "effect.CR_HIGH_001.onSummon"
+        }
+      ]
+    },
+    {
+      "id": "CR_HIGH_002",
+      "name": "元婴期道主",
+      "kind": "unit",
+      "description": "极其强大的元婴期修士，需要献祭2只灵兽才能召唤。",
+      "rarity": "epic",
+      "labels": ["sect_qingyun", "道主", "元婴期"],
+      "limitPerDeck": 1,
+      "star": 8,
+      "race": "人族",
+      "linggen": ["金", "木", "水", "火", "土"],
+      "factionId": "sect_qingyun",
+      "realm": {
+        "stage": "元婴期",
+        "phase": "中期",
+        "value": 18
+      },
+      "attack": 20,
+      "health": 60,
+      "effects": [
+        {
+          "timing": "onSummon",
+          "target": {
+            "scope": "self"
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 5
+            }
+          ],
+          "text": "登场时：本卡攻击力+5。",
+          "scriptId": "effect.CR_HIGH_002.onSummon.buff"
+        },
+        {
+          "timing": "turnStart",
+          "target": {
+            "scope": "allyUnits"
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 2
+            }
+          ],
+          "text": "每回合开始时：所有友方单位攻击力+2。",
+          "scriptId": "effect.CR_HIGH_002.turnStart"
+        }
+      ]
     }
   ]
 }

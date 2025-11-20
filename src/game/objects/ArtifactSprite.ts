@@ -81,16 +81,18 @@ export class ArtifactSprite extends BaseCardSprite {
         this.setupInteractivity();
 
         // 设置拖拽事件
-        this.setupDragEvents(() => {
-            // 拖拽结束后的处理
-            const battleScene = this.scene as any;
-            if (battleScene.tryEquipArtifact) {
-                const success = battleScene.tryEquipArtifact(this);
-                if (!success) {
+        this.setupDragEvents({
+            onDragEnd: () => {
+                // 拖拽结束后的处理
+                const battleScene = this.scene as any;
+                if (battleScene.tryEquipArtifact) {
+                    const success = battleScene.tryEquipArtifact(this);
+                    if (!success) {
+                        this.returnToOriginalPosition();
+                    }
+                } else {
                     this.returnToOriginalPosition();
                 }
-            } else {
-                this.returnToOriginalPosition();
             }
         });
     }
