@@ -60,6 +60,157 @@
           "scriptId": "effect.TL_002.shield"
         }
       ]
+    },
+    {
+      "id": "TL_003",
+      "name": "雷击符",
+      "kind": "talisman",
+      "description": "引动天雷，对敌方单位造成强力伤害。",
+      "rarity": "rare",
+      "labels": ["攻击符", "雷系"],
+      "limitPerDeck": 2,
+
+      "isInstant": true,
+      "duration": 0,
+      "target": "unit",
+
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "singleEnemy"
+          },
+          "actions": [
+            {
+              "type": "dealDamage",
+              "value": 6
+            }
+          ],
+          "text": "对一个敌方单位造成6点伤害。",
+          "scriptId": "effect.TL_003.cast"
+        }
+      ]
+    },
+    {
+      "id": "TL_004",
+      "name": "治愈符",
+      "kind": "talisman",
+      "description": "温和的治疗符箓，能快速恢复伤势。",
+      "rarity": "common",
+      "labels": ["治疗符"],
+      "limitPerDeck": 3,
+
+      "isInstant": true,
+      "duration": 0,
+      "target": "unit",
+
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "singleAlly"
+          },
+          "actions": [
+            {
+              "type": "heal",
+              "value": 8
+            }
+          ],
+          "text": "为一个己方单位恢复8点生命值。",
+          "scriptId": "effect.TL_004.cast"
+        }
+      ]
+    },
+    {
+      "id": "TL_005",
+      "name": "冰封符",
+      "kind": "talisman",
+      "description": "冰系符箓，冻结目标使其无法行动。",
+      "rarity": "rare",
+      "labels": ["控制符", "冰系"],
+      "limitPerDeck": 2,
+
+      "isInstant": true,
+      "duration": 0,
+      "target": "unit",
+
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "singleEnemy"
+          },
+          "actions": [
+            {
+              "type": "applyStatus",
+              "statusId": "frozen",
+              "value": 1
+            }
+          ],
+          "text": "使一个敌方单位冰封，下回合无法攻击。",
+          "scriptId": "effect.TL_005.cast"
+        }
+      ]
+    },
+    {
+      "id": "TL_006",
+      "name": "群攻符",
+      "kind": "talisman",
+      "description": "范围攻击符箓，对所有敌人造成伤害。",
+      "rarity": "epic",
+      "labels": ["攻击符", "范围"],
+      "limitPerDeck": 1,
+
+      "isInstant": true,
+      "duration": 0,
+      "target": "allEnemies",
+
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "allEnemies"
+          },
+          "actions": [
+            {
+              "type": "dealDamage",
+              "value": 4
+            }
+          ],
+          "text": "对所有敌方单位造成4点伤害。",
+          "scriptId": "effect.TL_006.cast"
+        }
+      ]
+    },
+    {
+      "id": "TL_007",
+      "name": "净化符",
+      "kind": "talisman",
+      "description": "驱散一切负面状态的符箓。",
+      "rarity": "uncommon",
+      "labels": ["辅助符"],
+      "limitPerDeck": 2,
+
+      "isInstant": true,
+      "duration": 0,
+      "target": "unit",
+
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "singleAlly"
+          },
+          "actions": [
+            {
+              "type": "removeDebuffs",
+              "value": 1
+            }
+          ],
+          "text": "移除一个己方单位的所有负面状态。",
+          "scriptId": "effect.TL_007.cast"
+        }
+      ]
     }
   ]
 }

@@ -76,6 +76,118 @@ export class BattleAnimationManager {
         });
     }
 
+    public playSummonAnimation(card: CardSprite, star: number): void {
+        if (!card.active || star < 5) {
+            return;
+        }
+
+        const scene = this.scene;
+        const intensity = star >= 8 ? 2 : 1;
+        const baseScale = (card as any).getCardBaseScale ? (card as any).getCardBaseScale() : card.scale;
+        const originalDepth = card.depth ?? 0;
+        const originalPos = (card as any).getOriginalPosition ? (card as any).getOriginalPosition() : null;
+        const finalX = originalPos ? originalPos.x : card.x;
+        const finalY = originalPos ? originalPos.y : card.y;
+        const dropHeight = 250 * intensity;
+
+        let glow: Phaser.GameObjects.Graphics | null = null;
+        const particles: Phaser.GameObjects.Graphics[] = [];
+
+        const cleanup = () => {
+            if (!card.active) {
+                return;
+            }
+            card.setAngle(0);
+            card.setPosition(finalX, finalY);
+            card.setScale(baseScale);
+            card.setAlpha(1);
+            card.setDepth(originalDepth);
+            if (card.input) {
+                (card.input as any).draggable = false;
+            }
+            if (glow) {
+                glow.destroy();
+                glow = null;
+            }
+            particles.splice(0).forEach(p => p.destroy());
+        };
+
+        try {
+            scene.tweens.killTweensOf(card);
+
+            card.setPosition(finalX, finalY - dropHeight);
+            card.setAlpha(0);
+            card.setScale(baseScale * 0.8);
+            card.setDepth(5000);
+
+            glow = scene.add.graphics();
+            glow.fillStyle(star >= 8 ? 0xffd700 : 0x9b59b6, 0.6);
+            glow.fillCircle(0, 0, 150 * intensity);
+            glow.setPosition(finalX, finalY);
+            glow.setAlpha(0);
+            glow.setDepth(4998);
+
+            for (let i = 0; i < 20 * intensity; i++) {
+                const particle = scene.add.graphics();
+                const color = star >= 8 ? 0xffd700 : 0x9b59b6;
+                particle.fillStyle(color, 1);
+                particle.fillCircle(0, 0, 3);
+                particle.setPosition(finalX, finalY);
+                particle.setDepth(4999);
+                particles.push(particle);
+            }
+
+            this.shakeCamera(intensity);
+
+            scene.tweens.add({
+                targets: glow,
+                alpha: 0.8,
+                scale: 1.5,
+                duration: 300 * intensity,
+                ease: 'Cubic.easeOut'
+            });
+
+            particles.forEach((particle, index) => {
+                const angle = (Math.PI * 2 * index) / particles.length;
+                const distance = 100 * intensity;
+                scene.tweens.add({
+                    targets: particle,
+                    x: finalX + Math.cos(angle) * distance,
+                    y: finalY + Math.sin(angle) * distance,
+                    alpha: 0,
+                    duration: 600 * intensity,
+                    ease: 'Cubic.easeOut',
+                    onComplete: () => particle.destroy()
+                });
+            });
+
+            scene.tweens.add({
+                targets: card,
+                x: finalX,
+                y: finalY,
+                alpha: 1,
+                scale: baseScale,
+                duration: 400 * intensity,
+                ease: 'Back.easeOut',
+                onComplete: () => {
+                    scene.tweens.add({
+                        targets: card,
+                        angle: -5 * intensity,
+                        duration: 50,
+                        yoyo: true,
+                        repeat: 3 * intensity,
+                        ease: 'Sine.easeInOut',
+                        onComplete: cleanup
+                    });
+                },
+                onStop: cleanup
+            });
+        } catch (error) {
+            console.error('Summon animation error', error);
+            cleanup();
+        }
+    }
+
     // 单位攻击玩家动画
     public addAttackPlayerAnimation(
         attacker: CardSprite,
@@ -146,14 +258,91 @@ export class BattleAnimationManager {
     public playHitAnimation(target: CardSprite): void {
         const originalX = target.x;
         
+        // 震动效果
         this.scene.tweens.add({
             targets: target,
-            x: originalX + 10,
+            x: originalX + 5,
             duration: 50,
             yoyo: true,
             repeat: 2,
-            ease: 'Power2'
+            ease: 'Power2',
+            onComplete: () => {
+                target.x = originalX;
+            }
         });
+        
+        // 红色闪烁效果
+        this.scene.tweens.add({
+            targets: target,
+            alpha: 0.6,
+            duration: 100,
+            yoyo: true,
+            repeat: 1
+        });
+        
+        // 创建红色闪光特效
+        const hitFlash = this.scene.add.circle(target.x, target.y, 50, 0xff0000, 0.5);
+        hitFlash.setDepth(target.depth + 1);
+        this.scene.tweens.add({
+            targets: hitFlash,
+            alpha: 0,
+            scale: 1.5,
+            duration: 300,
+            ease: 'Power2',
+            onComplete: () => {
+                hitFlash.destroy();
+            }
+        });
+    }
+
+    // 治疗动画
+    public playHealAnimation(target: CardSprite): void {
+        // 绿色闪烁效果
+        this.scene.tweens.add({
+            targets: target,
+            alpha: { from: 1, to: 0.7 },
+            duration: 100,
+            yoyo: true,
+            repeat: 2
+        });
+        
+        // 创建绿色治疗光圈特效
+        const healGlow = this.scene.add.circle(target.x, target.y, 40, 0x2ecc71, 0.6);
+        healGlow.setDepth(target.depth + 1);
+        this.scene.tweens.add({
+            targets: healGlow,
+            alpha: 0,
+            scale: 1.8,
+            duration: 400,
+            ease: 'Power2',
+            onComplete: () => {
+                healGlow.destroy();
+            }
+        });
+        
+        // 治疗粒子效果（向上飘散）
+        for (let i = 0; i < 3; i++) {
+            this.scene.time.delayedCall(i * 100, () => {
+                const particle = this.scene.add.circle(
+                    target.x + (Math.random() - 0.5) * 60,
+                    target.y + 30,
+                    3,
+                    0x2ecc71,
+                    0.8
+                );
+                particle.setDepth(target.depth + 2);
+                this.scene.tweens.add({
+                    targets: particle,
+                    y: particle.y - 50,
+                    alpha: 0,
+                    duration: 600,
+                    ease: 'Power1',
+                    onComplete: () => {
+                        particle.destroy();
+                    }
+                });
+            });
+        }
     }
 
     // 死亡动画
@@ -205,5 +394,9 @@ export class BattleAnimationManager {
             ease: 'Power2',
             onComplete: () => damageText.destroy()
         });
+    }
+
+    private shakeCamera(intensity: number = 1): void {
+        this.scene.cameras.main.shake(400 * intensity, 0.01 * intensity, true);
     }
 }

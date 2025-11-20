@@ -1,38 +1,43 @@
 {
-  "name": "初始卡组",
-  "description": "青云宗弟子的基础卡组",
+  "name": "功能测试卡组",
+  "description": "包含各类卡牌，方便测试献祭召唤、装备、符箓、场地、丹药等所有功能。",
   "cards": [
-    {
-      "id": "CR_001",
-      "count": 3
-    },
-    {
-      "id": "CR_002",
-      "count": 2
-    },
-    {
-      "id": "CR_003",
-      "count": 2
-    },
-    {
-      "id": "AR_001",
-      "count": 1
-    },
-    {
-      "id": "TL_001",
-      "count": 1
-    },
-    {
-      "id": "FD_001",
-      "count": 1
-    },
-    {
-      "id": "CR_HIGH_001",
-      "count": 1
-    },
-    {
-      "id": "CR_HIGH_002",
-      "count": 1
-    }
+    { "id": "CR_001", "count": 1 },
+    { "id": "CR_002", "count": 1 },
+    { "id": "CR_003", "count": 1 },
+    { "id": "CR_004", "count": 1 },
+    { "id": "CR_005", "count": 1 },
+    { "id": "CR_006", "count": 1 },
+    { "id": "CR_007", "count": 1 },
+    { "id": "CR_008", "count": 1 },
+    { "id": "CR_009", "count": 1 },
+    { "id": "CR_010", "count": 1 },
+    { "id": "CR_HIGH_001", "count": 1 },
+    { "id": "CR_HIGH_002", "count": 1 },
+    
+    { "id": "AR_001", "count": 1 },
+    { "id": "AR_002", "count": 1 },
+    { "id": "AR_003", "count": 1 },
+    { "id": "AR_004", "count": 1 },
+    { "id": "AR_005", "count": 1 },
+    { "id": "AR_006", "count": 1 },
+    { "id": "AR_007", "count": 1 },
+    
+    { "id": "TL_001", "count": 1 },
+    { "id": "TL_002", "count": 1 },
+    { "id": "TL_003", "count": 1 },
+    { "id": "TL_004", "count": 1 },
+    { "id": "TL_005", "count": 1 },
+    { "id": "TL_006", "count": 1 },
+    { "id": "TL_007", "count": 1 },
+    
+    { "id": "FD_001", "count": 1 },
+    { "id": "FD_002", "count": 1 },
+    { "id": "FD_003", "count": 1 },
+    { "id": "FD_004", "count": 1 },
+    { "id": "FD_005", "count": 1 },
+    { "id": "FD_006", "count": 1 },
+    { "id": "FD_007", "count": 1 },
+    { "id": "FD_008", "count": 1 }
   ]
 }

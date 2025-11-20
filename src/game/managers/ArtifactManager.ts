@@ -2,7 +2,6 @@ import type { Scene } from 'phaser';
 import type { BattleLog } from '../ui/BattleLog';
 import type { CardSprite } from '../objects/CardSprite';
 import type { ArtifactSprite } from '../objects/ArtifactSprite';
-import type { ArtifactCard } from '../../../data/types/cards/artifact';
 
 interface EquippedArtifact {
     artifact: ArtifactSprite;
@@ -67,7 +66,7 @@ export class ArtifactManager {
                     this.equippedArtifacts.delete(oldArtifactId);
                     
                     // 日志
-                    this.battleLog.addLog(`【${targetData.name}】替换法器，卸下了【${oldArtifactData.name}】`);
+                    this.battleLog.addLog(`【${targetData.name}】替换法器，卸下了【${oldArtifactData.name}】`, [target, oldArtifact]);
                     
                     // 将旧法器加入弃牌堆并播放动画
                     const battleScene = this.scene as any;
@@ -110,7 +109,7 @@ export class ArtifactManager {
         this.attachArtifactVisual(artifact, target);
 
         // 日志
-        this.battleLog.addLog(`【${targetData.name}】装备了【${artifactData.name}】`, [target]);
+        this.battleLog.addLog(`【${targetData.name}】装备了【${artifactData.name}】`, [target, artifact]);
 
         return true;
     }
@@ -139,14 +138,14 @@ export class ArtifactManager {
         // 更新卡牌显示
         target.updateStats();
 
+        // 日志（在删除记录前记录）
+        this.battleLog.addLog(`【${targetData.name}】卸下了【${artifactData.name}】`, [target, artifact]);
+
         // 移除视觉附着
         artifact.destroy();
 
         // 移除记录
         this.equippedArtifacts.delete(artifactId);
-
-        // 日志
-        this.battleLog.addLog(`【${targetData.name}】卸下了【${artifactData.name}】`);
 
         return true;
     }
@@ -194,7 +193,7 @@ export class ArtifactManager {
         
         if (!isValid) {
             // 耐久度耗尽，卸下法器
-            this.battleLog.addLog(`【${artifact.getCardData().name}】耐久度耗尽，已损坏`);
+            this.battleLog.addLog(`【${artifact.getCardData().name}】耐久度耗尽，已损坏`, [artifact]);
             this.unequipArtifact(artifactId);
             return false;
         }

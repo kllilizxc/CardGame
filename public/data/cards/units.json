@@ -95,19 +95,292 @@
       "kind": "unit",
       "description": "栖息于青云峰顶的雷属性灵禽，速度奇快，能释放微弱的雷电之力。",
       "rarity": "common",
-      "labels": ["sect_qingyun", "飞禽族", "雷属性"],
+      "labels": ["灵兽", "灵禽", "雷属性"],
       "limitPerDeck": 3,
+
       "star": 2,
-      "race": "飞禽族",
-      "linggen": ["金"],
-      "factionId": "sect_qingyun",
+      "race": "兽族",
+      "linggen": ["雷"],
+      "factionId": "neutral",
       "realm": {
         "stage": "炼气期",
         "phase": "初期",
         "value": 1
       },
       "attack": 5,
+      "health": 18,
+      "effects": [
+        {
+          "timing": "onAttack",
+          "target": {
+            "scope": "attackTarget"
+          },
+          "conditions": [],
+          "actions": [
+            {
+              "type": "dealDamage",
+              "value": 2
+            }
+          ],
+          "text": "攻击时：对目标造成2点额外伤害。",
+          "scriptId": "effect.CR_003.onAttack"
+        }
+      ]
+    },
+    {
+      "id": "CR_004",
+      "name": "青云内门弟子",
+      "kind": "unit",
+      "description": "青云宗内门弟子，修炼有成，掌握了基础剑诀，实力不容小觑。",
+      "rarity": "rare",
+      "labels": ["sect_qingyun", "内门弟子", "队友", "剑修"],
+      "limitPerDeck": 2,
+
+      "star": 4,
+      "race": "人族",
+      "linggen": ["金"],
+      "factionId": "sect_qingyun",
+      "realm": {
+        "stage": "炼气期",
+        "phase": "后期",
+        "value": 3
+      },
+      "attack": 8,
+      "health": 35,
+      "effects": [
+        {
+          "timing": "onKill",
+          "target": {
+            "scope": "self"
+          },
+          "conditions": [],
+          "actions": [
+            {
+              "type": "heal",
+              "value": 5
+            }
+          ],
+          "text": "击败敌方单位时：本单位恢复5点生命值。",
+          "scriptId": "effect.CR_004.onKill"
+        }
+      ]
+    },
+    {
+      "id": "CR_005",
+      "name": "玄冰龟",
+      "kind": "unit",
+      "description": "寒潭中的古老灵兽，背甲坚硬无比，擅长防御。",
+      "rarity": "uncommon",
+      "labels": ["灵兽", "水属性", "防御"],
+      "limitPerDeck": 2,
+
+      "star": 3,
+      "race": "兽族",
+      "linggen": ["水"],
+      "factionId": "neutral",
+      "realm": {
+        "stage": "炼气期",
+        "phase": "中期",
+        "value": 2
+      },
+      "attack": 3,
+      "health": 45,
+      "effects": [
+        {
+          "timing": "onDamaged",
+          "target": {
+            "scope": "damageSource"
+          },
+          "conditions": [],
+          "actions": [
+            {
+              "type": "dealDamage",
+              "value": 3
+            }
+          ],
+          "text": "受到伤害时：对攻击者造成3点反伤。",
+          "scriptId": "effect.CR_005.onDamaged"
+        }
+      ]
+    },
+    {
+      "id": "CR_006",
+      "name": "血煞魔徒",
+      "kind": "unit",
+      "description": "堕入魔道的修士，性情残暴，以杀戮为乐。",
+      "rarity": "uncommon",
+      "labels": ["魔道", "敌人"],
+      "limitPerDeck": 2,
+
+      "star": 3,
+      "race": "人族",
+      "linggen": ["血"],
+      "factionId": "demon",
+      "realm": {
+        "stage": "炼气期",
+        "phase": "中期",
+        "value": 2
+      },
+      "attack": 9,
+      "health": 25,
+      "effects": [
+        {
+          "timing": "onSummon",
+          "target": {
+            "scope": "ownerPlayer"
+          },
+          "conditions": [],
+          "actions": [
+            {
+              "type": "loseHealth",
+              "value": 3
+            }
+          ],
+          "text": "登场时：失去3点生命值。攻击力极高但生命较低。",
+          "scriptId": "effect.CR_006.onSummon"
+        }
+      ]
+    },
+    {
+      "id": "CR_007",
+      "name": "烈焰狼",
+      "kind": "unit",
+      "description": "火山附近的凶猛灵兽，全身环绕着火焰，攻击带有灼烧效果。",
+      "rarity": "rare",
+      "labels": ["灵兽", "火属性", "凶兽"],
+      "limitPerDeck": 2,
+
+      "star": 4,
+      "race": "兽族",
+      "linggen": ["火"],
+      "factionId": "neutral",
+      "realm": {
+        "stage": "炼气期",
+        "phase": "后期",
+        "value": 3
+      },
+      "attack": 10,
+      "health": 30,
+      "effects": [
+        {
+          "timing": "onAttack",
+          "target": {
+            "scope": "attackTarget"
+          },
+          "conditions": [],
+          "actions": [
+            {
+              "type": "applyBurn",
+              "value": 2,
+              "duration": 2
+            }
+          ],
+          "text": "攻击时：使目标燃烧，在接下来2回合内每回合受到2点伤害。",
+          "scriptId": "effect.CR_007.onAttack"
+        }
+      ]
+    },
+    {
+      "id": "CR_008",
+      "name": "青云药童",
+      "kind": "unit",
+      "description": "负责照料灵药园的小童，精通草药之道，可以治疗伤势。",
+      "rarity": "uncommon",
+      "labels": ["sect_qingyun", "辅助", "治疗"],
+      "limitPerDeck": 2,
+
+      "star": 2,
+      "race": "人族",
+      "linggen": ["木"],
+      "factionId": "sect_qingyun",
+      "realm": {
+        "stage": "炼气期",
+        "phase": "初期",
+        "value": 1
+      },
+      "attack": 2,
       "health": 20,
+      "effects": [
+        {
+          "timing": "turnEnd",
+          "target": {
+            "scope": "allyUnits"
+          },
+          "conditions": [],
+          "actions": [
+            {
+              "type": "heal",
+              "value": 3
+            }
+          ],
+          "text": "我方回合结束时：所有友方单位恢复3点生命值。",
+          "scriptId": "effect.CR_008.turnEnd"
+        }
+      ]
+    },
+    {
+      "id": "CR_009",
+      "name": "青云剑阵长老",
+      "kind": "unit",
+      "description": "青云宗精通剑阵的长老，可同时指挥多名弟子结成剑阵。",
+      "rarity": "epic",
+      "labels": ["sect_qingyun", "长老", "剑修", "队友"],
+      "limitPerDeck": 1,
+
+      "star": 5,
+      "race": "人族",
+      "linggen": ["金", "木"],
+      "factionId": "sect_qingyun",
+      "realm": {
+        "stage": "筑基期",
+        "phase": "初期",
+        "value": 4
+      },
+      "attack": 12,
+      "health": 50,
+      "effects": [
+        {
+          "timing": "turnStart",
+          "target": {
+            "scope": "allyUnits",
+            "requiredLabelsAnyOf": ["sect_qingyun"]
+          },
+          "conditions": [],
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 2
+            },
+            {
+              "type": "modifyHealth",
+              "value": 2
+            }
+          ],
+          "text": "我方回合开始时：所有友方青云宗单位攻击力和生命值+2。",
+          "scriptId": "effect.CR_009.turnStart"
+        }
+      ]
+    },
+    {
+      "id": "CR_010",
+      "name": "野外山贼",
+      "kind": "unit",
+      "description": "盘踞在山道上的强盗，实力不强但数量众多。",
+      "rarity": "common",
+      "labels": ["敌人", "人类"],
+      "limitPerDeck": 3,
+
+      "star": 1,
+      "race": "人族",
+      "linggen": [],
+      "factionId": "bandit",
+      "realm": {
+        "stage": "凡人",
+        "phase": "",
+        "value": 0
+      },
+      "attack": 3,
+      "health": 15,
       "effects": []
     },
     {
@@ -118,6 +391,7 @@
       "rarity": "rare",
       "labels": ["sect_qingyun", "剑修", "金丹期"],
       "limitPerDeck": 2,
+
       "star": 5,
       "race": "人族",
       "linggen": ["金"],
@@ -154,6 +428,7 @@
       "rarity": "epic",
       "labels": ["sect_qingyun", "道主", "元婴期"],
       "limitPerDeck": 1,
+
       "star": 8,
       "race": "人族",
       "linggen": ["金", "木", "水", "火", "土"],

@@ -1,5 +1,5 @@
 import { Scene } from 'phaser';
-import type { PillCard } from '../../../data/types/cards/pill';
+import type { PillCard } from '@data/types/cards/pill';
 import { CardSprite } from '../objects/CardSprite';
 import type { BattleLog } from '../ui/BattleLog';
 

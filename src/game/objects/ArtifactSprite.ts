@@ -134,4 +134,11 @@ export class ArtifactSprite extends BaseCardSprite {
     protected getDefaultStrokeColor(): number {
         return 0xdaa520; // 金色
     }
+
+    // 重写：更新显示模式
+    protected updateDisplayMode(): void {
+        // 只有在hover模式下才显示描述
+        const shouldShowDescription = this.currentDisplayMode === 'hover';
+        this.descriptionText.setVisible(shouldShowDescription);
+    }
 }

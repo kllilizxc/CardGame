@@ -4,10 +4,10 @@ import { CardSprite } from '../objects/CardSprite';
 import { ArtifactSprite } from '../objects/ArtifactSprite';
 import { TalismanSprite } from '../objects/TalismanSprite';
 import { FieldSprite } from '../objects/FieldSprite';
-import type { UnitCard } from '../../../data/types/cards/unit';
-import type { ArtifactCard } from '../../../data/types/cards/artifact';
-import type { TalismanCard } from '../../../data/types/cards/talisman';
-import type { FieldCard } from '../../../data/types/cards/field';
+import type { UnitCard } from '../../../public/data/types/cards/unit';
+import type { ArtifactCard } from '../../../public/data/types/cards/artifact';
+import type { TalismanCard } from '../../../public/data/types/cards/talisman';
+import type { FieldCard } from '../../../public/data/types/cards/field';
 import { BattleLog } from '../ui/BattleLog';
 import { CardListView } from '../ui/CardListView';
 import { BattleAnimationManager } from '../managers/BattleAnimationManager';
@@ -22,7 +22,13 @@ import { BattleEventManager } from '../managers/BattleEventManager';
 import { SacrificeManager } from '../managers/SacrificeManager';
 import { PillSlotUI } from '../ui/PillSlotUI';
 import { SacrificeSelectionUI } from '../ui/SacrificeSelectionUI';
-import type { PillCard } from '../../../data/types/cards/pill';
+import { SkillManager } from '../managers/SkillManager';
+import { SkillUI } from '../ui/SkillUI';
+import { DeckSelectionUI } from '../ui/DeckSelectionUI';
+import { CardSpriteFactory } from '../factories/CardSpriteFactory';
+import { SkillEffectHandler } from '../handlers/SkillEffectHandler';
+import type { PillCard } from '../../../public/data/types/cards/pill';
+import type { SkillCard } from '../../../public/data/types/cards/skill';
 
 export class BattleScene extends Scene {
     // 游戏状态
@@ -61,6 +67,11 @@ export class BattleScene extends Scene {
     private eventManager!: BattleEventManager;
     private sacrificeManager!: SacrificeManager;
     private sacrificeUI!: SacrificeSelectionUI;
+    private skillManager!: SkillManager;
+    private skillUI!: SkillUI;
+    private deckSelectionUI!: DeckSelectionUI;
+    private skillEffectHandler!: SkillEffectHandler;
+    private pillTooltip: Phaser.GameObjects.Container | null = null;
 
     constructor() {
         super('BattleScene');
@@ -77,6 +88,7 @@ export class BattleScene extends Scene {
         this.load.json('talismanCards', 'data/cards/talismans.json');
         this.load.json('pillCards', 'data/cards/pills.json');
         this.load.json('fieldCards', 'data/cards/fields.json');
+        this.load.json('skillCards', 'data/cards/skills.json');
         this.load.json('starterDeck', 'data/decks/starter-deck.json');
         this.load.json('currentEncounter', 'data/encounters/medium-enemy.json');
     }
@@ -126,6 +138,7 @@ export class BattleScene extends Scene {
         const talismanCardsData = this.cache.json.get('talismanCards') as { talismans: any[] };
         const fieldCardsData = this.cache.json.get('fieldCards') as { fields: any[] };
         const pillCardsData = this.cache.json.get('pillCards') as { pills: any[] };
+        const skillCardsData = this.cache.json.get('skillCards') as { skills: SkillCard[] };
         const starterDeckData = this.cache.json.get('starterDeck') as { cards: Array<{ id: string; count: number }> };
 
         // 创建卡牌索引
@@ -169,6 +182,12 @@ export class BattleScene extends Scene {
         // 初始化丹药系统
         this.setupPillSystem(pillCardsData.pills);
 
+        // 初始化技能系统
+        this.setupSkillSystem(skillCardsData.skills);
+
+        // 设置事件管理器的场地区域引用
+        this.eventManager.setFieldZones(this.playerFieldZone, this.enemyFieldZone);
+
         // 设置事件管理器引用
         this.eventManager.setReferences(
             this.playerField,
@@ -203,12 +222,16 @@ export class BattleScene extends Scene {
      * 处理符箓使用逻辑（补充BattleEventManager）
      */
     private setupTalismanUsageLogic(): void {
-        this.events.on('useTalisman', (talisman: TalismanSprite, target: CardSprite) => {
+        this.events.on('useTalisman', (
+            talisman: TalismanSprite,
+            target: CardSprite,
+            targetSide: 'ally' | 'enemy'
+        ) => {
             // 先启动符箓选择状态
             this.talismanManager.startUseTalisman(talisman);
             
             // 尝试使用符箓
-            const success = this.talismanManager.useTalismanOnTarget(target);
+            const success = this.talismanManager.useTalismanOnTarget(target, targetSide);
             
             if (success) {
                 // 从手牌中移除
@@ -295,6 +318,64 @@ export class BattleScene extends Scene {
             // 群体效果（allUnits, all），直接使用
             this.pillManager.usePillFromSlot(slotIndex);
         }
+    }
+
+    /**
+     * 初始化技能系统
+     */
+    private setupSkillSystem(skillsData: SkillCard[]): void {
+        const { width, height } = this.scale;
+        
+        // 初始化技能管理器
+        this.skillManager = new SkillManager(this, this.battleLog);
+        
+        // 初始化卡组选择UI
+        this.deckSelectionUI = new DeckSelectionUI(this);
+        
+        // 初始化技能效果处理器
+        this.skillEffectHandler = new SkillEffectHandler({
+            scene: this,
+            deck: this.deck,
+            hand: this.hand,
+            cardScale: this.cardScale,
+            battleLog: this.battleLog,
+            cardManager: this.cardManager,
+            deckSelectionUI: this.deckSelectionUI,
+            animationManager: this.animationManager,
+            updateDeckCount: () => this.updateDeckCount(),
+            drawCard: () => this.drawCard(),
+            playerField: this.playerField,
+            enemyField: this.enemyField
+        });
+        
+        // 将 GameActionHandler 注入到 TalismanManager
+        this.talismanManager.setGameActionHandler(this.skillEffectHandler.getGameActionHandler());
+        
+        // 创建技能UI（放在屏幕上方）
+        this.skillUI = new SkillUI(
+            this,
+            width / 2,
+            height * 0.1,
+            (skillIndex: number) => {
+                // 点击技能按钮
+                this.useSkill(skillIndex);
+            }
+        );
+
+        // 给玩家装备初始技能（只装备第一个技能：注定一抽）
+        const playerSkills = skillsData.slice(0, 1);
+        this.skillManager.initializeSkills(playerSkills);
+        this.skillUI.createSkills(this.skillManager.getSkills());
+    }
+
+    /**
+     * 使用技能
+     */
+    private useSkill(skillIndex: number): void {
+        this.skillManager.useSkill(skillIndex, (skill) => {
+            // 使用技能效果处理器执行技能效果
+            this.skillEffectHandler.applySkillEffect(skill);
+        });
     }
 
 
@@ -392,36 +473,47 @@ export class BattleScene extends Scene {
             this.showCardPreview(card);
         });
 
+        this.events.on('showCardPreviewFromData', (cardData: any) => {
+            this.showCardPreviewFromData(cardData);
+        });
+
         this.events.on('hideCardPreview', () => {
             this.hideCardPreview();
+        });
+
+        // 丹药 tooltip 事件
+        this.events.on('showPillTooltip', (pill: any, x: number, y: number) => {
+            this.showPillTooltip(pill, x, y);
+        });
+
+        this.events.on('hidePillTooltip', () => {
+            this.hidePillTooltip();
         });
     }
 
     private showCardPreview(card: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite) {
+        const cardData = card.getCardData();
+        this.showCardPreviewFromData(cardData);
+    }
+
+    private showCardPreviewFromData(cardData: any) {
         // 先隐藏旧的预览
         this.hideCardPreview();
 
         const { width, height } = this.scale;
-        const cardData = card.getCardData();
         
         const previewX = width * 0.15;
         const previewY = height * 0.5;
         const previewScale = 1.8;
 
-        // 直接克隆原卡片作为预览，保持原样式
-        let previewCard: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite;
-        
-        if (cardData.kind === 'unit') {
-            previewCard = new CardSprite(this, 0, 0, cardData, 1);
-        } else if (cardData.kind === 'artifact') {
-            previewCard = new ArtifactSprite(this, 0, 0, cardData, 1);
-        } else if (cardData.kind === 'talisman') {
-            previewCard = new TalismanSprite(this, 0, 0, cardData, 1);
-        } else if (cardData.kind === 'field') {
-            previewCard = new FieldSprite(this, 0, 0, cardData, 1);
-        } else {
+        // 使用工厂创建预览卡片
+        const previewCard = CardSpriteFactory.createSprite(this, cardData, 0, 0, 1);
+        if (!previewCard) {
             return; // 不支持的卡牌类型
         }
+
+        // 设置为hover模式，显示完整信息包括描述
+        previewCard.setDisplayMode('hover');
 
         // 创建预览容器
         this.cardPreview = this.add.container(previewX, previewY);
@@ -467,12 +559,110 @@ export class BattleScene extends Scene {
         }
     }
 
+    private showPillTooltip(pill: any, x: number, y: number) {
+        // 先隐藏旧的tooltip
+        this.hidePillTooltip();
+
+        // 创建tooltip容器
+        this.pillTooltip = this.add.container(x, y);
+        this.pillTooltip.setDepth(7000);
+
+        // 背景
+        const bgWidth = 250;
+        const bgHeight = 180;
+        const bg = this.add.rectangle(0, 0, bgWidth, bgHeight, 0x1a1a2e, 0.95);
+        bg.setStrokeStyle(3, 0x2ecc71);
+        this.pillTooltip.add(bg);
+
+        // 丹药图标
+        const icon = this.add.text(0, -60, '💊', {
+            fontSize: '40px'
+        }).setOrigin(0.5);
+        this.pillTooltip.add(icon);
+
+        // 丹药名称
+        const nameText = this.add.text(0, -25, pill.name, {
+            fontSize: '18px',
+            color: '#2ecc71',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+        this.pillTooltip.add(nameText);
+
+        // 品级
+        const gradeColors: { [key: string]: string } = {
+            '下品': '#95a5a6',
+            '中品': '#3498db',
+            '上品': '#9b59b6',
+            '极品': '#f39c12'
+        };
+        const gradeText = this.add.text(0, 0, `品级：${pill.grade}`, {
+            fontSize: '14px',
+            color: gradeColors[pill.grade] || '#95a5a6'
+        }).setOrigin(0.5);
+        this.pillTooltip.add(gradeText);
+
+        // 效果描述（短）
+        const descText = this.add.text(0, 25, pill.shortDescription || pill.description, {
+            fontSize: '12px',
+            color: '#ecf0f1',
+            align: 'center',
+            wordWrap: { width: bgWidth - 20 }
+        }).setOrigin(0.5);
+        this.pillTooltip.add(descText);
+
+        // 目标说明
+        if (pill.target) {
+            const targetLabels: { [key: string]: string } = {
+                'self': '自身',
+                'singleAlly': '单个友方',
+                'allAllies': '全体友方'
+            };
+            const targetText = this.add.text(0, 60, `目标：${targetLabels[pill.target] || pill.target}`, {
+                fontSize: '11px',
+                color: '#95a5a6'
+            }).setOrigin(0.5);
+            this.pillTooltip.add(targetText);
+        }
+
+        // 淡入动画
+        this.pillTooltip.setAlpha(0);
+        this.tweens.add({
+            targets: this.pillTooltip,
+            alpha: 1,
+            duration: 150,
+            ease: 'Power2'
+        });
+    }
+
+    private hidePillTooltip() {
+        if (this.pillTooltip) {
+            const tooltipToHide = this.pillTooltip;
+            this.pillTooltip = null;
+
+            this.tweens.killTweensOf(tooltipToHide);
+            this.tweens.add({
+                targets: tooltipToHide,
+                alpha: 0,
+                duration: 100,
+                onComplete: () => {
+                    tooltipToHide.destroy();
+                }
+            });
+        }
+    }
+
     public isCardInPlayerField(x: number, y: number): boolean {
         const bounds = this.playerFieldZone.getBounds();
         return Phaser.Geom.Rectangle.Contains(bounds, x, y);
     }
 
     public playCardToField(card: CardSprite): boolean {
+        // 检查卡片是否在手牌中（只有手牌中的卡才能打出）
+        if (!this.hand.includes(card)) {
+            // 卡片不在手牌中（可能是场上的单位），不允许打出
+            return false;
+        }
+
         const cardData = card.getCardData();
         
         // 检查是否需要献祭
@@ -522,6 +712,12 @@ export class BattleScene extends Scene {
      * 执行献祭并召唤单位
      */
     private performSacrificeAndSummon(card: CardSprite, sacrificeTargets: CardSprite[]): void {
+        // 先将被献祭的单位加入弃牌堆
+        sacrificeTargets.forEach(unit => {
+            const unitData = unit.getCardData();
+            this.addToDiscardPile(unitData);
+        });
+        
         // 执行献祭
         this.sacrificeManager.performSacrifice(
             sacrificeTargets,
@@ -551,6 +747,10 @@ export class BattleScene extends Scene {
                     this.playerField = result.playerField;
                     this.cardManager.arrangePlayerField(this.playerField);
                     this.cardManager.arrangeHand(this.hand);
+                    
+                    // 播放史诗召唤动画（交由动画管理器处理，异常不影响逻辑）
+                    const cardData = card.getCardData();
+                    this.animationManager.playSummonAnimation(card, cardData.star || 0);
                 }
             }
         );
@@ -844,6 +1044,10 @@ export class BattleScene extends Scene {
     }
 
     // 添加卡牌到弃牌堆
+    /**
+     * 播放史诗召唤动画
+     */
+
     public addToDiscardPile(cardData: UnitCard | ArtifactCard | TalismanCard) {
         this.discardPile.push(cardData);
         

@@ -24,9 +24,12 @@ export class BattleEventManager {
     private enemyField: CardSprite[] = [];
     private hand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[] = [];
     private fieldZone!: Phaser.GameObjects.Zone;
+    private playerFieldZone!: Phaser.GameObjects.Zone;
+    private enemyFieldZone!: Phaser.GameObjects.Zone;
 
     // 符箓相关
     private highlightedTarget: CardSprite | null = null;
+    private highlightedTargetSide: 'ally' | 'enemy' | null = null;
     private targetHighlight: Phaser.GameObjects.Graphics | null = null;
 
     constructor(
@@ -41,6 +44,17 @@ export class BattleEventManager {
         this.cardManager = cardManager;
         this.fieldManager = fieldManager;
         this.battleLog = battleLog;
+    }
+
+    /**
+     * 设置场地区域引用
+     */
+    public setFieldZones(
+        playerFieldZone: Phaser.GameObjects.Zone,
+        enemyFieldZone: Phaser.GameObjects.Zone
+    ): void {
+        this.playerFieldZone = playerFieldZone;
+        this.enemyFieldZone = enemyFieldZone;
     }
 
     /**
@@ -84,9 +98,10 @@ export class BattleEventManager {
             const result = this.combatManager.removeDeadUnits(
                 this.playerField,
                 this.enemyField,
-                () => {
-                    this.cardManager.arrangePlayerField(this.playerField);
-                    this.cardManager.arrangeEnemyField(this.enemyField);
+                (newPlayerField: CardSprite[], newEnemyField: CardSprite[]) => {
+                    // 使用过滤后的新数组进行排列
+                    this.cardManager.arrangePlayerField(newPlayerField);
+                    this.cardManager.arrangeEnemyField(newEnemyField);
                 }
             );
             
@@ -104,6 +119,7 @@ export class BattleEventManager {
         // 符箓拖拽开始
         this.scene.events.on('talismanDragStart', (talisman: TalismanSprite) => {
             this.highlightedTarget = null;
+            this.highlightedTargetSide = null;
             if (this.targetHighlight) {
                 this.targetHighlight.destroy();
                 this.targetHighlight = null;
@@ -115,7 +131,49 @@ export class BattleEventManager {
             talisman: TalismanSprite,
             pointer: Phaser.Input.Pointer
         ) => {
-            const target = this.getEnemyUnitAtPosition(pointer.x, pointer.y);
+            const talismanData = talisman.getCardData();
+            const targetScope = talismanData.effects?.[0]?.target?.scope;
+            let target: CardSprite | null = null;
+            let targetSide: 'ally' | 'enemy' | null = null;
+            let highlightAllUnits = false;
+
+            // 判断目标范围
+            if (targetScope === 'singleAlly') {
+                target = this.getAllyUnitAtPosition(pointer.x, pointer.y);
+                targetSide = target ? 'ally' : null;
+            } else if (targetScope === 'allyUnits' || targetScope === 'allAllies') {
+                // 群体友方目标 - 检测是否在友方场地区域内
+                const playerFieldBounds = this.playerFieldZone.getBounds();
+                const isInPlayerField = Phaser.Geom.Rectangle.Contains(playerFieldBounds, pointer.x, pointer.y);
+                
+                if (isInPlayerField && this.playerField.length > 0) {
+                    // 在友方区域内且有友方单位，使用第一个单位作为目标标记
+                    target = this.playerField[0];
+                    targetSide = 'ally';
+                    highlightAllUnits = true;
+                } else {
+                    target = null;
+                    targetSide = null;
+                }
+            } else if (targetScope === 'enemyUnits' || targetScope === 'allEnemies') {
+                // 群体敌方目标 - 检测是否在敌方场地区域内
+                const enemyFieldBounds = this.enemyFieldZone.getBounds();
+                const isInEnemyField = Phaser.Geom.Rectangle.Contains(enemyFieldBounds, pointer.x, pointer.y);
+                
+                if (isInEnemyField && this.enemyField.length > 0) {
+                    // 在敌方区域内且有敌方单位，使用第一个单位作为目标标记
+                    target = this.enemyField[0];
+                    targetSide = 'enemy';
+                    highlightAllUnits = true;
+                } else {
+                    target = null;
+                    targetSide = null;
+                }
+            } else {
+                // 默认按照敌方单位处理
+                target = this.getEnemyUnitAtPosition(pointer.x, pointer.y);
+                targetSide = target ? 'enemy' : null;
+            }
             
             if (target !== this.highlightedTarget) {
                 if (this.targetHighlight) {
@@ -124,19 +182,38 @@ export class BattleEventManager {
                 }
                 
                 this.highlightedTarget = target;
+                this.highlightedTargetSide = targetSide;
                 
                 if (target) {
-                    const bounds = target.getBounds();
                     this.targetHighlight = this.scene.add.graphics();
-                    this.targetHighlight.lineStyle(4, 0x00ff00, 1);
-                    this.targetHighlight.strokeRoundedRect(
-                        bounds.x,
-                        bounds.y,
-                        bounds.width,
-                        bounds.height,
-                        8
-                    );
+                    const color = targetSide === 'ally' ? 0x3498db : 0x00ff00;
+                    this.targetHighlight.lineStyle(4, color, 1);
                     this.targetHighlight.setDepth(999);
+
+                    // 如果是群体目标，高亮所有相应单位
+                    if (highlightAllUnits) {
+                        const unitsToHighlight = targetSide === 'ally' ? this.playerField : this.enemyField;
+                        unitsToHighlight.forEach(unit => {
+                            const bounds = unit.getBounds();
+                            this.targetHighlight!.strokeRoundedRect(
+                                bounds.x,
+                                bounds.y,
+                                bounds.width,
+                                bounds.height,
+                                8
+                            );
+                        });
+                    } else {
+                        // 单体目标，只高亮当前单位
+                        const bounds = target.getBounds();
+                        this.targetHighlight.strokeRoundedRect(
+                            bounds.x,
+                            bounds.y,
+                            bounds.width,
+                            bounds.height,
+                            8
+                        );
+                    }
                 }
             }
         });
@@ -151,12 +228,13 @@ export class BattleEventManager {
 
         // 尝试使用符箓
         this.scene.events.on('tryUseTalisman', (talisman: TalismanSprite) => {
-            if (this.highlightedTarget) {
-                this.scene.events.emit('useTalisman', talisman, this.highlightedTarget);
+            if (this.highlightedTarget && this.highlightedTargetSide) {
+                this.scene.events.emit('useTalisman', talisman, this.highlightedTarget, this.highlightedTargetSide);
             } else {
                 talisman.returnToOriginalPosition();
             }
             this.highlightedTarget = null;
+            this.highlightedTargetSide = null;
         });
     }
 
@@ -222,15 +300,23 @@ export class BattleEventManager {
      * 获取指定位置的敌方单位
      */
     private getEnemyUnitAtPosition(x: number, y: number): CardSprite | null {
+        return this.getUnitAtPosition(this.enemyField, x, y);
+    }
+
+    private getAllyUnitAtPosition(x: number, y: number): CardSprite | null {
+        return this.getUnitAtPosition(this.playerField, x, y);
+    }
+
+    private getUnitAtPosition(units: CardSprite[], x: number, y: number): CardSprite | null {
         const expandRadius = 50;
         
-        for (const enemy of this.enemyField) {
-            const bounds = enemy.getBounds();
+        for (const unit of units) {
+            const bounds = unit.getBounds();
             const expandedBounds = Phaser.Geom.Rectangle.Clone(bounds);
             Phaser.Geom.Rectangle.Inflate(expandedBounds, expandRadius, expandRadius);
             
             if (Phaser.Geom.Rectangle.Contains(expandedBounds, x, y)) {
-                return enemy;
+                return unit;
             }
         }
         return null;

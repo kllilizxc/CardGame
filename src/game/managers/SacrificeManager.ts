@@ -1,6 +1,6 @@
 import { Scene } from 'phaser';
 import type { CardSprite } from '../objects/CardSprite';
-import type { UnitCard } from '../../../data/types/cards/unit';
+import type { UnitCard } from '@data/types/cards/unit';
 import type { BattleLog } from '../ui/BattleLog';
 
 /**

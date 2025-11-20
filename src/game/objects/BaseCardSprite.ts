@@ -1,12 +1,22 @@
 import { GameObjects } from 'phaser';
 
+/**
+ * 卡片显示模式
+ * - field: 战场模式（基本信息）
+ * - hover: 悬停预览模式（完整信息，包含描述）
+ * - deck: 卡组查看模式（完整信息，不包含描述）
+ */
+export type CardDisplayMode = 'field' | 'hover' | 'deck';
+
 export abstract class BaseCardSprite extends GameObjects.Container {
     protected background!: GameObjects.Rectangle;
     protected nameText!: GameObjects.Text;
+    protected cardScale: number;
     protected isDragging: boolean = false;
     protected originalX: number = 0;
     protected originalY: number = 0;
-    protected cardScale: number = 1;
+    protected currentDisplayMode: CardDisplayMode = 'field';
+    protected isDraggingDisabled: boolean = false;
 
     // 卡牌标准尺寸
     protected readonly CARD_WIDTH = 180;
@@ -124,6 +134,7 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      */
     protected onPointerOver(): void {
         this.background.setStrokeStyle(3, 0xffd700);
+        // 只发送预览事件，不改变原卡片的显示模式
         this.scene.events.emit('showCardPreview', this);
     }
 
@@ -168,9 +179,29 @@ export abstract class BaseCardSprite extends GameObjects.Container {
     }
 
     /**
+     * 获取原始位置
+     */
+    public getOriginalPosition(): { x: number; y: number } {
+        return { x: this.originalX, y: this.originalY };
+    }
+
+    /**
+     * 获取卡牌原始缩放
+     */
+    public getCardBaseScale(): number {
+        return this.cardScale;
+    }
+
+    /**
      * 禁用拖拽但保留hover交互
      */
     public disableDragging(): void {
+        // 如果已经禁用过，直接返回避免重复操作
+        if (this.isDraggingDisabled) {
+            return;
+        }
+        
+        this.isDraggingDisabled = true;
         this.removeInteractive();
         this.setInteractive({ useHandCursor: false });
         
@@ -186,5 +217,26 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         this.on('pointerout', () => {
             this.onPointerOut();
         });
+    }
+
+    /**
+     * 设置卡片显示模式（子类需实现具体逻辑）
+     * @param mode 显示模式
+     */
+    public setDisplayMode(mode: CardDisplayMode): void {
+        this.currentDisplayMode = mode;
+        this.updateDisplayMode();
+    }
+
+    /**
+     * 更新显示模式（子类需重写此方法来控制UI元素显隐）
+     */
+    protected abstract updateDisplayMode(): void;
+
+    /**
+     * 获取当前显示模式
+     */
+    public getDisplayMode(): CardDisplayMode {
+        return this.currentDisplayMode;
     }
 }

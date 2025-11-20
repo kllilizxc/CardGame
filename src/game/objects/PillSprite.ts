@@ -125,7 +125,10 @@ export class PillSprite extends BaseCardSprite {
         return this.cardData;
     }
 
-    public showDescription(show: boolean): void {
-        this.descriptionText.setVisible(show);
+    // 重写：更新显示模式
+    protected updateDisplayMode(): void {
+        // 只有在hover模式下才显示描述
+        const shouldShowDescription = this.currentDisplayMode === 'hover';
+        this.descriptionText.setVisible(shouldShowDescription);
     }
 }

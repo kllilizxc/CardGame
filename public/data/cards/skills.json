@@ -1,6 +1,34 @@
 {
   "skills": [
     {
+      "id": "SK_000",
+      "name": "注定一抽",
+      "kind": "skill",
+      "description": "命运之力，从卡组任意选择一张卡加入手牌。",
+      "rarity": "rare",
+      "labels": ["命运", "检索"],
+      "limitPerDeck": 1,
+
+      "cooldownType": "perBattle",
+
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "ownerPlayer"
+          },
+          "actions": [
+            {
+              "type": "searchDeck",
+              "value": 1
+            }
+          ],
+          "text": "本场战斗中，你可以发动一次：从卡组中选择一张卡加入手牌。",
+          "scriptId": "effect.SK_000.use.searchDeck"
+        }
+      ]
+    },
+    {
       "id": "SK_001",
       "name": "灵兽召唤练习",
       "kind": "skill",

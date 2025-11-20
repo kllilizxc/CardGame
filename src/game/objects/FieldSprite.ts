@@ -101,4 +101,9 @@ export class FieldSprite extends BaseCardSprite {
     public updateDisplay(): void {
         // 场地卡没有动态数值，不需要更新
     }
+
+    // 重写：更新显示模式
+    protected updateDisplayMode(): void {
+        // 场地卡没有description字段，所有模式下显示一致
+    }
 }

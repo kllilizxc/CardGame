@@ -1,9 +1,9 @@
 import { Scene } from 'phaser';
-import type { CardSprite } from '../objects/CardSprite';
+import type { BaseCardSprite } from '../objects/BaseCardSprite';
 
 interface LogEntry {
     text: string;
-    cardRefs: Array<{ name: string; card: CardSprite }>;
+    cardRefs: Array<{ name: string; card: BaseCardSprite; cardData: any }>;
     timestamp: number;
 }
 
@@ -238,12 +238,13 @@ export class BattleLog {
         }
     }
 
-    public addLog(message: string, cards: CardSprite[] = []) {
+    public addLog(message: string, cards: BaseCardSprite[] = []) {
         const entry: LogEntry = {
             text: message,
             cardRefs: cards.map(card => ({
                 name: card.getCardData().name,
-                card: card
+                card: card,
+                cardData: card.getCardData()  // 存储卡片数据副本
             })),
             timestamp: Date.now()
         };
@@ -321,12 +322,12 @@ export class BattleLog {
         x: number,
         y: number,
         text: string,
-        cardRefs: Array<{ name: string; card: CardSprite }>,
+        cardRefs: Array<{ name: string; card: BaseCardSprite; cardData: any }>,
         fontSize: string,
         maxWidth: number
     ): number {
         // 解析文本，识别卡牌名称标记
-        const parts: Array<{ text: string; isCard: boolean; cardRef?: { name: string; card: CardSprite } }> = [];
+        const parts: Array<{ text: string; isCard: boolean; cardRef?: { name: string; card: BaseCardSprite; cardData: any } }> = [];
         let remaining = text;
         
         // 分割文本
@@ -412,7 +413,20 @@ export class BattleLog {
                 const cardRef = part.cardRef;
                 hitArea.on('pointerover', () => {
                     underline.setAlpha(1);
-                    this.scene.events.emit('showCardPreview', cardRef.card);
+                    // 安全检查：如果精灵还活着且场景存在，使用精灵；否则使用卡片数据
+                    try {
+                        if (cardRef.card && cardRef.card.active && cardRef.card.scene) {
+                            // 精灵存在、激活且有场景，可以安全使用
+                            this.scene.events.emit('showCardPreview', cardRef.card);
+                        } else {
+                            // 精灵已销毁或不可用，使用卡片数据显示预览
+                            this.scene.events.emit('showCardPreviewFromData', cardRef.cardData);
+                        }
+                    } catch (e) {
+                        // 如果访问精灵出错，直接使用数据
+                        console.warn('Error accessing card sprite, using card data instead:', e);
+                        this.scene.events.emit('showCardPreviewFromData', cardRef.cardData);
+                    }
                 });
                 
                 hitArea.on('pointerout', () => {

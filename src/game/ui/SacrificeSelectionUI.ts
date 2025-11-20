@@ -25,7 +25,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         
         const { width, height } = scene.scale;
         
-        // 半透明黑色背景
+        // 半透明黑色背景（设置交互以阻止穿透到UI下层）
         this.background = scene.add.rectangle(
             width / 2,
             height / 2,
@@ -34,7 +34,12 @@ export class SacrificeSelectionUI extends GameObjects.Container {
             0x000000,
             0.8
         );
+        // 必须设置交互，否则用户可以继续操作其他卡牌
         this.background.setInteractive();
+        this.background.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            // 阻止事件传播，但不做任何操作
+            pointer.event.stopPropagation();
+        });
         this.add(this.background);
 
         // 标题
@@ -148,25 +153,45 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         this.unitHighlights.clear();
 
         this.availableUnits.forEach(unit => {
-            // 为每个单位添加点击事件
-            unit.setInteractive({ useHandCursor: true });
+            // 提升单位深度到UI之上，确保可点击
+            unit.setDepth(5001);
             
-            unit.on('pointerdown', () => {
+            // 禁用拖拽（保留input配置）
+            (unit.input as any).draggable = false;
+            
+            // 添加献祭选择专用的点击事件（使用once确保只触发一次，用prependListener确保优先级最高）
+            const sacrificeClickHandler = (pointer: Phaser.Input.Pointer) => {
+                // 阻止默认行为和事件传播
+                if (pointer.event) {
+                    pointer.event.stopPropagation();
+                    pointer.event.preventDefault();
+                }
                 this.toggleUnitSelection(unit);
-            });
-
-            // 添加悬停效果
-            unit.on('pointerover', () => {
+            };
+            
+            const hoverHandler = () => {
                 if (!this.selectedUnits.includes(unit)) {
                     this.highlightUnit(unit, 0xffd700, 0.5);
                 }
-            });
-
-            unit.on('pointerout', () => {
+            };
+            
+            const outHandler = () => {
                 if (!this.selectedUnits.includes(unit)) {
                     this.removeHighlight(unit);
                 }
-            });
+            };
+            
+            // 保存处理器以便后续移除
+            (unit as any).__sacrificeHandlers = {
+                click: sacrificeClickHandler,
+                hover: hoverHandler,
+                out: outHandler
+            };
+            
+            // 添加事件监听
+            unit.on('pointerdown', sacrificeClickHandler, unit);
+            unit.on('pointerover', hoverHandler, unit);
+            unit.on('pointerout', outHandler, unit);
         });
     }
 
@@ -211,7 +236,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
             bounds.height,
             8
         );
-        highlight.setDepth(4999);
+        highlight.setDepth(5002); // 高亮在卡片之上
 
         this.unitHighlights.set(unit, highlight);
     }
@@ -249,10 +274,13 @@ export class SacrificeSelectionUI extends GameObjects.Container {
             return;
         }
 
+        // 保存选中的单位（hide会清空）
+        const selected = [...this.selectedUnits];
+        
         this.hide();
 
         if (this.onConfirm) {
-            this.onConfirm(this.selectedUnits);
+            this.onConfirm(selected);
         }
     }
 
@@ -277,11 +305,24 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         this.unitHighlights.forEach(highlight => highlight.destroy());
         this.unitHighlights.clear();
 
-        // 移除单位的交互监听
+        // 移除单位的交互监听并恢复深度和拖拽功能
         this.availableUnits.forEach(unit => {
-            unit.removeAllListeners('pointerdown');
-            unit.removeAllListeners('pointerover');
-            unit.removeAllListeners('pointerout');
+            // 移除献祭UI添加的监听器
+            const handlers = (unit as any).__sacrificeHandlers;
+            if (handlers) {
+                unit.off('pointerdown', handlers.click, unit);
+                unit.off('pointerover', handlers.hover, unit);
+                unit.off('pointerout', handlers.out, unit);
+                delete (unit as any).__sacrificeHandlers;
+            }
+            
+            // 恢复单位原始深度
+            unit.setDepth(0);
+            
+            // 恢复拖拽功能
+            if (unit.input) {
+                (unit.input as any).draggable = true;
+            }
         });
 
         this.availableUnits = [];

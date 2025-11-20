@@ -137,7 +137,7 @@ export class CombatManager {
     public removeDeadUnits(
         playerField: CardSprite[],
         enemyField: CardSprite[],
-        onArrange: () => void
+        onArrange: (newPlayerField: CardSprite[], newEnemyField: CardSprite[]) => void
     ): { playerField: CardSprite[]; enemyField: CardSprite[] } {
         const battleScene = this.scene as any;
         
@@ -236,8 +236,8 @@ export class CombatManager {
             return true;
         });
 
-        // 重新排列
-        onArrange();
+        // 重新排列（传入过滤后的新数组）
+        onArrange(newPlayerField, newEnemyField);
 
         return { playerField: newPlayerField, enemyField: newEnemyField };
     }

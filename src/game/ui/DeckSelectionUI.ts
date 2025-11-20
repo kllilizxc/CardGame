@@ -10,19 +10,23 @@ import type { TalismanCard } from '../../../data/types/cards/talisman';
 import type { FieldCard } from '../../../data/types/cards/field';
 import type { PillCard } from '../../../data/types/cards/pill';
 
+type AnyCard = UnitCard | ArtifactCard | TalismanCard | FieldCard | PillCard;
+type AnyCardSprite = CardSprite | ArtifactSprite | TalismanSprite | FieldSprite | PillSprite;
+
 /**
- * 通用的卡片列表视图
- * 用于展示卡组、弃牌堆等卡片列表
+ * 卡组选择UI
+ * 用于从卡组中选择一张卡（技能"注定一抽"等）
  */
-export class CardListView extends GameObjects.Container {
-    private title: string;
-    private cards: (UnitCard | ArtifactCard | TalismanCard | FieldCard | PillCard)[];
+export class DeckSelectionUI extends GameObjects.Container {
+    private cards: AnyCard[];
     private background!: GameObjects.Rectangle;
+    private overlay!: GameObjects.Rectangle;
     private titleText!: GameObjects.Text;
     private closeButton!: GameObjects.Rectangle;
     private scrollContainer!: GameObjects.Container;
-    private cardSprites: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite | PillSprite)[] = [];
+    private cardSprites: AnyCardSprite[] = [];
     private maskShape!: GameObjects.Graphics;
+    private onCardSelected: ((card: AnyCard) => void) | null = null;
     
     private scrollY: number = 0;
     private maxScrollY: number = 0;
@@ -37,26 +41,36 @@ export class CardListView extends GameObjects.Container {
     private contentWidth: number = 0;
     private contentHeight: number = 0;
 
-    constructor(scene: Scene, title: string, cards: (UnitCard | ArtifactCard | TalismanCard | FieldCard | PillCard)[]) {
+    constructor(scene: Scene) {
         super(scene, 0, 0);
-        
-        this.title = title;
-        this.cards = cards;
-        
-        this.createView();
-        this.setupInteraction();
-        
+        this.cards = [];
+        this.setVisible(false);
         scene.add.existing(this);
     }
 
-    private createView() {
+    /**
+     * 显示选择界面
+     */
+    public show(cards: AnyCard[], onCardSelected: (card: AnyCard) => void): void {
+        this.cards = cards;
+        this.onCardSelected = onCardSelected;
+        
+        this.createView();
+        this.setupInteraction();
+        this.setVisible(true);
+    }
+
+    /**
+     * 创建UI
+     */
+    private createView(): void {
         const { width, height } = this.scene.scale;
         
         // 半透明黑色背景遮罩（覆盖整个屏幕）
-        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7);
-        overlay.setInteractive();
-        overlay.on('pointerdown', () => this.close());
-        this.add(overlay);
+        this.overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8);
+        this.overlay.setInteractive();
+        this.overlay.on('pointerdown', () => this.hide());
+        this.add(this.overlay);
 
         // 主面板
         this.panelWidth = Math.min(800, width * 0.9);
@@ -65,14 +79,14 @@ export class CardListView extends GameObjects.Container {
         this.panelY = height / 2;
 
         this.background = this.scene.add.rectangle(this.panelX, this.panelY, this.panelWidth, this.panelHeight, 0x2c3e50);
-        this.background.setStrokeStyle(4, 0xf39c12);
+        this.background.setStrokeStyle(4, 0x3498db);
         this.background.setInteractive(); // 阻止点击穿透
         this.add(this.background);
 
         // 标题
-        this.titleText = this.scene.add.text(this.panelX, this.panelY - this.panelHeight / 2 + 30, this.title, {
+        this.titleText = this.scene.add.text(this.panelX, this.panelY - this.panelHeight / 2 + 30, '从卡组中选择一张卡', {
             fontSize: '24px',
-            color: '#f39c12',
+            color: '#3498db',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.add(this.titleText);
@@ -92,10 +106,10 @@ export class CardListView extends GameObjects.Container {
         this.closeButton.setInteractive({ useHandCursor: true });
         this.closeButton.on('pointerover', () => this.closeButton.setFillStyle(0xff6b6b));
         this.closeButton.on('pointerout', () => this.closeButton.setFillStyle(0xe74c3c));
-        this.closeButton.on('pointerdown', () => this.close());
+        this.closeButton.on('pointerdown', () => this.hide());
         this.add(this.closeButton);
 
-        const closeText = this.scene.add.text(closeX, closeY, '关闭', {
+        const closeText = this.scene.add.text(closeX, closeY, '取消', {
             fontSize: '16px',
             color: '#ffffff'
         }).setOrigin(0.5);
@@ -132,10 +146,13 @@ export class CardListView extends GameObjects.Container {
             this.add(scrollHint);
         }
 
-        this.setDepth(5000);
+        this.setDepth(6000);
     }
 
-    private createCardGrid(containerWidth: number) {
+    /**
+     * 创建卡片网格
+     */
+    private createCardGrid(containerWidth: number): void {
         const cardScale = 0.5;
         const cardWidth = 180 * cardScale;
         const cardHeight = 260 * cardScale;
@@ -150,7 +167,7 @@ export class CardListView extends GameObjects.Container {
             const x = col * (cardWidth + spacing) + cardWidth / 2;
             const y = row * (cardHeight + spacing) + cardHeight / 2;
 
-            let sprite: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite;
+            let sprite: AnyCardSprite;
             if (cardData.kind === 'unit') {
                 sprite = new CardSprite(this.scene, x, y, cardData as UnitCard, cardScale);
             } else if (cardData.kind === 'artifact') {
@@ -168,10 +185,26 @@ export class CardListView extends GameObjects.Container {
             // 禁用拖拽
             sprite.disableDragging();
 
-            // 设置为卡组模式（不显示description）
+            // 设置为deck模式
             sprite.setDisplayMode('deck');
-            
-            // 添加hover效果（预览在CardSprite/ArtifactSprite中已实现）
+
+            // 点击选择
+            sprite.setInteractive({ useHandCursor: true });
+            sprite.on('pointerdown', () => {
+                if (this.onCardSelected) {
+                    this.onCardSelected(cardData);
+                }
+                this.hide();
+            });
+
+            // hover高亮
+            sprite.on('pointerover', () => {
+                sprite.setScale(cardScale * 1.1);
+            });
+
+            sprite.on('pointerout', () => {
+                sprite.setScale(cardScale);
+            });
             
             this.scrollContainer.add(sprite);
             this.cardSprites.push(sprite);
@@ -183,10 +216,15 @@ export class CardListView extends GameObjects.Container {
         this.maxScrollY = Math.max(0, totalHeight - this.contentHeight);
     }
 
-    private setupInteraction() {
+    /**
+     * 设置交互
+     */
+    private setupInteraction(): void {
         // 鼠标滚轮滚动
         this.scene.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gameObjects: any[], _deltaX: number, deltaY: number) => {
-            this.scroll(deltaY * 0.5);
+            if (this.visible) {
+                this.scroll(deltaY * 0.5);
+            }
         });
 
         // 触摸拖动滚动
@@ -196,7 +234,7 @@ export class CardListView extends GameObjects.Container {
         });
 
         this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-            if (this.isDragging) {
+            if (this.isDragging && this.visible) {
                 const deltaY = this.lastPointerY - pointer.y;
                 this.scroll(deltaY);
                 this.lastPointerY = pointer.y;
@@ -206,14 +244,12 @@ export class CardListView extends GameObjects.Container {
         this.scene.input.on('pointerup', () => {
             this.isDragging = false;
         });
-
-        // ESC键关闭
-        this.scene.input.keyboard?.on('keydown-ESC', () => {
-            this.close();
-        });
     }
 
-    private scroll(delta: number) {
+    /**
+     * 滚动
+     */
+    private scroll(delta: number): void {
         this.scrollY += delta;
         this.scrollY = Phaser.Math.Clamp(this.scrollY, 0, this.maxScrollY);
         
@@ -221,24 +257,22 @@ export class CardListView extends GameObjects.Container {
         this.scrollContainer.setY(this.contentTop - this.scrollY);
     }
 
-    private close() {
-        // 移除键盘监听
-        this.scene.input.keyboard?.off('keydown-ESC');
-        
-        // 移除鼠标监听
-        this.scene.input.off('wheel');
-        this.scene.input.off('pointermove');
-        this.scene.input.off('pointerup');
+    /**
+     * 隐藏界面
+     */
+    public hide(): void {
+        this.setVisible(false);
         
         // 销毁所有卡片精灵
         this.cardSprites.forEach(sprite => sprite.destroy());
+        this.cardSprites = [];
         
         // 销毁遮罩
         if (this.maskShape) {
             this.maskShape.destroy();
         }
         
-        // 销毁自己
-        this.destroy();
+        // 清空所有子元素
+        this.removeAll(true);
     }
 }

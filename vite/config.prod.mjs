@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path';
 
 const phasermsg = () => {
     return {
@@ -23,6 +24,14 @@ export default defineConfig({
         react(),
         phasermsg()
     ],
+    resolve: {
+        alias: {
+            '@': path.resolve(__dirname, '../src'),
+            '@game': path.resolve(__dirname, '../src/game'),
+            '@data': path.resolve(__dirname, '../public/data'),
+            '@types': path.resolve(__dirname, '../public/data/types')
+        }
+    },
     logLevel: 'warning',
     build: {
         rollupOptions: {
