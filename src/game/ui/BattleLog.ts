@@ -34,10 +34,10 @@ export class BattleLog {
         const { width, height } = scene.scale;
 
         // 日志窗口尺寸和位置（右侧）
-        this.LOG_WIDTH = width * 0.25;
-        this.LOG_HEIGHT = height * 0.6;
-        this.LOG_X = width - this.LOG_WIDTH / 2 - width * 0.02;
-        this.LOG_Y = height * 0.5;
+        this.LOG_WIDTH = width * 0.18;
+        this.LOG_HEIGHT = height * 0.45;
+        this.LOG_X = width - this.LOG_WIDTH / 2 - width * 0.015;
+        this.LOG_Y = height * 0.35;
 
         // 创建容器
         this.container = scene.add.container(this.LOG_X, this.LOG_Y);

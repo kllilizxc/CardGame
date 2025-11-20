@@ -1,5 +1,5 @@
 import { GameObjects } from 'phaser';
-import type { UnitCard } from '../../../data/types/cards/unit';
+import type { UnitCard } from '@data/types/cards/unit';
 import { BaseCardSprite } from './BaseCardSprite';
 
 export class CardSprite extends BaseCardSprite {
@@ -82,6 +82,17 @@ export class CardSprite extends BaseCardSprite {
             onDragEnd: () => {
                 // 拖拽结束后的处理
                 const battleScene = this.scene as any; // BattleScene
+                
+                // 检查是否拖拽到己方场地上的其他单位（用于换位）
+                if (battleScene.swapPlayerFieldCards) {
+                    const swapped = battleScene.swapPlayerFieldCards(this, this.x, this.y);
+                    if (swapped) {
+                        // 交换成功，不需要其他操作
+                        return;
+                    }
+                }
+                
+                // 检查是否是从手牌拖到场地
                 if (battleScene.isCardInPlayerField && battleScene.isCardInPlayerField(this.x, this.y)) {
                     // 尝试打出卡牌
                     const success = battleScene.playCardToField(this);

@@ -381,77 +381,80 @@ export class BattleScene extends Scene {
 
     private createFieldZones() {
         const { width, height } = this.scale;
-        const fieldWidth = width * 0.7;
-        const fieldHeight = height * 0.2;
-        const fontSize = Math.floor(height * 0.02) + 'px';
+        const fieldWidth = width * 0.65;
+        const fieldHeight = height * 0.18;
+        const fontSize = Math.floor(height * 0.018) + 'px';
 
         // 敌方场地
-        const enemyFieldY = height * 0.2;
-        this.enemyFieldZone = this.add.zone(width / 2, enemyFieldY, fieldWidth, fieldHeight);
+        const enemyFieldY = height * 0.18;
+        this.enemyFieldZone = this.add.zone(width * 0.45, enemyFieldY, fieldWidth, fieldHeight);
         const enemyFieldGraphics = this.add.graphics();
-        enemyFieldGraphics.lineStyle(3, 0xe74c3c, 0.8);
+        enemyFieldGraphics.lineStyle(2, 0xe74c3c, 0.7);
         enemyFieldGraphics.strokeRect(
             this.enemyFieldZone.x - this.enemyFieldZone.width / 2,
             this.enemyFieldZone.y - this.enemyFieldZone.height / 2,
             this.enemyFieldZone.width,
             this.enemyFieldZone.height
         );
-        this.add.text(width / 2, height * 0.08, '敌方场地', {
+        this.add.text(width * 0.45, height * 0.075, '敌方场地', {
             fontSize: fontSize,
-            color: '#e74c3c'
+            color: '#e74c3c',
+            fontStyle: 'bold'
         }).setOrigin(0.5);
 
         // 场地卡区域（左侧）
-        const fieldZoneWidth = width * 0.15;
-        const fieldZoneHeight = height * 0.35;
-        const fieldZoneX = width * 0.1;
-        const fieldZoneY = height * 0.35;
+        const fieldZoneWidth = width * 0.13;
+        const fieldZoneHeight = height * 0.32;
+        const fieldZoneX = width * 0.08;
+        const fieldZoneY = height * 0.32;
         this.fieldZone = this.add.zone(fieldZoneX, fieldZoneY, fieldZoneWidth, fieldZoneHeight).setInteractive();
         const fieldZoneGraphics = this.add.graphics();
-        fieldZoneGraphics.lineStyle(3, 0xf39c12, 0.8);
+        fieldZoneGraphics.lineStyle(2, 0xf39c12, 0.7);
         fieldZoneGraphics.strokeRect(
             this.fieldZone.x - this.fieldZone.width / 2,
             this.fieldZone.y - this.fieldZone.height / 2,
             this.fieldZone.width,
             this.fieldZone.height
         );
-        this.add.text(fieldZoneX, fieldZoneY - fieldZoneHeight / 2 - 20, '场地', {
+        this.add.text(fieldZoneX, fieldZoneY - fieldZoneHeight / 2 - 15, '场地', {
             fontSize: fontSize,
             color: '#f39c12',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
         // 我方场地
-        const playerFieldY = height * 0.45;
-        this.playerFieldZone = this.add.zone(width / 2, playerFieldY, fieldWidth, fieldHeight).setInteractive();
+        const playerFieldY = height * 0.42;
+        this.playerFieldZone = this.add.zone(width * 0.45, playerFieldY, fieldWidth, fieldHeight).setInteractive();
         const playerFieldGraphics = this.add.graphics();
-        playerFieldGraphics.lineStyle(3, 0x2ecc71, 0.8);
+        playerFieldGraphics.lineStyle(2, 0x2ecc71, 0.7);
         playerFieldGraphics.strokeRect(
             this.playerFieldZone.x - this.playerFieldZone.width / 2,
             this.playerFieldZone.y - this.playerFieldZone.height / 2,
             this.playerFieldZone.width,
             this.playerFieldZone.height
         );
-        this.add.text(width / 2, height * 0.33, '我方场地（拖拽卡牌到这里）', {
+        this.add.text(width * 0.45, height * 0.31, '我方场地（拖拽卡牌到这里）', {
             fontSize: fontSize,
-            color: '#2ecc71'
+            color: '#2ecc71',
+            fontStyle: 'bold'
         }).setOrigin(0.5);
 
         // 手牌区域
-        const handY = height * 0.8;
-        const handHeight = height * 0.25;
-        this.handZone = this.add.zone(width / 2, handY, width * 0.9, handHeight);
+        const handY = height * 0.77;
+        const handHeight = height * 0.28;
+        this.handZone = this.add.zone(width * 0.47, handY, width * 0.8, handHeight);
         const handGraphics = this.add.graphics();
-        handGraphics.lineStyle(2, 0xf39c12, 0.6);
+        handGraphics.lineStyle(2, 0xf39c12, 0.5);
         handGraphics.strokeRect(
             this.handZone.x - this.handZone.width / 2,
             this.handZone.y - this.handZone.height / 2,
             this.handZone.width,
             this.handZone.height
         );
-        this.add.text(width / 2, height * 0.63, '手牌', {
+        this.add.text(width * 0.47, height * 0.59, '手牌', {
             fontSize: fontSize,
-            color: '#f39c12'
+            color: '#f39c12',
+            fontStyle: 'bold'
         }).setOrigin(0.5);
 
         // 卡组按钮（左下角）
@@ -656,6 +659,63 @@ export class BattleScene extends Scene {
         return Phaser.Geom.Rectangle.Contains(bounds, x, y);
     }
 
+    /**
+     * 交换己方场地上的两张卡片位置
+     */
+    public swapPlayerFieldCards(draggedCard: CardSprite, x: number, y: number): boolean {
+        // 检查拖拽的卡是否在己方场地中
+        const draggedIndex = this.playerField.indexOf(draggedCard);
+        if (draggedIndex === -1) {
+            // 不在场地中，不是换位操作
+            return false;
+        }
+
+        // 检查是否在己方场地区域内
+        if (!this.isCardInPlayerField(x, y)) {
+            return false;
+        }
+
+        // 找到最近的己方单位（而不是精确命中）
+        let targetCard: CardSprite | null = null;
+        let targetIndex = -1;
+        let minDistance = Infinity;
+
+        for (let i = 0; i < this.playerField.length; i++) {
+            if (i === draggedIndex) continue; // 跳过自己
+            
+            const card = this.playerField[i];
+            const cardX = card.x;
+            const cardY = card.y;
+            
+            // 计算到卡片中心的距离
+            const distance = Phaser.Math.Distance.Between(x, y, cardX, cardY);
+            
+            // 找到最近的卡片
+            if (distance < minDistance) {
+                minDistance = distance;
+                targetCard = card;
+                targetIndex = i;
+            }
+        }
+
+        // 如果找到目标卡片且距离合理（不是太远），交换位置
+        const maxDistance = 200; // 最大检测距离
+        if (targetCard && targetIndex !== -1 && minDistance < maxDistance) {
+            // 交换数组中的位置
+            [this.playerField[draggedIndex], this.playerField[targetIndex]] = 
+            [this.playerField[targetIndex], this.playerField[draggedIndex]];
+
+            // 重新排列场地
+            this.cardManager.arrangePlayerField(this.playerField);
+            
+            this.battleLog.addLog(`交换了【${draggedCard.getCardData().name}】和【${targetCard.getCardData().name}】的位置`);
+            
+            return true;
+        }
+
+        return false;
+    }
+
     public playCardToField(card: CardSprite): boolean {
         // 检查卡片是否在手牌中（只有手牌中的卡才能打出）
         if (!this.hand.includes(card)) {
@@ -834,17 +894,17 @@ export class BattleScene extends Scene {
 
     private createUI() {
         const { width, height } = this.scale;
-        const buttonWidth = width * 0.08;
-        const buttonHeight = height * 0.05;
-        const buttonX = width * 0.95;
-        const fontSize = Math.floor(height * 0.018) + 'px';
-        const titleFontSize = Math.floor(height * 0.022) + 'px';
+        const buttonWidth = width * 0.075;
+        const buttonHeight = height * 0.045;
+        const buttonX = width * 0.93;
+        const fontSize = Math.floor(height * 0.016) + 'px';
+        const titleFontSize = Math.floor(height * 0.02) + 'px';
 
         // 抽卡按钮
-        const drawButton = this.add.rectangle(buttonX, height * 0.08, buttonWidth, buttonHeight, 0xf39c12)
+        const drawButton = this.add.rectangle(buttonX, height * 0.03, buttonWidth, buttonHeight, 0xf39c12)
             .setInteractive({ useHandCursor: true });
         
-        this.add.text(buttonX, height * 0.08, '抽一张卡', {
+        this.add.text(buttonX, height * 0.03, '抽一张卡', {
             fontSize: fontSize,
             color: '#ffffff',
             fontStyle: 'bold'
@@ -855,10 +915,10 @@ export class BattleScene extends Scene {
         drawButton.on('pointerdown', () => this.drawCard());
 
         // 结束回合按钮
-        const endTurnButton = this.add.rectangle(buttonX, height * 0.15, buttonWidth, buttonHeight, 0xe74c3c)
+        const endTurnButton = this.add.rectangle(buttonX, height * 0.09, buttonWidth, buttonHeight, 0xe74c3c)
             .setInteractive({ useHandCursor: true });
         
-        this.add.text(buttonX, height * 0.15, '结束回合', {
+        this.add.text(buttonX, height * 0.09, '结束回合', {
             fontSize: fontSize,
             color: '#ffffff',
             fontStyle: 'bold'
@@ -869,7 +929,7 @@ export class BattleScene extends Scene {
         endTurnButton.on('pointerdown', () => this.endTurn());
 
         // 统计信息
-        const statsText = this.add.text(buttonX, height * 0.25, '', {
+        const statsText = this.add.text(buttonX, height * 0.64, '', {
             fontSize: fontSize,
             color: '#ffffff'
         }).setOrigin(0.5);
