@@ -4,11 +4,11 @@ import { ArtifactSprite } from '../objects/ArtifactSprite';
 import { TalismanSprite } from '../objects/TalismanSprite';
 import { FieldSprite } from '../objects/FieldSprite';
 import { PillSprite } from '../objects/PillSprite';
-import type { UnitCard } from '../../../data/types/cards/unit';
-import type { ArtifactCard } from '../../../data/types/cards/artifact';
-import type { TalismanCard } from '../../../data/types/cards/talisman';
-import type { FieldCard } from '../../../data/types/cards/field';
-import type { PillCard } from '../../../data/types/cards/pill';
+import type { UnitCard } from '@data/types/cards/unit';
+import type { ArtifactCard } from '@data/types/cards/artifact';
+import type { TalismanCard } from '@data/types/cards/talisman';
+import type { FieldCard } from '@data/types/cards/field';
+import type { PillCard } from '@data/types/cards/pill';
 
 type AnyCard = UnitCard | ArtifactCard | TalismanCard | FieldCard | PillCard;
 type AnyCardSprite = CardSprite | ArtifactSprite | TalismanSprite | FieldSprite | PillSprite;
@@ -27,6 +27,7 @@ export class DeckSelectionUI extends GameObjects.Container {
     private cardSprites: AnyCardSprite[] = [];
     private maskShape!: GameObjects.Graphics;
     private onCardSelected: ((card: AnyCard) => void) | null = null;
+    private onCancel: (() => void) | null = null;
     
     private scrollY: number = 0;
     private maxScrollY: number = 0;
@@ -51,9 +52,10 @@ export class DeckSelectionUI extends GameObjects.Container {
     /**
      * 显示选择界面
      */
-    public show(cards: AnyCard[], onCardSelected: (card: AnyCard) => void): void {
+    public show(cards: AnyCard[], onCardSelected: (card: AnyCard) => void, onCancel?: () => void): void {
         this.cards = cards;
         this.onCardSelected = onCardSelected;
+        this.onCancel = onCancel || null;
         
         this.createView();
         this.setupInteraction();
@@ -69,7 +71,7 @@ export class DeckSelectionUI extends GameObjects.Container {
         // 半透明黑色背景遮罩（覆盖整个屏幕）
         this.overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8);
         this.overlay.setInteractive();
-        this.overlay.on('pointerdown', () => this.hide());
+        this.overlay.on('pointerdown', () => this.hide(true)); // 点击背景取消
         this.add(this.overlay);
 
         // 主面板
@@ -106,7 +108,7 @@ export class DeckSelectionUI extends GameObjects.Container {
         this.closeButton.setInteractive({ useHandCursor: true });
         this.closeButton.on('pointerover', () => this.closeButton.setFillStyle(0xff6b6b));
         this.closeButton.on('pointerout', () => this.closeButton.setFillStyle(0xe74c3c));
-        this.closeButton.on('pointerdown', () => this.hide());
+        this.closeButton.on('pointerdown', () => this.hide(true)); // 点击关闭按钮取消
         this.add(this.closeButton);
 
         const closeText = this.scene.add.text(closeX, closeY, '取消', {
@@ -194,7 +196,7 @@ export class DeckSelectionUI extends GameObjects.Container {
                 if (this.onCardSelected) {
                     this.onCardSelected(cardData);
                 }
-                this.hide();
+                this.hide(false); // 选择了卡片，不是取消
             });
 
             // hover高亮
@@ -259,8 +261,14 @@ export class DeckSelectionUI extends GameObjects.Container {
 
     /**
      * 隐藏界面
+     * @param cancelled 是否是取消操作（未选择卡片）
      */
-    public hide(): void {
+    public hide(cancelled: boolean = false): void {
+        // 如果是取消且有取消回调，调用它
+        if (cancelled && this.onCancel) {
+            this.onCancel();
+        }
+        
         this.setVisible(false);
         
         // 销毁所有卡片精灵
@@ -274,5 +282,9 @@ export class DeckSelectionUI extends GameObjects.Container {
         
         // 清空所有子元素
         this.removeAll(true);
+        
+        // 清空回调
+        this.onCardSelected = null;
+        this.onCancel = null;
     }
 }

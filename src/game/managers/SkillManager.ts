@@ -72,7 +72,7 @@ export class SkillManager {
     /**
      * 使用技能
      */
-    public useSkill(skillIndex: number, onComplete?: (skill: SkillCard) => void): boolean {
+    public useSkill(skillIndex: number, onComplete?: (skill: SkillCard, onCancel: () => void) => void): boolean {
         if (!this.canUseSkill(skillIndex)) {
             this.battleLog.addLog('技能冷却中！');
             return false;
@@ -90,11 +90,22 @@ export class SkillManager {
             state.usedThisTurn++;
         }
 
+        // 创建撤销函数
+        const cancelSkill = () => {
+            if (skill.cooldownType === 'perBattle') {
+                state.usedThisBattle = false;
+            } else if (skill.cooldownType === 'perTurn') {
+                state.usedThisTurn = Math.max(0, state.usedThisTurn - 1);
+            }
+            this.battleLog.addLog(`取消使用【${skill.name}】`);
+            this.scene.events.emit('skillUsed', skillIndex);
+        };
+
         // 播放技能特效
         this.playSkillEffect(skill, () => {
-            // 触发技能效果回调
+            // 触发技能效果回调，传入取消函数
             if (onComplete) {
-                onComplete(skill);
+                onComplete(skill, cancelSkill);
             }
 
             // 更新UI

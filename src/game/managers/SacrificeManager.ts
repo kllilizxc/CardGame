@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import type { CardSprite } from '../objects/CardSprite';
 import type { UnitCard } from '@data/types/cards/unit';
 import type { BattleLog } from '../ui/BattleLog';
+import { getUnitStar } from '../utils/RealmHelper';
 
 /**
  * 献祭召唤管理器
@@ -22,7 +23,7 @@ export class SacrificeManager {
      * @returns 需要献祭的单位数量（0表示不需要）
      */
     public getSacrificeRequired(cardData: UnitCard): number {
-        const star = cardData.star;
+        const star = getUnitStar(cardData);
         
         if (star >= 8) {
             return 2; // 8星及以上需要献祭2只

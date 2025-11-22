@@ -9,15 +9,10 @@
       "labels": ["sect_qingyun", "青云宗山门附近", "灵狐"],
       "limitPerDeck": 3,
 
-      "star": 2,
+      "realmId": "realm_qi_1",
       "race": "兽族",
       "linggen": ["木"],
       "factionId": "sect_qingyun",
-      "realm": {
-        "stage": "炼气期",
-        "phase": "初期",
-        "value": 1
-      },
       "attack": 4,
       "health": 2,
       "effects": [
@@ -53,15 +48,10 @@
       "labels": ["sect_qingyun", "青云宗外门弟子院", "队友", "外门弟子"],
       "limitPerDeck": 2,
 
-      "star": 3,
+      "realmId": "realm_qi_6",
       "race": "人族",
       "linggen": ["金", "木"],
       "factionId": "sect_qingyun",
-      "realm": {
-        "stage": "炼气期",
-        "phase": "中期",
-        "value": 2
-      },
       "attack": 6,
       "health": 28,
       "effects": [
@@ -98,15 +88,10 @@
       "labels": ["灵兽", "灵禽", "雷属性"],
       "limitPerDeck": 3,
 
-      "star": 2,
+      "realmId": "realm_qi_1",
       "race": "兽族",
       "linggen": ["雷"],
       "factionId": "neutral",
-      "realm": {
-        "stage": "炼气期",
-        "phase": "初期",
-        "value": 1
-      },
       "attack": 5,
       "health": 18,
       "effects": [
@@ -136,15 +121,10 @@
       "labels": ["sect_qingyun", "内门弟子", "队友", "剑修"],
       "limitPerDeck": 2,
 
-      "star": 4,
+      "realmId": "realm_qi_12",
       "race": "人族",
       "linggen": ["金"],
       "factionId": "sect_qingyun",
-      "realm": {
-        "stage": "炼气期",
-        "phase": "后期",
-        "value": 3
-      },
       "attack": 8,
       "health": 35,
       "effects": [
@@ -174,15 +154,10 @@
       "labels": ["灵兽", "水属性", "防御"],
       "limitPerDeck": 2,
 
-      "star": 3,
+      "realmId": "realm_qi_6",
       "race": "兽族",
       "linggen": ["水"],
       "factionId": "neutral",
-      "realm": {
-        "stage": "炼气期",
-        "phase": "中期",
-        "value": 2
-      },
       "attack": 3,
       "health": 45,
       "effects": [
@@ -212,15 +187,10 @@
       "labels": ["魔道", "敌人"],
       "limitPerDeck": 2,
 
-      "star": 3,
+      "realmId": "realm_qi_6",
       "race": "人族",
       "linggen": ["血"],
       "factionId": "demon",
-      "realm": {
-        "stage": "炼气期",
-        "phase": "中期",
-        "value": 2
-      },
       "attack": 9,
       "health": 25,
       "effects": [
@@ -250,15 +220,10 @@
       "labels": ["灵兽", "火属性", "凶兽"],
       "limitPerDeck": 2,
 
-      "star": 4,
+      "realmId": "realm_qi_12",
       "race": "兽族",
       "linggen": ["火"],
       "factionId": "neutral",
-      "realm": {
-        "stage": "炼气期",
-        "phase": "后期",
-        "value": 3
-      },
       "attack": 10,
       "health": 30,
       "effects": [
@@ -289,15 +254,10 @@
       "labels": ["sect_qingyun", "辅助", "治疗"],
       "limitPerDeck": 2,
 
-      "star": 2,
+      "realmId": "realm_qi_1",
       "race": "人族",
       "linggen": ["木"],
       "factionId": "sect_qingyun",
-      "realm": {
-        "stage": "炼气期",
-        "phase": "初期",
-        "value": 1
-      },
       "attack": 2,
       "health": 20,
       "effects": [
@@ -327,15 +287,10 @@
       "labels": ["sect_qingyun", "长老", "剑修", "队友"],
       "limitPerDeck": 1,
 
-      "star": 5,
+      "realmId": "realm_foundation_early",
       "race": "人族",
       "linggen": ["金", "木"],
       "factionId": "sect_qingyun",
-      "realm": {
-        "stage": "筑基期",
-        "phase": "初期",
-        "value": 4
-      },
       "attack": 12,
       "health": 50,
       "effects": [
@@ -370,15 +325,10 @@
       "labels": ["敌人", "人类"],
       "limitPerDeck": 3,
 
-      "star": 1,
+      "realmId": "realm_mortal",
       "race": "人族",
       "linggen": [],
       "factionId": "bandit",
-      "realm": {
-        "stage": "凡人",
-        "phase": "",
-        "value": 0
-      },
       "attack": 3,
       "health": 15,
       "effects": []
@@ -392,15 +342,10 @@
       "labels": ["sect_qingyun", "剑修", "金丹期"],
       "limitPerDeck": 2,
 
-      "star": 5,
+      "realmId": "realm_nascent_early",
       "race": "人族",
       "linggen": ["金"],
       "factionId": "sect_qingyun",
-      "realm": {
-        "stage": "金丹期",
-        "phase": "初期",
-        "value": 10
-      },
       "attack": 12,
       "health": 35,
       "effects": [
@@ -429,15 +374,10 @@
       "labels": ["sect_qingyun", "道主", "元婴期"],
       "limitPerDeck": 1,
 
-      "star": 8,
+      "realmId": "realm_unity_late",
       "race": "人族",
       "linggen": ["金", "木", "水", "火", "土"],
       "factionId": "sect_qingyun",
-      "realm": {
-        "stage": "元婴期",
-        "phase": "中期",
-        "value": 18
-      },
       "attack": 20,
       "health": 60,
       "effects": [
@@ -470,6 +410,23 @@
           "scriptId": "effect.CR_HIGH_002.turnStart"
         }
       ]
+    },
+    {
+      "id": "SX_YJZ_001",
+      "name": "外门弟子·引剑者",
+      "kind": "unit",
+      "description": "剑修宗门的外门弟子，负责在战后将散落各处的剑器重新召回。",
+      "rarity": "common",
+      "labels": ["剑修", "外门弟子", "sect_sword_sect"],
+      "limitPerDeck": 3,
+
+      "realmId": "realm_mortal",
+      "race": "人族",
+      "linggen": ["金"],
+      "factionId": "sect_sword_sect",
+      "attack": 3,
+      "health": 15,
+      "gongfaIds": ["gongfa.return_sword_end_turn"]
     }
   ]
 }

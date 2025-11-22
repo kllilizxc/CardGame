@@ -1,6 +1,6 @@
-// 卡牌效果相关类型
+// 新的“功法”概念：抽象化的卡牌效果 Schema
 
-// ========================= 新的结构化 Effect Schema =========================
+import type { ArtifactWeaponType } from './cards/artifact';
 
 export enum EffectEventType {
   TurnStart = 'TurnStart',
@@ -33,7 +33,7 @@ export enum EffectConditionType {
 
 export interface ArtifactUsedCondition {
   type: EffectConditionType.ArtifactUsedThisTurn;
-  artifactTag?: string;
+  weaponType?: ArtifactWeaponType;
   minimum?: number;
 }
 
@@ -81,6 +81,7 @@ export interface CardFilter {
   labelsAnyOf?: string[];
   maxStar?: number;
   amount?: number;
+  weaponTypesAnyOf?: ArtifactWeaponType[];
 }
 
 export interface RecoverCardFromDiscardAction {
@@ -107,6 +108,13 @@ export interface DealDamageAction {
   target: 'singleEnemy' | 'allEnemies' | 'randomEnemy';
 }
 
+export interface ApplyStatusAction {
+  type: EffectActionType.ApplyStatus;
+  statusId: string;
+  duration?: number;
+  target: 'self' | 'singleAlly' | 'singleEnemy' | 'allEnemies';
+}
+
 export interface AddLogAction {
   type: EffectActionType.AddLog;
   message: string;
@@ -122,6 +130,7 @@ export type EffectAction =
   | DrawCardsAction
   | ModifyStatsAction
   | DealDamageAction
+  | ApplyStatusAction
   | AddLogAction
   | CustomAction;
 
@@ -131,74 +140,10 @@ export interface EffectSchema {
   actions: EffectAction[];
 }
 
-// ========================= 旧版兼容结构 =========================
-
-// 旧的卡牌效果触发时机（兼容旧数据）
-export type EffectTiming =
-  | 'onSummon'
-  | 'onDeath'
-  | 'onAttack'
-  | 'onDamaged'
-  | 'turnStart'
-  | 'turnEnd'
-  | 'reaction';
-
-// 旧的目标定义
-export type EffectTargetScope =
-  | 'self'
-  | 'ownerPlayer'
-  | 'allyUnits'
-  | 'enemyUnits'
-  | 'singleAlly'
-  | 'singleEnemy'
-  | 'allUnits'
-  | 'none';
-
-export interface EffectTarget {
-  scope: EffectTargetScope;
-  requiredLabelsAllOf?: string[];
-  requiredLabelsAnyOf?: string[];
-}
-
-export type LegacyEffectConditionType =
-  | 'hasLabel'
-  | 'realmDiffAtLeast'
-  | 'unitCountAtLeast'
-  | 'hasCardInHand'
-  | 'custom';
-
-export interface LegacyEffectCondition {
-  type: LegacyEffectConditionType;
-  labels?: string[];
-  value?: number;
-  scriptId?: string;
-}
-
-export type LegacyEffectActionType =
-  | 'modifyAttack'
-  | 'modifyHealth'
-  | 'drawCards'
-  | 'healPlayer'
-  | 'damagePlayer'
-  | 'applyStatus'
-  | 'destroyUnit'
-  | 'custom';
-
-export interface LegacyEffectAction {
-  type: LegacyEffectActionType;
-  value?: number;
-  statusId?: string;
-  scriptId?: string;
-}
-
-// 兼容结构：旧字段 + 新 schema
-export interface CardEffect {
-  id?: string;
-  timing?: EffectTiming;
-  target?: EffectTarget;
-  conditions?: LegacyEffectCondition[];
-  actions?: LegacyEffectAction[];
-  text?: string;
-  scriptId?: string;
-  schema?: EffectSchema;
+// 功法：可以被多张卡牌复用的效果定义
+export interface Gongfa {
+  id: string;
+  name?: string;
+  schema: EffectSchema;
+  description?: string;
 }

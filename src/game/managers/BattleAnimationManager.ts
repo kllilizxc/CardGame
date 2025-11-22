@@ -83,6 +83,7 @@ export class BattleAnimationManager {
 
         const scene = this.scene;
         const intensity = star >= 8 ? 2 : 1;
+        const is8StarOrAbove = star >= 8;
         const baseScale = (card as any).getCardBaseScale ? (card as any).getCardBaseScale() : card.scale;
         const originalDepth = card.depth ?? 0;
         const originalPos = (card as any).getOriginalPosition ? (card as any).getOriginalPosition() : null;
@@ -161,24 +162,59 @@ export class BattleAnimationManager {
                 });
             });
 
+            // 重力下落动画 - 符合物理的加速下落
             scene.tweens.add({
                 targets: card,
                 x: finalX,
                 y: finalY,
                 alpha: 1,
                 scale: baseScale,
-                duration: 400 * intensity,
-                ease: 'Back.easeOut',
+                duration: 350 * intensity,
+                ease: 'Cubic.easeIn', // 重力加速
                 onComplete: () => {
-                    scene.tweens.add({
-                        targets: card,
-                        angle: -5 * intensity,
-                        duration: 50,
-                        yoyo: true,
-                        repeat: 3 * intensity,
-                        ease: 'Sine.easeInOut',
-                        onComplete: cleanup
-                    });
+                    // 8星及以上：震动场上其他所有卡片
+                    if (is8StarOrAbove) {
+                        this.shakeOtherCards(card);
+                    }
+                    
+                    // 拍击瞬间 - 立即开始震动
+                    const bounceCount = 4 * intensity; // 震动次数
+                    let currentBounce = 0;
+                    
+                    const wobble = () => {
+                        if (currentBounce >= bounceCount) {
+                            // 最后恢复到正常状态
+                            scene.tweens.add({
+                                targets: card,
+                                scaleX: baseScale,
+                                duration: 150,
+                                ease: 'Elastic.easeOut',
+                                onComplete: cleanup
+                            });
+                            return;
+                        }
+                        
+                        // 第一次冲击最强，之后逐渐衰减
+                        const dampening = Math.pow(0.6, currentBounce); // 指数衰减，更符合物理
+                        // 交替方向 - 左右晃动
+                        const direction = currentBounce % 2 === 0 ? 1 : -1;
+                        // 旋转幅度 - 第一次最大，之后快速减小
+                        const rotationAmount = 0.6 * dampening * direction;
+                        
+                        scene.tweens.add({
+                            targets: card,
+                            scaleX: baseScale * (1 - rotationAmount),
+                            duration: 80 + currentBounce * 10, // 逐渐变慢（能量损耗）
+                            ease: 'Sine.easeInOut',
+                            onComplete: () => {
+                                currentBounce++;
+                                wobble();
+                            }
+                        });
+                    };
+                    
+                    // 立即开始震动，没有延迟
+                    wobble();
                 },
                 onStop: cleanup
             });
@@ -393,6 +429,73 @@ export class BattleAnimationManager {
             duration: 800,
             ease: 'Power2',
             onComplete: () => damageText.destroy()
+        });
+    }
+
+    /**
+     * 获取从弃牌堆回到手牌时，卡牌出现的起点位置。
+     * 统一在这里封装，避免其他管理器直接依赖 BattleScene 上的 UI 细节。
+     */
+    public getDiscardPileCardSpawnPosition(): { x: number; y: number } {
+        const battleScene = this.scene as any;
+        const discardPileButton = battleScene.discardPileButton as Phaser.GameObjects.Rectangle | undefined;
+
+        if (discardPileButton) {
+            return { x: discardPileButton.x, y: discardPileButton.y };
+        }
+
+        const { width, height } = this.scene.scale;
+        return {
+            x: width * 0.9,
+            y: height * 0.8
+        };
+    }
+
+    /**
+     * 震动场上其他所有卡片（8星召唤特效）
+     */
+    private shakeOtherCards(summonedCard: CardSprite): void {
+        const battleScene = this.scene as any;
+        
+        // 获取所有场上卡片（玩家场地和敌方场地）
+        const allFieldCards: CardSprite[] = [];
+        if (battleScene.playerField) {
+            allFieldCards.push(...battleScene.playerField);
+        }
+        if (battleScene.enemyField) {
+            allFieldCards.push(...battleScene.enemyField);
+        }
+        
+        // 震动每张卡片（除了刚召唤的）
+        allFieldCards.forEach((card, index) => {
+            if (card === summonedCard || !card.active) {
+                return;
+            }
+            
+            const originalY = card.y;
+            // 随机震动高度：15-30像素
+            const shakeHeight = 15 + Math.random() * 15;
+            // 稍微错开时间，产生波浪效果
+            const delay = index * 20;
+            
+            this.scene.time.delayedCall(delay, () => {
+                // 震起
+                this.scene.tweens.add({
+                    targets: card,
+                    y: originalY - shakeHeight,
+                    duration: 150,
+                    ease: 'Quad.easeOut',
+                    onComplete: () => {
+                        // 落回
+                        this.scene.tweens.add({
+                            targets: card,
+                            y: originalY,
+                            duration: 200,
+                            ease: 'Bounce.easeOut'
+                        });
+                    }
+                });
+            });
         });
     }
 

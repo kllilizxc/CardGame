@@ -1,6 +1,10 @@
 import { GameObjects } from 'phaser';
 import type { UnitCard } from '@data/types/cards/unit';
+import type { Gongfa } from '@data/types/gongfa';
 import { BaseCardSprite } from './BaseCardSprite';
+import { GongfaTooltip } from '../ui/GongfaTooltip';
+import { describeGongfa } from '../utils/GongfaDescriptionBuilder';
+import { getUnitStar, getRealmConfig } from '../utils/RealmHelper';
 
 export class CardSprite extends BaseCardSprite {
     private cardData: UnitCard;
@@ -9,6 +13,10 @@ export class CardSprite extends BaseCardSprite {
     private attackText: GameObjects.Text;
     private healthText: GameObjects.Text;
     private descriptionText: GameObjects.Text;
+    private gongfaContainer: GameObjects.Container;
+    private gongfaTexts: GameObjects.Text[] = [];
+    private gongfaTooltip: GongfaTooltip;
+    private gongfaData: Map<string, Gongfa> = new Map();
 
     constructor(scene: Phaser.Scene, x: number, y: number, cardData: UnitCard, scale: number = 0.7) {
         super(scene, x, y, scale);
@@ -21,7 +29,8 @@ export class CardSprite extends BaseCardSprite {
         this.createNameText(cardData.name);
 
         // 星级
-        const stars = '★'.repeat(cardData.star);
+        const star = getUnitStar(cardData);
+        const stars = '★'.repeat(star);
         this.starsText = scene.add.text(0, -85, stars, {
             fontSize: '14px',
             color: '#f1c40f'
@@ -29,7 +38,8 @@ export class CardSprite extends BaseCardSprite {
         this.add(this.starsText);
 
         // 境界
-        const realmInfo = `${cardData.realm?.stage || ''} ${cardData.realm?.phase || ''}`;
+        const realmConfig = getRealmConfig(cardData.realmId);
+        const realmInfo = realmConfig ? `${realmConfig.stage} ${realmConfig.phase}`.trim() : '';
         this.realmText = scene.add.text(0, -60, realmInfo, {
             fontSize: '12px',
             color: '#9b59b6'
@@ -73,6 +83,16 @@ export class CardSprite extends BaseCardSprite {
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.add(this.healthText);
+
+        // 初始化功法提示框
+        this.gongfaTooltip = new GongfaTooltip(scene);
+
+        // 创建功法列表容器
+        this.gongfaContainer = scene.add.container(0, 0);
+        this.add(this.gongfaContainer);
+
+        // 加载功法数据并渲染
+        this.loadAndRenderGongfa();
 
         // 设置交互和缩放
         this.setupInteractivity();
@@ -152,5 +172,112 @@ export class CardSprite extends BaseCardSprite {
         // 只有在hover模式下才显示描述
         const shouldShowDescription = this.currentDisplayMode === 'hover';
         this.descriptionText.setVisible(shouldShowDescription);
+        
+        // 功法列表始终显示（如果有的话）
+        this.gongfaContainer.setVisible(true);
+    }
+
+    /**
+     * 加载功法数据并渲染功法列表
+     */
+    private loadAndRenderGongfa(): void {
+        const gongfaIds = this.cardData.gongfaIds || [];
+        if (gongfaIds.length === 0) {
+            return;
+        }
+
+        // 从缓存加载功法数据，并生成描述
+        const gongfaListData = this.scene.cache.json.get('gongfaList') as { gongfa: Gongfa[] } | undefined;
+        if (gongfaListData && gongfaListData.gongfa) {
+            gongfaListData.gongfa.forEach(gongfa => {
+                // 如果没有描述，从 schema 自动生成
+                const description = gongfa.description ?? describeGongfa(gongfa.schema);
+                this.gongfaData.set(gongfa.id, { ...gongfa, description });
+            });
+        }
+
+        // 渲染功法列表
+        this.renderGongfaList(gongfaIds);
+    }
+
+    /**
+     * 渲染功法列表
+     */
+    private renderGongfaList(gongfaIds: string[]): void {
+        // 清除旧的功法文本
+        this.gongfaTexts.forEach(text => text.destroy());
+        this.gongfaTexts = [];
+
+        const startY = 30; // 功法列表起始 Y 坐标
+        const lineHeight = 16; // 每行高度
+
+        gongfaIds.forEach((gongfaId, index) => {
+            const gongfa = this.gongfaData.get(gongfaId);
+            if (!gongfa) {
+                return;
+            }
+
+            const y = startY + index * lineHeight;
+            
+            // 创建功法名文本
+            const gongfaText = this.scene.add.text(0, y, `【${gongfa.name}】`, {
+                fontSize: '10px',
+                color: '#f39c12',
+                fontStyle: 'bold'
+            }).setOrigin(0.5);
+            
+            this.gongfaContainer.add(gongfaText);
+            this.gongfaTexts.push(gongfaText);
+
+            // 创建交互区域
+            const hitArea = this.scene.add.rectangle(
+                0,
+                y,
+                gongfaText.width + 10,
+                lineHeight,
+                0xffd700,
+                0
+            );
+            hitArea.setInteractive({ useHandCursor: true });
+            hitArea.setOrigin(0.5);
+            this.gongfaContainer.add(hitArea);
+
+            // 下划线（默认隐藏）
+            const underline = this.scene.add.rectangle(
+                0,
+                y + 6,
+                gongfaText.width,
+                1,
+                0xffd700,
+                0
+            );
+            this.gongfaContainer.add(underline);
+
+            // hover 事件
+            hitArea.on('pointerover', () => {
+                underline.setAlpha(1);
+                // 计算提示框位置（世界坐标）
+                const worldPos = this.getWorldTransformMatrix();
+                const worldX = worldPos.tx;
+                const worldY = worldPos.ty + y * this.scale;
+                
+                const gongfaName = gongfa.name || gongfaId;
+                const description = gongfa.description || '无描述';
+                this.gongfaTooltip.show(worldX + 120, worldY, gongfaName, description);
+            });
+
+            hitArea.on('pointerout', () => {
+                underline.setAlpha(0);
+                this.gongfaTooltip.hide();
+            });
+        });
+    }
+
+    /**
+     * 销毁时清理功法提示框
+     */
+    public destroy(fromScene?: boolean): void {
+        this.gongfaTooltip.destroy();
+        super.destroy(fromScene);
     }
 }

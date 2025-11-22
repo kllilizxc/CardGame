@@ -7,17 +7,26 @@ import type { UnitCard } from '../../../public/data/types/cards/unit';
 import type { ArtifactCard } from '../../../public/data/types/cards/artifact';
 import type { TalismanCard } from '../../../public/data/types/cards/talisman';
 import type { FieldCard } from '../../../public/data/types/cards/field';
+import type { BattleLayoutConfig } from '../config/LayoutConfig';
 import type { BattleLog } from '../ui/BattleLog';
 
 export class CardManager {
     private scene: Scene;
     private battleLog: BattleLog;
     private cardScale: number;
+    private readonly DEFAULT_CARD_SPACING = 160;
+    private readonly LAYOUT_WIDTH_PADDING = 200;
 
     constructor(scene: Scene, battleLog: BattleLog, cardScale: number) {
         this.scene = scene;
         this.battleLog = battleLog;
         this.cardScale = cardScale;
+    }
+
+    private layout?: BattleLayoutConfig;
+
+    public setLayout(layout: BattleLayoutConfig): void {
+        this.layout = layout;
     }
 
     // 抽一张卡
@@ -31,7 +40,7 @@ export class CardManager {
             return { deck, hand };
         }
 
-        const cardData = deck.shift()!;
+        const cardData = deck.shift() as UnitCard | ArtifactCard | TalismanCard | FieldCard;
         let sprite: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite;
         
         if (cardData.kind === 'unit') {
@@ -57,17 +66,38 @@ export class CardManager {
 
     // 排列手牌
     public arrangeHand(hand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[]): void {
+        const layoutZone = this.layout?.handZone;
+        if (layoutZone) {
+            const y = layoutZone.y;
+            const availableWidth = Math.max(layoutZone.width - this.LAYOUT_WIDTH_PADDING, 1);
+            const spacing = this.calculateSpacing(hand.length, availableWidth);
+            const startX = layoutZone.x - spacing * (Math.max(hand.length - 1, 0)) / 2;
+
+            hand.forEach((card, index) => {
+                const x = startX + index * spacing;
+                this.scene.tweens.add({
+                    targets: card,
+                    x,
+                    y,
+                    duration: 300,
+                    ease: 'Back.easeOut'
+                });
+                card.setOriginalPosition(x, y);
+            });
+            return;
+        }
+
         const { width, height } = this.scene.scale;
-        const handY = height * 0.8;  // 手牌Y位置相对化
-        const spacing = width * 0.12; // 卡牌间距为屏幕宽度的12%
-        const totalWidth = (hand.length - 1) * spacing;
-        const startX = width / 2 - totalWidth / 2;
+        const handY = height * 0.8;
+        const availableWidth = width * 0.8;
+        const spacing = this.calculateSpacing(hand.length, availableWidth);
+        const startX = width / 2 - spacing * (Math.max(hand.length - 1, 0)) / 2;
 
         hand.forEach((card, index) => {
             const x = startX + index * spacing;
             this.scene.tweens.add({
                 targets: card,
-                x: x,
+                x,
                 y: handY,
                 duration: 300,
                 ease: 'Back.easeOut'
@@ -78,17 +108,38 @@ export class CardManager {
 
     // 排列玩家场地
     public arrangePlayerField(playerField: CardSprite[]): void {
+        const layoutZone = this.layout?.playerFieldZone;
+        if (layoutZone) {
+            const y = layoutZone.y;
+            const availableWidth = Math.max(layoutZone.width - this.LAYOUT_WIDTH_PADDING, 1);
+            const spacing = this.calculateSpacing(playerField.length, availableWidth);
+            const startX = layoutZone.x - spacing * (Math.max(playerField.length - 1, 0)) / 2;
+
+            playerField.forEach((card, index) => {
+                const x = startX + index * spacing;
+                this.scene.tweens.add({
+                    targets: card,
+                    x,
+                    y,
+                    duration: 300,
+                    ease: 'Back.easeOut'
+                });
+                card.setOriginalPosition(x, y);
+            });
+            return;
+        }
+
         const { width, height } = this.scene.scale;
-        const fieldY = height * 0.45;  // 我方场地Y位置
-        const spacing = width * 0.13;   // 卡牌间距
-        const totalWidth = (playerField.length - 1) * spacing;
-        const startX = width / 2 - totalWidth / 2;
+        const fieldY = height * 0.45;
+        const availableWidth = width * 0.8;
+        const spacing = this.calculateSpacing(playerField.length, availableWidth);
+        const startX = width / 2 - spacing * (Math.max(playerField.length - 1, 0)) / 2;
 
         playerField.forEach((card, index) => {
             const x = startX + index * spacing;
             this.scene.tweens.add({
                 targets: card,
-                x: x,
+                x,
                 y: fieldY,
                 duration: 300,
                 ease: 'Back.easeOut'
@@ -99,17 +150,39 @@ export class CardManager {
 
     // 排列敌方场地
     public arrangeEnemyField(enemyField: CardSprite[]): void {
+        const layoutZone = this.layout?.enemyFieldZone;
+        if (layoutZone) {
+            const y = layoutZone.y;
+            const availableWidth = Math.max(layoutZone.width - this.LAYOUT_WIDTH_PADDING, 1);
+            const spacing = this.calculateSpacing(enemyField.length, availableWidth);
+            const startX = layoutZone.x - spacing * (Math.max(enemyField.length - 1, 0)) / 2;
+
+            enemyField.forEach((card, index) => {
+                const x = startX + index * spacing;
+                this.scene.tweens.add({
+                    targets: card,
+                    x,
+                    y,
+                    duration: 300,
+                    ease: 'Back.easeOut'
+                });
+                card.setOriginalPosition(x, y);
+                card.disableDragging();
+            });
+            return;
+        }
+
         const { width, height } = this.scene.scale;
-        const fieldY = height * 0.2;   // 敌方场地Y位置
-        const spacing = width * 0.13;   // 卡牌间距
-        const totalWidth = (enemyField.length - 1) * spacing;
-        const startX = width / 2 - totalWidth / 2;
+        const fieldY = height * 0.2;
+        const availableWidth = width * 0.8;
+        const spacing = this.calculateSpacing(enemyField.length, availableWidth);
+        const startX = width / 2 - spacing * (Math.max(enemyField.length - 1, 0)) / 2;
 
         enemyField.forEach((card, index) => {
             const x = startX + index * spacing;
             this.scene.tweens.add({
                 targets: card,
-                x: x,
+                x,
                 y: fieldY,
                 duration: 300,
                 ease: 'Back.easeOut'
@@ -141,5 +214,15 @@ export class CardManager {
             return { success: true, hand, playerField };
         }
         return { success: false, hand, playerField };
+    }
+
+    private calculateSpacing(cardCount: number, availableWidth: number): number {
+        if (cardCount <= 1) {
+            return 0;
+        }
+
+        const effectiveWidth = Math.max(availableWidth, this.DEFAULT_CARD_SPACING);
+        const maxSpacing = effectiveWidth / (cardCount - 1);
+        return Math.min(this.DEFAULT_CARD_SPACING, maxSpacing);
     }
 }

@@ -5,7 +5,7 @@ import { ArtifactSprite } from '../objects/ArtifactSprite';
 import { TalismanSprite } from '../objects/TalismanSprite';
 import { FieldSprite } from '../objects/FieldSprite';
 import type { UnitCard } from '../../../public/data/types/cards/unit';
-import type { ArtifactCard } from '../../../public/data/types/cards/artifact';
+import type { ArtifactCard, ArtifactWeaponType } from '../../../public/data/types/cards/artifact';
 import type { TalismanCard } from '../../../public/data/types/cards/talisman';
 import type { FieldCard } from '../../../public/data/types/cards/field';
 import { BattleLog } from '../ui/BattleLog';
@@ -13,6 +13,7 @@ import { CardListView } from '../ui/CardListView';
 import { BattleAnimationManager } from '../managers/BattleAnimationManager';
 import { CombatManager } from '../managers/CombatManager';
 import { CardManager } from '../managers/CardManager';
+import { getUnitStar } from '../utils/RealmHelper';
 import { TurnManager } from '../managers/TurnManager';
 import { ArtifactManager } from '../managers/ArtifactManager';
 import { TalismanManager } from '../managers/TalismanManager';
@@ -27,6 +28,10 @@ import { SkillUI } from '../ui/SkillUI';
 import { DeckSelectionUI } from '../ui/DeckSelectionUI';
 import { CardSpriteFactory } from '../factories/CardSpriteFactory';
 import { SkillEffectHandler } from '../handlers/SkillEffectHandler';
+import { UnitEffectManager } from '../managers/UnitEffectManager';
+import { CardPreviewPanel } from '../ui/CardPreviewPanel';
+import { createDefaultLayout, type BattleLayoutConfig } from '../config/LayoutConfig';
+import { UsageManager } from '../managers/UsageManager';
 import type { PillCard } from '../../../public/data/types/cards/pill';
 import type { SkillCard } from '../../../public/data/types/cards/skill';
 
@@ -72,7 +77,14 @@ export class BattleScene extends Scene {
     private skillUI!: SkillUI;
     private deckSelectionUI!: DeckSelectionUI;
     private skillEffectHandler!: SkillEffectHandler;
+    private unitEffectManager!: UnitEffectManager;
     private pillTooltip: Phaser.GameObjects.Container | null = null;
+    private cardPreviewPanel!: CardPreviewPanel;
+    private usageManager: UsageManager = new UsageManager();
+    private static readonly USAGE_CATEGORY_WEAPON = 'weapon';
+    
+    // 布局配置
+    private layout!: BattleLayoutConfig;
 
     constructor() {
         super('BattleScene');
@@ -92,6 +104,7 @@ export class BattleScene extends Scene {
         this.load.json('skillCards', 'data/cards/skills.json');
         this.load.json('starterDeck', 'data/decks/starter-deck.json');
         this.load.json('currentEncounter', 'data/encounters/medium-enemy.json');
+        this.load.json('gongfaList', 'data/gongfa/gongfa-list.json');
     }
 
     create() {
@@ -100,6 +113,9 @@ export class BattleScene extends Scene {
 
         this.cardScale = this.calculateCardScale();
         this.cameras.main.setBackgroundColor(0x1a1a2e);
+        
+        // 初始化布局配置
+        this.layout = createDefaultLayout(width, height);
 
         // 创建标题
         const titleFontSize = Math.floor(height * 0.03) + 'px';
@@ -109,11 +125,21 @@ export class BattleScene extends Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        // 初始化管理器
-        this.battleLog = new BattleLog(this);
+        // 初始化管理器（使用布局配置）
+        this.battleLog = new BattleLog(this, this.layout.battleLog);
         this.animationManager = new BattleAnimationManager(this);
+        this.cardPreviewPanel = new CardPreviewPanel(this, this.layout.cardPreview);
         this.combatManager = new CombatManager(this, this.animationManager, this.battleLog);
         this.cardManager = new CardManager(this, this.battleLog, this.cardScale);
+        this.cardManager.setLayout(this.layout);
+        const gongfaData = this.cache.json.get('gongfaList') as { gongfa: any[] };
+        this.unitEffectManager = new UnitEffectManager(
+            this,
+            this.battleLog,
+            this.cardManager,
+            this.animationManager,
+            gongfaData?.gongfa || []
+        );
         this.turnManager = new TurnManager(this);
         this.artifactManager = new ArtifactManager(this, this.battleLog);
         this.talismanManager = new TalismanManager(this, this.battleLog);
@@ -267,13 +293,13 @@ export class BattleScene extends Scene {
      * 初始化丹药系统
      */
     private setupPillSystem(pillsData: PillCard[]): void {
-        const { width, height } = this.scale;
+        const pillConfig = this.layout.pillSlots;
         
-        // 创建丹药槽位UI（放在屏幕下方手牌区上方）
+        // 创建丹药槽位UI
         this.pillSlotUI = new PillSlotUI(
             this,
-            width / 2,
-            height * 0.75,
+            pillConfig.x,
+            pillConfig.y,
             (slotIndex: number) => {
                 // 点击槽位使用丹药
                 this.usePillFromSlot(slotIndex);
@@ -325,8 +351,6 @@ export class BattleScene extends Scene {
      * 初始化技能系统
      */
     private setupSkillSystem(skillsData: SkillCard[]): void {
-        const { width, height } = this.scale;
-        
         // 初始化技能管理器
         this.skillManager = new SkillManager(this, this.battleLog);
         
@@ -352,11 +376,12 @@ export class BattleScene extends Scene {
         // 将 GameActionHandler 注入到 TalismanManager
         this.talismanManager.setGameActionHandler(this.skillEffectHandler.getGameActionHandler());
         
-        // 创建技能UI（放在屏幕上方）
+        // 创建技能UI（使用布局配置）
+        const skillConfig = this.layout.skillUI;
         this.skillUI = new SkillUI(
             this,
-            width / 2,
-            height * 0.1,
+            skillConfig.x,
+            skillConfig.y,
             (skillIndex: number) => {
                 // 点击技能按钮
                 this.useSkill(skillIndex);
@@ -381,78 +406,72 @@ export class BattleScene extends Scene {
 
 
     private createFieldZones() {
-        const { width, height } = this.scale;
-        const fieldWidth = width * 0.65;
-        const fieldHeight = height * 0.18;
+        const { height } = this.scale;
         const fontSize = Math.floor(height * 0.018) + 'px';
 
-        // 敌方场地
-        const enemyFieldY = height * 0.18;
-        this.enemyFieldZone = this.add.zone(width * 0.45, enemyFieldY, fieldWidth, fieldHeight);
+        // 敌方场地（使用布局配置）
+        const enemyConfig = this.layout.enemyFieldZone;
+        this.enemyFieldZone = this.add.zone(enemyConfig.x, enemyConfig.y, enemyConfig.width, enemyConfig.height);
         const enemyFieldGraphics = this.add.graphics();
         enemyFieldGraphics.lineStyle(2, 0xe74c3c, 0.7);
         enemyFieldGraphics.strokeRect(
-            this.enemyFieldZone.x - this.enemyFieldZone.width / 2,
-            this.enemyFieldZone.y - this.enemyFieldZone.height / 2,
-            this.enemyFieldZone.width,
-            this.enemyFieldZone.height
+            enemyConfig.x - enemyConfig.width / 2,
+            enemyConfig.y - enemyConfig.height / 2,
+            enemyConfig.width,
+            enemyConfig.height
         );
-        this.add.text(width * 0.45, height * 0.075, '敌方场地', {
+        this.add.text(enemyConfig.x, enemyConfig.y - enemyConfig.height / 2 - 20, '敌方场地', {
             fontSize: fontSize,
             color: '#e74c3c',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        // 场地卡区域（左侧）
-        const fieldZoneWidth = width * 0.13;
-        const fieldZoneHeight = height * 0.32;
-        const fieldZoneX = width * 0.08;
-        const fieldZoneY = height * 0.32;
-        this.fieldZone = this.add.zone(fieldZoneX, fieldZoneY, fieldZoneWidth, fieldZoneHeight).setInteractive();
+        // 场地卡区域
+        const fieldConfig = this.layout.fieldCardZone;
+        this.fieldZone = this.add.zone(fieldConfig.x, fieldConfig.y, fieldConfig.width, fieldConfig.height).setInteractive();
         const fieldZoneGraphics = this.add.graphics();
         fieldZoneGraphics.lineStyle(2, 0xf39c12, 0.7);
         fieldZoneGraphics.strokeRect(
-            this.fieldZone.x - this.fieldZone.width / 2,
-            this.fieldZone.y - this.fieldZone.height / 2,
-            this.fieldZone.width,
-            this.fieldZone.height
+            fieldConfig.x - fieldConfig.width / 2,
+            fieldConfig.y - fieldConfig.height / 2,
+            fieldConfig.width,
+            fieldConfig.height
         );
-        this.add.text(fieldZoneX, fieldZoneY - fieldZoneHeight / 2 - 15, '场地', {
+        this.add.text(fieldConfig.x, fieldConfig.y - fieldConfig.height / 2 - 15, '场地', {
             fontSize: fontSize,
             color: '#f39c12',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
         // 我方场地
-        const playerFieldY = height * 0.42;
-        this.playerFieldZone = this.add.zone(width * 0.45, playerFieldY, fieldWidth, fieldHeight).setInteractive();
+        const playerConfig = this.layout.playerFieldZone;
+        this.playerFieldZone = this.add.zone(playerConfig.x, playerConfig.y, playerConfig.width, playerConfig.height).setInteractive();
         const playerFieldGraphics = this.add.graphics();
         playerFieldGraphics.lineStyle(2, 0x2ecc71, 0.7);
         playerFieldGraphics.strokeRect(
-            this.playerFieldZone.x - this.playerFieldZone.width / 2,
-            this.playerFieldZone.y - this.playerFieldZone.height / 2,
-            this.playerFieldZone.width,
-            this.playerFieldZone.height
+            playerConfig.x - playerConfig.width / 2,
+            playerConfig.y - playerConfig.height / 2,
+            playerConfig.width,
+            playerConfig.height
         );
-        this.add.text(width * 0.45, height * 0.31, '我方场地（拖拽卡牌到这里）', {
+        this.add.text(playerConfig.x, playerConfig.y - playerConfig.height / 2 - 20, '我方场地（拖拽卡牌到这里）', {
             fontSize: fontSize,
             color: '#2ecc71',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
         // 手牌区域
-        const handY = height * 0.77;
-        const handHeight = height * 0.28;
-        this.handZone = this.add.zone(width * 0.47, handY, width * 0.8, handHeight);
+        const handConfig = this.layout.handZone;
+        this.handZone = this.add.zone(handConfig.x, handConfig.y, handConfig.width, handConfig.height);
         const handGraphics = this.add.graphics();
         handGraphics.lineStyle(2, 0xf39c12, 0.5);
         handGraphics.strokeRect(
-            this.handZone.x - this.handZone.width / 2,
-            this.handZone.y - this.handZone.height / 2,
-            this.handZone.width,
-            this.handZone.height
+            handConfig.x - handConfig.width / 2,
+            handConfig.y - handConfig.height / 2,
+            handConfig.width,
+            handConfig.height
         );
-        this.add.text(width * 0.47, height * 0.59, '手牌', {
+        this.add.text(handConfig.x, handConfig.y - handConfig.height / 2 - 20, '手牌', {
             fontSize: fontSize,
             color: '#f39c12',
             fontStyle: 'bold'
@@ -474,15 +493,16 @@ export class BattleScene extends Scene {
 
     private setupCardPreview() {
         this.events.on('showCardPreview', (card: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite) => {
-            this.showCardPreview(card);
+            this.cardPreviewPanel.showCard(card);
         });
 
         this.events.on('showCardPreviewFromData', (cardData: any) => {
-            this.showCardPreviewFromData(cardData);
+            this.cardPreviewPanel.showCardFromData(cardData);
         });
 
         this.events.on('hideCardPreview', () => {
-            this.hideCardPreview();
+            // 不再自动隐藏，保持显示直到下一张卡片
+            // this.cardPreviewPanel.hide();
         });
 
         // 丹药 tooltip 事件
@@ -811,7 +831,8 @@ export class BattleScene extends Scene {
                     
                     // 播放史诗召唤动画（交由动画管理器处理，异常不影响逻辑）
                     const cardData = card.getCardData();
-                    this.animationManager.playSummonAnimation(card, cardData.star || 0);
+                    const star = cardData.kind === 'unit' ? getUnitStar(cardData) : 0;
+                    this.animationManager.playSummonAnimation(card, star);
                 }
             }
         );
@@ -840,11 +861,43 @@ export class BattleScene extends Scene {
                     this.hand.splice(index, 1);
                     this.cardManager.arrangeHand(this.hand);
                 }
+
+                const artifactData = artifact.getCardData() as ArtifactCard;
+                this.recordArtifactUsage(artifactData.weaponType);
                 return true;
             }
         }
 
         return false;
+    }
+
+    private recordArtifactUsage(weaponType?: ArtifactWeaponType) {
+        if (!weaponType) {
+            return;
+        }
+        this.usageManager.recordUsage(BattleScene.USAGE_CATEGORY_WEAPON, weaponType);
+    }
+
+    private resetArtifactUsage() {
+        this.usageManager.resetCategory(BattleScene.USAGE_CATEGORY_WEAPON);
+    }
+
+    private applyPlayerTurnEndEffects() {
+        if (!this.unitEffectManager) {
+            return;
+        }
+
+        const context = {
+            playerField: this.playerField,
+            discardPile: this.discardPile,
+            hand: this.hand,
+            discardPileButton: this.discardPileButton,
+            cardScale: this.cardScale,
+            artifactUsage: this.usageManager.getCategoryUsage(BattleScene.USAGE_CATEGORY_WEAPON)
+        };
+
+        this.unitEffectManager.applyTurnEndEffectsForPlayerUnits(this.playerField, context);
+        this.resetArtifactUsage();
     }
 
     private drawInitialHand() {
@@ -989,6 +1042,7 @@ export class BattleScene extends Scene {
         if (!this.isPlayerTurn) return;
 
         this.battleLog.addLog('═══ 战斗阶段 ═══');
+        this.applyPlayerTurnEndEffects();
         
         this.playerTurn();
     }
@@ -1045,12 +1099,12 @@ export class BattleScene extends Scene {
 
     // 创建卡组按钮
     private createDeckButton() {
-        const { width, height } = this.scale;
-        const buttonX = 80;
-        const buttonY = height - 80;
+        const deckConfig = this.layout.deckButton;
+        const buttonX = deckConfig.x;
+        const buttonY = deckConfig.y;
 
         // 按钮背景
-        const button = this.add.rectangle(buttonX, buttonY, 120, 100, 0x34495e);
+        const button = this.add.rectangle(buttonX, buttonY, deckConfig.width, deckConfig.height, 0x34495e);
         button.setStrokeStyle(3, 0x3498db);
         button.setInteractive({ useHandCursor: true });
 
@@ -1068,7 +1122,7 @@ export class BattleScene extends Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        const labelText = this.add.text(buttonX, buttonY + 50, '卡组', {
+        const labelText = this.add.text(buttonX, buttonY + deckConfig.height / 2 - 10, '卡组', {
             fontSize: '14px',
             color: '#ecf0f1'
         }).setOrigin(0.5);
@@ -1089,12 +1143,12 @@ export class BattleScene extends Scene {
 
     // 创建弃牌堆按钮
     private createDiscardPileButton() {
-        const { width, height } = this.scale;
-        const buttonX = width - 80;
-        const buttonY = height - 80;
+        const discardConfig = this.layout.discardPileButton;
+        const buttonX = discardConfig.x;
+        const buttonY = discardConfig.y;
 
         // 按钮背景
-        const button = this.add.rectangle(buttonX, buttonY, 120, 100, 0x34495e);
+        const button = this.add.rectangle(buttonX, buttonY, discardConfig.width, discardConfig.height, 0x34495e);
         button.setStrokeStyle(3, 0x95a5a6);
         button.setInteractive({ useHandCursor: true });
 

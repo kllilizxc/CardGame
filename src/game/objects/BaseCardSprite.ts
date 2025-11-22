@@ -143,7 +143,8 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      */
     protected onPointerOut(): void {
         this.background.setStrokeStyle(3, this.getDefaultStrokeColor());
-        this.scene.events.emit('hideCardPreview');
+        // 不再触发隐藏预览，让预览面板保持显示
+        // this.scene.events.emit('hideCardPreview');
     }
 
     /**

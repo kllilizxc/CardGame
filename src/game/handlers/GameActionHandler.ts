@@ -53,8 +53,9 @@ export class GameActionHandler {
      * 从卡组检索卡牌
      * @param _count 检索数量（预留参数，目前只支持1张）
      * @param filter 可选的过滤条件（未来扩展）
+     * @param onCancel 取消时的回调
      */
-    public searchDeck(_count: number = 1, filter?: (card: AnyCard) => boolean): void {
+    public searchDeck(_count: number = 1, filter?: (card: AnyCard) => boolean, onCancel?: () => void): void {
         const { deck, deckSelectionUI, hand, cardScale, battleLog, cardManager, updateDeckCount, scene } = this.context;
 
         // 应用过滤条件（如果有）
@@ -62,26 +63,34 @@ export class GameActionHandler {
 
         if (filteredDeck.length === 0) {
             battleLog.addLog('卡组中没有符合条件的卡牌');
+            // 没有卡可选也算取消
+            if (onCancel) {
+                onCancel();
+            }
             return;
         }
 
-        deckSelectionUI.show(filteredDeck, (selectedCard) => {
-            // 将选中的卡牌加入手牌
-            const index = deck.indexOf(selectedCard);
-            if (index > -1) {
-                deck.splice(index, 1);
-                
-                // 使用工厂创建卡片精灵
-                const sprite = CardSpriteFactory.createSprite(scene, selectedCard, 0, 0, cardScale);
+        deckSelectionUI.show(
+            filteredDeck, 
+            (selectedCard) => {
+                // 将选中的卡牌加入手牌
+                const index = deck.indexOf(selectedCard);
+                if (index > -1) {
+                    deck.splice(index, 1);
+                    
+                    // 使用工厂创建卡片精灵
+                    const sprite = CardSpriteFactory.createSprite(scene, selectedCard, 0, 0, cardScale);
 
-                if (sprite) {
-                    hand.push(sprite);
-                    cardManager.arrangeHand(hand as any);
-                    battleLog.addLog(`检索了【${selectedCard.name}】`);
-                    updateDeckCount();
+                    if (sprite) {
+                        hand.push(sprite);
+                        cardManager.arrangeHand(hand as any);
+                        battleLog.addLog(`检索了【${selectedCard.name}】`);
+                        updateDeckCount();
+                    }
                 }
-            }
-        });
+            },
+            onCancel // 传入取消回调
+        );
     }
 
     /**

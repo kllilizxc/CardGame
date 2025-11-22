@@ -17,8 +17,10 @@ export class SkillEffectHandler {
 
     /**
      * 应用技能效果
+     * @param skill 技能卡数据
+     * @param onCancel 技能被取消时的回调（用于可取消的技能）
      */
-    public applySkillEffect(skill: SkillCard): void {
+    public applySkillEffect(skill: SkillCard, onCancel?: () => void): void {
         if (!skill.effects || skill.effects.length === 0) {
             return;
         }
@@ -27,7 +29,7 @@ export class SkillEffectHandler {
             if (!effect.actions) return;
 
             effect.actions.forEach((action: any) => {
-                this.handleAction(action);
+                this.handleAction(action, onCancel);
             });
         });
     }
@@ -35,10 +37,10 @@ export class SkillEffectHandler {
     /**
      * 处理单个技能动作
      */
-    private handleAction(action: any): void {
+    private handleAction(action: any, onCancel?: () => void): void {
         switch (action.type) {
             case 'searchDeck':
-                this.handleSearchDeck(action);
+                this.handleSearchDeck(action, onCancel);
                 break;
 
             case 'drawCards':
@@ -46,16 +48,16 @@ export class SkillEffectHandler {
                 break;
 
             default:
-                console.log(`未处理的技能效果类型: ${action.type}`);
+                console.log(`未知的技能效果类型: ${action.type}`);
         }
     }
 
     /**
      * 处理从卡组检索卡牌
      */
-    private handleSearchDeck(action: any): void {
+    private handleSearchDeck(action: any, onCancel?: () => void): void {
         const count = action.value || 1;
-        this.gameActionHandler.searchDeck(count);
+        this.gameActionHandler.searchDeck(count, undefined, onCancel);
     }
 
     /**

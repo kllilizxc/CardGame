@@ -1,246 +1,198 @@
-# Phaser React TypeScript Template
+# 修仙卡牌（Phaser + React + TypeScript）
 
-This is a Phaser 3 project template that uses the React framework and Vite for bundling. It includes a bridge for React to Phaser game communication, hot-reloading for quick development workflow and scripts to generate production-ready builds.
+> 一款以修仙题材为背景的卡牌战斗原型，融合单位、法器、功法、丹药、技能等多套系统。该项目基于 Phaser 3 场景与 React 外壳构建，重点实现模块化的战场布局与数据驱动的战斗逻辑，方便继续扩展为完整游戏。
 
-**[This Template is also available as a JavaScript version.](https://github.com/phaserjs/template-react)**
+![battle-scene](screenshot.png)
 
-### Versions
+---
 
-This template has been updated for:
+## 特性速览
 
-- [Phaser 3.90.0](https://github.com/phaserjs/phaser)
-- [React 19.0.0](https://github.com/facebook/react)
-- [Vite 6.3.1](https://github.com/vitejs/vite)
-- [TypeScript 5.7.2](https://github.com/microsoft/TypeScript)
+- **统一布局系统**：`BattleLayoutConfig` 统一描述所有 UI 面板和场地区域，可按分辨率或模式动态生成。
+- **多管理器架构**：卡牌、法器、技能、丹药、战斗事件、功法效果均由独立 Manager 负责，降低耦合。
+- **数据驱动内容**：卡牌、功法、遭遇均来自 `public/data` JSON，可无代码迭代内容。
+- **功法/Usage 机制**：`UsageManager` 记录武器使用情况，`UnitEffectManager` 解析 `gongfa-list.json` 并在回合事件中执行效果（如“引剑者”回收剑类法器）。
+- **React ↔ Phaser 桥梁**：`EventBus` 使 React UI 与 Phaser 场景交互（如调试工具或面板控制）。
 
-![screenshot](screenshot.png)
+---
 
-## Requirements
+## 技术栈
 
-[Node.js](https://nodejs.org) is required to install dependencies and run scripts via `npm`.
+| 类别 | 技术 |
+| --- | --- |
+| 游戏引擎 | [Phaser 3.90.0](https://github.com/phaserjs/phaser) |
+| 前端壳层 | [React 19](https://github.com/facebook/react) + [Vite 6](https://github.com/vitejs/vite) |
+| 语言 | TypeScript 5.7 |
+| 构建 | Vite + npm scripts |
 
-## Available Commands
+---
 
-| Command | Description |
-|---------|-------------|
-| `npm install` | Install project dependencies |
-| `npm run dev` | Launch a development web server |
-| `npm run build` | Create a production build in the `dist` folder |
-| `npm run dev-nolog` | Launch a development web server without sending anonymous data (see "About log.js" below) |
-| `npm run build-nolog` | Create a production build in the `dist` folder without sending anonymous data (see "About log.js" below) |
+## 快速开始
 
-## Writing Code
+### 准备
+- Node.js 18+（推荐 LTS）。
 
-After cloning the repo, run `npm install` from your project directory. Then, you can start the local development server by running `npm run dev`.
-
-The local development server runs on `http://localhost:8080` by default. Please see the Vite documentation if you wish to change this, or add SSL support.
-
-Once the server is running you can edit any of the files in the `src` folder. Vite will automatically recompile your code and then reload the browser.
-
-## Template Project Structure
-
-We have provided a default project structure to get you started. This is as follows:
-
-| Path                          | Description                                                                 |
-|-------------------------------|-----------------------------------------------------------------------------|
-| `index.html`                  | A basic HTML page to contain the game.                                     |
-| `src`                         | Contains the React client source code.                                     |
-| `src/main.tsx`                | The main **React** entry point. This bootstraps the React application.      |
-| `src/PhaserGame.tsx`          | The React component that initializes the Phaser Game and acts as a bridge between React and Phaser. |
-| `src/vite-env.d.ts`           | Global TypeScript declarations, providing type information.                |
-| `src/App.tsx`                 | The main React component.                                                  |
-| `src/game/EventBus.ts`        | A simple event bus to communicate between React and Phaser.                |
-| `src/game`                    | Contains the game source code.                                             |
-| `src/game/main.tsx`           | The main **game** entry point. This contains the game configuration and starts the game. |
-| `src/game/scenes/`            | The folder where Phaser Scenes are located.                                |
-| `public/style.css`            | Some simple CSS rules to help with page layout.                            |
-| `public/assets`               | Contains the static assets used by the game.                               |
-
-## React Bridge
-
-The `PhaserGame.tsx` component is the bridge between React and Phaser. It initializes the Phaser game and passes events between the two.
-
-To communicate between React and Phaser, you can use the **EventBus.js** file. This is a simple event bus that allows you to emit and listen for events from both React and Phaser.
-
-```js
-// In React
-import { EventBus } from './EventBus';
-
-// Emit an event
-EventBus.emit('event-name', data);
-
-// In Phaser
-// Listen for an event
-EventBus.on('event-name', (data) => {
-    // Do something with the data
-});
+### 安装与运行
+```bash
+npm install
+npm run dev       # http://localhost:8080，含日志上报
+# 或
+npm run dev-nolog # 关闭 log.js 匿名统计
 ```
 
-In addition to this, the `PhaserGame` component exposes the Phaser game instance along with the most recently active Phaser Scene using React forwardRef.
+构建产物：
 
-Once exposed, you can access them like any regular react reference.
+| 命令 | 说明 |
+| --- | --- |
+| `npm run build` | 生成 `dist/`，并发送一次 log.js 统计 |
+| `npm run build-nolog` | 同上，跳过 log.js |
 
-## Phaser Scene Handling
+> **log.js** 仅收集模板名称 / 构建类型 / Phaser 版本。若需彻底禁用，可删除 `log.js` 并修改 `package.json` scripts。
 
-In Phaser, the Scene is the lifeblood of your game. It is where you sprites, game logic and all of the Phaser systems live. You can also have multiple scenes running at the same time. This template provides a way to obtain the current active scene from React.
+---
 
-You can get the current Phaser Scene from the component event `"current-active-scene"`. In order to do this, you need to emit the event `"current-scene-ready"` from the Phaser Scene class. This event should be emitted when the scene is ready to be used. You can see this done in all of the Scenes in our template.
+## 项目结构
 
-**Important**: When you add a new Scene to your game, make sure you expose to React by emitting the `"current-scene-ready"` event via the `EventBus`, like this:
-
-
-```ts
-class MyScene extends Phaser.Scene
-{
-    constructor ()
-    {
-        super('MyScene');
-    }
-
-    create ()
-    {
-        // Your Game Objects and logic here
-
-        // At the end of create method:
-        EventBus.emit('current-scene-ready', this);
-    }
-}
+```
+├─public/
+│  ├─assets/               # 静态资源
+│  └─data/                 # 游戏数据（卡牌、功法、遭遇…）
+├─src/
+│  ├─App.tsx               # React 根组件
+│  ├─PhaserGame.tsx        # React 与 Phaser 的桥梁
+│  └─game/
+│     ├─main.ts            # Phaser Game 配置
+│     ├─config/LayoutConfig.ts
+│     ├─scenes/BattleScene.ts
+│     ├─managers/          # 战斗子系统管理器
+│     ├─objects/           # 卡牌、法器等精灵
+│     └─ui/                # UI 面板、面板逻辑
+└─docs/                    # 系统设计与重构记录
 ```
 
-You don't have to emit this event if you don't need to access the specific scene from React. Also, you don't have to emit it at the end of `create`, you can emit it at any point. For example, should your Scene be waiting for a network request or API call to complete, it could emit the event once that data is ready.
+| 路径 | 作用 |
+| --- | --- |
+| `src/game/config/LayoutConfig.ts` | 定义 `BattleLayoutConfig` 接口与 `createDefaultLayout(width,height)`，集中管理面板/区域位置。 |
+| `src/game/scenes/BattleScene.ts` | 核心战场场景：加载数据、初始化 Manager、创建 UI、驱动回合逻辑与功法触发。 |
+| `src/game/managers/*.ts` | 各子系统管理器：`CardManager`、`UnitEffectManager`、`UsageManager`、`SkillManager`、`PillManager` 等。 |
+| `src/game/ui/*.ts` | UI 组件（战斗日志、卡牌预览、丹药槽、技能栏等），通过布局配置定位。 |
+| `src/game/objects/*.ts` | Phaser 精灵与交互（单位卡、法器、符箓等）。 |
+| `public/data` | JSON 内容库（卡牌、功法、卡组、遭遇等），配合 `public/data/types` 中的 TypeScript 类型使用。 |
+| `docs/*.md` | 设计 / 重构 / Bug 记录，如 `ARTIFACT_SYSTEM.md`、`CARD_LIST_VIEW.md` 等。 |
 
-### React Component Example
+---
 
-Here's an example of how to access Phaser data for use in a React Component:
+## 运行时架构
 
-```ts
-import { useRef } from 'react';
-import { IRefPhaserGame } from "./game/PhaserGame";
+### React 外壳
+`src/main.tsx` → `App.tsx` / `GameApp.tsx` → `PhaserGame.tsx`。React 仅提供挂载容器及潜在的调试/外部 UI，核心游戏逻辑都在 Phaser。
 
-// In a parent component
-const ReactComponent = () => {
+### Phaser 游戏实例
+`src/game/main.ts` 配置 Phaser（画布尺寸、渲染、场景）。当前仅注册 `BattleScene`，未来可拓展多个场景。
 
-    const phaserRef = useRef<IRefPhaserGame>(); // you can access to this ref from phaserRef.current
+### BattleScene 生命周期
+1. `preload`：载入图片 / JSON（卡牌、功法等）。
+2. `create`：创建布局、初始化各 Manager、注册事件、发出 `EventBus.emit('current-scene-ready', this)`。
+3. `update`：驱动动画 / 状态（目前大多逻辑在 Manager 内处理）。
 
-    const onCurrentActiveScene = (scene: Phaser.Scene) => {
-    
-        // This is invoked
+### 子系统 Manager
+- **CardManager**：抽牌、摆放、hover/拖拽回调。整合 `BattleLayoutConfig` 区域，实现居中固定间距算法。
+- **UnitEffectManager**：解析 `gongfa-list.json`，根据事件（如 `TurnEnd`）与条件(`ArtifactUsedThisTurn`)执行动作（如恢复弃牌卡）。
+- **UsageManager**：记录 `category -> key -> count`，目前用来统计武器使用（剑类法器）。在回合结束前读取并在 `resetCategory` 时清空，方便扩展到符箓/技能等。
+- **PillManager / SkillManager / ArtifactManager / FieldManager / BattleEventManager / CombatManager**：分别处理对应领域逻辑。
 
-    }
+### UI 布局
+`createDefaultLayout(width,height)` 返回一组 `ZoneConfig` / `PanelConfig`：
+- `handZone`, `playerFieldZone`, `enemyFieldZone`, `fieldCardZone`
+- `pillSlots`, `skillUI`, `cardPreview`, `battleLog`
+- `deckButton`, `discardPileButton` 等
 
-    return (
-        ...
-        <PhaserGame ref={phaserRef} currentActiveScene={onCurrentActiveScene} />
-        ...
-    );
+BattleScene 将配置传入各 UI 组件，真正的尺寸与位置只出现一次，方便日后根据分辨率、横竖屏或移动端再生成不同布局。
 
-}
-```
+---
 
-In the code above, you can get a reference to the current Phaser Game instance and the current Scene by creating a reference with `useRef()` and assign to PhaserGame component.
+## 数据与内容
 
-From this state reference, the game instance is available via `phaserRef.current.game` and the most recently active Scene via `phaserRef.current.scene`.
+| 文件 | 说明 |
+| --- | --- |
+| `public/data/cards/units.json` | 单位卡定义，含 `attack`, `health`, `gongfaIds` 等。 |
+| `public/data/cards/artifacts.json` | 法器数据（目标、武器类型、属性加成）。 |
+| `public/data/gongfa/gongfa-list.json` | 功法 schema：事件、条件、动作、文案，通过 `UnitEffectManager` 解析。 |
+| `public/data/decks/starter-deck.json` | 初始卡组。 |
+| `public/data/encounters/*.json` | 敌方单位配置。 |
+| `public/data/types/*.ts` | 对应的 TypeScript 类型定义，供运行时和 IDE 补全。 |
 
-The `onCurrentActiveScene` callback will also be invoked whenever the the Phaser Scene changes, as long as you emit the event via the EventBus, as outlined above.
+内容迭代流程：修改 JSON → `npm run dev` 热重载 → 通过战斗日志/调试功能验证。
 
-## Handling Assets
+---
 
-Vite supports loading assets via JavaScript module `import` statements.
+## 功法与 Usage 流程
 
-This template provides support for both embedding assets and also loading them from a static folder. To embed an asset, you can import it at the top of the JavaScript file you are using it in:
+1. **记录使用**：当装备剑类法器成功时，`BattleScene.recordArtifactUsage` 调用 `usageManager.recordUsage('artifactWeapon','剑')`。
+2. **回合结束**：`BattleScene.endTurn()` → `applyPlayerTurnEndEffects()`，构造 `GongfaRuntimeContext`（包含 `artifactUsage`）。
+3. **条件判断**：`UnitEffectManager.areConditionsSatisfied` 检查 `ArtifactUsedThisTurn` 条件是否满足（weaponType + minimum）。
+4. **执行动作**：如 `RecoverCardFromDiscard`，从弃牌堆取出目标卡牌（“引剑者”效果）。
+5. **重置**：本回合功法结算后 `usageManager.resetCategory('artifactWeapon')`，确保下回合重新记录。
 
-```js
-import logoImg from './assets/logo.png'
-```
+扩展：任意系统都可以通过 UsageManager 追踪（例如技能次数、符箓消耗），并在功法条件中新增对应类型。
 
-To load static files such as audio files, videos, etc place them into the `public/assets` folder. Then you can use this path in the Loader calls within Phaser:
+---
 
-```js
-preload ()
-{
-    //  This is an example of an imported bundled image.
-    //  Remember to import it at the top of this file
-    this.load.image('logo', logoImg);
+## 自定义布局指南
 
-    //  This is an example of loading a static image
-    //  from the public/assets folder:
-    this.load.image('background', 'assets/bg.png');
-}
-```
+1. 打开 `src/game/config/LayoutConfig.ts`。
+2. 修改或新增 `BattleLayoutConfig` 字段（例如新面板 `artifactLog`）。
+3. 更新 `createDefaultLayout(width,height)` 中对应区域，考虑比例/间距。
+4. 在 `BattleScene` 中将新配置注入相关 UI（`this.createBattleLog(layout.battleLog)` 等）。
+5. UI 组件内部只引用 `config.x/y/width/height`，避免再次硬编码。
 
-When you issue the `npm run build` command, all static assets are automatically copied to the `dist/assets` folder.
+> 建议保留一个“逻辑区域名称”与“Phaser 实际 Zone”一一对应的方式，方便 Manager 使用（如 CardManager 直接获取 `layout.handZone`）。
 
-## Deploying to Production
+---
 
-After you run the `npm run build` command, your code will be built into a single bundle and saved to the `dist` folder, along with any other assets your project imported, or stored in the public assets folder.
+## Onboarding Checklist
 
-In order to deploy your game, you will need to upload *all* of the contents of the `dist` folder to a public facing web server.
+1. **阅读 README 与 `docs/`**：了解现有系统，尤其是 `ARTIFACT_SYSTEM.md` & `CARD_LIST_VIEW.md`。
+2. **运行 Dev 环境**：`npm run dev`，在浏览器中打开战斗场景。
+3. **熟悉数据**：浏览 `public/data/cards` 与 `gongfa/gongfa-list.json`，理解字段。
+4. **理解回合流**：从 `BattleScene.playerTurn()` / `enemyTurn()` / `endTurn()` 入手，观察 Manager 协作方式。
+5. **尝试修改一张卡牌**：调整攻击力或功法，确认热重载与日志输出。
+6. **阅读关键 Manager**：`CardManager`, `UnitEffectManager`, `UsageManager`, `ArtifactManager`，掌握职责边界。
+7. **扩展/修复**：根据需求在 Manager 内实现，必要时更新 `LayoutConfig` 和相应 UI。
 
-## Customizing the Template
+---
 
-### Vite
+## 调试与常用技巧
 
-If you want to customize your build, such as adding plugin (i.e. for loading CSS or fonts), you can modify the `vite/config.*.mjs` file for cross-project changes, or you can modify and/or create new configuration files and target them in specific npm tasks inside of `package.json`. Please see the [Vite documentation](https://vitejs.dev/) for more information.
+- **BattleLog**：`src/game/ui/BattleLog.ts`，通过 `battleLog.addLog()`、`addGongfaLog()` 输出关键节点信息。
+- **EventBus 调试**：React 层可通过 `EventBus.on` 监听场景事件，快速做外部工具。
+- **热重载**：Vite 自动刷新；若遇到 Phaser 资源缓存问题，可在 `preload` 中使用 `this.load.reset()` 或清理缓存。
+- **功法排查**：在 `UnitEffectManager.applyTurnEndEffectsForPlayerUnits` 临时输出 context（Usage、场上单位、弃牌堆）。
+- **布局问题**：确认 `BattleScene` 中所有 UI 调用均使用 `layout.xxx`，并检查 `createDefaultLayout` 是否返回正确值。
 
-## About log.js
+---
 
-If you inspect our node scripts you will see there is a file called `log.js`. This file makes a single silent API call to a domain called `gryzor.co`. This domain is owned by Phaser Studio Inc. The domain name is a homage to one of our favorite retro games.
-
-We send the following 3 pieces of data to this API: The name of the template being used (vue, react, etc). If the build was 'dev' or 'prod' and finally the version of Phaser being used.
-
-At no point is any personal data collected or sent. We don't know about your project files, device, browser or anything else. Feel free to inspect the `log.js` file to confirm this.
-
-Why do we do this? Because being open source means we have no visible metrics about which of our templates are being used. We work hard to maintain a large and diverse set of templates for Phaser developers and this is our small anonymous way to determine if that work is actually paying off, or not. In short, it helps us ensure we're building the tools for you.
-
-However, if you don't want to send any data, you can use these commands instead:
-
-Dev:
+## 部署
 
 ```bash
-npm run dev-nolog
+npm run build      # 或 npm run build-nolog
+# 输出 dist/
 ```
 
-Build:
+将 `dist` 全量上传至任意静态服务器（Vercel、Netlify、OSS 等）。如需自定义 base path，请调整 `vite.config.ts` 中的 `base` 配置。
 
-```bash
-npm run build-nolog
-```
+---
 
-Or, to disable the log entirely, simply delete the file `log.js` and remove the call to it in the `scripts` section of `package.json`:
+## 相关文档与参考
 
-Before:
+- `docs/ARTIFACT_SYSTEM.md`：法器流程、动画时序、交互细节。
+- `docs/CARD_LIST_VIEW.md`：卡牌列表 UI 规划。
+- `docs/REFACTORING_CARD_SPRITES.md`：卡牌精灵演进记录。
+- Phaser 官方资源： [API 文档](https://newdocs.phaser.io)、[示例仓库](https://labs.phaser.io)。
 
-```json
-"scripts": {
-    "dev": "node log.js dev & dev-template-script",
-    "build": "node log.js build & build-template-script"
-},
-```
+如需讨论或提交 Issue，欢迎附上：
+1. 复现步骤
+2. 相关数据（卡牌/功法 ID）
+3. 截图或 BattleLog 片段
 
-After:
-
-```json
-"scripts": {
-    "dev": "dev-template-script",
-    "build": "build-template-script"
-},
-```
-
-Either of these will stop `log.js` from running. If you do decide to do this, please could you at least join our Discord and tell us which template you're using! Or send us a quick email. Either will be super-helpful, thank you.
-
-## Join the Phaser Community!
-
-We love to see what developers like you create with Phaser! It really motivates us to keep improving. So please join our community and show-off your work 😄
-
-**Visit:** The [Phaser website](https://phaser.io) and follow on [Phaser Twitter](https://twitter.com/phaser_)<br />
-**Play:** Some of the amazing games [#madewithphaser](https://twitter.com/search?q=%23madewithphaser&src=typed_query&f=live)<br />
-**Learn:** [API Docs](https://newdocs.phaser.io), [Support Forum](https://phaser.discourse.group/) and [StackOverflow](https://stackoverflow.com/questions/tagged/phaser-framework)<br />
-**Discord:** Join us on [Discord](https://discord.gg/phaser)<br />
-**Code:** 2000+ [Examples](https://labs.phaser.io)<br />
-**Read:** The [Phaser World](https://phaser.io/community/newsletter) Newsletter<br />
-
-Created by [Phaser Studio](mailto:support@phaser.io). Powered by coffee, anime, pixels and love.
-
-The Phaser logo and characters are &copy; 2011 - 2025 Phaser Studio Inc.
-
-All rights reserved.
+祝开发顺利，玩得开心！

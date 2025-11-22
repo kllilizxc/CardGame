@@ -1,10 +1,13 @@
 import { Scene } from 'phaser';
 import type { BaseCardSprite } from '../objects/BaseCardSprite';
+import { GongfaTooltip } from './GongfaTooltip';
+import type { PanelConfig } from '../config/LayoutConfig';
 
 interface LogEntry {
     text: string;
     cardRefs: Array<{ name: string; card: BaseCardSprite; cardData: any }>;
     timestamp: number;
+    gongfaInfo?: { name: string; description: string };
 }
 
 export class BattleLog {
@@ -22,6 +25,7 @@ export class BattleLog {
     private scrollThumb: Phaser.GameObjects.Rectangle;
     private bottomHint: Phaser.GameObjects.Text;
     private isScrolling: boolean = false;
+    private gongfaTooltip: GongfaTooltip;
 
     private readonly MAX_ENTRIES = 50;
     private readonly LOG_WIDTH: number;
@@ -29,15 +33,14 @@ export class BattleLog {
     private readonly LOG_X: number;
     private readonly LOG_Y: number;
 
-    constructor(scene: Scene) {
+    constructor(scene: Scene, config: PanelConfig) {
         this.scene = scene;
-        const { width, height } = scene.scale;
 
-        // 日志窗口尺寸和位置（右侧）
-        this.LOG_WIDTH = width * 0.18;
-        this.LOG_HEIGHT = height * 0.45;
-        this.LOG_X = width - this.LOG_WIDTH / 2 - width * 0.015;
-        this.LOG_Y = height * 0.35;
+        // 使用传入的配置
+        this.LOG_WIDTH = config.width;
+        this.LOG_HEIGHT = config.height;
+        this.LOG_X = config.x;
+        this.LOG_Y = config.y;
 
         // 创建容器
         this.container = scene.add.container(this.LOG_X, this.LOG_Y);
@@ -51,7 +54,7 @@ export class BattleLog {
 
         // 标题
         const title = scene.add.text(0, -this.LOG_HEIGHT / 2 + 20, '战斗日志', {
-            fontSize: Math.floor(height * 0.02) + 'px',
+            fontSize: Math.floor(scene.scale.height * 0.02) + 'px',
             color: '#f39c12',
             fontStyle: 'bold'
         }).setOrigin(0.5);
@@ -66,7 +69,7 @@ export class BattleLog {
 
         // 滚动提示（左侧）
         const scrollHint = scene.add.text(-this.LOG_WIDTH / 2 + 80, this.LOG_HEIGHT / 2 - 15, '[ 滚轮滚动 ]', {
-            fontSize: Math.floor(height * 0.012) + 'px',
+            fontSize: Math.floor(scene.scale.height * 0.012) + 'px',
             color: '#95a5a6',
             fontStyle: 'italic'
         }).setOrigin(0.5);
@@ -74,7 +77,7 @@ export class BattleLog {
 
         // 位置提示（右侧）
         this.bottomHint = scene.add.text(this.LOG_WIDTH / 2 - 80, this.LOG_HEIGHT / 2 - 15, '✓ 已到最新', {
-            fontSize: Math.floor(height * 0.012) + 'px',
+            fontSize: Math.floor(scene.scale.height * 0.012) + 'px',
             color: '#2ecc71',
             fontStyle: 'bold'
         }).setOrigin(0.5);
@@ -89,6 +92,9 @@ export class BattleLog {
 
         // 设置滚轮事件
         this.setupScrolling();
+
+        // 初始化功法提示框
+        this.gongfaTooltip = new GongfaTooltip(scene);
     }
 
     private createToggleButton() {
@@ -130,7 +136,6 @@ export class BattleLog {
     }
 
     private createScrollBar() {
-        const { height } = this.scene.scale;
         const barWidth = 6;
         const barHeight = this.LOG_HEIGHT - 100;
         const barX = this.LOG_WIDTH / 2 - 15;
@@ -257,6 +262,39 @@ export class BattleLog {
         this.refreshLog();
     }
 
+    /**
+     * 添加带功法悬浮提示的日志
+     * @param unitName 单位名称
+     * @param gongfaName 功法名称
+     * @param gongfaDescription 功法描述
+     * @param cards 相关卡牌精灵
+     */
+    public addGongfaLog(unitName: string, gongfaName: string, gongfaDescription: string, cards: BaseCardSprite[] = []) {
+        // 使用特殊标记包裹功法名，方便后续识别
+        const message = `【${unitName}】发动了功法<GONGFA>${gongfaName}</GONGFA>`;
+        
+        const entry: LogEntry & { gongfaInfo?: { name: string; description: string } } = {
+            text: message,
+            cardRefs: cards.map(card => ({
+                name: card.getCardData().name,
+                card: card,
+                cardData: card.getCardData()
+            })),
+            timestamp: Date.now(),
+            gongfaInfo: {
+                name: gongfaName,
+                description: gongfaDescription
+            }
+        };
+
+        this.logEntries.push(entry as LogEntry);
+        if (this.logEntries.length > this.MAX_ENTRIES) {
+            this.logEntries.shift();
+        }
+
+        this.refreshLog();
+    }
+
     private refreshLog() {
         // 清除旧的文本
         this.logTexts.forEach(text => text.destroy());
@@ -290,12 +328,15 @@ export class BattleLog {
                 );
             });
             
+            // 功法名已经在 addGongfaLog 中标记为 <GONGFA>，这里不需要额外处理
+            
             // 创建日志行（使用分段着色）
             const actualHeight = this.createColoredLogLine(
                 -this.LOG_WIDTH / 2 + 15,
                 currentY,
                 displayText,
                 entry.cardRefs,
+                entry.gongfaInfo,
                 fontSize,
                 maxWidth
             );
@@ -323,43 +364,90 @@ export class BattleLog {
         y: number,
         text: string,
         cardRefs: Array<{ name: string; card: BaseCardSprite; cardData: any }>,
+        gongfaInfo: { name: string; description: string } | undefined,
         fontSize: string,
         maxWidth: number
     ): number {
-        // 解析文本，识别卡牌名称标记
-        const parts: Array<{ text: string; isCard: boolean; cardRef?: { name: string; card: BaseCardSprite; cardData: any } }> = [];
+        // 解析文本，识别卡牌名称和功法标记
+        const parts: Array<{ 
+            text: string; 
+            isCard: boolean; 
+            isGongfa: boolean;
+            cardRef?: { name: string; card: BaseCardSprite; cardData: any };
+            gongfaInfo?: { name: string; description: string };
+        }> = [];
         let remaining = text;
         
-        // 分割文本
+        // 分割文本，同时处理 <CARD> 和 <GONGFA> 标记
         while (remaining.length > 0) {
             const cardStart = remaining.indexOf('<CARD>');
-            if (cardStart === -1) {
-                // 没有更多卡牌标记
+            const gongfaStart = remaining.indexOf('<GONGFA>');
+            
+            // 找到最近的标记
+            let nextMarkStart = -1;
+            let isNextCard = false;
+            
+            if (cardStart !== -1 && gongfaStart !== -1) {
+                if (cardStart < gongfaStart) {
+                    nextMarkStart = cardStart;
+                    isNextCard = true;
+                } else {
+                    nextMarkStart = gongfaStart;
+                    isNextCard = false;
+                }
+            } else if (cardStart !== -1) {
+                nextMarkStart = cardStart;
+                isNextCard = true;
+            } else if (gongfaStart !== -1) {
+                nextMarkStart = gongfaStart;
+                isNextCard = false;
+            }
+            
+            if (nextMarkStart === -1) {
+                // 没有更多标记
                 if (remaining.length > 0) {
-                    parts.push({ text: remaining, isCard: false });
+                    parts.push({ text: remaining, isCard: false, isGongfa: false });
                 }
                 break;
             }
             
-            // 添加卡牌前的普通文本
-            if (cardStart > 0) {
-                parts.push({ text: remaining.substring(0, cardStart), isCard: false });
+            // 添加标记前的普通文本
+            if (nextMarkStart > 0) {
+                parts.push({ text: remaining.substring(0, nextMarkStart), isCard: false, isGongfa: false });
             }
             
-            // 查找结束标记
-            const cardEnd = remaining.indexOf('</CARD>');
-            if (cardEnd === -1) break;
-            
-            const cardName = remaining.substring(cardStart + 6, cardEnd);
-            const cardRef = cardRefs.find(ref => ref.name === cardName);
-            
-            parts.push({ 
-                text: `【${cardName}】`, 
-                isCard: true,
-                cardRef: cardRef
-            });
-            
-            remaining = remaining.substring(cardEnd + 7);
+            if (isNextCard) {
+                // 处理卡牌标记
+                const cardEnd = remaining.indexOf('</CARD>');
+                if (cardEnd === -1) break;
+                
+                const cardName = remaining.substring(cardStart + 6, cardEnd);
+                const cardRef = cardRefs.find(ref => ref.name === cardName);
+                
+                parts.push({ 
+                    text: `【${cardName}】`, 
+                    isCard: true,
+                    isGongfa: false,
+                    cardRef: cardRef
+                });
+                
+                remaining = remaining.substring(cardEnd + 7);
+            } else {
+                // 处理功法标记
+                const gongfaEnd = remaining.indexOf('</GONGFA>');
+                if (gongfaEnd === -1) break;
+                
+                const gongfaName = remaining.substring(gongfaStart + 8, gongfaEnd);
+                
+                parts.push({ 
+                    text: `【${gongfaName}】`, 
+                    isCard: false,
+                    isGongfa: true,
+                    gongfaInfo: gongfaInfo
+                });
+                
+                remaining = remaining.substring(gongfaEnd + 9);
+            }
         }
         
         // 创建文本片段
@@ -369,8 +457,8 @@ export class BattleLog {
         let maxHeight = 0;
         
         parts.forEach(part => {
-            const textColor = part.isCard ? '#f39c12' : '#ecf0f1';
-            const textStyle = part.isCard ? 'bold' : 'normal';
+            const textColor = part.isCard || part.isGongfa ? '#f39c12' : '#ecf0f1';
+            const textStyle = part.isCard || part.isGongfa ? 'bold' : 'normal';
             
             const textObj = this.scene.add.text(currentX, currentLineY, part.text, {
                 fontSize: fontSize,
@@ -446,6 +534,57 @@ export class BattleLog {
                 });
             }
             
+            // 如果是功法名称，添加悬浮提示交互
+            if (part.isGongfa && part.gongfaInfo) {
+                const hitArea = this.scene.add.rectangle(
+                    currentX + textObj.width / 2,
+                    currentLineY + 8,
+                    textObj.width,
+                    16,
+                    0xffd700,
+                    0
+                );
+                hitArea.setInteractive({ useHandCursor: true });
+                hitArea.setOrigin(0.5, 0.5);
+                this.logContainer.add(hitArea);
+                
+                // 下划线
+                const underline = this.scene.add.rectangle(
+                    hitArea.x,
+                    hitArea.y + 8,
+                    textObj.width,
+                    2,
+                    0xffd700,
+                    0
+                );
+                this.logContainer.add(underline);
+                
+                const gongfaInfo = part.gongfaInfo;
+                hitArea.on('pointerover', () => {
+                    underline.setAlpha(1);
+                    // 计算提示框位置（相对于场景坐标）
+                    const worldX = this.container.x + hitArea.x + this.logContainer.x;
+                    const worldY = this.container.y + hitArea.y + this.logContainer.y;
+                    this.gongfaTooltip.show(worldX + textObj.width / 2, worldY - 10, gongfaInfo.name, gongfaInfo.description);
+                });
+                
+                hitArea.on('pointerout', () => {
+                    underline.setAlpha(0);
+                    this.gongfaTooltip.hide();
+                });
+                
+                // 让滚轮事件穿透到背景
+                hitArea.on('wheel', (_pointer: Phaser.Input.Pointer, _deltaX: number, deltaY: number) => {
+                    if (this.isScrolling) return;
+                    
+                    const scrollSpeed = 60;
+                    const targetOffset = this.scrollOffset + (deltaY > 0 ? scrollSpeed : -scrollSpeed);
+                    const clampedOffset = Phaser.Math.Clamp(targetOffset, 0, this.maxScrollOffset);
+                    
+                    this.smoothScrollTo(clampedOffset);
+                });
+            }
+            
             currentX += textObj.width;
             lineWidth += textObj.width;
         });
@@ -471,6 +610,7 @@ export class BattleLog {
     }
 
     public destroy() {
+        this.gongfaTooltip.destroy();
         this.container.destroy();
         this.toggleButton.destroy();
     }

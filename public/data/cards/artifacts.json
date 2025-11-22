@@ -7,6 +7,7 @@
       "description": "青云宗外门弟子常用的飞剑，品阶不高，但胜在顺手易用。",
       "rarity": "common",
       "labels": ["sect_qingyun", "飞剑", "武器"],
+      "weaponType": "剑",
       "limitPerDeck": 3,
 
       "equipTarget": "unit",

@@ -1,12 +1,12 @@
 // 单位卡：包括灵兽、人族修士、妖族队友等
-import type { BaseCard, Realm, UnitRace, LinggenElement } from "./core";
+import type { BaseCard, UnitRace, LinggenElement } from "./core";
 import type { CardEffect } from "./effects";
 
 export interface UnitCard extends BaseCard {
   kind: "unit";
 
-  /** 星级：1–12 星，用于召唤条件与大致强度 */
-  star: number;
+  /** 境界ID：引用 combat-baseline.json 中的境界配置，星级根据 realm.value 计算（最高12星） */
+  realmId: string;
 
   /** 单位种族：灵兽、人族、妖族等 */
   race: UnitRace;
@@ -17,9 +17,6 @@ export interface UnitCard extends BaseCard {
   /** 所属势力 ID，如 "sect_qingyun"、某国家/家族等 */
   factionId?: string;
 
-  /** 当前境界/修为：结构化的大境界 + 小阶段 + 数值 */
-  realm?: Realm;
-
   /** 攻击力：自动攻击时造成的伤害值 */
   attack: number;
 
@@ -28,4 +25,7 @@ export interface UnitCard extends BaseCard {
 
   /** 该单位的规则效果（被动、主动、反击等） */
   effects?: CardEffect[];
+
+  /** 该单位携带的功法 ID 列表（可复用的效果定义） */
+  gongfaIds?: string[];
 }

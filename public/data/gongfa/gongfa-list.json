@@ -1,0 +1,34 @@
+{
+  "gongfa": [
+    {
+      "id": "gongfa.return_sword_end_turn",
+      "name": "引剑回收",
+      "schema": {
+        "event": {
+          "type": "TurnEnd",
+          "side": "Ally"
+        },
+        "conditions": [
+          {
+            "type": "ArtifactUsedThisTurn",
+            "weaponType": "剑",
+            "minimum": 1
+          }
+        ],
+        "actions": [
+          {
+            "type": "RecoverCardFromDiscard",
+            "filter": {
+              "kind": ["artifact"],
+              "weaponTypesAnyOf": ["剑"],
+              "maxStar": 3,
+              "amount": 1
+            },
+            "destination": "Hand",
+            "amount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

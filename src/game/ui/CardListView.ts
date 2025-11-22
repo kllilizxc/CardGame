@@ -4,11 +4,11 @@ import { ArtifactSprite } from '../objects/ArtifactSprite';
 import { TalismanSprite } from '../objects/TalismanSprite';
 import { FieldSprite } from '../objects/FieldSprite';
 import { PillSprite } from '../objects/PillSprite';
-import type { UnitCard } from '../../../data/types/cards/unit';
-import type { ArtifactCard } from '../../../data/types/cards/artifact';
-import type { TalismanCard } from '../../../data/types/cards/talisman';
-import type { FieldCard } from '../../../data/types/cards/field';
-import type { PillCard } from '../../../data/types/cards/pill';
+import type { UnitCard } from '@data/types/cards/unit';
+import type { ArtifactCard } from '@data/types/cards/artifact';
+import type { TalismanCard } from '@data/types/cards/talisman';
+import type { FieldCard } from '@data/types/cards/field';
+import type { PillCard } from '@data/types/cards/pill';
 
 /**
  * 通用的卡片列表视图
@@ -159,8 +159,6 @@ export class CardListView extends GameObjects.Container {
                 sprite = new TalismanSprite(this.scene, x, y, cardData as TalismanCard, cardScale);
             } else if (cardData.kind === 'field') {
                 sprite = new FieldSprite(this.scene, x, y, cardData as FieldCard, cardScale);
-            } else if (cardData.kind === 'pill') {
-                sprite = new PillSprite(this.scene, x, y, cardData as PillCard, cardScale);
             } else {
                 return; // 暂不支持其他类型
             }
