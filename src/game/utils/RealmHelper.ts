@@ -4,32 +4,23 @@
  */
 
 import type { UnitCard } from '../../../public/data/types/cards/unit';
+import combatBaselineDataRaw from '../../../public/data/config/combat-baseline.json';
+import type { CombatBaselineConfig } from '../../../public/data/types/combat-baseline';
 
-// 境界配置映射表（与 combat-baseline.json 对应）
-const REALM_CONFIG: Record<string, { value: number; stage: string; phase: string }> = {
-  'realm_mortal': { value: 0, stage: '凡人', phase: '' },
-  'realm_qi_1': { value: 1, stage: '炼气', phase: '1层' },
-  'realm_qi_6': { value: 2, stage: '炼气', phase: '6层' },
-  'realm_qi_12': { value: 3, stage: '炼气', phase: '12层' },
-  'realm_foundation_early': { value: 4, stage: '筑基', phase: '初期' },
-  'realm_foundation_mid': { value: 5, stage: '筑基', phase: '中期' },
-  'realm_foundation_late': { value: 6, stage: '筑基', phase: '后期' },
-  'realm_golden_early': { value: 7, stage: '金丹', phase: '初期' },
-  'realm_golden_mid': { value: 8, stage: '金丹', phase: '中期' },
-  'realm_golden_late': { value: 9, stage: '金丹', phase: '后期' },
-  'realm_nascent_early': { value: 10, stage: '元婴', phase: '初期' },
-  'realm_nascent_mid': { value: 11, stage: '元婴', phase: '中期' },
-  'realm_nascent_late': { value: 12, stage: '元婴', phase: '后期' },
-  'realm_spirit_early': { value: 13, stage: '化神', phase: '初期' },
-  'realm_spirit_mid': { value: 14, stage: '化神', phase: '中期' },
-  'realm_spirit_late': { value: 15, stage: '化神', phase: '后期' },
-  'realm_unity_early': { value: 16, stage: '合体', phase: '初期' },
-  'realm_unity_mid': { value: 17, stage: '合体', phase: '中期' },
-  'realm_unity_late': { value: 18, stage: '合体', phase: '后期' },
-  'realm_mahayana_early': { value: 19, stage: '大乘', phase: '初期' },
-  'realm_mahayana_mid': { value: 20, stage: '大乘', phase: '中期' },
-  'realm_mahayana_late': { value: 21, stage: '大乘', phase: '后期' },
-};
+// 类型断言确保数据符合预期格式
+const combatBaselineData = combatBaselineDataRaw as CombatBaselineConfig;
+
+// 从 combat-baseline.json 构建境界配置映射表
+const REALM_CONFIG: Record<string, { value: number; stage: string; phase: string }> = {};
+
+// 初始化境界配置映射
+combatBaselineData.realms.forEach(realm => {
+  REALM_CONFIG[realm.id] = {
+    value: realm.value,
+    stage: realm.stage,
+    phase: realm.phase
+  };
+});
 
 /**
  * 根据境界ID获取星级（1-12星）

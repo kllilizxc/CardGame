@@ -26,6 +26,9 @@ export type ArtifactWeaponType =
 export interface ArtifactCard extends BaseCard {
   kind: "artifact";
 
+  /** 品级ID：引用 artifact-grade.json 中的品级配置，星级根据 grade.value 计算（最高12星） */
+  gradeId: string;
+
   /** 装备对象：通常是单位，将来可扩展到玩家本体 */
   equipTarget: "unit" | "player";
 

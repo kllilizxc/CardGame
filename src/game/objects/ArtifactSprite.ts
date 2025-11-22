@@ -1,9 +1,12 @@
 import { GameObjects } from 'phaser';
 import type { ArtifactCard } from '@data/types/cards/artifact';
 import { BaseCardSprite } from './BaseCardSprite';
+import { getArtifactStar, getGradeDisplayName } from '../utils/ArtifactHelper';
 
 export class ArtifactSprite extends BaseCardSprite {
     private cardData: ArtifactCard;
+    private starsText: GameObjects.Text;
+    private gradeText: GameObjects.Text;
     private typeText: GameObjects.Text;
     private bonusText: GameObjects.Text;
     private durabilityText?: GameObjects.Text;
@@ -21,9 +24,26 @@ export class ArtifactSprite extends BaseCardSprite {
         // 创建名称
         this.createNameText(cardData.name);
 
+        // 星级
+        const star = getArtifactStar(cardData);
+        const stars = '★'.repeat(star);
+        this.starsText = scene.add.text(0, -85, stars, {
+            fontSize: '14px',
+            color: '#f1c40f'
+        }).setOrigin(0.5);
+        this.add(this.starsText);
+
+        // 品级
+        const gradeName = getGradeDisplayName(cardData.gradeId);
+        this.gradeText = scene.add.text(0, -65, gradeName, {
+            fontSize: '12px',
+            color: '#daa520'
+        }).setOrigin(0.5);
+        this.add(this.gradeText);
+
         // 类型标签
         const typeLabel = this.getTypeLabel();
-        this.typeText = scene.add.text(0, -85, typeLabel, {
+        this.typeText = scene.add.text(0, -45, typeLabel, {
             fontSize: '14px',
             color: '#daa520'
         }).setOrigin(0.5);

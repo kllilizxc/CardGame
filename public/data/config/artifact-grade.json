@@ -1,0 +1,29 @@
+{
+  "description": "法器品级配置：定义不同品级法器的基准属性加成。品级分为黄阶、地阶、玄阶、天阶、仙阶、神阶，每阶分上中下品。星级根据 value 计算（最高12星）。",
+  "baselineFor": "artifact_equipment",
+  "grades": [
+    { "id": "grade_yellow_lower", "tier": "黄阶", "quality": "下品", "value": 0,  "attackBonusMin": 1,  "attackBonusMax": 2,  "healthBonusMin": 0,   "healthBonusMax": 5 },
+    { "id": "grade_yellow_middle", "tier": "黄阶", "quality": "中品", "value": 1,  "attackBonusMin": 2,  "attackBonusMax": 3,  "healthBonusMin": 5,   "healthBonusMax": 10 },
+    { "id": "grade_yellow_upper", "tier": "黄阶", "quality": "上品", "value": 2,  "attackBonusMin": 3,  "attackBonusMax": 4,  "healthBonusMin": 10,  "healthBonusMax": 15 },
+
+    { "id": "grade_earth_lower", "tier": "地阶", "quality": "下品", "value": 3,  "attackBonusMin": 4,  "attackBonusMax": 6,  "healthBonusMin": 15,  "healthBonusMax": 25 },
+    { "id": "grade_earth_middle", "tier": "地阶", "quality": "中品", "value": 4,  "attackBonusMin": 6,  "attackBonusMax": 8,  "healthBonusMin": 25,  "healthBonusMax": 35 },
+    { "id": "grade_earth_upper", "tier": "地阶", "quality": "上品", "value": 5,  "attackBonusMin": 8,  "attackBonusMax": 10, "healthBonusMin": 35,  "healthBonusMax": 50 },
+
+    { "id": "grade_mystic_lower", "tier": "玄阶", "quality": "下品", "value": 6,  "attackBonusMin": 10, "attackBonusMax": 14, "healthBonusMin": 50,  "healthBonusMax": 70 },
+    { "id": "grade_mystic_middle", "tier": "玄阶", "quality": "中品", "value": 7,  "attackBonusMin": 14, "attackBonusMax": 18, "healthBonusMin": 70,  "healthBonusMax": 90 },
+    { "id": "grade_mystic_upper", "tier": "玄阶", "quality": "上品", "value": 8,  "attackBonusMin": 18, "attackBonusMax": 24, "healthBonusMin": 90,  "healthBonusMax": 120 },
+
+    { "id": "grade_heaven_lower", "tier": "天阶", "quality": "下品", "value": 9,  "attackBonusMin": 24, "attackBonusMax": 32, "healthBonusMin": 120, "healthBonusMax": 160 },
+    { "id": "grade_heaven_middle", "tier": "天阶", "quality": "中品", "value": 10, "attackBonusMin": 32, "attackBonusMax": 42, "healthBonusMin": 160, "healthBonusMax": 210 },
+    { "id": "grade_heaven_upper", "tier": "天阶", "quality": "上品", "value": 11, "attackBonusMin": 42, "attackBonusMax": 54, "healthBonusMin": 210, "healthBonusMax": 270 },
+
+    { "id": "grade_immortal_lower", "tier": "仙阶", "quality": "下品", "value": 12, "attackBonusMin": 54, "attackBonusMax": 70, "healthBonusMin": 270, "healthBonusMax": 350 },
+    { "id": "grade_immortal_middle", "tier": "仙阶", "quality": "中品", "value": 13, "attackBonusMin": 70, "attackBonusMax": 90, "healthBonusMin": 350, "healthBonusMax": 450 },
+    { "id": "grade_immortal_upper", "tier": "仙阶", "quality": "上品", "value": 14, "attackBonusMin": 90, "attackBonusMax": 115,"healthBonusMin": 450, "healthBonusMax": 580 },
+
+    { "id": "grade_divine_lower", "tier": "神阶", "quality": "下品", "value": 15, "attackBonusMin": 115,"attackBonusMax": 150,"healthBonusMin": 580, "healthBonusMax": 750 },
+    { "id": "grade_divine_middle", "tier": "神阶", "quality": "中品", "value": 16, "attackBonusMin": 150,"attackBonusMax": 195,"healthBonusMin": 750, "healthBonusMax": 980 },
+    { "id": "grade_divine_upper", "tier": "神阶", "quality": "上品", "value": 17, "attackBonusMin": 195,"attackBonusMax": 250,"healthBonusMin": 980, "healthBonusMax": 1300 }
+  ]
+}

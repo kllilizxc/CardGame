@@ -10,6 +10,7 @@
       "weaponType": "剑",
       "limitPerDeck": 3,
 
+      "gradeId": "grade_yellow_lower",
       "equipTarget": "unit",
       "durability": 3,
       "attackBonus": 1,
@@ -40,6 +41,7 @@
       "labels": ["饰品", "聚灵"],
       "limitPerDeck": 2,
 
+      "gradeId": "grade_yellow_middle",
       "equipTarget": "unit",
 
       "effects": [
@@ -68,6 +70,7 @@
       "labels": ["护甲", "防御"],
       "limitPerDeck": 2,
 
+      "gradeId": "grade_yellow_upper",
       "equipTarget": "unit",
       "durability": 5,
       "healthBonus": 10,
@@ -98,6 +101,7 @@
       "labels": ["法杖", "火系", "武器"],
       "limitPerDeck": 2,
 
+      "gradeId": "grade_earth_lower",
       "equipTarget": "unit",
       "attackBonus": 3,
 
@@ -134,6 +138,7 @@
       "labels": ["饰品", "治疗"],
       "limitPerDeck": 1,
 
+      "gradeId": "grade_earth_middle",
       "equipTarget": "unit",
 
       "effects": [
@@ -162,6 +167,7 @@
       "labels": ["sect_qingyun", "灵兽", "法器"],
       "limitPerDeck": 1,
 
+      "gradeId": "grade_mystic_lower",
       "equipTarget": "field",
 
       "effects": [
@@ -195,6 +201,7 @@
       "labels": ["靴子", "速度"],
       "limitPerDeck": 3,
 
+      "gradeId": "grade_yellow_lower",
       "equipTarget": "unit",
 
       "effects": [
