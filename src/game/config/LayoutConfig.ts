@@ -56,9 +56,9 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
     return {
         // 卡牌预览面板 - 左上角
         cardPreview: {
-            x: width * 0.09,
+            x: width * 0.1,
             y: height * 0.5,
-            width: width * 0.15,
+            width: width * 0.2,
             height: height * 0.5
         },
         

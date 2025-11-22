@@ -32,6 +32,9 @@ import { UnitEffectManager } from '../managers/UnitEffectManager';
 import { CardPreviewPanel } from '../ui/CardPreviewPanel';
 import { createDefaultLayout, type BattleLayoutConfig } from '../config/LayoutConfig';
 import { UsageManager } from '../managers/UsageManager';
+import { StatusManager } from '../managers/StatusManager';
+import { BattleStatusController } from '../managers/BattleStatusController';
+import { BattleStateChecker } from '../managers/BattleStateChecker';
 import type { PillCard } from '../../../public/data/types/cards/pill';
 import type { SkillCard } from '../../../public/data/types/cards/skill';
 
@@ -54,6 +57,7 @@ export class BattleScene extends Scene {
     private cardScale: number = 1;
     private cardPreview: Phaser.GameObjects.Container | null = null;
     private gameSpeed: number = 1; // 游戏速度倍率（1x 或 2x）
+    private isProcessingTurn: boolean = false; // 防止重复点击结束回合
     
     // UI元素引用
     private deckButton?: Phaser.GameObjects.Rectangle;
@@ -81,6 +85,9 @@ export class BattleScene extends Scene {
     private pillTooltip: Phaser.GameObjects.Container | null = null;
     private cardPreviewPanel!: CardPreviewPanel;
     private usageManager: UsageManager = new UsageManager();
+    private statusManager!: StatusManager;
+    private battleStatusController!: BattleStatusController;
+    private battleStateChecker!: BattleStateChecker;
     private static readonly USAGE_CATEGORY_WEAPON = 'weapon';
     
     // 布局配置
@@ -91,8 +98,10 @@ export class BattleScene extends Scene {
     }
 
     private calculateCardScale(): number {
+        // 响应式缩放系数，会与 CardSprite 的默认 scale 相乘
+        // 例如：1080p 屏幕返回 1.0，720p 返回 0.67
         const { height } = this.scale;
-        return (height / 1080) * 0.7;
+        return height / 1080;
     }
 
     preload() {
@@ -107,7 +116,7 @@ export class BattleScene extends Scene {
         this.load.json('gongfaList', 'data/gongfa/gongfa-list.json');
     }
 
-    create() {
+    async create() {
         console.log('BattleScene create() 开始');
         const { width, height } = this.scale;
 
@@ -128,6 +137,19 @@ export class BattleScene extends Scene {
         // 初始化管理器（使用布局配置）
         this.battleLog = new BattleLog(this, this.layout.battleLog);
         this.animationManager = new BattleAnimationManager(this);
+        
+        // 初始化状态管理器
+        this.statusManager = new StatusManager();
+        await this.statusManager.initialize();
+        console.log('StatusManager initialized');
+        
+        // 初始化战斗状态控制器（必须在 battleLog 和 animationManager 之后）
+        this.battleStatusController = new BattleStatusController(
+            this.statusManager,
+            this.battleLog,
+            this.animationManager
+        );
+        
         this.cardPreviewPanel = new CardPreviewPanel(this, this.layout.cardPreview);
         this.combatManager = new CombatManager(this, this.animationManager, this.battleLog);
         this.cardManager = new CardManager(this, this.battleLog, this.cardScale);
@@ -141,6 +163,14 @@ export class BattleScene extends Scene {
             gongfaData?.gongfa || []
         );
         this.turnManager = new TurnManager(this);
+        
+        // 初始化战场状态检查器（必须在 turnManager 之后）
+        this.battleStateChecker = new BattleStateChecker(
+            this,
+            this.battleLog,
+            this.animationManager,
+            this.turnManager
+        );
         this.artifactManager = new ArtifactManager(this, this.battleLog);
         this.talismanManager = new TalismanManager(this, this.battleLog);
         this.fieldManager = new FieldManager(this, this.battleLog);
@@ -398,9 +428,9 @@ export class BattleScene extends Scene {
      * 使用技能
      */
     private useSkill(skillIndex: number): void {
-        this.skillManager.useSkill(skillIndex, (skill) => {
-            // 使用技能效果处理器执行技能效果
-            this.skillEffectHandler.applySkillEffect(skill);
+        this.skillManager.useSkill(skillIndex, (skill, onCancel) => {
+            // 使用技能效果处理器执行技能效果，传入取消回调
+            this.skillEffectHandler.applySkillEffect(skill, onCancel);
         });
     }
 
@@ -1006,7 +1036,7 @@ export class BattleScene extends Scene {
         }).setOrigin(0.5);
 
         // 回合提示
-        const turnText = this.add.text(width / 2, height * 0.95, '', {
+        const turnText = this.add.text(width / 2, height * 0.45, '', {
             fontSize: titleFontSize,
             color: '#f39c12',
             fontStyle: 'bold'
@@ -1039,12 +1069,34 @@ export class BattleScene extends Scene {
     }
 
     private endTurn() {
-        if (!this.isPlayerTurn) return;
-
-        this.battleLog.addLog('═══ 战斗阶段 ═══');
-        this.applyPlayerTurnEndEffects();
+        if (!this.isPlayerTurn || this.isProcessingTurn) return;
         
-        this.playerTurn();
+        // 设置处理标志，防止重复点击
+        this.isProcessingTurn = true;
+
+        // 1. 先触发回合结束状态（燃烧等）
+        this.battleLog.addLog('═══ 回合结束阶段 ═══');
+        this.battleStatusController.triggerTurnEndStatuses(
+            this.playerField,
+            this.enemyField
+        );
+        
+        // 统一检查战场状态（包括生命值和胜负）
+        this.battleStateChecker.checkBattleState(
+            this.playerField,
+            this.enemyField,
+            this.playerHealth,
+            (unit: CardSprite, isPlayer: boolean) => this.removeUnitFromField(unit, isPlayer),
+            () => {} // 回合结束阶段不需要额外处理
+        );
+        
+        // 2. 等待状态动画完成后进入战斗阶段
+        this.time.delayedCall(800, () => {
+            this.battleLog.addLog('═══ 战斗阶段 ═══');
+            this.applyPlayerTurnEndEffects();
+            this.playerTurn();
+            // 注意：isProcessingTurn 会在回合流程结束时重置
+        });
     }
 
     private playerTurn() {
@@ -1061,14 +1113,38 @@ export class BattleScene extends Scene {
 
                 this.isPlayerTurn = false;
                 
-                // 等待死亡动画完成后切换回合
+                // 等待死亡动画完成后切换到敌人回合
                 this.time.delayedCall(600, () => {
                     this.turnManager.showTurnAnimation('敌人回合', 0xe74c3c, () => {
-                        this.enemyTurn();
+                        // 敌人回合开始
+                        this.startEnemyTurn();
                     });
                 });
             }
         );
+    }
+
+    private startEnemyTurn() {
+        // 1. 先触发回合开始状态（中毒等）
+        this.battleLog.addLog('═══ 敌人回合开始 ═══');
+        this.battleStatusController.triggerTurnStartStatuses(
+            this.playerField,
+            this.enemyField
+        );
+        
+        // 统一检查战场状态（包括生命值和胜负）
+        this.battleStateChecker.checkBattleState(
+            this.playerField,
+            this.enemyField,
+            this.playerHealth,
+            (unit: CardSprite, isPlayer: boolean) => this.removeUnitFromField(unit, isPlayer),
+            () => {} // 敌人回合开始不需要额外处理
+        );
+        
+        // 2. 等待状态动画完成后进入战斗
+        this.time.delayedCall(800, () => {
+            this.enemyTurn();
+        });
     }
 
     private enemyTurn() {
@@ -1086,15 +1162,58 @@ export class BattleScene extends Scene {
                 this.isPlayerTurn = true;
                 this.turnNumber++;
                 
-                // 等待死亡动画完成后切换回合
+                // 等待死亡动画完成后，先触发敌人回合结束状态
                 this.time.delayedCall(600, () => {
-                    this.turnManager.showTurnAnimation(`回合 ${this.turnNumber}`, 0x2ecc71, () => {
-                        this.battleLog.addLog(`═══ 回合 ${this.turnNumber} 开始 ═══`);
-                        this.drawCard();
+                    this.battleLog.addLog('═══ 敌人回合结束 ═══');
+                    this.battleStatusController.triggerTurnEndStatuses(
+                        this.playerField,
+                        this.enemyField
+                    );
+                    
+                    // 统一检查战场状态（包括生命值和胜负）
+                    this.battleStateChecker.checkBattleState(
+                        this.playerField,
+                        this.enemyField,
+                        this.playerHealth,
+                        (unit: CardSprite, isPlayer: boolean) => this.removeUnitFromField(unit, isPlayer),
+                        () => {} // 敌人回合结束不需要额外处理
+                    );
+                    
+                    // 等待状态动画完成后切换到玩家回合
+                    this.time.delayedCall(800, () => {
+                        this.turnManager.showTurnAnimation(`回合 ${this.turnNumber}`, 0x2ecc71, () => {
+                            this.startPlayerTurn();
+                        });
                     });
                 });
             }
         );
+    }
+
+    private startPlayerTurn() {
+        // 重置回合处理标志，允许玩家再次结束回合
+        this.isProcessingTurn = false;
+        
+        // 1. 先触发回合开始状态（中毒等）
+        this.battleLog.addLog(`═══ 回合 ${this.turnNumber} 开始 ═══`);
+        this.battleStatusController.triggerTurnStartStatuses(
+            this.playerField,
+            this.enemyField
+        );
+        
+        // 统一检查战场状态（包括生命值和胜负）
+        this.battleStateChecker.checkBattleState(
+            this.playerField,
+            this.enemyField,
+            this.playerHealth,
+            (unit: CardSprite, isPlayer: boolean) => this.removeUnitFromField(unit, isPlayer),
+            () => {} // 玩家回合开始不需要额外处理
+        );
+        
+        // 2. 等待状态动画完成后抽卡
+        this.time.delayedCall(800, () => {
+            this.drawCard();
+        });
     }
 
     // 创建卡组按钮
@@ -1244,5 +1363,27 @@ export class BattleScene extends Scene {
                 if (onComplete) onComplete();
             }
         });
+    }
+
+    /**
+     * 从战场移除单位（由 BattleStateChecker 调用）
+     */
+    private removeUnitFromField(unit: CardSprite, isPlayer: boolean): void {
+        // 清理状态
+        const unitData = unit.getCardData();
+        this.battleStatusController.cleanupUnitStatuses(unitData.id);
+        
+        // 从场上移除
+        if (isPlayer) {
+            const index = this.playerField.indexOf(unit);
+            if (index > -1) {
+                this.playerField.splice(index, 1);
+            }
+        } else {
+            const index = this.enemyField.indexOf(unit);
+            if (index > -1) {
+                this.enemyField.splice(index, 1);
+            }
+        }
     }
 }

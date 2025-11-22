@@ -211,6 +211,99 @@
           "scriptId": "effect.TL_007.cast"
         }
       ]
+    },
+    {
+      "id": "TL_TEST_POISON",
+      "name": "剧毒符",
+      "kind": "talisman",
+      "description": "施加剧毒，持续侵蚀目标生命。测试用符箓。",
+      "rarity": "common",
+      "labels": ["攻击符", "毒系", "测试"],
+      "limitPerDeck": 3,
+
+      "isInstant": true,
+      "duration": 0,
+      "target": "unit",
+
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "singleEnemy"
+          },
+          "actions": [
+            {
+              "type": "applyStatus",
+              "statusId": "poison",
+              "stacks": 3
+            }
+          ],
+          "text": "对一个敌方单位施加3层中毒（每回合开始受到2点伤害，持续3回合）。",
+          "scriptId": "effect.TL_TEST_POISON.cast"
+        }
+      ]
+    },
+    {
+      "id": "TL_TEST_BURN",
+      "name": "烈焰符",
+      "kind": "talisman",
+      "description": "施加燃烧，造成递减的持续伤害。测试用符箓。",
+      "rarity": "common",
+      "labels": ["攻击符", "火系", "测试"],
+      "limitPerDeck": 3,
+
+      "isInstant": true,
+      "duration": 0,
+      "target": "unit",
+
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "singleEnemy"
+          },
+          "actions": [
+            {
+              "type": "applyStatus",
+              "statusId": "burn",
+              "stacks": 5
+            }
+          ],
+          "text": "对一个敌方单位施加5层燃烧（回合结束受到等于层数的伤害，递减）。",
+          "scriptId": "effect.TL_TEST_BURN.cast"
+        }
+      ]
+    },
+    {
+      "id": "TL_TEST_ARMOR",
+      "name": "护甲符",
+      "kind": "talisman",
+      "description": "提供护甲保护。测试用符箓。",
+      "rarity": "common",
+      "labels": ["防御符", "测试"],
+      "limitPerDeck": 3,
+
+      "isInstant": true,
+      "duration": 0,
+      "target": "unit",
+
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "singleAlly"
+          },
+          "actions": [
+            {
+              "type": "applyStatus",
+              "statusId": "armor",
+              "stacks": 5
+            }
+          ],
+          "text": "为一个己方单位提供5层护甲（减少受到的伤害）。",
+          "scriptId": "effect.TL_TEST_ARMOR.cast"
+        }
+      ]
     }
   ]
 }

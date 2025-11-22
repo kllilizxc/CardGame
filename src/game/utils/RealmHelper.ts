@@ -22,9 +22,21 @@ combatBaselineData.realms.forEach(realm => {
   };
 });
 
+// 大境界到星级的映射
+const STAGE_TO_STAR: Record<string, number> = {
+  '凡人': 1,
+  '炼气': 2,
+  '筑基': 3,
+  '金丹': 4,
+  '元婴': 5,
+  '化神': 6,
+  '合体': 7,
+  '大乘': 8
+};
+
 /**
- * 根据境界ID获取星级（1-12星）
- * 星级 = min(realm.value + 1, 12)
+ * 根据境界ID获取星级（1-8星，按大境界计算）
+ * 星级由大境界决定，小阶段不影响星级
  */
 export function getStarFromRealmId(realmId: string): number {
   const config = REALM_CONFIG[realmId];
@@ -32,7 +44,7 @@ export function getStarFromRealmId(realmId: string): number {
     console.warn(`Unknown realmId: ${realmId}, defaulting to 1 star`);
     return 1;
   }
-  return Math.min(config.value + 1, 12);
+  return STAGE_TO_STAR[config.stage] || 1;
 }
 
 /**

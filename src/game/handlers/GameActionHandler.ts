@@ -6,6 +6,7 @@ import type { BattleLog } from '../ui/BattleLog';
 import type { CardManager } from '../managers/CardManager';
 import type { DeckSelectionUI } from '../ui/DeckSelectionUI';
 import type { BattleAnimationManager } from '../managers/BattleAnimationManager';
+import { getStatusDefinition } from '../utils/StatusHelper';
 
 type AnyCard = any;
 
@@ -177,13 +178,19 @@ export class GameActionHandler {
                 break;
 
             case 'applyStatus':
-                // TODO: 实现状态系统后处理
-                battleLog.addLog(`${source}对目标施加了${action.statusId}状态`);
+                if (target) {
+                    this.applyStatus(target, action.statusId, action.stacks || 1, source, sourceCard);
+                } else if (targets) {
+                    targets.forEach(t => this.applyStatus(t, action.statusId, action.stacks || 1, source, sourceCard));
+                }
                 break;
 
             case 'removeDebuffs':
-                // TODO: 实现状态系统后处理
-                battleLog.addLog(`${source}移除了目标的负面状态`);
+                if (target) {
+                    this.removeDebuffs(target, source, sourceCard);
+                } else if (targets) {
+                    targets.forEach(t => this.removeDebuffs(t, source, sourceCard));
+                }
                 break;
 
             default:
@@ -249,6 +256,74 @@ export class GameActionHandler {
             `【${source}】使【${targetData.name}】攻击力${value > 0 ? '+' : ''}${value}！`,
             cardRefs
         );
+    }
+
+    /**
+     * 施加状态
+     */
+    private applyStatus(target: CardSprite, statusId: string, stacks: number, source: string, sourceCard?: BaseCardSprite): void {
+        const { battleLog, scene } = this.context;
+        const targetData = target.getCardData();
+        
+        // 获取 statusManager
+        const battleScene = scene as any;
+        if (!battleScene.statusManager) {
+            console.warn('StatusManager not available');
+            return;
+        }
+
+        // 施加状态
+        const success = battleScene.statusManager.applyStatus(
+            targetData.id,
+            statusId,
+            stacks
+        );
+
+        if (success) {
+            // 获取状态定义以显示名称
+            const statusDef = getStatusDefinition(statusId);
+            const statusName = statusDef?.name || statusId;
+
+            // 记录日志
+            const cardRefs = sourceCard ? [sourceCard, target] : [target];
+            battleLog.addLog(
+                `【${source}】对【${targetData.name}】施加了${stacks}层【${statusName}】！`,
+                cardRefs
+            );
+
+            // 更新状态显示UI
+            const statuses = battleScene.statusManager.getUnitStatuses(targetData.id);
+            target.updateStatusDisplay(statuses);
+        }
+    }
+
+    /**
+     * 移除负面状态
+     */
+    private removeDebuffs(target: CardSprite, source: string, sourceCard?: BaseCardSprite): void {
+        const { battleLog, scene } = this.context;
+        const targetData = target.getCardData();
+        
+        // 获取 statusManager
+        const battleScene = scene as any;
+        if (!battleScene.statusManager) {
+            console.warn('StatusManager not available');
+            return;
+        }
+
+        // 移除所有负面状态
+        battleScene.statusManager.clearDebuffs(targetData.id);
+
+        // 记录日志
+        const cardRefs = sourceCard ? [sourceCard, target] : [target];
+        battleLog.addLog(
+            `【${source}】移除了【${targetData.name}】的所有负面状态！`,
+            cardRefs
+        );
+
+        // 更新状态显示UI
+        const statuses = battleScene.statusManager.getUnitStatuses(targetData.id);
+        target.updateStatusDisplay(statuses);
     }
 
     /**

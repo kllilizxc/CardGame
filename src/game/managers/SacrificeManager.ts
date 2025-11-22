@@ -7,31 +7,80 @@ import { getUnitStar } from '../utils/RealmHelper';
 /**
  * 献祭召唤管理器
  * 处理高星单位的献祭召唤逻辑
+ * 
+ * 献祭规则：
+ * - freeStarThreshold 及以下不需要献祭
+ * - 每高一星需要 2 张低一星的卡作为祭品
  */
 export class SacrificeManager {
     private scene: Scene;
     private battleLog: BattleLog;
+    
+    // 配置参数
+    private readonly freeStarThreshold: number; // 免费召唤的星级上限
+    private readonly sacrificePerStar: number;  // 每高一星需要的祭品数量
 
-    constructor(scene: Scene, battleLog: BattleLog) {
+    constructor(scene: Scene, battleLog: BattleLog, freeStarThreshold: number = 2) {
         this.scene = scene;
         this.battleLog = battleLog;
+        this.freeStarThreshold = freeStarThreshold;
+        this.sacrificePerStar = 2; // 固定为2张祭品
     }
 
     /**
      * 检查是否需要献祭
      * @param cardData 单位卡数据
      * @returns 需要献祭的单位数量（0表示不需要）
+     * 
+     * 计算公式：
+     * - star <= freeStarThreshold: 0张祭品
+     * - star > freeStarThreshold: (star - freeStarThreshold) * sacrificePerStar 张祭品
+     * 
+     * 示例（freeStarThreshold = 2）：
+     * - 1星: 0张祭品
+     * - 2星: 0张祭品
+     * - 3星: (3-2)*2 = 2张祭品
+     * - 4星: (4-2)*2 = 4张祭品
+     * - 5星: (5-2)*2 = 6张祭品
      */
     public getSacrificeRequired(cardData: UnitCard): number {
         const star = getUnitStar(cardData);
         
-        if (star >= 8) {
-            return 2; // 8星及以上需要献祭2只
-        } else if (star >= 5) {
-            return 1; // 5-7星需要献祭1只
+        if (star <= this.freeStarThreshold) {
+            return 0; // 免费召唤
         }
         
-        return 0; // 4星及以下不需要献祭
+        // 每高一星需要 sacrificePerStar 张祭品
+        return (star - this.freeStarThreshold) * this.sacrificePerStar;
+    }
+    
+    /**
+     * 检查祭品是否满足星级要求
+     * @param cardData 要召唤的单位
+     * @param sacrificeTargets 选择的祭品
+     * @returns 是否满足要求
+     * 
+     * 祭品规则：
+     * - 推荐使用低一星的卡（targetStar - 1）
+     * - 也可以使用同级或更高级的卡
+     * - 即：祭品星级 >= targetStar - 1
+     */
+    public validateSacrificeStars(cardData: UnitCard, sacrificeTargets: CardSprite[]): boolean {
+        const targetStar = getUnitStar(cardData);
+        
+        // 免费召唤不需要检查
+        if (targetStar <= this.freeStarThreshold) {
+            return true;
+        }
+        
+        // 祭品必须是低一星或更高星级的卡
+        const minSacrificeStar = targetStar - 1;
+        
+        return sacrificeTargets.every(sacrifice => {
+            const sacrificeData = sacrifice.getCardData();
+            const sacrificeStar = getUnitStar(sacrificeData);
+            return sacrificeStar >= minSacrificeStar;
+        });
     }
 
     /**
@@ -159,13 +208,40 @@ export class SacrificeManager {
 
     /**
      * 获取献祭提示文本
+     * @param cardData 要召唤的单位
+     * @param requiredCount 需要的祭品数量
      */
-    public getSacrificeText(requiredCount: number): string {
-        if (requiredCount === 1) {
-            return '需要献祭1只场上单位';
-        } else if (requiredCount === 2) {
-            return '需要献祭2只场上单位';
+    public getSacrificeText(cardData: UnitCard, requiredCount: number): string {
+        if (requiredCount === 0) {
+            return '';
         }
-        return '';
+        
+        const targetStar = getUnitStar(cardData);
+        const minSacrificeStar = targetStar - 1;
+        
+        return `需要献祭${requiredCount}只${minSacrificeStar}星及以上单位`;
+    }
+    
+    /**
+     * 获取可用的祭品列表（符合星级要求的单位）
+     * @param cardData 要召唤的单位
+     * @param playerField 玩家场上单位
+     */
+    public getValidSacrifices(cardData: UnitCard, playerField: CardSprite[]): CardSprite[] {
+        const targetStar = getUnitStar(cardData);
+        
+        // 免费召唤不需要祭品
+        if (targetStar <= this.freeStarThreshold) {
+            return [];
+        }
+        
+        const minSacrificeStar = targetStar - 1;
+        
+        return playerField.filter(unit => {
+            const unitData = unit.getCardData();
+            const unitStar = getUnitStar(unitData);
+            // 可以使用低一星或更高星级的卡
+            return unitStar >= minSacrificeStar;
+        });
     }
 }

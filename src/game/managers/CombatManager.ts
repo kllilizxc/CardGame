@@ -92,8 +92,13 @@ export class CombatManager {
         });
 
         // 在所有攻击完成后调用回调
-        if (onComplete && delay > 0) {
-            this.scene.time.delayedCall(delay + 200, onComplete);
+        if (onComplete) {
+            if (delay > 0) {
+                this.scene.time.delayedCall(delay + 200, onComplete);
+            } else {
+                // 如果没有任何攻击动画，立即调用回调
+                this.scene.time.delayedCall(100, onComplete);
+            }
         }
 
         return delay; // 返回总动画时长

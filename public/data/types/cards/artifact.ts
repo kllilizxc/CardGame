@@ -23,6 +23,16 @@ export type ArtifactWeaponType =
   | '飞镖'
   | '扇子';
 
+/**
+ * 法器属性（五行）
+ * 每个法器可以有1-5种属性
+ * - 低级法器（黄阶、地阶）：基本都是单属性
+ * - 中级法器（玄阶、天阶）：1-2种属性
+ * - 高级法器（仙阶、神阶）：1-3种属性
+ * - 属性越多越稀有，但不一定等级越高属性越多（可能专注于一种属性）
+ */
+export type ArtifactElement = '金' | '木' | '水' | '火' | '土';
+
 export interface ArtifactCard extends BaseCard {
   kind: "artifact";
 
@@ -35,8 +45,12 @@ export interface ArtifactCard extends BaseCard {
   /** 武器类型：仅对武器类法器必填，用于判定剑器等逻辑 */
   weaponType?: ArtifactWeaponType;
 
-  /** 耐久度（可选），为 0 时法器失效或破碎 */
-  durability?: number;
+  /** 
+   * 法器属性（五行）
+   * 可以有1-5种属性，属性越多越稀有
+   * 低级法器通常单属性，高级法器可能多属性或专注单属性
+   */
+  elements: ArtifactElement[];
 
   /** 基础数值加成 */
   attackBonus?: number;

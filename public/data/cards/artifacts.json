@@ -12,7 +12,7 @@
 
       "gradeId": "grade_yellow_lower",
       "equipTarget": "unit",
-      "durability": 3,
+      "elements": ["金"],
       "attackBonus": 1,
 
       "effects": [
@@ -43,6 +43,7 @@
 
       "gradeId": "grade_yellow_middle",
       "equipTarget": "unit",
+      "elements": ["木"],
 
       "effects": [
         {
@@ -72,7 +73,7 @@
 
       "gradeId": "grade_yellow_upper",
       "equipTarget": "unit",
-      "durability": 5,
+      "elements": ["土"],
       "healthBonus": 10,
 
       "effects": [
@@ -103,6 +104,7 @@
 
       "gradeId": "grade_earth_lower",
       "equipTarget": "unit",
+      "elements": ["火"],
       "attackBonus": 3,
 
       "effects": [
@@ -140,6 +142,7 @@
 
       "gradeId": "grade_earth_middle",
       "equipTarget": "unit",
+      "elements": ["木", "水"],
 
       "effects": [
         {
@@ -169,6 +172,7 @@
 
       "gradeId": "grade_mystic_lower",
       "equipTarget": "field",
+      "elements": ["木", "土"],
 
       "effects": [
         {
@@ -203,6 +207,7 @@
 
       "gradeId": "grade_yellow_lower",
       "equipTarget": "unit",
+      "elements": ["木"],
 
       "effects": [
         {

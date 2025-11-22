@@ -1,10 +1,12 @@
 import { GameObjects } from 'phaser';
 import type { UnitCard } from '@data/types/cards/unit';
 import type { Gongfa } from '@data/types/gongfa';
+import type { StatusInstance } from '@data/types/status';
 import { BaseCardSprite } from './BaseCardSprite';
 import { GongfaTooltip } from '../ui/GongfaTooltip';
 import { describeGongfa } from '../utils/GongfaDescriptionBuilder';
 import { getUnitStar, getRealmConfig } from '../utils/RealmHelper';
+import { getStatusDisplayText, getStatusCategoryColor, getStatusFullDescription } from '../utils/StatusHelper';
 
 export class CardSprite extends BaseCardSprite {
     private cardData: UnitCard;
@@ -17,8 +19,10 @@ export class CardSprite extends BaseCardSprite {
     private gongfaTexts: GameObjects.Text[] = [];
     private gongfaTooltip: GongfaTooltip;
     private gongfaData: Map<string, Gongfa> = new Map();
+    private statusContainer?: GameObjects.Container;
+    private statusTooltip?: GameObjects.Container;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, cardData: UnitCard, scale: number = 0.7) {
+    constructor(scene: Phaser.Scene, x: number, y: number, cardData: UnitCard, scale: number = 1) {
         super(scene, x, y, scale);
         this.cardData = cardData;
 
@@ -274,10 +278,143 @@ export class CardSprite extends BaseCardSprite {
     }
 
     /**
-     * 销毁时清理功法提示框
+     * 更新状态显示
+     */
+    public updateStatusDisplay(statuses: StatusInstance[]): void {
+        // 清除旧的状态显示
+        if (this.statusContainer) {
+            this.statusContainer.destroy();
+            this.statusContainer = undefined;
+        }
+        
+        if (this.statusTooltip) {
+            this.statusTooltip.destroy();
+            this.statusTooltip = undefined;
+        }
+
+        // 如果没有状态，直接返回
+        if (!statuses || statuses.length === 0) {
+            return;
+        }
+
+        // 创建新的状态容器（显示在卡片左侧，避免与功法重合）
+        this.statusContainer = this.scene.add.container(-90, -80);
+        this.add(this.statusContainer);
+
+        // 显示每个状态
+        statuses.forEach((status, index) => {
+            const displayText = getStatusDisplayText(status);
+            const categoryColor = getStatusCategoryColor(status.statusId);
+            
+            const yPos = index * 22;
+            
+            // 创建状态背景
+            const bg = this.scene.add.rectangle(0, yPos, 50, 18, categoryColor, 0.8);
+            bg.setStrokeStyle(1, categoryColor);
+            this.statusContainer!.add(bg);
+            
+            // 创建状态文本
+            const text = this.scene.add.text(0, yPos, displayText, {
+                fontSize: '12px',
+                color: '#ffffff',
+                fontStyle: 'bold'
+            }).setOrigin(0.5);
+            this.statusContainer!.add(text);
+            
+            // 添加交互（悬停显示详细信息）
+            bg.setInteractive();
+            bg.on('pointerover', () => {
+                this.showStatusTooltip(status, bg);
+            });
+            bg.on('pointerout', () => {
+                this.hideStatusTooltip();
+            });
+        });
+    }
+
+    /**
+     * 显示状态提示框
+     */
+    private showStatusTooltip(status: StatusInstance, targetBg: GameObjects.Rectangle): void {
+        // 隐藏之前的提示框
+        this.hideStatusTooltip();
+
+        const fullDesc = getStatusFullDescription(status);
+        
+        // 先创建临时文本来测量实际大小
+        const padding = 12;
+        const maxWidth = 300; // 最大宽度
+        
+        const tempText = this.scene.add.text(0, 0, fullDesc, {
+            fontSize: '16px',
+            fontStyle: 'bold',
+            lineSpacing: 4,
+            wordWrap: { width: maxWidth - padding * 2 }
+        });
+        
+        // 获取文本的实际尺寸
+        const textBounds = tempText.getBounds();
+        const width = Math.max(textBounds.width + padding * 2, 200); // 最小宽度200
+        const height = textBounds.height + padding * 2;
+        
+        // 销毁临时文本
+        tempText.destroy();
+        
+        // 获取世界坐标
+        const bgWorldPos = targetBg.getWorldTransformMatrix();
+        
+        // 创建提示框（显示在状态图标右侧）
+        // 注意：不要添加到 this，而是直接添加到场景，这样图层更高
+        this.statusTooltip = this.scene.add.container(
+            bgWorldPos.tx + 60,
+            bgWorldPos.ty
+        );
+        // 设置非常高的深度，确保在所有卡片之上
+        this.statusTooltip.setDepth(99999);
+        
+        // 背景（根据文本实际大小调整）
+        const tooltipBg = this.scene.add.rectangle(0, 0, width, height, 0x2c3e50, 0.98);
+        tooltipBg.setStrokeStyle(3, 0xf39c12);
+        this.statusTooltip.add(tooltipBg);
+        
+        // 文本（增大字体）
+        const tooltipText = this.scene.add.text(-width/2 + padding, -height/2 + padding, fullDesc, {
+            fontSize: '16px',
+            color: '#ecf0f1',
+            fontStyle: 'bold',
+            lineSpacing: 4,
+            wordWrap: { width: maxWidth - padding * 2 }
+        }).setOrigin(0, 0);
+        this.statusTooltip.add(tooltipText);
+    }
+
+    /**
+     * 隐藏状态提示框
+     */
+    private hideStatusTooltip(): void {
+        if (this.statusTooltip) {
+            this.statusTooltip.destroy();
+            this.statusTooltip = undefined;
+        }
+    }
+
+    /**
+     * 清除状态显示
+     */
+    public clearStatusDisplay(): void {
+        if (this.statusContainer) {
+            this.statusContainer.destroy();
+            this.statusContainer = undefined;
+        }
+        this.hideStatusTooltip();
+    }
+
+    /**
+     * 销毁时清理功法提示框和状态显示
      */
     public destroy(fromScene?: boolean): void {
         this.gongfaTooltip.destroy();
+        this.clearStatusDisplay();
         super.destroy(fromScene);
     }
 }

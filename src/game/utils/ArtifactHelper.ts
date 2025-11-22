@@ -3,7 +3,7 @@
  * 提供法器品级相关的查询和计算功能
  */
 
-import type { ArtifactCard } from '../../../public/data/types/cards/artifact';
+import type { ArtifactCard, ArtifactElement } from '../../../public/data/types/cards/artifact';
 import artifactGradeDataRaw from '../../../public/data/config/artifact-grade.json';
 import type { ArtifactGradeConfig } from '../../../public/data/types/artifact-grade';
 
@@ -22,9 +22,19 @@ artifactGradeData.grades.forEach(grade => {
   };
 });
 
+// 品阶到星级的映射
+const TIER_TO_STAR: Record<string, number> = {
+  '黄阶': 1,
+  '地阶': 2,
+  '玄阶': 3,
+  '天阶': 4,
+  '仙阶': 5,
+  '神阶': 6
+};
+
 /**
- * 根据品级ID获取星级（1-12星）
- * 星级 = min(grade.value + 1, 12)
+ * 根据品级ID获取星级（1-6星，按品阶计算）
+ * 星级由品阶决定，品质不影响星级
  */
 export function getStarFromGradeId(gradeId: string): number {
   const config = GRADE_CONFIG[gradeId];
@@ -32,7 +42,7 @@ export function getStarFromGradeId(gradeId: string): number {
     console.warn(`Unknown gradeId: ${gradeId}, defaulting to 1 star`);
     return 1;
   }
-  return Math.min(config.value + 1, 12);
+  return TIER_TO_STAR[config.tier] || 1;
 }
 
 /**
@@ -58,4 +68,61 @@ export function getGradeDisplayName(gradeId: string): string {
     return '未知品级';
   }
   return `${config.tier}${config.quality}`;
+}
+
+/**
+ * 获取法器属性显示文本
+ * @param elements 法器属性数组
+ * @returns 属性显示文本（如："金"、"木水"、"金木水火土"）
+ */
+export function getElementsDisplayText(elements: ArtifactElement[]): string {
+  if (!elements || elements.length === 0) {
+    return '无属性';
+  }
+  return elements.join('');
+}
+
+/**
+ * 获取法器属性颜色
+ * @param element 单个属性
+ * @returns 十六进制颜色值
+ */
+export function getElementColor(element: ArtifactElement): number {
+  const colorMap: Record<ArtifactElement, number> = {
+    '金': 0xFFD700, // 金色
+    '木': 0x228B22, // 绿色
+    '水': 0x1E90FF, // 蓝色
+    '火': 0xFF4500, // 红色
+    '土': 0x8B4513  // 棕色
+  };
+  return colorMap[element] || 0xFFFFFF;
+}
+
+/**
+ * 检查法器是否包含指定属性
+ * @param artifact 法器卡数据
+ * @param element 要检查的属性
+ */
+export function hasElement(artifact: ArtifactCard, element: ArtifactElement): boolean {
+  return artifact.elements?.includes(element) || false;
+}
+
+/**
+ * 检查法器是否包含所有指定属性
+ * @param artifact 法器卡数据
+ * @param elements 要检查的属性数组
+ */
+export function hasAllElements(artifact: ArtifactCard, elements: ArtifactElement[]): boolean {
+  if (!artifact.elements) return false;
+  return elements.every(element => artifact.elements.includes(element));
+}
+
+/**
+ * 检查法器是否包含任一指定属性
+ * @param artifact 法器卡数据
+ * @param elements 要检查的属性数组
+ */
+export function hasAnyElement(artifact: ArtifactCard, elements: ArtifactElement[]): boolean {
+  if (!artifact.elements) return false;
+  return elements.some(element => artifact.elements.includes(element));
 }

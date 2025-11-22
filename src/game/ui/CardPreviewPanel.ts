@@ -72,7 +72,7 @@ export class CardPreviewPanel {
         }
 
         // 创建新的预览卡片
-        const previewCard = CardSpriteFactory.createSprite(this.scene, cardData, 0, 0, 1);
+        const previewCard = CardSpriteFactory.createSprite(this.scene, cardData, 0, 0);
         if (!previewCard) {
             return;
         }
@@ -82,9 +82,9 @@ export class CardPreviewPanel {
         previewCard.setPosition(0, 20);
 
         // 计算合适的缩放比例
-        const cardHeight = 300; // 假设卡牌原始高度
-        const availableHeight = this.PANEL_HEIGHT - 100; // 留出标题和边距
-        const scale = Math.min(1.5, availableHeight / cardHeight);
+        const cardHeight = 200; // 假设卡牌原始高度
+        const availableHeight = this.PANEL_HEIGHT; // 留出标题和边距
+        const scale = Math.min(1.8, availableHeight / cardHeight);
         previewCard.setScale(scale);
 
         this.container.add(previewCard);

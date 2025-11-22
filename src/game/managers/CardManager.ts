@@ -14,7 +14,7 @@ export class CardManager {
     private scene: Scene;
     private battleLog: BattleLog;
     private cardScale: number;
-    private readonly DEFAULT_CARD_SPACING = 160;
+    private readonly DEFAULT_CARD_SPACING = 220; // 从 160 增加到 220，适配更大的卡片
     private readonly LAYOUT_WIDTH_PADDING = 200;
 
     constructor(scene: Scene, battleLog: BattleLog, cardScale: number) {
