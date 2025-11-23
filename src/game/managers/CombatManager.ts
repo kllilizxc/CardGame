@@ -3,16 +3,19 @@ import type { CardSprite } from '../objects/CardSprite';
 import type { ArtifactSprite } from '../objects/ArtifactSprite';
 import type { BattleLog } from '../ui/BattleLog';
 import { BattleAnimationManager } from './BattleAnimationManager';
+import type { StatusManager } from './StatusManager';
 
 export class CombatManager {
     private scene: Scene;
     private animationManager: BattleAnimationManager;
     private battleLog: BattleLog;
+    private statusManager: StatusManager;
 
-    constructor(scene: Scene, animationManager: BattleAnimationManager, battleLog: BattleLog) {
+    constructor(scene: Scene, animationManager: BattleAnimationManager, battleLog: BattleLog, statusManager: StatusManager) {
         this.scene = scene;
         this.animationManager = animationManager;
         this.battleLog = battleLog;
+        this.statusManager = statusManager;
     }
 
     // 战斗结算（带动画）
@@ -106,15 +109,21 @@ export class CombatManager {
         }
         
         const cardData = unit.getCardData();
-        cardData.health -= damage;
+        
+        // 通过 StatusManager 处理伤害（会先消耗护甲）
+        const finalDamage = this.statusManager.processDamage(cardData.id, damage);
+        
+        cardData.health -= finalDamage;
         
         // 生命值不能低于0
         if (cardData.health < 0) {
             cardData.health = 0;
         }
         
-        // 实时更新卡牌显示
+        // 实时更新卡牌显示（包括护甲状态）
         unit.updateStats();
+        const statuses = this.statusManager.getUnitStatuses(cardData.id);
+        unit.updateStatusDisplay(statuses);
     }
 
     /**

@@ -234,7 +234,7 @@ export class TurnManager {
      */
     public executeEnemyTurn(context: TurnContext): void {
         context.combatManager.resolveCombat(
-            context.isPlayerTurn,
+            false, // 敌人回合，isPlayerTurn 应该是 false
             context.playerField,
             context.enemyField,
             context.onPlayerDamaged,

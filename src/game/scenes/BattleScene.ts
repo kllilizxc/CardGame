@@ -171,7 +171,7 @@ export class BattleScene extends Scene {
         );
         
         // CardPreviewPanel 已被 CardPreviewManager 替代
-        this.combatManager = new CombatManager(this, this.animationManager, this.battleLog);
+        this.combatManager = new CombatManager(this, this.animationManager, this.battleLog, this.statusManager);
         this.cardManager = new CardManager(this, this.battleLog, this.cardScale);
         this.cardManager.setLayout(this.layout);
         const gongfaData = this.cache.json.get('gongfaList') as { gongfa: any[] };
