@@ -21,11 +21,104 @@
             "filter": {
               "kind": ["artifact"],
               "weaponTypesAnyOf": ["剑"],
-              "maxStar": 3,
+              "maxStar": "card.star + 2",
               "amount": 1
             },
             "destination": "Hand",
             "amount": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "gongfa.search_sword_on_summon",
+      "name": "检索剑器",
+      "schema": {
+        "event": {
+          "type": "OnSummon",
+          "side": "Ally"
+        },
+        "actions": [
+          {
+            "type": "SearchCardFromDeck",
+            "filter": {
+              "kind": ["artifact"],
+              "weaponTypesAnyOf": ["剑"],
+              "maxStar": "card.star + 1",
+              "amount": 1
+            },
+            "destination": "Hand",
+            "amount": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "gongfa.sword_control_basic",
+      "name": "控剑术·基础",
+      "schema": {
+        "event": {
+          "type": "OnEquipArtifact",
+          "side": "Ally"
+        },
+        "conditions": [
+          {
+            "type": "ArtifactEquipped",
+            "weaponType": "剑",
+            "maxStar": "card.star + 1"
+          }
+        ],
+        "actions": [
+          {
+            "type": "ImmediateAttack",
+            "target": "singleEnemy",
+            "damageMultiplier": 1.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "gongfa.sword_recall",
+      "name": "剑意呼唤",
+      "schema": {
+        "event": {
+          "type": "OnSummon",
+          "side": "Ally"
+        },
+        "actions": [
+          {
+            "type": "RecoverCardFromDiscard",
+            "filter": {
+              "kind": ["artifact"],
+              "weaponTypesAnyOf": ["剑"],
+              "amount": 1
+            },
+            "destination": "Hand",
+            "amount": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "gongfa.sword_control_shield",
+      "name": "控剑术·盾",
+      "schema": {
+        "event": {
+          "type": "OnEquipArtifact",
+          "side": "Ally"
+        },
+        "conditions": [
+          {
+            "type": "ArtifactEquipped",
+            "weaponType": "剑",
+            "maxStar": "card.star + 1"
+          }
+        ],
+        "actions": [
+          {
+            "type": "GainArmor",
+            "target": "self",
+            "value": "artifact.star * 2"
           }
         ]
       }

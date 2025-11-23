@@ -27,6 +27,7 @@ export interface GameActionContext {
     // 战场信息（用于效果处理）
     playerField?: CardSprite[];
     enemyField?: CardSprite[];
+    discardPile?: AnyCard[];
 }
 
 /**
@@ -91,6 +92,56 @@ export class GameActionHandler {
                 }
             },
             onCancel // 传入取消回调
+        );
+    }
+
+    /**
+     * 从弃牌堆选择卡牌回收到手牌
+     * @param _count 选择数量（预留参数，目前只支持1张）
+     * @param filter 可选的过滤条件
+     * @param onCancel 取消时的回调
+     */
+    public recoverFromDiscardPile(_count: number = 1, filter?: (card: AnyCard) => boolean, onCancel?: () => void): void {
+        const { discardPile, deckSelectionUI, hand, cardScale, battleLog, cardManager, scene, animationManager } = this.context;
+
+        if (!discardPile) {
+            console.warn('弃牌堆未提供');
+            if (onCancel) onCancel();
+            return;
+        }
+
+        // 应用过滤条件（如果有）
+        const filteredCards = filter ? discardPile.filter(filter) : discardPile;
+
+        if (filteredCards.length === 0) {
+            battleLog.addLog('弃牌堆中没有符合条件的卡牌');
+            if (onCancel) {
+                onCancel();
+            }
+            return;
+        }
+
+        // 复用 DeckSelectionUI 显示弃牌堆选择
+        deckSelectionUI.show(
+            filteredCards,
+            (selectedCard) => {
+                // 从弃牌堆移除
+                const index = discardPile.indexOf(selectedCard);
+                if (index > -1) {
+                    discardPile.splice(index, 1);
+                    
+                    // 从弃牌堆位置创建卡片精灵
+                    const { x: startX, y: startY } = animationManager.getDiscardPileCardSpawnPosition();
+                    const sprite = CardSpriteFactory.createSprite(scene, selectedCard, startX, startY, cardScale);
+
+                    if (sprite) {
+                        hand.push(sprite);
+                        cardManager.arrangeHand(hand as any);
+                        battleLog.addLog(`从弃牌堆回收了【${selectedCard.name}】`);
+                    }
+                }
+            },
+            onCancel
         );
     }
 

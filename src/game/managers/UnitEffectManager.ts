@@ -5,12 +5,18 @@ import type { BattleAnimationManager } from './BattleAnimationManager';
 import { getUnitStar } from '../utils/RealmHelper';
 import { CardSpriteFactory } from '../factories/CardSpriteFactory';
 import type { CardSprite } from '../objects/CardSprite';
+import type { ArtifactGradeConfig } from '@data/types/artifact-grade';
+import artifactGradeConfig from '@data/config/artifact-grade.json';
 import type {
     Gongfa,
     EffectAction,
     EffectCondition,
     EffectSchema,
     RecoverCardFromDiscardAction,
+    SearchCardFromDeckAction,
+    ImmediateAttackAction,
+    GainArmorAction,
+    ArtifactEquippedCondition,
     CardFilter
 } from '@data/types/gongfa';
 import { EffectEventType, EffectEventSide, EffectConditionType, EffectActionType, EffectActionDestination } from '@data/types/gongfa';
@@ -24,11 +30,17 @@ type AnyHandSprite = CardSprite | import('../objects/ArtifactSprite').ArtifactSp
 
 export interface GongfaRuntimeContext {
     playerField: CardSprite[];
+    enemyField?: CardSprite[];
     discardPile: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[];
     hand: AnyHandSprite[];
     discardPileButton?: Phaser.GameObjects.Rectangle;
     cardScale: number;
     artifactUsage: Partial<Record<ArtifactWeaponType, number>>;
+    triggerUnit?: CardSprite; // 触发功法的单位，用于表达式计算和攻击
+    equippedArtifact?: ArtifactCard; // 当前装备的法器，用于装备事件
+    gameActionHandler?: any; // GameActionHandler 实例，用于选择卡牌等操作
+    combatManager?: any; // CombatManager 实例，用于执行攻击
+    battleStatusController?: any; // BattleStatusController 实例，用于应用状态
 }
 
 const KNOWN_WEAPON_TYPES: ArtifactWeaponType[] = ['剑', '刀', '鞭', '枪', '锤', '弓', '尺', '印', '棍', '棒', '毒', '琴', '笛子', '拳套', '符箓', '斧头', '匕首', '飞镖', '扇子'];
@@ -64,6 +76,18 @@ export class UnitEffectManager {
         });
     }
 
+    public applyOnSummonEffects(unit: CardSprite, context: GongfaRuntimeContext): void {
+        this.executeUnitGongfa(unit, EffectEventType.OnSummon, EffectEventSide.Ally, context);
+    }
+
+    public applyOnEquipArtifactEffects(unit: CardSprite, artifact: ArtifactCard, context: GongfaRuntimeContext): void {
+        const contextWithArtifact: GongfaRuntimeContext = {
+            ...context,
+            equippedArtifact: artifact
+        };
+        this.executeUnitGongfa(unit, EffectEventType.OnEquipArtifact, EffectEventSide.Ally, contextWithArtifact);
+    }
+
     private executeUnitGongfa(
         unit: CardSprite,
         eventType: EffectEventType,
@@ -72,6 +96,12 @@ export class UnitEffectManager {
     ): void {
         const cardData = unit.getCardData();
         const gongfaIds = cardData.gongfaIds || [];
+
+        // 将触发单位添加到上下文中，用于表达式计算和攻击
+        const contextWithUnit: GongfaRuntimeContext = {
+            ...context,
+            triggerUnit: unit
+        };
 
         gongfaIds.forEach(id => {
             const gongfa = this.gongfaMap.get(id);
@@ -83,11 +113,11 @@ export class UnitEffectManager {
                 return;
             }
 
-            if (!this.areConditionsSatisfied(gongfa.schema.conditions || [], context)) {
+            if (!this.areConditionsSatisfied(gongfa.schema.conditions || [], contextWithUnit)) {
                 return;
             }
 
-            const executed = this.executeActions(gongfa.schema.actions, context);
+            const executed = this.executeActions(gongfa.schema.actions, contextWithUnit);
             if (executed) {
                 const displayName = gongfa.name || id;
                 const description = gongfa.description || '无描述';
@@ -157,6 +187,40 @@ export class UnitEffectManager {
                     });
                     return count >= minimum;
                 }
+                case EffectConditionType.ArtifactEquipped: {
+                    const artifactCondition = condition as ArtifactEquippedCondition;
+                    if (!context.equippedArtifact) {
+                        return false;
+                    }
+                    
+                    // 检查武器类型
+                    if (artifactCondition.weaponType) {
+                        const weaponType = context.equippedArtifact.weaponType || 
+                            this.extractWeaponTypeFromLabels(context.equippedArtifact.labels || []);
+                        if (weaponType !== artifactCondition.weaponType) {
+                            return false;
+                        }
+                    }
+                    
+                    // 检查星级限制
+                    if (artifactCondition.maxStar !== undefined) {
+                        const artifactStar = this.getArtifactStarFromGrade(context.equippedArtifact.gradeId);
+                        let maxStarValue: number;
+                        
+                        if (typeof artifactCondition.maxStar === 'string') {
+                            // 解析表达式，如 "card.star + 1"
+                            maxStarValue = this.evaluateExpression(artifactCondition.maxStar, context);
+                        } else {
+                            maxStarValue = artifactCondition.maxStar;
+                        }
+                        
+                        if (artifactStar > maxStarValue) {
+                            return false;
+                        }
+                    }
+                    
+                    return true;
+                }
                 case EffectConditionType.Custom:
                     console.warn(`自定义功法条件暂未实现：${condition.scriptId}`);
                     return false;
@@ -175,6 +239,25 @@ export class UnitEffectManager {
                     const amount = recoverAction.amount ?? recoverAction.filter.amount ?? 1;
                     const recovered = this.recoverCardsFromDiscard(recoverAction, amount, context);
                     executed = executed || recovered;
+                    break;
+                }
+                case EffectActionType.SearchCardFromDeck: {
+                    const searchAction = action as SearchCardFromDeckAction;
+                    const amount = searchAction.amount ?? searchAction.filter.amount ?? 1;
+                    const searched = this.searchCardsFromDeck(searchAction, amount, context);
+                    executed = executed || searched;
+                    break;
+                }
+                case EffectActionType.ImmediateAttack: {
+                    const attackAction = action as ImmediateAttackAction;
+                    const attacked = this.executeImmediateAttack(attackAction, context);
+                    executed = executed || attacked;
+                    break;
+                }
+                case EffectActionType.GainArmor: {
+                    const armorAction = action as GainArmorAction;
+                    const gained = this.executeGainArmor(armorAction, context);
+                    executed = executed || gained;
                     break;
                 }
                 case EffectActionType.DrawCards: {
@@ -210,32 +293,167 @@ export class UnitEffectManager {
             return false;
         }
 
-        let recovered = 0;
-        for (let i = context.discardPile.length - 1; i >= 0 && recovered < amount; i--) {
-            const card = context.discardPile[i];
-            if (!this.isCardMatchFilter(card, action.filter)) {
-                continue;
-            }
-
-            context.discardPile.splice(i, 1);
-            if (context.discardPileButton) {
-                const countText = context.discardPileButton.getData('countText') as Phaser.GameObjects.Text;
-                if (countText) {
-                    countText.setText(`${context.discardPile.length}`);
-                }
-            }
-
-            // 从动画管理器获取弃牌堆起点位置，让动画方向为“弃牌堆 → 手牌”
-            const { x: startX, y: startY } = this.animationManager.getDiscardPileCardSpawnPosition();
-            const sprite = CardSpriteFactory.createSprite(this.scene, card, startX, startY, context.cardScale);
-            if (sprite) {
-                context.hand.push(sprite as AnyHandSprite);
-                this.cardManager.arrangeHand(context.hand as any);
-            }
-            recovered++;
+        if (!context.gameActionHandler) {
+            console.warn('GameActionHandler 未提供，无法回收卡牌');
+            return false;
         }
 
-        return recovered > 0;
+        // 构建过滤函数
+        const filterFunc = (card: UnitCard | ArtifactCard | TalismanCard | FieldCard) => {
+            return this.isCardMatchFilter(card, action.filter);
+        };
+
+        // 调用 GameActionHandler 的弃牌堆选择方法
+        context.gameActionHandler.recoverFromDiscardPile(amount, filterFunc);
+
+        return true; // 返回true表示已触发选择UI
+    }
+
+    private searchCardsFromDeck(
+        action: SearchCardFromDeckAction,
+        amount: number,
+        context: GongfaRuntimeContext
+    ): boolean {
+        if (action.destination !== EffectActionDestination.Hand) {
+            console.warn(`暂不支持的功法检索目的地：${action.destination}`);
+            return false;
+        }
+
+        if (!context.gameActionHandler) {
+            console.warn('GameActionHandler 未提供，无法检索卡牌');
+            return false;
+        }
+
+        // 构建过滤函数
+        const filterFunc = (card: UnitCard | ArtifactCard | TalismanCard | FieldCard) => {
+            return this.isCardMatchFilter(card, action.filter);
+        };
+
+        // 调用 GameActionHandler 的 searchDeck 方法
+        context.gameActionHandler.searchDeck(amount, filterFunc);
+
+        return true; // 返回true表示已触发检索UI
+    }
+
+    private executeImmediateAttack(
+        action: ImmediateAttackAction,
+        context: GongfaRuntimeContext
+    ): boolean {
+        if (!context.triggerUnit) {
+            console.warn('立即攻击需要触发单位信息');
+            return false;
+        }
+
+        if (!context.enemyField || context.enemyField.length === 0) {
+            console.warn('没有敌方单位可以攻击');
+            return false;
+        }
+
+        if (!context.combatManager) {
+            console.warn('CombatManager 未提供，无法执行立即攻击');
+            return false;
+        }
+
+        // 获取攻击者的攻击力
+        const attackerData = context.triggerUnit.getCardData() as UnitCard;
+        let attackPower = attackerData.attack || 0;
+
+        // 如果装备了法器，加上法器的攻击加成
+        if (context.equippedArtifact && context.equippedArtifact.attackBonus) {
+            attackPower += context.equippedArtifact.attackBonus;
+        }
+
+        // 应用伤害倍率
+        const damageMultiplier = action.damageMultiplier ?? 1.0;
+        const finalDamage = Math.floor(attackPower * damageMultiplier);
+
+        // 记录日志
+        this.battleLog.addLog(`【${attackerData.name}】触发控剑术，立即发动攻击（${finalDamage}点伤害）`);
+
+        // 根据目标类型执行攻击
+        if (action.target === 'singleEnemy') {
+            // 单体攻击：攻击第一个存活的敌人
+            const target = context.enemyField.find(enemy => {
+                const enemyData = enemy.getCardData();
+                return enemyData.health > 0;
+            });
+
+            if (target) {
+                // 使用 CombatManager 的攻击逻辑
+                context.combatManager.performSingleAttack(
+                    context.triggerUnit,
+                    target,
+                    finalDamage,
+                    0, // 立即执行，无延迟
+                    false // 单体攻击
+                );
+            }
+        } else if (action.target === 'allEnemies') {
+            // AOE攻击：攻击所有敌人
+            const aliveEnemies = context.enemyField.filter(enemy => {
+                return enemy.getCardData().health > 0;
+            });
+            
+            if (aliveEnemies.length > 0) {
+                context.combatManager.performSingleAttack(
+                    context.triggerUnit,
+                    aliveEnemies,
+                    finalDamage,
+                    0, // 立即执行，无延迟
+                    true // AOE攻击
+                );
+            }
+        }
+
+        return true;
+    }
+
+    private executeGainArmor(action: GainArmorAction, context: GongfaRuntimeContext): boolean {
+        if (!context.triggerUnit) {
+            console.warn('获得护甲需要触发单位信息');
+            return false;
+        }
+
+        // 计算护甲值
+        let armorValue = 0;
+        if (typeof action.value === 'number') {
+            armorValue = action.value;
+        } else if (typeof action.value === 'string') {
+            armorValue = this.evaluateExpression(action.value, context);
+        }
+
+        if (armorValue <= 0) {
+            console.warn(`护甲值无效: ${armorValue}`);
+            return false;
+        }
+
+        // 确定目标
+        let target: CardSprite | null = null;
+        if (action.target === 'self') {
+            target = context.triggerUnit;
+        }
+
+        if (!target) {
+            console.warn('未找到护甲目标');
+            return false;
+        }
+
+        const targetData = target.getCardData();
+        this.battleLog.addLog(`【${targetData.name}】获得 ${armorValue} 点护甲`);
+
+        // 应用护甲状态
+        if (context.battleStatusController) {
+            context.battleStatusController.applyStatusToUnit(
+                targetData.id,
+                'armor',
+                armorValue,
+                target // 传递单位精灵以更新显示
+            );
+        } else {
+            console.warn('battleStatusController 未提供，无法应用护甲状态');
+        }
+
+        return true;
     }
 
     private isCardMatchFilter(card: UnitCard | ArtifactCard | TalismanCard | FieldCard, filter: CardFilter): boolean {
@@ -282,5 +500,66 @@ export class UnitEffectManager {
             return undefined;
         }
         return KNOWN_WEAPON_TYPES.find(type => match.includes(type));
+    }
+
+    /**
+     * 从 gradeId 获取法器星级
+     * 从配置文件中读取品阶对应的 star 值
+     * 同阶（tier）的所有品质星级相同，value 用于品质排序
+     */
+    private getArtifactStarFromGrade(gradeId: string): number {
+        const config = artifactGradeConfig as ArtifactGradeConfig;
+        const grade = config.grades.find(g => g.id === gradeId);
+        
+        if (grade) {
+            // 直接返回 star 字段（黄阶=1星，地阶=2星...）
+            return grade.star;
+        }
+        
+        // 默认返回1星
+        console.warn(`未知的 gradeId: ${gradeId}, 默认为1星`);
+        return 1;
+    }
+
+    /**
+     * 计算表达式的值
+     * 支持的表达式：
+     * - "card.star + 1" - 单位星级 + 1
+     * - "artifact.star * 2" - 法器星级 * 2
+     */
+    private evaluateExpression(expression: string, context: GongfaRuntimeContext): number {
+        if (!context.triggerUnit) {
+            console.warn(`表达式计算需要 triggerUnit: ${expression}`);
+            return 0;
+        }
+
+        const unitData = context.triggerUnit.getCardData() as UnitCard;
+        const unitStar = getUnitStar(unitData);
+
+        // 构造参数对象
+        const args = {
+            card: {
+                star: unitStar
+            },
+            artifact: {
+                star: context.equippedArtifact 
+                    ? this.getArtifactStarFromGrade(context.equippedArtifact.gradeId)
+                    : 0
+            }
+        };
+
+        try {
+            // 使用 new Function 创建函数，传入参数对象
+            const fn = new Function('args', `
+                const card = args.card;
+                const artifact = args.artifact;
+                return ${expression};
+            `);
+            const result = fn(args);
+            return typeof result === 'number' ? result : 0;
+        } catch (error) {
+            console.error(`表达式计算失败: ${expression}`, error);
+            return 0;
+        }
     }
 }

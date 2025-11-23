@@ -1,4 +1,4 @@
-import type { EffectSchema, EffectCondition, EffectAction } from '@data/types/gongfa';
+import type { EffectSchema, EffectCondition, GongfaAction } from '@data/types/gongfa';
 import { EffectEventType, EffectConditionType, EffectActionType } from '@data/types/gongfa';
 
 export function describeGongfa(schema: EffectSchema): string {
@@ -41,6 +41,10 @@ function describeConditions(conditions: EffectCondition[]): string {
                 const minText = condition.minimum && condition.minimum > 1 ? `${condition.minimum}次` : '至少1次';
                 return `若本回合你使用过${minText}${weaponText}`;
             }
+            case EffectConditionType.ArtifactEquipped: {
+                const weaponText = condition.weaponType ? `${condition.weaponType}器` : '法器';
+                return `装备${weaponText}时`;
+            }
             case EffectConditionType.UnitOnField: {
                 if (condition.unitId) {
                     return `若场上存在【${condition.unitId}】`;
@@ -63,7 +67,16 @@ function describeConditions(conditions: EffectCondition[]): string {
     }).join('，');
 }
 
-function describeActions(actions: EffectAction[]): string {
+/**
+ * 翻译表达式中的变量为中文
+ */
+function translateExpression(expression: string): string {
+    return expression
+        .replace(/artifact\.star/g, '法器星级')
+        .replace(/card\.star/g, '单位星级');
+}
+
+function describeActions(actions: GongfaAction[]): string {
     return actions.map(action => {
         switch (action.type) {
             case EffectActionType.RecoverCardFromDiscard: {
@@ -73,7 +86,29 @@ function describeActions(actions: EffectAction[]): string {
                     : action.filter.labelsAnyOf && action.filter.labelsAnyOf.length > 0
                         ? action.filter.labelsAnyOf.join('或') + '卡牌'
                         : '卡牌';
-                return `从弃牌堆将${amountText}${weaponText}加入手牌`;
+                return `从弃牌堆选择${amountText}${weaponText}加入手牌`;
+            }
+            case EffectActionType.SearchCardFromDeck: {
+                const amountText = action.amount && action.amount > 1 ? `${action.amount}张` : '1张';
+                const weaponText = action.filter.weaponTypesAnyOf && action.filter.weaponTypesAnyOf.length > 0
+                    ? action.filter.weaponTypesAnyOf.join('或') + '器'
+                    : action.filter.labelsAnyOf && action.filter.labelsAnyOf.length > 0
+                        ? action.filter.labelsAnyOf.join('或') + '卡牌'
+                        : '卡牌';
+                return `从牌库检索${amountText}${weaponText}`;
+            }
+            case EffectActionType.ImmediateAttack: {
+                const targetText = action.target === 'allEnemies' ? '所有敌人' : '单个敌人';
+                const multiplierText = action.damageMultiplier && action.damageMultiplier !== 1.0
+                    ? `造成${Math.floor(action.damageMultiplier * 100)}%攻击力的伤害`
+                    : '立即攻击';
+                return `对${targetText}${multiplierText}`;
+            }
+            case EffectActionType.GainArmor: {
+                const valueText = typeof action.value === 'string'
+                    ? translateExpression(action.value)
+                    : `${action.value}点`;
+                return `获得${valueText}护甲`;
             }
             case EffectActionType.DrawCards:
                 return `抽${action.value}张牌`;

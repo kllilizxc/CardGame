@@ -9,7 +9,9 @@ export interface ArtifactGrade {
   tier: string;
   /** 品质：下品、中品、上品 */
   quality: string;
-  /** 品级数值（用于计算星级等） */
+  /** 星级（同阶星级相同） */
+  star: number;
+  /** 品级数值（用于品质排序，0-17） */
   value: number;
   /** 推荐攻击加成最小值 */
   attackBonusMin: number;

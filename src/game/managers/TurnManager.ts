@@ -1,4 +1,31 @@
 import { Scene } from 'phaser';
+import type { CardSprite } from '../objects/CardSprite';
+import type { BattleLog } from '../ui/BattleLog';
+import type { CombatManager } from './CombatManager';
+import type { BattleStatusController } from './BattleStatusController';
+import type { BattleStateChecker } from './BattleStateChecker';
+
+export interface TurnContext {
+    playerField: CardSprite[];
+    enemyField: CardSprite[];
+    playerHealth: number;
+    isPlayerTurn: boolean;
+    turnNumber: number;
+    isProcessingTurn: boolean;
+    battleLog: BattleLog;
+    combatManager: CombatManager;
+    battleStatusController: BattleStatusController;
+    battleStateChecker: BattleStateChecker;
+    onPlayerDamaged: (damage: number) => void;
+    onRemoveUnit: (unit: CardSprite, isPlayer: boolean) => void;
+    onDrawCard: () => void;
+    onEnablePlayerInteraction: () => void;
+    onDisablePlayerInteraction: () => void;
+    onApplyPlayerTurnEndEffects: () => void;
+    onSetIsPlayerTurn: (value: boolean) => void;
+    onSetTurnNumber: (value: number) => void;
+    onSetIsProcessingTurn: (value: boolean) => void;
+}
 
 export class TurnManager {
     private scene: Scene;
@@ -101,5 +128,181 @@ export class TurnManager {
         }).setOrigin(0.5).setDepth(2000);
 
         this.scene.input.once('pointerdown', onRestart);
+    }
+
+    /**
+     * 结束回合
+     */
+    public endTurn(context: TurnContext): void {
+        console.log('TurnManager.endTurn 被调用', {
+            isPlayerTurn: context.isPlayerTurn,
+            isProcessingTurn: context.isProcessingTurn
+        });
+        
+        if (!context.isPlayerTurn || context.isProcessingTurn) {
+            console.log('endTurn 被拦截：', {
+                reason: !context.isPlayerTurn ? '不是玩家回合' : '正在处理回合'
+            });
+            return;
+        }
+
+        // 设置处理标志，防止重复点击
+        context.onSetIsProcessingTurn(true);
+        console.log('设置 isProcessingTurn = true');
+
+        // 1. 触发回合结束状态
+        context.battleLog.addLog('═══ 回合结束阶段 ═══');
+        context.battleStatusController.triggerTurnEndStatuses(
+            context.playerField,
+            context.enemyField
+        );
+
+        // 检查战场状态
+        context.battleStateChecker.checkBattleState(
+            context.playerField,
+            context.enemyField,
+            context.playerHealth,
+            context.onRemoveUnit,
+            () => {} // 回合结束阶段不需要额外处理
+        );
+
+        // 2. 等待状态动画完成后进入战斗阶段
+        this.scene.time.delayedCall(800, () => {
+            context.battleLog.addLog('═══ 战斗阶段 ═══');
+            context.onApplyPlayerTurnEndEffects();
+            this.executePlayerTurn(context);
+        });
+    }
+
+    /**
+     * 执行玩家攻击阶段
+     */
+    public executePlayerTurn(context: TurnContext): void {
+        context.combatManager.resolveCombat(
+            context.isPlayerTurn,
+            context.playerField,
+            context.enemyField,
+            context.onPlayerDamaged,
+            () => {
+                // 攻击完成后触发通用效果检查
+                this.scene.events.emit('effectApplied');
+
+                // 切换到敌人回合
+                context.onSetIsPlayerTurn(false);
+
+                // 等待死亡动画完成后切换到敌人回合
+                this.scene.time.delayedCall(600, () => {
+                    this.showTurnAnimation('敌人回合', 0xe74c3c, () => {
+                        this.startEnemyTurn(context);
+                    });
+                });
+            }
+        );
+    }
+
+    /**
+     * 开始敌人回合
+     */
+    public startEnemyTurn(context: TurnContext): void {
+        // 禁用玩家交互
+        context.onDisablePlayerInteraction();
+
+        // 1. 触发回合开始状态
+        context.battleLog.addLog('═══ 敌人回合开始 ═══');
+        context.battleStatusController.triggerTurnStartStatuses(
+            context.playerField,
+            context.enemyField
+        );
+
+        // 检查战场状态
+        context.battleStateChecker.checkBattleState(
+            context.playerField,
+            context.enemyField,
+            context.playerHealth,
+            context.onRemoveUnit,
+            () => {} // 敌人回合开始不需要额外处理
+        );
+
+        // 2. 等待状态动画完成后进入战斗
+        this.scene.time.delayedCall(800, () => {
+            this.executeEnemyTurn(context);
+        });
+    }
+
+    /**
+     * 执行敌人攻击阶段
+     */
+    public executeEnemyTurn(context: TurnContext): void {
+        context.combatManager.resolveCombat(
+            context.isPlayerTurn,
+            context.playerField,
+            context.enemyField,
+            context.onPlayerDamaged,
+            () => {
+                // 攻击完成后触发通用效果检查
+                this.scene.events.emit('effectApplied');
+
+                // 切换到玩家回合并增加回合数
+                context.onSetIsPlayerTurn(true);
+                context.onSetTurnNumber(context.turnNumber + 1);
+
+                // 等待死亡动画完成后，先触发敌人回合结束状态
+                this.scene.time.delayedCall(600, () => {
+                    context.battleLog.addLog('═══ 敌人回合结束 ═══');
+                    context.battleStatusController.triggerTurnEndStatuses(
+                        context.playerField,
+                        context.enemyField
+                    );
+
+                    // 检查战场状态
+                    context.battleStateChecker.checkBattleState(
+                        context.playerField,
+                        context.enemyField,
+                        context.playerHealth,
+                        context.onRemoveUnit,
+                        () => {} // 敌人回合结束不需要额外处理
+                    );
+
+                    // 等待状态动画完成后切换到玩家回合
+                    this.scene.time.delayedCall(800, () => {
+                        this.showTurnAnimation(`回合 ${context.turnNumber + 1}`, 0x2ecc71, () => {
+                            this.startPlayerTurn(context);
+                        });
+                    });
+                });
+            }
+        );
+    }
+
+    /**
+     * 开始玩家回合
+     */
+    public startPlayerTurn(context: TurnContext): void {
+        // 重置回合处理标志，允许玩家再次结束回合
+        context.onSetIsProcessingTurn(false);
+        
+        // 启用玩家交互
+        context.onEnablePlayerInteraction();
+
+        // 1. 触发回合开始状态
+        context.battleLog.addLog(`═══ 回合 ${context.turnNumber} 开始 ═══`);
+        context.battleStatusController.triggerTurnStartStatuses(
+            context.playerField,
+            context.enemyField
+        );
+
+        // 检查战场状态
+        context.battleStateChecker.checkBattleState(
+            context.playerField,
+            context.enemyField,
+            context.playerHealth,
+            context.onRemoveUnit,
+            () => {} // 玩家回合开始不需要额外处理
+        );
+
+        // 2. 等待状态动画完成后抽卡
+        this.scene.time.delayedCall(800, () => {
+            context.onDrawCard();
+        });
     }
 }

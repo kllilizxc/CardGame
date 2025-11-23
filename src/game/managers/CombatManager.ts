@@ -58,14 +58,8 @@ export class CombatManager {
                     [attacker, target]
                 );
                 
-                // 添加攻击动画到时间轴
-                this.animationManager.addAttackAnimation(
-                    attacker,
-                    target,
-                    attackValue,
-                    delay,
-                    (t, d) => this.damageUnit(t, d)
-                );
+                // 复用 performSingleAttack
+                this.performSingleAttack(attacker, target, attackValue, delay, false);
                 delay += 600; // 每个攻击间隔600ms
             } else {
                 // 没有存活的防御单位，直接攻击玩家本体（如果是敌人回合）
@@ -121,6 +115,50 @@ export class CombatManager {
         
         // 实时更新卡牌显示
         unit.updateStats();
+    }
+
+    /**
+     * 执行单次攻击（用于技能、功法等触发的即时攻击）
+     * @param attacker 攻击者
+     * @param target 目标（单体攻击）或目标数组（AOE攻击）
+     * @param damage 伤害值
+     * @param delay 延迟时间（ms）
+     * @param isAOE 是否为AOE攻击
+     */
+    public performSingleAttack(
+        attacker: CardSprite,
+        target: CardSprite | CardSprite[],
+        damage: number,
+        delay: number = 0,
+        isAOE: boolean = false
+    ): void {
+        if (isAOE && Array.isArray(target)) {
+            // AOE攻击：攻击所有目标
+            target.forEach((t, index) => {
+                const targetData = t.getCardData();
+                if (targetData.health > 0) {
+                    this.animationManager.addAttackAnimation(
+                        attacker,
+                        t,
+                        damage,
+                        delay + index * 200, // 每个目标间隔200ms
+                        (unit, dmg) => this.damageUnit(unit, dmg)
+                    );
+                }
+            });
+        } else if (!Array.isArray(target)) {
+            // 单体攻击
+            const targetData = target.getCardData();
+            if (targetData.health > 0) {
+                this.animationManager.addAttackAnimation(
+                    attacker,
+                    target,
+                    damage,
+                    delay,
+                    (unit, dmg) => this.damageUnit(unit, dmg)
+                );
+            }
+        }
     }
 
     /**

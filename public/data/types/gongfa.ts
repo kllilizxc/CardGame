@@ -9,6 +9,7 @@ export enum EffectEventType {
   OnDeath = 'OnDeath',
   OnAttack = 'OnAttack',
   OnKill = 'OnKill',
+  OnEquipArtifact = 'OnEquipArtifact',
   Custom = 'Custom'
 }
 
@@ -28,6 +29,7 @@ export enum EffectConditionType {
   ArtifactUsedThisTurn = 'ArtifactUsedThisTurn',
   UnitOnField = 'UnitOnField',
   CardInHand = 'CardInHand',
+  ArtifactEquipped = 'ArtifactEquipped',
   Custom = 'Custom'
 }
 
@@ -49,6 +51,12 @@ export interface CardInHandCondition {
   minimum?: number;
 }
 
+export interface ArtifactEquippedCondition {
+  type: EffectConditionType.ArtifactEquipped;
+  weaponType?: ArtifactWeaponType;
+  maxStar?: number | string; // 支持表达式，如 "card.star + 1"
+}
+
 export interface CustomCondition {
   type: EffectConditionType.Custom;
   scriptId: string;
@@ -58,14 +66,18 @@ export type EffectCondition =
   | ArtifactUsedCondition
   | UnitOnFieldCondition
   | CardInHandCondition
+  | ArtifactEquippedCondition
   | CustomCondition;
 
 export enum EffectActionType {
   RecoverCardFromDiscard = 'RecoverCardFromDiscard',
+  SearchCardFromDeck = 'SearchCardFromDeck',
   DrawCards = 'DrawCards',
   ModifyStats = 'ModifyStats',
   DealDamage = 'DealDamage',
   ApplyStatus = 'ApplyStatus',
+  ImmediateAttack = 'ImmediateAttack',
+  GainArmor = 'GainArmor',
   AddLog = 'AddLog',
   Custom = 'Custom'
 }
@@ -79,13 +91,20 @@ export enum EffectActionDestination {
 export interface CardFilter {
   kind?: Array<'unit' | 'artifact' | 'talisman' | 'field'>;
   labelsAnyOf?: string[];
-  maxStar?: number;
+  maxStar?: number | string; // 支持数字或表达式字符串，如 "card.star + 2"
   amount?: number;
   weaponTypesAnyOf?: ArtifactWeaponType[];
 }
 
 export interface RecoverCardFromDiscardAction {
   type: EffectActionType.RecoverCardFromDiscard;
+  filter: CardFilter;
+  destination: EffectActionDestination;
+  amount?: number;
+}
+
+export interface SearchCardFromDeckAction {
+  type: EffectActionType.SearchCardFromDeck;
   filter: CardFilter;
   destination: EffectActionDestination;
   amount?: number;
@@ -115,6 +134,18 @@ export interface ApplyStatusAction {
   target: 'self' | 'singleAlly' | 'singleEnemy' | 'allEnemies';
 }
 
+export interface ImmediateAttackAction {
+  type: EffectActionType.ImmediateAttack;
+  target: 'singleEnemy' | 'allEnemies';
+  damageMultiplier?: number; // 伤害倍率，默认1.0
+}
+
+export interface GainArmorAction {
+  type: EffectActionType.GainArmor;
+  target: 'self' | 'singleAlly' | 'allAllies';
+  value: number | string; // 可以是数字或表达式，如 "artifact.star * 2"
+}
+
 export interface AddLogAction {
   type: EffectActionType.AddLog;
   message: string;
@@ -125,19 +156,22 @@ export interface CustomAction {
   scriptId: string;
 }
 
-export type EffectAction =
+export type GongfaAction =
   | RecoverCardFromDiscardAction
+  | SearchCardFromDeckAction
   | DrawCardsAction
   | ModifyStatsAction
   | DealDamageAction
   | ApplyStatusAction
+  | ImmediateAttackAction
+  | GainArmorAction
   | AddLogAction
   | CustomAction;
 
 export interface EffectSchema {
   event: EffectEvent;
   conditions?: EffectCondition[];
-  actions: EffectAction[];
+  actions: GongfaAction[];
 }
 
 // 功法：可以被多张卡牌复用的效果定义

@@ -75,6 +75,10 @@ export class CardManager {
 
             hand.forEach((card, index) => {
                 const x = startX + index * spacing;
+                // 设置手牌深度
+                const depth = this.layout?.depth?.handCards ?? 10;
+                card.setDepth(depth);
+                
                 this.scene.tweens.add({
                     targets: card,
                     x,
@@ -95,6 +99,10 @@ export class CardManager {
 
         hand.forEach((card, index) => {
             const x = startX + index * spacing;
+            // 设置手牌深度（fallback 路径）
+            const depth = this.layout?.depth?.handCards ?? 10;
+            card.setDepth(depth);
+            
             this.scene.tweens.add({
                 targets: card,
                 x,
@@ -117,6 +125,10 @@ export class CardManager {
 
             playerField.forEach((card, index) => {
                 const x = startX + index * spacing;
+                // 设置场上卡牌深度
+                const depth = this.layout?.depth?.fieldCards ?? 50;
+                card.setDepth(depth);
+                
                 this.scene.tweens.add({
                     targets: card,
                     x,
@@ -137,6 +149,10 @@ export class CardManager {
 
         playerField.forEach((card, index) => {
             const x = startX + index * spacing;
+            // 设置场上卡牌深度（fallback 路径）
+            const depth = this.layout?.depth?.fieldCards ?? 50;
+            card.setDepth(depth);
+            
             this.scene.tweens.add({
                 targets: card,
                 x,
@@ -159,6 +175,10 @@ export class CardManager {
 
             enemyField.forEach((card, index) => {
                 const x = startX + index * spacing;
+                // 设置场上卡牌深度
+                const depth = this.layout?.depth?.fieldCards ?? 50;
+                card.setDepth(depth);
+                
                 this.scene.tweens.add({
                     targets: card,
                     x,
@@ -180,6 +200,10 @@ export class CardManager {
 
         enemyField.forEach((card, index) => {
             const x = startX + index * spacing;
+            // 设置场上卡牌深度（fallback 路径）
+            const depth = this.layout?.depth?.fieldCards ?? 50;
+            card.setDepth(depth);
+            
             this.scene.tweens.add({
                 targets: card,
                 x,

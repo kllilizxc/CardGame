@@ -9,22 +9,20 @@ import { getUnitStar } from '../utils/RealmHelper';
  * 处理高星单位的献祭召唤逻辑
  * 
  * 献祭规则：
- * - freeStarThreshold 及以下不需要献祭
- * - 每高一星需要 2 张低一星的卡作为祭品
+ * - 1-2 星不需要献祭
+ * - 3 星及以上需要献祭 1 张至少 (目标星级-1) 星的单位卡
  */
 export class SacrificeManager {
     private scene: Scene;
     private battleLog: BattleLog;
     
     // 配置参数
-    private readonly freeStarThreshold: number; // 免费召唤的星级上限
-    private readonly sacrificePerStar: number;  // 每高一星需要的祭品数量
+    private readonly freeStarThreshold: number; // 免费召唤的星级上限（1-2星）
 
     constructor(scene: Scene, battleLog: BattleLog, freeStarThreshold: number = 2) {
         this.scene = scene;
         this.battleLog = battleLog;
         this.freeStarThreshold = freeStarThreshold;
-        this.sacrificePerStar = 2; // 固定为2张祭品
     }
 
     /**
@@ -32,16 +30,16 @@ export class SacrificeManager {
      * @param cardData 单位卡数据
      * @returns 需要献祭的单位数量（0表示不需要）
      * 
-     * 计算公式：
-     * - star <= freeStarThreshold: 0张祭品
-     * - star > freeStarThreshold: (star - freeStarThreshold) * sacrificePerStar 张祭品
+     * 新规则：
+     * - 1-2 星: 0张祭品（可直接召唤）
+     * - 3 星及以上: 1张祭品（需要献祭1张至少 (目标星级-1) 星的单位）
      * 
-     * 示例（freeStarThreshold = 2）：
+     * 示例：
      * - 1星: 0张祭品
      * - 2星: 0张祭品
-     * - 3星: (3-2)*2 = 2张祭品
-     * - 4星: (4-2)*2 = 4张祭品
-     * - 5星: (5-2)*2 = 6张祭品
+     * - 3星: 1张祭品（需要2星或以上单位）
+     * - 4星: 1张祭品（需要3星或以上单位）
+     * - 5星: 1张祭品（需要4星或以上单位）
      */
     public getSacrificeRequired(cardData: UnitCard): number {
         const star = getUnitStar(cardData);
@@ -50,8 +48,8 @@ export class SacrificeManager {
             return 0; // 免费召唤
         }
         
-        // 每高一星需要 sacrificePerStar 张祭品
-        return (star - this.freeStarThreshold) * this.sacrificePerStar;
+        // 3星及以上统一需要1张祭品
+        return 1;
     }
     
     /**
@@ -109,7 +107,7 @@ export class SacrificeManager {
             return;
         }
 
-        this.battleLog.addLog(`献祭了${sacrificeTargets.length}只灵兽进行召唤`);
+        this.battleLog.addLog(`献祭了${sacrificeTargets.length}只单位进行召唤`);
 
         // 播放献祭动画
         this.playSacrificeAnimation(sacrificeTargets, () => {

@@ -1,5 +1,7 @@
 import { Scene } from 'phaser';
 import type { CardSprite } from '../objects/CardSprite';
+import type { ArtifactSprite } from '../objects/ArtifactSprite';
+import type { TalismanSprite } from '../objects/TalismanSprite';
 
 export class BattleAnimationManager {
     private scene: Scene;
@@ -501,5 +503,35 @@ export class BattleAnimationManager {
 
     private shakeCamera(intensity: number = 1): void {
         this.scene.cameras.main.shake(400 * intensity, 0.01 * intensity, true);
+    }
+
+    /**
+     * 播放卡牌飞向弃牌堆的动画
+     */
+    public playCardToDiscardPileAnimation(
+        card: CardSprite | ArtifactSprite | TalismanSprite,
+        targetX: number,
+        targetY: number,
+        onComplete?: () => void
+    ): void {
+        // 使用布局配置的深度
+        const battleScene = this.scene as any;
+        const depth = battleScene.layout?.depth?.cardToDiscardAnimation ?? 2000;
+        card.setDepth(depth);
+
+        // 飞向弃牌堆的动画
+        this.scene.tweens.add({
+            targets: card,
+            x: targetX,
+            y: targetY,
+            scale: 0.2,
+            alpha: 0.7,
+            duration: 1000,
+            ease: 'Power2',
+            onComplete: () => {
+                card.destroy();
+                if (onComplete) onComplete();
+            }
+        });
     }
 }

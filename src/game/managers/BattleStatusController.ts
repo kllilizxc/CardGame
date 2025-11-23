@@ -97,6 +97,32 @@ export class BattleStatusController {
     }
 
     /**
+     * 应用状态到单位
+     * @param unitId 单位ID
+     * @param statusId 状态ID
+     * @param stacks 层数
+     * @param unit 单位精灵（可选，用于更新显示）
+     * @param sourceId 来源ID（可选）
+     * @param duration 持续时间（可选）
+     */
+    public applyStatusToUnit(
+        unitId: string, 
+        statusId: string, 
+        stacks: number, 
+        unit?: CardSprite,
+        sourceId?: string, 
+        duration?: number
+    ): void {
+        const success = this.statusManager.applyStatus(unitId, statusId, stacks, sourceId, duration);
+        
+        // 如果成功应用状态且提供了单位精灵，更新状态显示
+        if (success && unit) {
+            const statuses = this.statusManager.getUnitStatuses(unitId);
+            unit.updateStatusDisplay(statuses);
+        }
+    }
+
+    /**
      * 清理单位状态
      */
     public cleanupUnitStatuses(unitId: string): void {

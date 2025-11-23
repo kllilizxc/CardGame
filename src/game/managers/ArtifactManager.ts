@@ -2,6 +2,7 @@ import type { Scene } from 'phaser';
 import type { BattleLog } from '../ui/BattleLog';
 import type { CardSprite } from '../objects/CardSprite';
 import type { ArtifactSprite } from '../objects/ArtifactSprite';
+import type { UnitEffectManager } from './UnitEffectManager';
 
 interface EquippedArtifact {
     artifact: ArtifactSprite;
@@ -16,10 +17,15 @@ export class ArtifactManager {
     private scene: Scene;
     private battleLog: BattleLog;
     private equippedArtifacts: Map<string, EquippedArtifact> = new Map(); // artifactId -> equipped info
+    private unitEffectManager?: UnitEffectManager;
 
     constructor(scene: Scene, battleLog: BattleLog) {
         this.scene = scene;
         this.battleLog = battleLog;
+    }
+
+    public setUnitEffectManager(unitEffectManager: UnitEffectManager): void {
+        this.unitEffectManager = unitEffectManager;
     }
 
     /**
@@ -110,6 +116,25 @@ export class ArtifactManager {
 
         // 日志
         this.battleLog.addLog(`【${targetData.name}】装备了【${artifactData.name}】`, [target, artifact]);
+
+        // 触发装备法器事件（控剑术等）
+        if (this.unitEffectManager) {
+            const battleScene = this.scene as any;
+            const context = {
+                playerField: battleScene.playerField || [],
+                enemyField: battleScene.enemyField || [],
+                discardPile: battleScene.discardPile || [],
+                hand: battleScene.hand || [],
+                discardPileButton: battleScene.discardPileButton,
+                cardScale: battleScene.cardScale || 0.35,
+                artifactUsage: {},
+                gameActionHandler: battleScene.skillEffectHandler?.getGameActionHandler(),
+                combatManager: battleScene.combatManager,
+                animationManager: battleScene.animationManager,
+                battleStatusController: battleScene.battleStatusController
+            };
+            this.unitEffectManager.applyOnEquipArtifactEffects(target, artifactData, context);
+        }
 
         return true;
     }

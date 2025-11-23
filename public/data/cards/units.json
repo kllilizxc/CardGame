@@ -427,6 +427,40 @@
       "attack": 3,
       "health": 15,
       "gongfaIds": ["gongfa.return_sword_end_turn"]
+    },
+    {
+      "id": "SX_YJS_001",
+      "name": "内门弟子·御剑者",
+      "kind": "unit",
+      "description": "剑修宗门的内门弟子，掌握了基础的控剑术，能够在装备剑器时立即发动攻击。",
+      "rarity": "common",
+      "labels": ["剑修", "内门弟子", "sect_sword_sect"],
+      "limitPerDeck": 3,
+
+      "realmId": "realm_qi_6",
+      "race": "人族",
+      "linggen": ["金", "木"],
+      "factionId": "sect_sword_sect",
+      "attack": 6,
+      "health": 28,
+      "gongfaIds": ["gongfa.search_sword_on_summon", "gongfa.sword_control_basic"]
+    },
+    {
+      "id": "SX_TY_001",
+      "name": "内门弟子·铁翼",
+      "kind": "unit",
+      "description": "剑修宗门的内门弟子，擅长防御，装备剑器时能够凝聚护甲保护自身。",
+      "rarity": "common",
+      "labels": ["剑修", "内门弟子", "sect_sword_sect"],
+      "limitPerDeck": 3,
+
+      "realmId": "realm_qi_6",
+      "race": "人族",
+      "linggen": ["金", "土"],
+      "factionId": "sect_sword_sect",
+      "attack": 4,
+      "health": 30,
+      "gongfaIds": ["gongfa.sword_recall", "gongfa.sword_control_shield"]
     }
   ]
 }
