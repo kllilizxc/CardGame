@@ -67,8 +67,8 @@ export class BattleAnimationManager {
         const rushDist = distance * 0.7; // 冲刺到目标70%的距离
 
         this.scene.time.delayedCall(delay, () => {
-            // 获取卡牌基础缩放
-            const baseScale = attacker.scale;
+            // 获取卡牌基础缩放（使用原始缩放，而不是当前 scale）
+            const baseScale = attacker.getCardBaseScale();
 
             // 第1步：后退蓄力
             this.addTweens({
@@ -343,10 +343,11 @@ export class BattleAnimationManager {
         const rushDist = distance * 0.5;
 
         this.scene.time.delayedCall(delay, () => {
-            const baseScale = attacker.scale;
+            // 获取卡牌基础缩放（使用原始缩放，而不是当前 scale）
+            const baseScale = attacker.getCardBaseScale();
 
             // 后退蓄力
-            this.scene.tweens.add({
+            this.addTweens({
                 targets: attacker,
                 x: originalX - normalizedX * retreatDist,
                 y: originalY - normalizedY * retreatDist,
@@ -355,7 +356,7 @@ export class BattleAnimationManager {
                 ease: 'Back.easeIn',
                 onComplete: () => {
                     // 冲向玩家
-                    this.scene.tweens.add({
+                    this.addTweens({
                         targets: attacker,
                         x: originalX + normalizedX * rushDist,
                         y: originalY + normalizedY * rushDist,
@@ -368,7 +369,7 @@ export class BattleAnimationManager {
                             this.playPlayerHitEffect(damage);
 
                             // 返回原位
-                            this.scene.tweens.add({
+                            this.addTweens({
                                 targets: attacker,
                                 x: originalX,
                                 y: originalY,
@@ -388,7 +389,7 @@ export class BattleAnimationManager {
         const originalX = target.x;
         
         // 震动效果
-        this.scene.tweens.add({
+        this.addTweens({
             targets: target,
             x: originalX + 5,
             duration: 50,
@@ -401,7 +402,7 @@ export class BattleAnimationManager {
         });
         
         // 红色闪烁效果
-        this.scene.tweens.add({
+        this.addTweens({
             targets: target,
             alpha: 0.6,
             duration: 100,
@@ -412,7 +413,7 @@ export class BattleAnimationManager {
         // 创建红色闪光特效
         const hitFlash = this.scene.add.circle(target.x, target.y, 50, 0xff0000, 0.5);
         hitFlash.setDepth(target.depth + 1);
-        this.scene.tweens.add({
+        this.addTweens({
             targets: hitFlash,
             alpha: 0,
             scale: 1.5,
@@ -427,7 +428,7 @@ export class BattleAnimationManager {
     // 治疗动画
     public playHealAnimation(target: CardSprite): void {
         // 绿色闪烁效果
-        this.scene.tweens.add({
+        this.addTweens({
             targets: target,
             alpha: { from: 1, to: 0.7 },
             duration: 100,
@@ -438,7 +439,7 @@ export class BattleAnimationManager {
         // 创建绿色治疗光圈特效
         const healGlow = this.scene.add.circle(target.x, target.y, 40, 0x2ecc71, 0.6);
         healGlow.setDepth(target.depth + 1);
-        this.scene.tweens.add({
+        this.addTweens({
             targets: healGlow,
             alpha: 0,
             scale: 1.8,
@@ -460,7 +461,7 @@ export class BattleAnimationManager {
                     0.8
                 );
                 particle.setDepth(target.depth + 2);
-                this.scene.tweens.add({
+                this.addTweens({
                     targets: particle,
                     y: particle.y - 50,
                     alpha: 0,
@@ -477,7 +478,7 @@ export class BattleAnimationManager {
     // 死亡动画
     public playDeathAnimation(target: CardSprite): void {
         const baseScale = target.scale;
-        this.scene.tweens.add({
+        this.addTweens({
             targets: target,
             alpha: 0,
             scale: baseScale * 0.8,
@@ -498,7 +499,7 @@ export class BattleAnimationManager {
         const flash = this.scene.add.rectangle(width / 2, height / 2, width, height, 0xff0000, 0.3);
         flash.setDepth(2400);
         
-        this.scene.tweens.add({
+        this.addTweens({
             targets: flash,
             alpha: 0,
             duration: 300,
@@ -515,7 +516,7 @@ export class BattleAnimationManager {
         }).setOrigin(0.5);
         damageText.setDepth(2401);
 
-        this.scene.tweens.add({
+        this.addTweens({
             targets: damageText,
             y: height * 0.4,
             alpha: 0,
