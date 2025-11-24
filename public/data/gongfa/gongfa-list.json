@@ -122,6 +122,52 @@
           }
         ]
       }
+    },
+    {
+      "id": "gongfa.search_swords_to_discard",
+      "name": "剑器检索·弃牌",
+      "schema": {
+        "event": {
+          "type": "OnSummon",
+          "side": "Ally"
+        },
+        "actions": [
+          {
+            "type": "SearchCardFromDeck",
+            "filter": {
+              "kind": ["artifact"],
+              "weaponTypesAnyOf": ["剑"],
+              "maxStar": "card.star + 1"
+            },
+            "destination": "DiscardPile",
+            "amount": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "gongfa.sword_heart_slash_aoe",
+      "name": "控剑术·剑心斩（AOE）初级",
+      "schema": {
+        "event": {
+          "type": "OnEquipArtifact",
+          "side": "Ally"
+        },
+        "conditions": [
+          {
+            "type": "ArtifactEquipped",
+            "weaponType": "剑",
+            "maxStar": "card.star + 1"
+          }
+        ],
+        "actions": [
+          {
+            "type": "ImmediateAttack",
+            "target": "allEnemies",
+            "damageMultiplier": 0.5
+          }
+        ]
+      }
     }
   ]
 }

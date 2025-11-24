@@ -1,9 +1,5 @@
-import type { Scene } from 'phaser';
-import type { BattleLog } from '../ui/BattleLog';
-import type { CardManager } from './CardManager';
-import type { BattleAnimationManager } from './BattleAnimationManager';
+import type { BattleContext } from '../context/BattleContext';
 import { getUnitStar } from '../utils/RealmHelper';
-import { CardSpriteFactory } from '../factories/CardSpriteFactory';
 import type { CardSprite } from '../objects/CardSprite';
 import type { ArtifactGradeConfig } from '@data/types/artifact-grade';
 import artifactGradeConfig from '@data/config/artifact-grade.json';
@@ -41,32 +37,24 @@ export interface GongfaRuntimeContext {
     gameActionHandler?: any; // GameActionHandler 实例，用于选择卡牌等操作
     combatManager?: any; // CombatManager 实例，用于执行攻击
     battleStatusController?: any; // BattleStatusController 实例，用于应用状态
+    battleTickManager?: any; // BattleTickManager 实例，用于状态检查
 }
 
 const KNOWN_WEAPON_TYPES: ArtifactWeaponType[] = ['剑', '刀', '鞭', '枪', '锤', '弓', '尺', '印', '棍', '棒', '毒', '琴', '笛子', '拳套', '符箓', '斧头', '匕首', '飞镖', '扇子'];
 
 export class UnitEffectManager {
-    private scene: Scene;
-    private battleLog: BattleLog;
-    private cardManager: CardManager;
-    private animationManager: BattleAnimationManager;
+    private battleContext: BattleContext;
     private gongfaMap: Map<string, Gongfa> = new Map();
 
     constructor(
-        scene: Scene,
-        battleLog: BattleLog,
-        cardManager: CardManager,
-        animationManager: BattleAnimationManager,
+        battleContext: BattleContext,
         gongfaList: Gongfa[]
     ) {
-        this.scene = scene;
-        this.battleLog = battleLog;
-        this.cardManager = cardManager;
-        this.animationManager = animationManager;
+        this.battleContext = battleContext;
 
+        // 构建功法映射
         gongfaList.forEach(gongfa => {
-            const description = gongfa.description ?? describeGongfa(gongfa.schema);
-            this.gongfaMap.set(gongfa.id, { ...gongfa, description });
+            this.gongfaMap.set(gongfa.id, gongfa);
         });
     }
 
@@ -121,7 +109,7 @@ export class UnitEffectManager {
             if (executed) {
                 const displayName = gongfa.name || id;
                 const description = gongfa.description || '无描述';
-                this.battleLog.addGongfaLog(cardData.name, displayName, description, [unit]);
+                this.battleContext.battleLog.addGongfaLog(cardData.name, displayName, description, [unit]);
             }
         });
     }
@@ -314,11 +302,6 @@ export class UnitEffectManager {
         amount: number,
         context: GongfaRuntimeContext
     ): boolean {
-        if (action.destination !== EffectActionDestination.Hand) {
-            console.warn(`暂不支持的功法检索目的地：${action.destination}`);
-            return false;
-        }
-
         if (!context.gameActionHandler) {
             console.warn('GameActionHandler 未提供，无法检索卡牌');
             return false;
@@ -329,10 +312,19 @@ export class UnitEffectManager {
             return this.isCardMatchFilter(card, action.filter);
         };
 
-        // 调用 GameActionHandler 的 searchDeck 方法
-        context.gameActionHandler.searchDeck(amount, filterFunc);
+        // 根据目的地调用不同的方法
+        if (action.destination === EffectActionDestination.Hand) {
+            // 检索到手牌
+            context.gameActionHandler.searchDeck(amount, filterFunc);
+        } else if (action.destination === EffectActionDestination.DiscardPile) {
+            // 检索到弃牌堆（不需要UI，直接添加）
+            context.gameActionHandler.searchDeckToDiscard(amount, filterFunc);
+        } else {
+            console.warn(`暂不支持的功法检索目的地：${action.destination}`);
+            return false;
+        }
 
-        return true; // 返回true表示已触发检索UI
+        return true;
     }
 
     private executeImmediateAttack(
@@ -368,7 +360,7 @@ export class UnitEffectManager {
         const finalDamage = Math.floor(attackPower * damageMultiplier);
 
         // 记录日志
-        this.battleLog.addLog(`【${attackerData.name}】触发控剑术，立即发动攻击（${finalDamage}点伤害）`);
+        this.battleContext.battleLog.addLog(`【${attackerData.name}】触发控剑术，立即发动攻击（${finalDamage}点伤害）`);
 
         // 根据目标类型执行攻击
         if (action.target === 'singleEnemy') {
@@ -402,6 +394,7 @@ export class UnitEffectManager {
                     0, // 立即执行，无延迟
                     true // AOE攻击
                 );
+                // tick 由 BattleAnimationManager 自动调用
             }
         }
 
@@ -439,7 +432,7 @@ export class UnitEffectManager {
         }
 
         const targetData = target.getCardData();
-        this.battleLog.addLog(`【${targetData.name}】获得 ${armorValue} 点护甲`);
+        this.battleContext.battleLog.addLog(`【${targetData.name}】获得 ${armorValue} 点护甲`);
 
         // 应用护甲状态
         if (context.battleStatusController) {

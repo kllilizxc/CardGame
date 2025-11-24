@@ -31,10 +31,9 @@ import { SkillEffectHandler } from '../handlers/SkillEffectHandler';
 import { UnitEffectManager } from '../managers/UnitEffectManager';
 // CardPreviewPanel 已被 CardPreviewManager 替代
 import { createDefaultLayout, type BattleLayoutConfig } from '../config/LayoutConfig';
+import { ManagerFactory } from '../managers/ManagerFactory';
 import { UsageManager } from '../managers/UsageManager';
-import { StatusManager } from '../managers/StatusManager';
-import { BattleStatusController } from '../managers/BattleStatusController';
-import { BattleStateChecker } from '../managers/BattleStateChecker';
+import { BattleContext } from '../context/BattleContext';
 import type { PillCard } from '../../../public/data/types/cards/pill';
 import type { SkillCard } from '../../../public/data/types/cards/skill';
 import { BattleState } from '../state/BattleState';
@@ -45,6 +44,9 @@ import { PillTooltipUI } from '../ui/PillTooltipUI';
 export class BattleScene extends Scene {
     // 游戏状态（使用 BattleState 管理）
     private battleState!: BattleState;
+    
+    // 战斗上下文 - 集中管理通用管理器
+    public battleContext!: BattleContext;
     
     // 场地区域
     private playerFieldZone!: Phaser.GameObjects.Zone;
@@ -58,12 +60,17 @@ export class BattleScene extends Scene {
     private cardPreviewManager!: CardPreviewManager;
     private pillTooltipUI!: PillTooltipUI;
     
-    // 管理器
-    private battleLog!: BattleLog;
-    private animationManager!: BattleAnimationManager;
-    private combatManager!: CombatManager;
-    private cardManager!: CardManager;
-    private turnManager!: TurnManager;
+    // 管理器（通过 battleContext 访问的核心管理器）
+    private get battleLog() { return this.battleContext.battleLog; }
+    private get animationManager() { return this.battleContext.animationManager; }
+    private get combatManager() { return this.battleContext.combatManager; }
+    private get cardManager() { return this.battleContext.cardManager; }
+    private get turnManager() { return this.battleContext.turnManager; }
+    private get battleStatusController() { return this.battleContext.battleStatusController; }
+    private get battleStateChecker() { return this.battleContext.battleStateChecker; }
+    public get battleTickManager() { return this.battleContext.battleTickManager; }
+    
+    // 其他管理器（不在 context 中的）
     private artifactManager!: ArtifactManager;
     private talismanManager!: TalismanManager;
     private fieldManager!: FieldManager;
@@ -79,9 +86,6 @@ export class BattleScene extends Scene {
     private unitEffectManager!: UnitEffectManager;
     // pillTooltip 已移到 PillTooltipUI
     private usageManager: UsageManager = new UsageManager();
-    private statusManager!: StatusManager;
-    private battleStatusController!: BattleStatusController;
-    private battleStateChecker!: BattleStateChecker;
     private static readonly USAGE_CATEGORY_WEAPON = 'weapon';
     
     // 布局配置
@@ -154,58 +158,31 @@ export class BattleScene extends Scene {
         // 初始化布局配置
         this.layout = createDefaultLayout(width, height);
 
-        // 初始化管理器（使用布局配置）
-        this.battleLog = new BattleLog(this, this.layout.battleLog);
-        this.animationManager = new BattleAnimationManager(this);
-        
-        // 初始化状态管理器
-        this.statusManager = new StatusManager();
-        await this.statusManager.initialize();
-        console.log('StatusManager initialized');
-        
-        // 初始化战斗状态控制器（必须在 battleLog 和 animationManager 之后）
-        this.battleStatusController = new BattleStatusController(
-            this.statusManager,
-            this.battleLog,
-            this.animationManager
-        );
-        
-        // CardPreviewPanel 已被 CardPreviewManager 替代
-        this.combatManager = new CombatManager(this, this.animationManager, this.battleLog, this.statusManager);
-        this.cardManager = new CardManager(this, this.battleLog, this.cardScale);
-        this.cardManager.setLayout(this.layout);
+        // 初始化战斗上下文
+        this.battleContext = new BattleContext(this);
+
+        // 使用 ManagerFactory 统一初始化所有管理器
         const gongfaData = this.cache.json.get('gongfaList') as { gongfa: any[] };
-        this.unitEffectManager = new UnitEffectManager(
-            this,
-            this.battleLog,
-            this.cardManager,
-            this.animationManager,
-            gongfaData?.gongfa || []
-        );
-        this.turnManager = new TurnManager(this);
-        
-        // 初始化战场状态检查器（必须在 turnManager 之后）
-        this.battleStateChecker = new BattleStateChecker(
-            this,
-            this.battleLog,
-            this.animationManager,
-            this.turnManager
-        );
-        this.artifactManager = new ArtifactManager(this, this.battleLog);
-        this.artifactManager.setUnitEffectManager(this.unitEffectManager); // 设置功法管理器，用于触发装备事件
-        this.talismanManager = new TalismanManager(this, this.battleLog);
-        this.fieldManager = new FieldManager(this, this.battleLog);
-        this.pillManager = new PillManager(this, this.battleLog, 3); // 默认3个丹药槽位
-        this.sacrificeManager = new SacrificeManager(this, this.battleLog);
-        
-        // 初始化事件管理器
-        this.eventManager = new BattleEventManager(
-            this,
-            this.combatManager,
-            this.cardManager,
-            this.fieldManager,
-            this.battleLog
-        );
+        const managers = await ManagerFactory.createManagers(this, this.battleContext, {
+            layout: this.layout,
+            cardScale: this.cardScale,
+            gongfaData: gongfaData?.gongfa || [],
+            fieldAccessors: {
+                getPlayerField: () => this.playerField,
+                getEnemyField: () => this.enemyField,
+                setPlayerField: (field: CardSprite[]) => { this.playerField = field; },
+                setEnemyField: (field: CardSprite[]) => { this.enemyField = field; }
+            }
+        });
+
+        // 保存管理器引用
+        this.unitEffectManager = managers.unitEffectManager;
+        this.artifactManager = managers.artifactManager;
+        this.talismanManager = managers.talismanManager;
+        this.fieldManager = managers.fieldManager;
+        this.pillManager = managers.pillManager;
+        this.sacrificeManager = managers.sacrificeManager;
+        this.eventManager = managers.eventManager;
         
         // 初始化献祭UI
         this.sacrificeUI = new SacrificeSelectionUI(this);
@@ -649,7 +626,8 @@ export class BattleScene extends Scene {
                 artifactUsage: {},
                 gameActionHandler: this.skillEffectHandler.getGameActionHandler(),
                 combatManager: this.combatManager,
-                battleStatusController: this.battleStatusController
+                battleStatusController: this.battleStatusController,
+                battleTickManager: this.battleTickManager
             });
         }
         return result.success;
@@ -706,7 +684,8 @@ export class BattleScene extends Scene {
                         artifactUsage: {},
                         gameActionHandler: this.skillEffectHandler.getGameActionHandler(),
                         combatManager: this.combatManager,
-                        battleStatusController: this.battleStatusController
+                        battleStatusController: this.battleStatusController,
+                        battleTickManager: this.battleTickManager
                     });
                     
                     // 播放史诗召唤动画（交由动画管理器处理，异常不影响逻辑）

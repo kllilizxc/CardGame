@@ -73,25 +73,76 @@ export class GameActionHandler {
         }
 
         deckSelectionUI.show(
-            filteredDeck, 
+            filteredDeck,
+            1, // 单选
             (selectedCard) => {
                 // 将选中的卡牌加入手牌
-                const index = deck.indexOf(selectedCard);
+                const card = selectedCard as AnyCard;
+                const index = deck.indexOf(card);
                 if (index > -1) {
                     deck.splice(index, 1);
                     
                     // 使用工厂创建卡片精灵
-                    const sprite = CardSpriteFactory.createSprite(scene, selectedCard, 0, 0, cardScale);
+                    const sprite = CardSpriteFactory.createSprite(scene, card, 0, 0, cardScale);
 
                     if (sprite) {
                         hand.push(sprite);
                         cardManager.arrangeHand(hand as any);
-                        battleLog.addLog(`检索了【${selectedCard.name}】`);
+                        battleLog.addLog(`检索了【${card.name}】`);
                         updateDeckCount();
                     }
                 }
             },
-            onCancel // 传入取消回调
+            onCancel
+        );
+    }
+
+    /**
+     * 从卡组检索卡牌到弃牌堆（带UI选择）
+     * @param count 检索数量
+     * @param filter 过滤条件
+     * @param onCancel 取消时的回调
+     */
+    public searchDeckToDiscard(count: number = 1, filter?: (card: AnyCard) => boolean, onCancel?: () => void): void {
+        const { deck, discardPile, deckSelectionUI, battleLog, updateDeckCount, animationManager } = this.context;
+
+        if (!discardPile) {
+            console.warn('弃牌堆未提供');
+            if (onCancel) onCancel();
+            return;
+        }
+
+        // 应用过滤条件
+        const filteredDeck = filter ? deck.filter(filter) : deck;
+
+        if (filteredDeck.length === 0) {
+            battleLog.addLog('卡组中没有符合条件的卡牌');
+            if (onCancel) onCancel();
+            return;
+        }
+
+        // 使用统一的 show 方法
+        deckSelectionUI.show(
+            filteredDeck,
+            count,
+            (selected) => {
+                // 先移动卡牌数据
+                // 统一转换为数组处理
+                const cards = Array.isArray(selected) ? selected : [selected as AnyCard];
+                cards.forEach((card: AnyCard) => {
+                    const index = deck.indexOf(card);
+                    if (index > -1) {
+                        deck.splice(index, 1);
+                        discardPile.push(card);
+                        battleLog.addLog(`检索了【${card.name}】到弃牌堆`);
+                    }
+                });
+                updateDeckCount();
+
+                // 播放动画（传入实际的卡牌数据）
+                animationManager.playDeckToDiscardAnimation(cards);
+            },
+            onCancel
         );
     }
 
@@ -124,20 +175,22 @@ export class GameActionHandler {
         // 复用 DeckSelectionUI 显示弃牌堆选择
         deckSelectionUI.show(
             filteredCards,
+            1, // 单选
             (selectedCard) => {
                 // 从弃牌堆移除
-                const index = discardPile.indexOf(selectedCard);
+                const card = selectedCard as AnyCard;
+                const index = discardPile.indexOf(card);
                 if (index > -1) {
                     discardPile.splice(index, 1);
                     
                     // 从弃牌堆位置创建卡片精灵
                     const { x: startX, y: startY } = animationManager.getDiscardPileCardSpawnPosition();
-                    const sprite = CardSpriteFactory.createSprite(scene, selectedCard, startX, startY, cardScale);
+                    const sprite = CardSpriteFactory.createSprite(scene, card, startX, startY, cardScale);
 
                     if (sprite) {
                         hand.push(sprite);
                         cardManager.arrangeHand(hand as any);
-                        battleLog.addLog(`从弃牌堆回收了【${selectedCard.name}】`);
+                        battleLog.addLog(`从弃牌堆回收了【${card.name}】`);
                     }
                 }
             },

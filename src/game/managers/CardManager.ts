@@ -9,11 +9,13 @@ import type { TalismanCard } from '../../../public/data/types/cards/talisman';
 import type { FieldCard } from '../../../public/data/types/cards/field';
 import type { BattleLayoutConfig } from '../config/LayoutConfig';
 import type { BattleLog } from '../ui/BattleLog';
+import type { BattleAnimationManager } from './BattleAnimationManager';
 
 export class CardManager {
     private scene: Scene;
     private battleLog: BattleLog;
     private cardScale: number;
+    private animationManager?: BattleAnimationManager;
     private readonly DEFAULT_CARD_SPACING = 220; // 从 160 增加到 220，适配更大的卡片
     private readonly LAYOUT_WIDTH_PADDING = 200;
 
@@ -21,6 +23,10 @@ export class CardManager {
         this.scene = scene;
         this.battleLog = battleLog;
         this.cardScale = cardScale;
+    }
+
+    public setAnimationManager(animationManager: BattleAnimationManager): void {
+        this.animationManager = animationManager;
     }
 
     private layout?: BattleLayoutConfig;
@@ -79,14 +85,14 @@ export class CardManager {
                 const depth = this.layout?.depth?.handCards ?? 10;
                 card.setDepth(depth);
                 
-                this.scene.tweens.add({
-                    targets: card,
-                    x,
-                    y,
-                    duration: 300,
-                    ease: 'Back.easeOut'
-                });
-                card.setOriginalPosition(x, y);
+                if (this.animationManager) {
+                    this.animationManager.playCardMoveAnimation(card, x, y, () => {
+                        card.setOriginalPosition(x, y);
+                    });
+                } else {
+                    card.setPosition(x, y);
+                    card.setOriginalPosition(x, y);
+                }
             });
             return;
         }
@@ -103,14 +109,14 @@ export class CardManager {
             const depth = this.layout?.depth?.handCards ?? 10;
             card.setDepth(depth);
             
-            this.scene.tweens.add({
-                targets: card,
-                x,
-                y: handY,
-                duration: 300,
-                ease: 'Back.easeOut'
-            });
-            card.setOriginalPosition(x, handY);
+            if (this.animationManager) {
+                this.animationManager.playCardMoveAnimation(card, x, handY, () => {
+                    card.setOriginalPosition(x, handY);
+                });
+            } else {
+                card.setPosition(x, handY);
+                card.setOriginalPosition(x, handY);
+            }
         });
     }
 
@@ -129,14 +135,14 @@ export class CardManager {
                 const depth = this.layout?.depth?.fieldCards ?? 50;
                 card.setDepth(depth);
                 
-                this.scene.tweens.add({
-                    targets: card,
-                    x,
-                    y,
-                    duration: 300,
-                    ease: 'Back.easeOut'
-                });
-                card.setOriginalPosition(x, y);
+                if (this.animationManager) {
+                    this.animationManager.playCardMoveAnimation(card, x, y, () => {
+                        card.setOriginalPosition(x, y);
+                    });
+                } else {
+                    card.setPosition(x, y);
+                    card.setOriginalPosition(x, y);
+                }
             });
             return;
         }
@@ -153,14 +159,14 @@ export class CardManager {
             const depth = this.layout?.depth?.fieldCards ?? 50;
             card.setDepth(depth);
             
-            this.scene.tweens.add({
-                targets: card,
-                x,
-                y: fieldY,
-                duration: 300,
-                ease: 'Back.easeOut'
-            });
-            card.setOriginalPosition(x, fieldY);
+            if (this.animationManager) {
+                this.animationManager.playCardMoveAnimation(card, x, fieldY, () => {
+                    card.setOriginalPosition(x, fieldY);
+                });
+            } else {
+                card.setPosition(x, fieldY);
+                card.setOriginalPosition(x, fieldY);
+            }
         });
     }
 
@@ -179,14 +185,14 @@ export class CardManager {
                 const depth = this.layout?.depth?.fieldCards ?? 50;
                 card.setDepth(depth);
                 
-                this.scene.tweens.add({
-                    targets: card,
-                    x,
-                    y,
-                    duration: 300,
-                    ease: 'Back.easeOut'
-                });
-                card.setOriginalPosition(x, y);
+                if (this.animationManager) {
+                    this.animationManager.playCardMoveAnimation(card, x, y, () => {
+                        card.setOriginalPosition(x, y);
+                    });
+                } else {
+                    card.setPosition(x, y);
+                    card.setOriginalPosition(x, y);
+                }
                 card.disableDragging();
             });
             return;
@@ -204,14 +210,14 @@ export class CardManager {
             const depth = this.layout?.depth?.fieldCards ?? 50;
             card.setDepth(depth);
             
-            this.scene.tweens.add({
-                targets: card,
-                x,
-                y: fieldY,
-                duration: 300,
-                ease: 'Back.easeOut'
-            });
-            card.setOriginalPosition(x, fieldY);
+            if (this.animationManager) {
+                this.animationManager.playCardMoveAnimation(card, x, fieldY, () => {
+                    card.setOriginalPosition(x, fieldY);
+                });
+            } else {
+                card.setPosition(x, fieldY);
+                card.setOriginalPosition(x, fieldY);
+            }
             
             // 敌人卡牌不可拖拽，但可以hover查看
             card.disableDragging();

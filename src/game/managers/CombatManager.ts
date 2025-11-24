@@ -1,21 +1,12 @@
-import { Scene } from 'phaser';
 import type { CardSprite } from '../objects/CardSprite';
 import type { ArtifactSprite } from '../objects/ArtifactSprite';
-import type { BattleLog } from '../ui/BattleLog';
-import { BattleAnimationManager } from './BattleAnimationManager';
-import type { StatusManager } from './StatusManager';
+import type { BattleContext } from '../context/BattleContext';
 
 export class CombatManager {
-    private scene: Scene;
-    private animationManager: BattleAnimationManager;
-    private battleLog: BattleLog;
-    private statusManager: StatusManager;
+    private battleContext: BattleContext;
 
-    constructor(scene: Scene, animationManager: BattleAnimationManager, battleLog: BattleLog, statusManager: StatusManager) {
-        this.scene = scene;
-        this.animationManager = animationManager;
-        this.battleLog = battleLog;
-        this.statusManager = statusManager;
+    constructor(battleContext: BattleContext) {
+        this.battleContext = battleContext;
     }
 
     // 战斗结算（带动画）
@@ -56,7 +47,7 @@ export class CombatManager {
                 console.log(`${attacker.getCardData().name} 攻击 ${targetCard.name}，造成 ${attackValue} 点伤害`);
                 
                 // 记录攻击日志
-                this.battleLog.addLog(
+                this.battleContext.battleLog.addLog(
                     `【${attacker.getCardData().name}】攻击【${targetCard.name}】，造成${attackValue}点伤害`,
                     [attacker, target]
                 );
@@ -70,13 +61,13 @@ export class CombatManager {
                     console.log(`${attacker.getCardData().name} 直接攻击你，造成 ${attackValue} 点伤害`);
                     
                     // 记录直击玩家日志
-                    this.battleLog.addLog(
+                    this.battleContext.battleLog.addLog(
                         `【${attacker.getCardData().name}】直接攻击你，造成${attackValue}点伤害！`,
                         [attacker]
                     );
                     
                     // 添加攻击玩家的动画
-                    this.animationManager.addAttackPlayerAnimation(
+                    this.battleContext.animationManager.addAttackPlayerAnimation(
                         attacker,
                         attackValue,
                         delay,
@@ -91,10 +82,10 @@ export class CombatManager {
         // 在所有攻击完成后调用回调
         if (onComplete) {
             if (delay > 0) {
-                this.scene.time.delayedCall(delay + 200, onComplete);
+                this.battleContext.scene.time.delayedCall(delay + 200, onComplete);
             } else {
                 // 如果没有任何攻击动画，立即调用回调
-                this.scene.time.delayedCall(100, onComplete);
+                this.battleContext.scene.time.delayedCall(100, onComplete);
             }
         }
 
@@ -111,7 +102,7 @@ export class CombatManager {
         const cardData = unit.getCardData();
         
         // 通过 StatusManager 处理伤害（会先消耗护甲）
-        const finalDamage = this.statusManager.processDamage(cardData.id, damage);
+        const finalDamage = this.battleContext.statusManager.processDamage(cardData.id, damage);
         
         cardData.health -= finalDamage;
         
@@ -119,10 +110,12 @@ export class CombatManager {
         if (cardData.health < 0) {
             cardData.health = 0;
         }
+
+        console.log("damageUnit", unit.getCardData().name, cardData.health);
         
         // 实时更新卡牌显示（包括护甲状态）
         unit.updateStats();
-        const statuses = this.statusManager.getUnitStatuses(cardData.id);
+        const statuses = this.battleContext.statusManager.getUnitStatuses(cardData.id);
         unit.updateStatusDisplay(statuses);
     }
 
@@ -146,7 +139,7 @@ export class CombatManager {
             target.forEach((t, index) => {
                 const targetData = t.getCardData();
                 if (targetData.health > 0) {
-                    this.animationManager.addAttackAnimation(
+                    this.battleContext.animationManager.addAttackAnimation(
                         attacker,
                         t,
                         damage,
@@ -159,7 +152,7 @@ export class CombatManager {
             // 单体攻击
             const targetData = target.getCardData();
             if (targetData.health > 0) {
-                this.animationManager.addAttackAnimation(
+                this.battleContext.animationManager.addAttackAnimation(
                     attacker,
                     target,
                     damage,
@@ -191,13 +184,13 @@ export class CombatManager {
         enemyField: CardSprite[],
         onArrange: (newPlayerField: CardSprite[], newEnemyField: CardSprite[]) => void
     ): { playerField: CardSprite[]; enemyField: CardSprite[] } {
-        const battleScene = this.scene as any;
+        const battleScene = this.battleContext.scene as any;
         
         // 检查玩家场地
         const newPlayerField = playerField.filter(unit => {
             if (this.isDead(unit)) {
                 console.log(`${unit.getCardData().name} 被击败！`);
-                this.battleLog.addLog(`【${unit.getCardData().name}】被击败！`);
+                this.battleContext.battleLog.addLog(`【${unit.getCardData().name}】被击败！`);
                 
                 // 获取装备的法器（在清理前）
                 const equippedArtifacts = battleScene.artifactManager 
@@ -217,10 +210,10 @@ export class CombatManager {
                 });
                 
                 // 播放死亡动画
-                this.animationManager.playDeathAnimation(unit);
+                this.battleContext.animationManager.playDeathAnimation(unit);
                 
                 // 延迟后播放飞向弃牌堆的动画
-                this.scene.time.delayedCall(300, () => {
+                this.battleContext.scene.time.delayedCall(300, () => {
                     // 计算需要等待的动画数量
                     let animationCount = 1 + equippedArtifacts.length;
                     const onAnimationComplete = () => {
@@ -261,15 +254,15 @@ export class CombatManager {
         const newEnemyField = enemyField.filter(unit => {
             if (this.isDead(unit)) {
                 console.log(`${unit.getCardData().name} 被击败！`);
-                this.battleLog.addLog(`【${unit.getCardData().name}】被击败！`);
+                this.battleContext.battleLog.addLog(`【${unit.getCardData().name}】被击败！`);
                 
                 // 获取装备的法器并销毁（敌人不进入弃牌堆）
                 const equippedArtifacts = battleScene.artifactManager 
                     ? battleScene.artifactManager.getEquippedArtifacts(unit)
                     : [];
                 
-                this.animationManager.playDeathAnimation(unit);
-                this.scene.time.delayedCall(300, () => {
+                this.battleContext.animationManager.playDeathAnimation(unit);
+                this.battleContext.scene.time.delayedCall(300, () => {
                     // 销毁装备的法器
                     equippedArtifacts.forEach((artifact: ArtifactSprite) => {
                         artifact.destroy();

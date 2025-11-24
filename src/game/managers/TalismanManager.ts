@@ -2,19 +2,19 @@ import { Scene } from 'phaser';
 import { TalismanSprite } from '../objects/TalismanSprite';
 import { CardSprite } from '../objects/CardSprite';
 import { GameActionHandler } from '../handlers/GameActionHandler';
-import type { BattleLog } from '../ui/BattleLog';
+import type { BattleContext } from '../context/BattleContext';
 import type { TalismanCard } from '../../../public/data/types/cards/talisman';
 
 export class TalismanManager {
     private scene: Scene;
-    private battleLog: BattleLog;
+    private battleContext: BattleContext;
     private selectedTalisman: TalismanSprite | null = null;
     private isSelectingTarget: boolean = false;
     private gameActionHandler: GameActionHandler | null = null;
 
-    constructor(scene: Scene, battleLog: BattleLog) {
+    constructor(scene: Scene, battleContext: BattleContext) {
         this.scene = scene;
-        this.battleLog = battleLog;
+        this.battleContext = battleContext;
     }
 
     /**
@@ -32,7 +32,7 @@ export class TalismanManager {
         this.isSelectingTarget = true;
         
         const talismanData = talisman.getCardData();
-        this.battleLog.addLog(`选择【${talismanData.name}】的目标...`, [talisman]);
+        this.battleContext.battleLog.addLog(`选择【${talismanData.name}】的目标...`, [talisman]);
         
         // 高亮符箓卡
         talisman.setScale(talisman.scale * 1.2);
@@ -64,7 +64,7 @@ export class TalismanManager {
 
         // 检查目标是否合法
         if (!this.isValidTarget(target, talismanData, targetSide)) {
-            this.battleLog.addLog(`无法对【${targetData.name}】使用【${talismanData.name}】`);
+            this.battleContext.battleLog.addLog(`无法对【${targetData.name}】使用【${talismanData.name}】`);
             return false;
         }
         // 应用效果

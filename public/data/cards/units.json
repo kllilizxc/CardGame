@@ -461,6 +461,23 @@
       "attack": 4,
       "health": 30,
       "gongfaIds": ["gongfa.sword_recall", "gongfa.sword_control_shield"]
+    },
+    {
+      "id": "SX_JXTM_001",
+      "name": "真传弟子·剑心通明",
+      "kind": "unit",
+      "description": "剑修宗门的真传弟子，剑心通明，能够以剑意攻击所有敌人。",
+      "rarity": "rare",
+      "labels": ["剑修", "真传弟子", "sect_sword_sect"],
+      "limitPerDeck": 2,
+
+      "realmId": "realm_qi_12",
+      "race": "人族",
+      "linggen": ["金"],
+      "factionId": "sect_sword_sect",
+      "attack": 8,
+      "health": 35,
+      "gongfaIds": ["gongfa.search_swords_to_discard", "gongfa.sword_heart_slash_aoe"]
     }
   ]
 }

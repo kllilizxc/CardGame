@@ -27,7 +27,12 @@ export class DeckSelectionUI extends GameObjects.Container {
     private cardSprites: AnyCardSprite[] = [];
     private maskShape!: GameObjects.Graphics;
     private onCardSelected: ((card: AnyCard) => void) | null = null;
+    private onCardsSelected: ((cards: AnyCard[]) => void) | null = null;
     private onCancel: (() => void) | null = null;
+    private isMultiSelect: boolean = false;
+    private maxSelectCount: number = 1;
+    private selectedCards: Set<AnyCard> = new Set();
+    private confirmButton!: GameObjects.Rectangle;
     
     private scrollY: number = 0;
     private maxScrollY: number = 0;
@@ -51,15 +56,43 @@ export class DeckSelectionUI extends GameObjects.Container {
 
     /**
      * 显示选择界面
+     * @param cards 可选卡牌列表
+     * @param count 选择数量（1为单选，>1为多选）
+     * @param onSelected 选择完成回调（单选返回单张卡，多选返回数组）
+     * @param onCancel 取消回调
      */
-    public show(cards: AnyCard[], onCardSelected: (card: AnyCard) => void, onCancel?: () => void): void {
+    public show(
+        cards: AnyCard[], 
+        count: number = 1,
+        onSelected: ((card: AnyCard) => void) | ((cards: AnyCard[]) => void),
+        onCancel?: () => void
+    ): void {
         this.cards = cards;
-        this.onCardSelected = onCardSelected;
         this.onCancel = onCancel || null;
+        this.isMultiSelect = count > 1;
+        this.maxSelectCount = count;
+        this.selectedCards.clear();
+
+        if (this.isMultiSelect) {
+            // 多选模式
+            this.onCardsSelected = onSelected as (cards: AnyCard[]) => void;
+            this.onCardSelected = null;
+        } else {
+            // 单选模式
+            this.onCardSelected = onSelected as (card: AnyCard) => void;
+            this.onCardsSelected = null;
+        }
         
         this.createView();
         this.setupInteraction();
         this.setVisible(true);
+    }
+
+    /**
+     * @deprecated 使用 show(cards, count, onSelected, onCancel) 代替
+     */
+    public showMultiSelect(cards: AnyCard[], maxCount: number, onCardsSelected: (cards: AnyCard[]) => void, onCancel?: () => void): void {
+        this.show(cards, maxCount, onCardsSelected, onCancel);
     }
 
     /**
@@ -86,7 +119,10 @@ export class DeckSelectionUI extends GameObjects.Container {
         this.add(this.background);
 
         // 标题
-        this.titleText = this.scene.add.text(this.panelX, this.panelY - this.panelHeight / 2 + 30, '从卡组中选择一张卡', {
+        const titleText = this.isMultiSelect 
+            ? `从卡组中选择 ${this.maxSelectCount} 张卡`
+            : '从卡组中选择一张卡';
+        this.titleText = this.scene.add.text(this.panelX, this.panelY - this.panelHeight / 2 + 30, titleText, {
             fontSize: '24px',
             color: '#3498db',
             fontStyle: 'bold'
@@ -94,7 +130,10 @@ export class DeckSelectionUI extends GameObjects.Container {
         this.add(this.titleText);
 
         // 卡片数量
-        const countText = this.scene.add.text(this.panelX, this.panelY - this.panelHeight / 2 + 60, `共 ${this.cards.length} 张卡牌`, {
+        const countInfo = this.isMultiSelect
+            ? `共 ${this.cards.length} 张卡牌 | 已选择 ${this.selectedCards.size}/${this.maxSelectCount}`
+            : `共 ${this.cards.length} 张卡牌`;
+        const countText = this.scene.add.text(this.panelX, this.panelY - this.panelHeight / 2 + 60, countInfo, {
             fontSize: '16px',
             color: '#ecf0f1'
         }).setOrigin(0.5);
@@ -116,6 +155,26 @@ export class DeckSelectionUI extends GameObjects.Container {
             color: '#ffffff'
         }).setOrigin(0.5);
         this.add(closeText);
+
+        // 多选模式：添加确认按钮
+        if (this.isMultiSelect) {
+            const confirmX = this.panelX;
+            const confirmY = this.panelY + this.panelHeight / 2 - 50;
+            this.confirmButton = this.scene.add.rectangle(confirmX, confirmY, 120, 50, 0x27ae60);
+            this.confirmButton.setStrokeStyle(2, 0xffffff);
+            this.confirmButton.setInteractive({ useHandCursor: true });
+            this.confirmButton.on('pointerover', () => this.confirmButton.setFillStyle(0x2ecc71));
+            this.confirmButton.on('pointerout', () => this.confirmButton.setFillStyle(0x27ae60));
+            this.confirmButton.on('pointerdown', () => this.confirmSelection());
+            this.add(this.confirmButton);
+
+            const confirmText = this.scene.add.text(confirmX, confirmY, '确认选择', {
+                fontSize: '18px',
+                color: '#ffffff',
+                fontStyle: 'bold'
+            }).setOrigin(0.5);
+            this.add(confirmText);
+        }
 
         // 创建滚动容器
         this.contentLeft = this.panelX - this.panelWidth / 2 + 20;
@@ -193,10 +252,16 @@ export class DeckSelectionUI extends GameObjects.Container {
             // 点击选择
             sprite.setInteractive({ useHandCursor: true });
             sprite.on('pointerdown', () => {
-                if (this.onCardSelected) {
-                    this.onCardSelected(cardData);
+                if (this.isMultiSelect) {
+                    // 多选模式：切换选中状态
+                    this.toggleCardSelection(cardData, sprite);
+                } else {
+                    // 单选模式：直接选择并关闭
+                    if (this.onCardSelected) {
+                        this.onCardSelected(cardData);
+                    }
+                    this.hide(false);
                 }
-                this.hide(false); // 选择了卡片，不是取消
             });
 
             // hover高亮
@@ -260,6 +325,39 @@ export class DeckSelectionUI extends GameObjects.Container {
     }
 
     /**
+     * 切换卡片选中状态（多选模式）
+     */
+    private toggleCardSelection(card: AnyCard, sprite: AnyCardSprite): void {
+        if (this.selectedCards.has(card)) {
+            // 取消选中
+            this.selectedCards.delete(card);
+            sprite.setAlpha(1.0); // 恢复不透明
+        } else {
+            // 选中
+            if (this.selectedCards.size >= this.maxSelectCount) {
+                // 已达到最大选择数量，不能再选
+                return;
+            }
+            this.selectedCards.add(card);
+            sprite.setAlpha(0.6); // 半透明表示已选中
+        }
+    }
+
+    /**
+     * 确认选择（多选模式）
+     */
+    private confirmSelection(): void {
+        if (this.selectedCards.size === 0) {
+            return; // 没有选择任何卡片
+        }
+
+        if (this.onCardsSelected) {
+            this.onCardsSelected(Array.from(this.selectedCards));
+        }
+        this.hide(false);
+    }
+
+    /**
      * 隐藏界面
      * @param cancelled 是否是取消操作（未选择卡片）
      */
@@ -283,8 +381,11 @@ export class DeckSelectionUI extends GameObjects.Container {
         // 清空所有子元素
         this.removeAll(true);
         
-        // 清空回调
+        // 清空回调和选中状态
         this.onCardSelected = null;
+        this.onCardsSelected = null;
         this.onCancel = null;
+        this.selectedCards.clear();
+        this.isMultiSelect = false;
     }
 }

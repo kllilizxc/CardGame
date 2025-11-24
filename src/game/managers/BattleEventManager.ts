@@ -3,11 +3,8 @@ import type { CardSprite } from '../objects/CardSprite';
 import type { ArtifactSprite } from '../objects/ArtifactSprite';
 import type { TalismanSprite } from '../objects/TalismanSprite';
 import { FieldSprite } from '../objects/FieldSprite';
-import type { CombatManager } from './CombatManager';
-import type { CardManager } from './CardManager';
+import type { BattleContext } from '../context/BattleContext';
 import type { FieldManager } from './FieldManager';
-import type { TurnManager } from './TurnManager';
-import type { BattleLog } from '../ui/BattleLog';
 
 /**
  * 战斗事件管理器
@@ -15,10 +12,8 @@ import type { BattleLog } from '../ui/BattleLog';
  */
 export class BattleEventManager {
     private scene: Scene;
-    private combatManager: CombatManager;
-    private cardManager: CardManager;
+    private battleContext: BattleContext;
     private fieldManager: FieldManager;
-    private battleLog: BattleLog;
 
     private playerField: CardSprite[] = [];
     private enemyField: CardSprite[] = [];
@@ -34,16 +29,12 @@ export class BattleEventManager {
 
     constructor(
         scene: Scene,
-        combatManager: CombatManager,
-        cardManager: CardManager,
-        fieldManager: FieldManager,
-        battleLog: BattleLog
+        battleContext: BattleContext,
+        fieldManager: FieldManager
     ) {
         this.scene = scene;
-        this.combatManager = combatManager;
-        this.cardManager = cardManager;
+        this.battleContext = battleContext;
         this.fieldManager = fieldManager;
-        this.battleLog = battleLog;
     }
 
     /**
@@ -88,20 +79,20 @@ export class BattleEventManager {
     private setupCombatEvents(): void {
         // 效果应用完成事件
         this.scene.events.on('effectApplied', () => {
-            if (this.combatManager.hasDeadUnits(this.playerField, this.enemyField)) {
+            if (this.battleContext.combatManager.hasDeadUnits(this.playerField, this.enemyField)) {
                 this.scene.events.emit('checkDeadUnits');
             }
         });
 
         // 死亡检查事件
         this.scene.events.on('checkDeadUnits', () => {
-            const result = this.combatManager.removeDeadUnits(
+            const result = this.battleContext.combatManager.removeDeadUnits(
                 this.playerField,
                 this.enemyField,
                 (newPlayerField: CardSprite[], newEnemyField: CardSprite[]) => {
                     // 使用过滤后的新数组进行排列
-                    this.cardManager.arrangePlayerField(newPlayerField);
-                    this.cardManager.arrangeEnemyField(newEnemyField);
+                    this.battleContext.cardManager.arrangePlayerField(newPlayerField);
+                    this.battleContext.cardManager.arrangeEnemyField(newEnemyField);
                 }
             );
             
@@ -265,7 +256,7 @@ export class BattleEventManager {
                 };
 
                 this.fieldManager.playField(fieldData, fieldPosition);
-                this.cardManager.arrangeHand(this.hand);
+                this.battleContext.cardManager.arrangeHand(this.hand);
 
                 this.scene.time.delayedCall(300, () => {
                     if (card.active) {

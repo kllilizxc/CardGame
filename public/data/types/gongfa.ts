@@ -85,7 +85,8 @@ export enum EffectActionType {
 export enum EffectActionDestination {
   Hand = 'Hand',
   Field = 'Field',
-  DeckTop = 'DeckTop'
+  DeckTop = 'DeckTop',
+  DiscardPile = 'DiscardPile'
 }
 
 export interface CardFilter {

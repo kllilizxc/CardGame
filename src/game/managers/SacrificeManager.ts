@@ -1,7 +1,7 @@
 import { Scene } from 'phaser';
 import type { CardSprite } from '../objects/CardSprite';
 import type { UnitCard } from '@data/types/cards/unit';
-import type { BattleLog } from '../ui/BattleLog';
+import type { BattleContext } from '../context/BattleContext';
 import { getUnitStar } from '../utils/RealmHelper';
 
 /**
@@ -14,14 +14,14 @@ import { getUnitStar } from '../utils/RealmHelper';
  */
 export class SacrificeManager {
     private scene: Scene;
-    private battleLog: BattleLog;
+    private battleContext: BattleContext;
     
     // 配置参数
     private readonly freeStarThreshold: number; // 免费召唤的星级上限（1-2星）
 
-    constructor(scene: Scene, battleLog: BattleLog, freeStarThreshold: number = 2) {
+    constructor(scene: Scene, battleContext: BattleContext, freeStarThreshold: number = 2) {
         this.scene = scene;
-        this.battleLog = battleLog;
+        this.battleContext = battleContext;
         this.freeStarThreshold = freeStarThreshold;
     }
 
@@ -107,7 +107,7 @@ export class SacrificeManager {
             return;
         }
 
-        this.battleLog.addLog(`献祭了${sacrificeTargets.length}只单位进行召唤`);
+        this.battleContext.battleLog.addLog(`献祭了${sacrificeTargets.length}只单位进行召唤`);
 
         // 播放献祭动画
         this.playSacrificeAnimation(sacrificeTargets, () => {

@@ -1,29 +1,19 @@
 import type { Scene } from 'phaser';
 import type { CardSprite } from '../objects/CardSprite';
-import type { BattleLog } from '../ui/BattleLog';
-import type { BattleAnimationManager } from './BattleAnimationManager';
-import type { TurnManager } from './TurnManager';
+import type { BattleContext } from '../context/BattleContext';
 
 /**
  * 战场状态检查器
  * 统一检查和处理战场上所有单位的状态变化
+ * 保留 scene 用于 UI 动画，使用 battleContext 访问战斗逻辑
  */
 export class BattleStateChecker {
     private scene: Scene;
-    private battleLog: BattleLog;
-    private animationManager: BattleAnimationManager;
-    private turnManager: TurnManager;
+    private battleContext: BattleContext;
 
-    constructor(
-        scene: Scene,
-        battleLog: BattleLog,
-        animationManager: BattleAnimationManager,
-        turnManager: TurnManager
-    ) {
+    constructor(scene: Scene, battleContext: BattleContext) {
         this.scene = scene;
-        this.battleLog = battleLog;
-        this.animationManager = animationManager;
-        this.turnManager = turnManager;
+        this.battleContext = battleContext;
     }
 
     /**
@@ -90,10 +80,10 @@ export class BattleStateChecker {
         onUnitRemoved: (unit: CardSprite, isPlayer: boolean) => void
     ): void {
         const unitData = unit.getCardData();
-        this.battleLog.addLog(`【${unitData.name}】被击败了！`);
+        this.battleContext.battleLog.addLog(`【${unitData.name}】被击败了！`);
 
         // 播放死亡动画
-        this.animationManager.playDeathAnimation(unit);
+        this.battleContext.animationManager.playDeathAnimation(unit);
 
         // 通知外部移除单位（包括清理状态等）
         onUnitRemoved(unit, isPlayer);
@@ -118,7 +108,7 @@ export class BattleStateChecker {
         // 检查玩家是否失败（生命值归零）
         if (playerHealth <= 0) {
             this.scene.time.delayedCall(600, () => {
-                this.turnManager.showDefeat(() => {
+                this.battleContext.turnManager.showDefeat(() => {
                     this.scene.scene.restart();
                 });
                 onBattleEnd(false);
@@ -129,7 +119,7 @@ export class BattleStateChecker {
         // 检查是否所有敌人都被击败
         if (enemyField.length === 0) {
             this.scene.time.delayedCall(600, () => {
-                this.turnManager.showVictory(() => {
+                this.battleContext.turnManager.showVictory(() => {
                     this.scene.scene.restart();
                 });
                 onBattleEnd(true);

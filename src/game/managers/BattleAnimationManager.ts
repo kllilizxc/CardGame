@@ -2,12 +2,44 @@ import { Scene } from 'phaser';
 import type { CardSprite } from '../objects/CardSprite';
 import type { ArtifactSprite } from '../objects/ArtifactSprite';
 import type { TalismanSprite } from '../objects/TalismanSprite';
+import { CardSpriteFactory } from '../factories/CardSpriteFactory';
 
 export class BattleAnimationManager {
     private scene: Scene;
+    private pendingAnimations: number = 0; // 追踪进行中的动画数量
 
     constructor(scene: Scene) {
         this.scene = scene;
+    }
+
+    /**
+     * 包装 tween，在动画完成后自动调用 tick
+     */
+    private addTweens(config: Phaser.Types.Tweens.TweenBuilderConfig): Phaser.Tweens.Tween {
+        const originalOnComplete = config.onComplete;
+        
+        // 动画开始时计数
+        this.pendingAnimations++;
+        
+        config.onComplete = (tween: Phaser.Tweens.Tween, targets: any, ...params: any[]) => {
+            // 先调用原始回调
+            if (originalOnComplete) {
+                (originalOnComplete as any)(tween, targets, ...params);
+            }
+            
+            // 动画完成时减少计数
+            this.pendingAnimations--;
+
+            // 如果所有动画都完成了，调用 tick
+            if (this.pendingAnimations === 0) {
+                const battleScene = this.scene as any;
+                if (battleScene.battleTickManager) {
+                    battleScene.battleTickManager.tick();
+                }
+            }
+        };
+        
+        return this.scene.tweens.add(config);
     }
 
     // 单位攻击单位动画
@@ -39,7 +71,7 @@ export class BattleAnimationManager {
             const baseScale = attacker.scale;
 
             // 第1步：后退蓄力
-            this.scene.tweens.add({
+            this.addTweens({
                 targets: attacker,
                 x: originalX - normalizedX * retreatDist,
                 y: originalY - normalizedY * retreatDist,
@@ -48,7 +80,7 @@ export class BattleAnimationManager {
                 ease: 'Back.easeIn',
                 onComplete: () => {
                     // 第2步：冲向目标
-                    this.scene.tweens.add({
+                    this.addTweens({
                         targets: attacker,
                         x: originalX + normalizedX * rushDist,
                         y: originalY + normalizedY * rushDist,
@@ -63,7 +95,7 @@ export class BattleAnimationManager {
                             this.playHitAnimation(target);
 
                             // 第3步：返回原位
-                            this.scene.tweens.add({
+                            this.addTweens({
                                 targets: attacker,
                                 x: originalX,
                                 y: originalY,
@@ -75,6 +107,65 @@ export class BattleAnimationManager {
                     });
                 }
             });
+        });
+    }
+
+    /**
+     * 法器附着到单位的动画
+     * @param artifact 法器精灵
+     * @param targetX 目标相对X坐标
+     * @param targetY 目标相对Y坐标
+     * @param onComplete 完成回调
+     */
+    public playArtifactAttachAnimation(
+        artifact: ArtifactSprite,
+        targetX: number,
+        targetY: number,
+        onComplete?: () => void
+    ): void {
+        this.addTweens({
+            targets: artifact,
+            x: targetX,
+            y: targetY,
+            scale: 0.3,
+            duration: 300,
+            ease: 'Power2',
+            onComplete: () => {
+                // 动画完成后确保交互性正常
+                if (artifact.input) {
+                    artifact.input.enabled = true;
+                }
+                if (onComplete) {
+                    onComplete();
+                }
+            }
+        });
+    }
+
+    /**
+     * 卡牌移动到目标位置的动画
+     * @param card 卡牌精灵
+     * @param targetX 目标X坐标
+     * @param targetY 目标Y坐标
+     * @param onComplete 完成回调
+     */
+    public playCardMoveAnimation(
+        card: CardSprite | ArtifactSprite | TalismanSprite | any,
+        targetX: number,
+        targetY: number,
+        onComplete?: () => void
+    ): void {
+        this.addTweens({
+            targets: card,
+            x: targetX,
+            y: targetY,
+            duration: 300,
+            ease: 'Back.easeOut',
+            onComplete: () => {
+                if (onComplete) {
+                    onComplete();
+                }
+            }
         });
     }
 
@@ -451,6 +542,99 @@ export class BattleAnimationManager {
             x: width * 0.9,
             y: height * 0.8
         };
+    }
+
+    /**
+     * 获取卡组位置
+     */
+    public getDeckPosition(): { x: number; y: number } {
+        const battleScene = this.scene as any;
+        const deckCountText = battleScene.deckCountText as Phaser.GameObjects.Text | undefined;
+
+        if (deckCountText) {
+            return { x: deckCountText.x, y: deckCountText.y };
+        }
+
+        const { width, height } = this.scene.scale;
+        return {
+            x: width * 0.1,
+            y: height * 0.8
+        };
+    }
+
+    /**
+     * 播放从卡组到弃牌堆的动画
+     * @param cards 移动的卡牌数据
+     * @param onComplete 动画完成回调
+     */
+    public playDeckToDiscardAnimation(cards?: any[], onComplete?: () => void): void {
+        if (!cards || cards.length === 0) {
+            if (onComplete) onComplete();
+            return;
+        }
+
+        const deckPos = this.getDeckPosition();
+        const discardPos = this.getDiscardPileCardSpawnPosition();
+        const animScale = 0.8; // 动画中的卡牌缩放
+        
+        cards.forEach((cardData, i) => {
+            // 使用 CardSpriteFactory 创建真实的卡牌精灵
+            const sprite = CardSpriteFactory.createSprite(
+                this.scene,
+                cardData,
+                deckPos.x,
+                deckPos.y + 130,
+                animScale
+            );
+
+            if (!sprite) return;
+
+            // 禁用交互和拖拽
+            sprite.disableInteractive();
+            sprite.disableDragging();
+            
+            // 设置为 deck 显示模式
+            sprite.setDisplayMode('deck');
+            
+            // 设置深度
+            sprite.setDepth(5000 + i);
+
+            // 延迟启动每张卡的动画
+            this.scene.time.delayedCall(i * 100, () => {
+                // 添加弧线运动效果
+                const midX = (deckPos.x + discardPos.x) / 2;
+                const midY = Math.min(deckPos.y, discardPos.y) - 100; // 向上的弧线
+                
+                // 第一段：向上飞
+                this.scene.tweens.add({
+                    targets: sprite,
+                    x: midX,
+                    y: midY,
+                    scale: animScale * 1.1,
+                    duration: 300,
+                    ease: 'Cubic.easeOut',
+                    onComplete: () => {
+                        // 第二段：落向弃牌堆
+                        this.scene.tweens.add({
+                            targets: sprite,
+                            x: discardPos.x,
+                            y: discardPos.y + 130,
+                            scale: animScale * 0.8,
+                            alpha: 1,
+                            duration: 300,
+                            ease: 'Cubic.easeIn',
+                            onComplete: () => {
+                                sprite.destroy();
+                                // 最后一张卡完成时调用回调
+                                if (i === cards.length - 1 && onComplete) {
+                                    onComplete();
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+        });
     }
 
     /**

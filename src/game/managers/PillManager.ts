@@ -1,7 +1,7 @@
 import { Scene } from 'phaser';
 import type { PillCard } from '@data/types/cards/pill';
 import { CardSprite } from '../objects/CardSprite';
-import type { BattleLog } from '../ui/BattleLog';
+import type { BattleContext } from '../context/BattleContext';
 
 /**
  * 丹药槽位信息
@@ -18,13 +18,13 @@ export interface PillSlot {
  */
 export class PillManager {
     private scene: Scene;
-    private battleLog: BattleLog;
+    private battleContext: BattleContext;
     private slots: PillSlot[] = [];     // 丹药槽位数组
     private maxSlots: number = 3;       // 默认最大槽位数
 
-    constructor(scene: Scene, battleLog: BattleLog, maxSlots: number = 3) {
+    constructor(scene: Scene, battleContext: BattleContext, maxSlots: number = 3) {
         this.scene = scene;
-        this.battleLog = battleLog;
+        this.battleContext = battleContext;
         this.maxSlots = Math.min(maxSlots, 5); // 最多5个槽位
         
         // 初始化槽位
@@ -51,13 +51,13 @@ export class PillManager {
     public addPill(pill: PillCard): boolean {
         const emptySlot = this.slots.find(slot => slot.isEmpty);
         if (!emptySlot) {
-            this.battleLog.addLog('丹药槽位已满！');
+            this.battleContext.battleLog.addLog('丹药槽位已满！');
             return false;
         }
 
         emptySlot.pill = pill;
         emptySlot.isEmpty = false;
-        this.battleLog.addLog(`获得丹药【${pill.name}】`);
+        this.battleContext.battleLog.addLog(`获得丹药【${pill.name}】`);
         
         // 触发UI更新事件
         this.scene.events.emit('pillSlotsUpdated', this.slots);
@@ -109,7 +109,7 @@ export class PillManager {
             });
         }
         
-        this.battleLog.addLog(`丹药槽位扩展至${this.maxSlots}个`);
+        this.battleContext.battleLog.addLog(`丹药槽位扩展至${this.maxSlots}个`);
         this.scene.events.emit('pillSlotsUpdated', this.slots);
     }
 
@@ -127,7 +127,7 @@ export class PillManager {
             return false;
         }
 
-        this.battleLog.addLog(`使用了【${pill.name}】`);
+        this.battleContext.battleLog.addLog(`使用了【${pill.name}】`);
 
         // 播放使用动画和特效
         this.playUseEffect(target, () => {
@@ -245,7 +245,7 @@ export class PillManager {
 
                     case 'applyStatus':
                         // 状态效果暂时简化处理
-                        this.battleLog.addLog(`施加状态效果`);
+                        this.battleContext.battleLog.addLog(`施加状态效果`);
                         break;
 
                     default:
@@ -255,7 +255,7 @@ export class PillManager {
 
             // 显示效果文本
             if (effect.text) {
-                this.battleLog.addLog(effect.text);
+                this.battleContext.battleLog.addLog(effect.text);
             }
         });
     }
@@ -268,7 +268,7 @@ export class PillManager {
 
         // 通知场景更新玩家生命值
         this.scene.events.emit('healPlayer', amount);
-        this.battleLog.addLog(`玩家回复了${amount}点生命值`);
+        this.battleContext.battleLog.addLog(`玩家回复了${amount}点生命值`);
 
         // 显示治疗特效
         this.showHealEffect();
@@ -282,9 +282,9 @@ export class PillManager {
         cardData.health += value;
 
         if (value > 0) {
-            this.battleLog.addLog(`【${cardData.name}】回复了${value}点生命`);
+            this.battleContext.battleLog.addLog(`【${cardData.name}】回复了${value}点生命`);
         } else {
-            this.battleLog.addLog(`【${cardData.name}】受到${-value}点伤害`);
+            this.battleContext.battleLog.addLog(`【${cardData.name}】受到${-value}点伤害`);
         }
 
         unit.updateStats();
@@ -298,7 +298,7 @@ export class PillManager {
         cardData.attack += value;
 
         const durationText = duration > 0 ? `（持续${duration}回合）` : '';
-        this.battleLog.addLog(`【${cardData.name}】攻击力${value > 0 ? '+' : ''}${value}${durationText}`);
+        this.battleContext.battleLog.addLog(`【${cardData.name}】攻击力${value > 0 ? '+' : ''}${value}${durationText}`);
 
         unit.updateStats();
 
@@ -310,7 +310,7 @@ export class PillManager {
      */
     private drawCards(count: number): void {
         this.scene.events.emit('drawCardsFromPill', count);
-        this.battleLog.addLog(`抽取${count}张卡牌`);
+        this.battleContext.battleLog.addLog(`抽取${count}张卡牌`);
     }
 
     /**

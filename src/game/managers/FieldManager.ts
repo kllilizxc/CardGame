@@ -1,5 +1,5 @@
 import type { Scene } from 'phaser';
-import type { BattleLog } from '../ui/BattleLog';
+import type { BattleContext } from '../context/BattleContext';
 import { FieldSprite } from '../objects/FieldSprite';
 import type { FieldCard } from '@data/types/cards/field';
 import type { CardSprite } from '../objects/CardSprite';
@@ -10,12 +10,12 @@ import type { CardSprite } from '../objects/CardSprite';
  */
 export class FieldManager {
     private scene: Scene;
-    private battleLog: BattleLog;
+    private battleContext: BattleContext;
     private currentField: FieldSprite | null = null;
 
-    constructor(scene: Scene, battleLog: BattleLog) {
+    constructor(scene: Scene, battleContext: BattleContext) {
         this.scene = scene;
-        this.battleLog = battleLog;
+        this.battleContext = battleContext;
     }
 
     /**
@@ -29,7 +29,7 @@ export class FieldManager {
         if (this.currentField) {
             const oldFieldName = this.currentField.getCardData().name;
             this.removeCurrentField();
-            this.battleLog.addLog(`【${oldFieldName}】被【${fieldCard.name}】替换！`, oldField ? [oldField] : []);
+            this.battleContext.battleLog.addLog(`【${oldFieldName}】被【${fieldCard.name}】替换！`, oldField ? [oldField] : []);
         }
 
         // 创建新的场地精灵
@@ -44,10 +44,10 @@ export class FieldManager {
 
         // 记录日志（包含场地精灵引用）
         if (!oldField) {
-            this.battleLog.addLog(`【${fieldCard.name}】已生效！`, [this.currentField]);
+            this.battleContext.battleLog.addLog(`【${fieldCard.name}】已生效！`, [this.currentField]);
         } else {
             // 更新之前的日志，添加新场地引用
-            this.battleLog.addLog(`【${fieldCard.name}】已生效！`, [this.currentField]);
+            this.battleContext.battleLog.addLog(`【${fieldCard.name}】已生效！`, [this.currentField]);
         }
 
         // 添加到场景

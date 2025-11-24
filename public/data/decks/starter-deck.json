@@ -2,9 +2,10 @@
   "name": "功能测试卡组",
   "description": "包含各类卡牌，方便测试献祭召唤、装备、符箓、场地、丹药、状态系统等所有功能。",
   "cards": [
-    { "id": "SX_YJZ_001", "count": 3 },
-    { "id": "SX_YJS_001", "count": 3 },
-    { "id": "SX_TY_001", "count": 3 },
+    { "id": "SX_YJZ_001", "count": 1 },
+    { "id": "SX_YJS_001", "count": 2 },
+    { "id": "SX_TY_001", "count": 2 },
+    { "id": "SX_JXTM_001", "count": 2 },
     { "id": "AR_001", "count": 3 },
     { "id": "AR_004", "count": 3 }
   ]

@@ -1,5 +1,5 @@
 import type { Scene } from 'phaser';
-import type { BattleLog } from '../ui/BattleLog';
+import type { BattleContext } from '../context/BattleContext';
 import type { CardSprite } from '../objects/CardSprite';
 import type { ArtifactSprite } from '../objects/ArtifactSprite';
 import type { UnitEffectManager } from './UnitEffectManager';
@@ -15,13 +15,13 @@ interface EquippedArtifact {
 
 export class ArtifactManager {
     private scene: Scene;
-    private battleLog: BattleLog;
+    private battleContext: BattleContext;
     private equippedArtifacts: Map<string, EquippedArtifact> = new Map(); // artifactId -> equipped info
     private unitEffectManager?: UnitEffectManager;
 
-    constructor(scene: Scene, battleLog: BattleLog) {
+    constructor(scene: Scene, battleContext: BattleContext) {
         this.scene = scene;
-        this.battleLog = battleLog;
+        this.battleContext = battleContext;
     }
 
     public setUnitEffectManager(unitEffectManager: UnitEffectManager): void {
@@ -72,7 +72,7 @@ export class ArtifactManager {
                     this.equippedArtifacts.delete(oldArtifactId);
                     
                     // 日志
-                    this.battleLog.addLog(`【${targetData.name}】替换法器，卸下了【${oldArtifactData.name}】`, [target, oldArtifact]);
+                    this.battleContext.battleLog.addLog(`【${targetData.name}】替换法器，卸下了【${oldArtifactData.name}】`, [target, oldArtifact]);
                     
                     // 将旧法器加入弃牌堆并播放动画
                     const battleScene = this.scene as any;
@@ -115,7 +115,7 @@ export class ArtifactManager {
         this.attachArtifactVisual(artifact, target);
 
         // 日志
-        this.battleLog.addLog(`【${targetData.name}】装备了【${artifactData.name}】`, [target, artifact]);
+        this.battleContext.battleLog.addLog(`【${targetData.name}】装备了【${artifactData.name}】`, [target, artifact]);
 
         // 触发装备法器事件（控剑术等）
         if (this.unitEffectManager) {
@@ -131,9 +131,14 @@ export class ArtifactManager {
                 gameActionHandler: battleScene.skillEffectHandler?.getGameActionHandler(),
                 combatManager: battleScene.combatManager,
                 animationManager: battleScene.animationManager,
-                battleStatusController: battleScene.battleStatusController
+                battleStatusController: battleScene.battleStatusController,
+                battleTickManager: battleScene.battleTickManager
             };
             this.unitEffectManager.applyOnEquipArtifactEffects(target, artifactData, context);
+            
+            // 注意：不在这里调用 tick()
+            // tick() 应该在攻击动画完成后的回调中调用
+            // 参见 CombatManager.performSingleAttack 的 onComplete 回调
         }
 
         return true;
@@ -164,7 +169,7 @@ export class ArtifactManager {
         target.updateStats();
 
         // 日志（在删除记录前记录）
-        this.battleLog.addLog(`【${targetData.name}】卸下了【${artifactData.name}】`, [target, artifact]);
+        this.battleContext.battleLog.addLog(`【${targetData.name}】卸下了【${artifactData.name}】`, [target, artifact]);
 
         // 移除视觉附着
         artifact.destroy();
@@ -218,7 +223,7 @@ export class ArtifactManager {
         
         if (!isValid) {
             // 耐久度耗尽，卸下法器
-            this.battleLog.addLog(`【${artifact.getCardData().name}】耐久度耗尽，已损坏`, [artifact]);
+            this.battleContext.battleLog.addLog(`【${artifact.getCardData().name}】耐久度耗尽，已损坏`, [artifact]);
             this.unequipArtifact(artifactId);
             return false;
         }
@@ -318,21 +323,15 @@ export class ArtifactManager {
         const targetX = 80;
         const targetY = -60;
         
-        // 使用动画从当前位置移动到目标位置并缩放
-        this.scene.tweens.add({
-            targets: artifact,
-            x: targetX,
-            y: targetY,
-            scale: 0.3,
-            duration: 300,
-            ease: 'Power2',
-            onComplete: () => {
-                // 动画完成后确保交互性正常
-                if (artifact.input) {
-                    artifact.input.enabled = true;
-                }
-            }
-        });
+        // 使用动画管理器播放附着动画
+        const battleScene = this.scene as any;
+        if (battleScene.animationManager) {
+            battleScene.animationManager.playArtifactAttachAnimation(
+                artifact,
+                targetX,
+                targetY
+            );
+        }
     }
 
     /**

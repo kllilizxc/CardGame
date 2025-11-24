@@ -95,7 +95,8 @@ function describeActions(actions: GongfaAction[]): string {
                     : action.filter.labelsAnyOf && action.filter.labelsAnyOf.length > 0
                         ? action.filter.labelsAnyOf.join('或') + '卡牌'
                         : '卡牌';
-                return `从牌库检索${amountText}${weaponText}`;
+                const destinationText = action.destination === 'DiscardPile' ? '加入弃牌堆' : '';
+                return `从牌库检索${amountText}${weaponText}${destinationText}`;
             }
             case EffectActionType.ImmediateAttack: {
                 const targetText = action.target === 'allEnemies' ? '所有敌人' : '单个敌人';
