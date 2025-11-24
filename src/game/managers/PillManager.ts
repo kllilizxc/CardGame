@@ -130,81 +130,15 @@ export class PillManager {
         this.battleContext.battleLog.addLog(`使用了【${pill.name}】`);
 
         // 播放使用动画和特效
-        this.playUseEffect(target, () => {
+        this.battleContext.effectManager.playPillUseEffect(target, () => {
             // 应用效果
             this.applyPillEffects(pill, target);
 
             // 从槽位移除
             this.removePill(slotIndex);
-
-            // 触发效果应用检查
-            this.scene.events.emit('effectApplied');
         });
 
         return true;
-    }
-
-    /**
-     * 播放丹药使用特效
-     */
-    private playUseEffect(target: CardSprite | 'player' | undefined, onComplete: () => void): void {
-        const { width, height } = this.scene.scale;
-        
-        // 确定特效位置
-        let effectX: number;
-        let effectY: number;
-        
-        if (target && target !== 'player' && target instanceof CardSprite) {
-            // 如果有目标单位，在目标位置播放
-            effectX = target.x;
-            effectY = target.y;
-        } else {
-            // 玩家或无目标，在下方中央播放
-            effectX = width / 2;
-            effectY = height * 0.85;
-        }
-
-        // 添加光效
-        const light = this.scene.add.circle(effectX, effectY, 0, 0x2ecc71, 0.7);
-        light.setDepth(999);
-        
-        // 扩散光圈
-        this.scene.tweens.add({
-            targets: light,
-            radius: 80,
-            alpha: 0,
-            duration: 500,
-            ease: 'Power2',
-            onComplete: () => {
-                light.destroy();
-            }
-        });
-        
-        // 粒子效果
-        for (let i = 0; i < 8; i++) {
-            const angle = (Math.PI * 2 * i) / 8;
-            const particle = this.scene.add.circle(effectX, effectY, 4, 0x2ecc71, 0.8);
-            particle.setDepth(1000);
-            
-            this.scene.tweens.add({
-                targets: particle,
-                x: effectX + Math.cos(angle) * 60,
-                y: effectY + Math.sin(angle) * 60,
-                alpha: 0,
-                duration: 600,
-                ease: 'Power2',
-                onComplete: () => {
-                    particle.destroy();
-                }
-            });
-        }
-        
-        // 延迟后执行回调
-        this.scene.time.delayedCall(300, () => {
-            if (onComplete) {
-                onComplete();
-            }
-        });
     }
 
     /**
@@ -271,7 +205,7 @@ export class PillManager {
         this.battleContext.battleLog.addLog(`玩家回复了${amount}点生命值`);
 
         // 显示治疗特效
-        this.showHealEffect();
+        this.battleContext.effectManager.showHealEffect();
     }
 
     /**
@@ -283,8 +217,10 @@ export class PillManager {
 
         if (value > 0) {
             this.battleContext.battleLog.addLog(`【${cardData.name}】回复了${value}点生命`);
+            this.battleContext.effectManager.showHealEffect(unit.x, unit.y);
         } else {
             this.battleContext.battleLog.addLog(`【${cardData.name}】受到${-value}点伤害`);
+            this.battleContext.effectManager.showDamageEffect(unit);
         }
 
         unit.updateStats();
@@ -300,6 +236,13 @@ export class PillManager {
         const durationText = duration > 0 ? `（持续${duration}回合）` : '';
         this.battleContext.battleLog.addLog(`【${cardData.name}】攻击力${value > 0 ? '+' : ''}${value}${durationText}`);
 
+        // 显示增益/减益特效
+        if (value > 0) {
+            this.battleContext.effectManager.showBuffEffect(unit);
+        } else {
+            this.battleContext.effectManager.showDebuffEffect(unit);
+        }
+
         unit.updateStats();
 
         // TODO: 如果有duration，需要在回合结束后移除效果
@@ -311,41 +254,5 @@ export class PillManager {
     private drawCards(count: number): void {
         this.scene.events.emit('drawCardsFromPill', count);
         this.battleContext.battleLog.addLog(`抽取${count}张卡牌`);
-    }
-
-    /**
-     * 显示治疗特效
-     */
-    private showHealEffect(): void {
-        const { width, height } = this.scene.scale;
-        const centerX = width / 2;
-        const centerY = height * 0.85;
-
-        // 创建治疗粒子效果
-        const particles: Phaser.GameObjects.Arc[] = [];
-        for (let i = 0; i < 8; i++) {
-            const angle = (Math.PI * 2 * i) / 8;
-            const particle = this.scene.add.circle(
-                centerX,
-                centerY,
-                5,
-                0x2ecc71,
-                0.8
-            );
-            particle.setDepth(1000);
-            particles.push(particle);
-
-            this.scene.tweens.add({
-                targets: particle,
-                x: centerX + Math.cos(angle) * 50,
-                y: centerY + Math.sin(angle) * 50 - 30,
-                alpha: 0,
-                duration: 600,
-                ease: 'Power2',
-                onComplete: () => {
-                    particle.destroy();
-                }
-            });
-        }
     }
 }

@@ -269,17 +269,6 @@ export class BattleScene extends Scene {
         // 设置符箓使用逻辑
         this.setupTalismanUsageLogic();
 
-        // 补充战斗结束检查逻辑
-        this.events.on('checkDeadUnits', () => {
-            // 检查战斗是否结束
-            this.combatManager.checkBattleEnd(
-                this.playerHealth,
-                this.enemyField.length,
-                () => this.turnManager.showVictory(() => this.scene.restart()),
-                () => this.turnManager.showDefeat(() => this.scene.restart())
-            );
-        });
-
         this.battleLog.addLog('战斗开始！');
         
         // 开始第一回合

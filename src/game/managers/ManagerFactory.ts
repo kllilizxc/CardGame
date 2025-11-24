@@ -2,6 +2,7 @@ import type { Scene } from 'phaser';
 import type { BattleContext } from '../context/BattleContext';
 import { BattleLog } from '../ui/BattleLog';
 import { BattleAnimationManager } from './BattleAnimationManager';
+import { EffectManager } from './EffectManager';
 import { StatusManager } from './StatusManager';
 import { BattleStatusController } from './BattleStatusController';
 import { CombatManager } from './CombatManager';
@@ -63,13 +64,17 @@ export class ManagerFactory {
         const animationManager = new BattleAnimationManager(scene);
         battleContext.setAnimationManager(animationManager);
 
-        // 3. 初始化 StatusManager (异步)
+        // 3. 初始化 EffectManager
+        const effectManager = new EffectManager(animationManager);
+        battleContext.setEffectManager(effectManager);
+
+        // 4. 初始化 StatusManager (异步)
         const statusManager = new StatusManager();
         await statusManager.initialize();
         console.log('StatusManager initialized');
         battleContext.setStatusManager(statusManager);
 
-        // 4. 初始化 BattleStatusController
+        // 5. 初始化 BattleStatusController
         const battleStatusController = new BattleStatusController(
             statusManager,
             battleLog,
@@ -77,31 +82,31 @@ export class ManagerFactory {
         );
         battleContext.setBattleStatusController(battleStatusController);
 
-        // 5. 初始化 CombatManager
+        // 6. 初始化 CombatManager
         const combatManager = new CombatManager(battleContext);
         battleContext.setCombatManager(combatManager);
 
-        // 6. 初始化 CardManager
+        // 7. 初始化 CardManager
         const cardManager = new CardManager(scene, battleLog, config.cardScale);
         cardManager.setLayout(config.layout);
         cardManager.setAnimationManager(animationManager);
         battleContext.setCardManager(cardManager);
 
-        // 7. 初始化 UnitEffectManager
+        // 8. 初始化 UnitEffectManager
         const unitEffectManager = new UnitEffectManager(
             battleContext,
             config.gongfaData || []
         );
 
-        // 8. 初始化 TurnManager
+        // 9. 初始化 TurnManager
         const turnManager = new TurnManager(scene, battleContext);
         battleContext.setTurnManager(turnManager);
 
-        // 9. 初始化 BattleStateChecker
+        // 10. 初始化 BattleStateChecker
         const battleStateChecker = new BattleStateChecker(scene, battleContext);
         battleContext.setBattleStateChecker(battleStateChecker);
 
-        // 10. 初始化 BattleTickManager
+        // 11. 初始化 BattleTickManager
         const battleTickManager = new BattleTickManager(
             scene,
             battleContext,
@@ -116,7 +121,7 @@ export class ManagerFactory {
         const talismanManager = new TalismanManager(scene, battleContext);
         const fieldManager = new FieldManager(scene, battleContext);
         const pillManager = new PillManager(scene, battleContext, 3);
-        const sacrificeManager = new SacrificeManager(scene, battleContext);
+        const sacrificeManager = new SacrificeManager(battleContext);
 
         const eventManager = new BattleEventManager(
             scene,

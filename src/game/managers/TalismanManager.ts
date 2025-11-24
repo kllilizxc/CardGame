@@ -143,9 +143,6 @@ export class TalismanManager {
                     );
                 });
             }
-
-            // 效果应用完成后，触发通用的效果检查事件
-            this.scene.events.emit('effectApplied');
         });
     }
 
@@ -157,34 +154,7 @@ export class TalismanManager {
         target: CardSprite,
         onComplete: () => void
     ): void {
-
-        // 符箓飞向目标
-        this.scene.tweens.add({
-            targets: talisman,
-            x: target.x,
-            y: target.y,
-            scale: 0.5,
-            alpha: 0.8,
-            duration: 300,
-            ease: 'Power2',
-            onComplete: () => {
-                // 创建爆炸效果
-                const explosion = this.scene.add.circle(target.x, target.y, 30, 0xff6b6b, 0.8);
-                explosion.setDepth(1500);
-
-                this.scene.tweens.add({
-                    targets: explosion,
-                    scale: 2,
-                    alpha: 0,
-                    duration: 300,
-                    ease: 'Power2',
-                    onComplete: () => {
-                        explosion.destroy();
-                        if (onComplete) onComplete();
-                    }
-                });
-            }
-        });
+        this.battleContext.effectManager.playTalismanUseAnimation(talisman, target, onComplete);
     }
 
     /**

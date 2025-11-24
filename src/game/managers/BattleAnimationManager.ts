@@ -1,5 +1,5 @@
 import { Scene } from 'phaser';
-import type { CardSprite } from '../objects/CardSprite';
+import { CardSprite } from '../objects/CardSprite';
 import type { ArtifactSprite } from '../objects/ArtifactSprite';
 import type { TalismanSprite } from '../objects/TalismanSprite';
 import { CardSpriteFactory } from '../factories/CardSpriteFactory';
@@ -716,6 +716,487 @@ export class BattleAnimationManager {
                 card.destroy();
                 if (onComplete) onComplete();
             }
+        });
+    }
+
+    /**
+     * 播放丹药使用特效
+     */
+    public playPillUseEffect(
+        target: CardSprite | 'player' | undefined,
+        onComplete?: () => void
+    ): void {
+        const { width, height } = this.scene.scale;
+        
+        // 确定特效位置
+        let effectX: number;
+        let effectY: number;
+        
+        if (target && target !== 'player' && target instanceof CardSprite) {
+            effectX = target.x;
+            effectY = target.y;
+        } else {
+            effectX = width / 2;
+            effectY = height * 0.85;
+        }
+
+        // 添加光效
+        const light = this.scene.add.circle(effectX, effectY, 0, 0x2ecc71, 0.7);
+        light.setDepth(999);
+        
+        this.addTweens({
+            targets: light,
+            radius: 80,
+            alpha: 0,
+            duration: 500,
+            ease: 'Power2',
+            onComplete: () => {
+                light.destroy();
+            }
+        });
+        
+        // 粒子效果
+        for (let i = 0; i < 8; i++) {
+            const angle = (Math.PI * 2 * i) / 8;
+            const particle = this.scene.add.circle(effectX, effectY, 4, 0x2ecc71, 0.8);
+            particle.setDepth(1000);
+            
+            this.addTweens({
+                targets: particle,
+                x: effectX + Math.cos(angle) * 60,
+                y: effectY + Math.sin(angle) * 60,
+                alpha: 0,
+                duration: 600,
+                ease: 'Power2',
+                onComplete: () => {
+                    particle.destroy();
+                }
+            });
+        }
+        
+        // 延迟后执行回调
+        if (onComplete) {
+            this.scene.time.delayedCall(300, onComplete);
+        }
+    }
+
+    /**
+     * 显示治疗特效
+     */
+    public showHealEffect(
+        x?: number,
+        y?: number,
+        color: number = 0x2ecc71
+    ): void {
+        const { width, height } = this.scene.scale;
+        const centerX = x ?? width / 2;
+        const centerY = y ?? height * 0.85;
+
+        for (let i = 0; i < 8; i++) {
+            const angle = (Math.PI * 2 * i) / 8;
+            const particle = this.scene.add.circle(centerX, centerY, 5, color, 0.8);
+            particle.setDepth(1000);
+
+            this.addTweens({
+                targets: particle,
+                x: centerX + Math.cos(angle) * 50,
+                y: centerY + Math.sin(angle) * 50 - 30,
+                alpha: 0,
+                duration: 600,
+                ease: 'Power2',
+                onComplete: () => {
+                    particle.destroy();
+                }
+            });
+        }
+    }
+
+    /**
+     * 显示伤害特效
+     */
+    public showDamageEffect(target: CardSprite, color: number = 0xe74c3c): void {
+        // 闪烁效果
+        this.addTweens({
+            targets: target,
+            alpha: 0.3,
+            duration: 100,
+            yoyo: true,
+            repeat: 2
+        });
+
+        // 粒子爆炸效果
+        for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI * 2 * i) / 6;
+            const particle = this.scene.add.circle(target.x, target.y, 3, color, 0.9);
+            particle.setDepth(1000);
+            
+            this.addTweens({
+                targets: particle,
+                x: target.x + Math.cos(angle) * 40,
+                y: target.y + Math.sin(angle) * 40,
+                alpha: 0,
+                duration: 400,
+                ease: 'Power2',
+                onComplete: () => {
+                    particle.destroy();
+                }
+            });
+        }
+    }
+
+    /**
+     * 显示增益特效
+     */
+    public showBuffEffect(target: CardSprite, color: number = 0xf39c12): void {
+        // 光环效果
+        const ring = this.scene.add.circle(target.x, target.y, 30, color, 0);
+        ring.setStrokeStyle(3, color, 0.8);
+        ring.setDepth(999);
+
+        this.addTweens({
+            targets: ring,
+            radius: 60,
+            alpha: 0,
+            duration: 500,
+            ease: 'Power2',
+            onComplete: () => {
+                ring.destroy();
+            }
+        });
+
+        // 上升粒子
+        for (let i = 0; i < 5; i++) {
+            const offsetX = (Math.random() - 0.5) * 40;
+            const particle = this.scene.add.circle(
+                target.x + offsetX,
+                target.y + 30,
+                3,
+                color,
+                0.8
+            );
+            particle.setDepth(1000);
+
+            this.addTweens({
+                targets: particle,
+                y: target.y - 40,
+                alpha: 0,
+                duration: 800,
+                delay: i * 100,
+                ease: 'Power2',
+                onComplete: () => {
+                    particle.destroy();
+                }
+            });
+        }
+    }
+
+    /**
+     * 显示减益特效
+     */
+    public showDebuffEffect(target: CardSprite, color: number = 0x9b59b6): void {
+        // 下沉粒子
+        for (let i = 0; i < 5; i++) {
+            const offsetX = (Math.random() - 0.5) * 40;
+            const particle = this.scene.add.circle(
+                target.x + offsetX,
+                target.y - 30,
+                3,
+                color,
+                0.8
+            );
+            particle.setDepth(1000);
+
+            this.addTweens({
+                targets: particle,
+                y: target.y + 40,
+                alpha: 0,
+                duration: 800,
+                delay: i * 100,
+                ease: 'Power2',
+                onComplete: () => {
+                    particle.destroy();
+                }
+            });
+        }
+    }
+
+    /**
+     * 显示爆炸特效
+     */
+    public showExplosionEffect(
+        x: number,
+        y: number,
+        color: number = 0xe67e22,
+        radius: number = 60
+    ): void {
+        // 中心闪光
+        const flash = this.scene.add.circle(x, y, 10, 0xffffff, 1);
+        flash.setDepth(1001);
+
+        this.addTweens({
+            targets: flash,
+            radius: 20,
+            alpha: 0,
+            duration: 200,
+            ease: 'Power2',
+            onComplete: () => {
+                flash.destroy();
+            }
+        });
+
+        // 爆炸波纹
+        const wave = this.scene.add.circle(x, y, 0, color, 0.6);
+        wave.setDepth(1000);
+
+        this.addTweens({
+            targets: wave,
+            radius: radius,
+            alpha: 0,
+            duration: 400,
+            ease: 'Power2',
+            onComplete: () => {
+                wave.destroy();
+            }
+        });
+
+        // 爆炸粒子
+        for (let i = 0; i < 12; i++) {
+            const angle = (Math.PI * 2 * i) / 12;
+            const particle = this.scene.add.circle(x, y, 4, color, 0.9);
+            particle.setDepth(1000);
+            
+            this.addTweens({
+                targets: particle,
+                x: x + Math.cos(angle) * radius,
+                y: y + Math.sin(angle) * radius,
+                alpha: 0,
+                duration: 500,
+                ease: 'Power2',
+                onComplete: () => {
+                    particle.destroy();
+                }
+            });
+        }
+    }
+
+    /**
+     * 显示文字飘动效果
+     */
+    public showFloatingText(
+        x: number,
+        y: number,
+        text: string,
+        color: string = '#ffffff',
+        fontSize: number = 24
+    ): void {
+        const textObj = this.scene.add.text(x, y, text, {
+            fontSize: `${fontSize}px`,
+            color: color,
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4
+        });
+        textObj.setOrigin(0.5);
+        textObj.setDepth(1002);
+
+        this.addTweens({
+            targets: textObj,
+            y: y - 50,
+            alpha: 0,
+            duration: 1000,
+            ease: 'Power2',
+            onComplete: () => {
+                textObj.destroy();
+            }
+        });
+    }
+
+    /**
+     * 播放献祭动画
+     */
+    public playSacrificeAnimation(
+        sacrificeTargets: CardSprite[],
+        onComplete: () => void
+    ): void {
+        const { width, height } = this.scene.scale;
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        let completedCount = 0;
+        const totalCount = sacrificeTargets.length;
+
+        sacrificeTargets.forEach((unit, index) => {
+            // 单位飞向中心并消失
+            this.addTweens({
+                targets: unit,
+                x: centerX,
+                y: centerY,
+                scale: unit.scale * 0.3,
+                alpha: 0,
+                duration: 600,
+                delay: index * 100,
+                ease: 'Power2',
+                onComplete: () => {
+                    completedCount++;
+                    if (completedCount === totalCount && onComplete) {
+                        onComplete();
+                    }
+                }
+            });
+        });
+
+        // 添加献祭光效
+        this.showSacrificeEffect(centerX, centerY, totalCount);
+    }
+
+    /**
+     * 显示献祭特效
+     */
+    public showSacrificeEffect(x: number, y: number, count: number): void {
+        // 紫色献祭光环
+        const circle = this.scene.add.circle(x, y, 0, 0x9b59b6, 0.6);
+        circle.setDepth(999);
+
+        this.addTweens({
+            targets: circle,
+            radius: 150,
+            alpha: 0,
+            duration: 800,
+            ease: 'Power2',
+            onComplete: () => {
+                circle.destroy();
+            }
+        });
+
+        // 粒子效果
+        for (let i = 0; i < count * 8; i++) {
+            const angle = (Math.PI * 2 * i) / (count * 8);
+            const particle = this.scene.add.circle(x, y, 3, 0x9b59b6, 0.8);
+            particle.setDepth(1000);
+
+            this.addTweens({
+                targets: particle,
+                x: x + Math.cos(angle) * 120,
+                y: y + Math.sin(angle) * 120,
+                alpha: 0,
+                duration: 600,
+                ease: 'Power2',
+                onComplete: () => {
+                    particle.destroy();
+                }
+            });
+        }
+    }
+
+    /**
+     * 播放符箓使用动画
+     */
+    public playTalismanUseAnimation(
+        talisman: any,
+        target: CardSprite,
+        onComplete: () => void
+    ): void {
+        // 符箓飞向目标
+        this.addTweens({
+            targets: talisman,
+            x: target.x,
+            y: target.y,
+            scale: 0.5,
+            alpha: 0.8,
+            duration: 300,
+            ease: 'Power2',
+            onComplete: () => {
+                // 创建爆炸效果
+                const explosion = this.scene.add.circle(target.x, target.y, 30, 0xff6b6b, 0.8);
+                explosion.setDepth(1500);
+
+                this.addTweens({
+                    targets: explosion,
+                    scale: 2,
+                    alpha: 0,
+                    duration: 300,
+                    ease: 'Power2',
+                    onComplete: () => {
+                        explosion.destroy();
+                        if (onComplete) onComplete();
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * 显示回合切换动画
+     */
+    public showTurnAnimation(text: string, color: number, onComplete: () => void): void {
+        const { width, height } = this.scene.scale;
+        const fontSize = Math.floor(height * 0.08) + 'px';
+
+        // 创建遮罩
+        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.5);
+        overlay.setDepth(2500);
+        overlay.setAlpha(0);
+
+        // 创建文字
+        const turnText = this.scene.add.text(width / 2, height / 2, text, {
+            fontSize: fontSize,
+            color: '#' + color.toString(16).padStart(6, '0'),
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 8
+        }).setOrigin(0.5);
+        turnText.setDepth(2501);
+        turnText.setScale(0);
+
+        // 动画序列
+        this.addTweens({
+            targets: overlay,
+            alpha: 1,
+            duration: 200,
+            ease: 'Power2'
+        });
+
+        this.addTweens({
+            targets: turnText,
+            scale: 1.2,
+            duration: 300,
+            ease: 'Back.easeOut',
+            onComplete: () => {
+                // 停留一会儿
+                this.scene.time.delayedCall(600, () => {
+                    // 淡出
+                    this.addTweens({
+                        targets: [overlay, turnText],
+                        alpha: 0,
+                        duration: 300,
+                        ease: 'Power2',
+                        onComplete: () => {
+                            overlay.destroy();
+                            turnText.destroy();
+                            onComplete();
+                        }
+                    });
+                });
+            }
+        });
+    }
+
+    /**
+     * 卡牌返回原始位置动画
+     */
+    public returnCardToPosition(
+        card: any,
+        targetX: number,
+        targetY: number,
+        onComplete?: () => void
+    ): void {
+        this.addTweens({
+            targets: card,
+            x: targetX,
+            y: targetY,
+            duration: 300,
+            ease: 'Back.easeOut',
+            onComplete: onComplete
         });
     }
 }

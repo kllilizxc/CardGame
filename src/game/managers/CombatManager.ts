@@ -81,11 +81,15 @@ export class CombatManager {
 
         // 在所有攻击完成后调用回调
         if (onComplete) {
+            const onCompleteWithTick = () => {
+                onComplete!()
+                this.battleContext.battleTickManager.tick()
+            }
             if (delay > 0) {
-                this.battleContext.scene.time.delayedCall(delay + 200, onComplete);
+                this.battleContext.scene.time.delayedCall(delay + 200, onCompleteWithTick);
             } else {
                 // 如果没有任何攻击动画，立即调用回调
-                this.battleContext.scene.time.delayedCall(100, onComplete);
+                this.battleContext.scene.time.delayedCall(100, onCompleteWithTick);
             }
         }
 

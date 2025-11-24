@@ -1,4 +1,3 @@
-import { Scene } from 'phaser';
 import type { CardSprite } from '../objects/CardSprite';
 import type { UnitCard } from '@data/types/cards/unit';
 import type { BattleContext } from '../context/BattleContext';
@@ -13,14 +12,12 @@ import { getUnitStar } from '../utils/RealmHelper';
  * - 3 星及以上需要献祭 1 张至少 (目标星级-1) 星的单位卡
  */
 export class SacrificeManager {
-    private scene: Scene;
     private battleContext: BattleContext;
     
     // 配置参数
     private readonly freeStarThreshold: number; // 免费召唤的星级上限（1-2星）
 
-    constructor(scene: Scene, battleContext: BattleContext, freeStarThreshold: number = 2) {
-        this.scene = scene;
+    constructor(battleContext: BattleContext, freeStarThreshold: number = 2) {
         this.battleContext = battleContext;
         this.freeStarThreshold = freeStarThreshold;
     }
@@ -134,74 +131,7 @@ export class SacrificeManager {
         sacrificeTargets: CardSprite[],
         onComplete: () => void
     ): void {
-        const { width, height } = this.scene.scale;
-        const centerX = width / 2;
-        const centerY = height / 2;
-
-        let completedCount = 0;
-        const totalCount = sacrificeTargets.length;
-
-        sacrificeTargets.forEach((unit, index) => {
-            // 单位飞向中心并消失
-            this.scene.tweens.add({
-                targets: unit,
-                x: centerX,
-                y: centerY,
-                scale: unit.scale * 0.3,
-                alpha: 0,
-                duration: 600,
-                delay: index * 100,
-                ease: 'Power2',
-                onComplete: () => {
-                    completedCount++;
-                    if (completedCount === totalCount && onComplete) {
-                        onComplete();
-                    }
-                }
-            });
-        });
-
-        // 添加献祭光效
-        this.createSacrificeEffect(centerX, centerY, totalCount);
-    }
-
-    /**
-     * 创建献祭特效
-     */
-    private createSacrificeEffect(x: number, y: number, count: number): void {
-        // 紫色献祭光环
-        const circle = this.scene.add.circle(x, y, 0, 0x9b59b6, 0.6);
-        circle.setDepth(999);
-
-        this.scene.tweens.add({
-            targets: circle,
-            radius: 150,
-            alpha: 0,
-            duration: 800,
-            ease: 'Power2',
-            onComplete: () => {
-                circle.destroy();
-            }
-        });
-
-        // 粒子效果
-        for (let i = 0; i < count * 8; i++) {
-            const angle = (Math.PI * 2 * i) / (count * 8);
-            const particle = this.scene.add.circle(x, y, 3, 0x9b59b6, 0.8);
-            particle.setDepth(1000);
-
-            this.scene.tweens.add({
-                targets: particle,
-                x: x + Math.cos(angle) * 120,
-                y: y + Math.sin(angle) * 120,
-                alpha: 0,
-                duration: 600,
-                ease: 'Power2',
-                onComplete: () => {
-                    particle.destroy();
-                }
-            });
-        }
+        this.battleContext.effectManager.playSacrificeAnimation(sacrificeTargets, onComplete);
     }
 
     /**

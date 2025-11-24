@@ -8,6 +8,7 @@ import type { BattleStatusController } from '../managers/BattleStatusController'
 import type { BattleTickManager } from '../managers/BattleTickManager';
 import type { BattleStateChecker } from '../managers/BattleStateChecker';
 import type { TurnManager } from '../managers/TurnManager';
+import type { EffectManager } from '../managers/EffectManager';
 
 /**
  * 战斗上下文 - 集中管理所有通用的管理器引用
@@ -22,6 +23,7 @@ export class BattleContext {
     
     // 动画和战斗管理器
     public animationManager!: BattleAnimationManager;
+    public effectManager!: EffectManager;
     public combatManager!: CombatManager;
     public cardManager!: CardManager;
     
@@ -50,6 +52,13 @@ export class BattleContext {
      */
     public setAnimationManager(animationManager: BattleAnimationManager): void {
         this.animationManager = animationManager;
+    }
+
+    /**
+     * 设置特效管理器
+     */
+    public setEffectManager(effectManager: EffectManager): void {
+        this.effectManager = effectManager;
     }
 
     /**
@@ -108,6 +117,7 @@ export class BattleContext {
         return !!(
             this.battleLog &&
             this.animationManager &&
+            this.effectManager &&
             this.combatManager &&
             this.cardManager &&
             this.statusManager &&

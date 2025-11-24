@@ -42,9 +42,6 @@ export class BattleTickManager {
         this.getEnemyField = fieldAccessors.getEnemyField;
         this.setPlayerField = fieldAccessors.setPlayerField;
         this.setEnemyField = fieldAccessors.setEnemyField;
-        
-        // 注册默认的死亡检查逻辑
-        this.registerDeathCheck();
     }
 
     /**
@@ -67,61 +64,63 @@ export class BattleTickManager {
     /**
      * 执行 tick - 在关键时间点调用
      * 应该在动画完成、效果执行完毕等异步操作的回调中调用
+     * 
+     * Tick 执行顺序：
+     * 1. 移除死亡单位
+     * 2. 检查战斗胜负
+     * 3. 执行所有注册的回调
      */
     public tick(): void {
-        // 执行所有注册的回调
+        const playerField = this.getPlayerField();
+        const enemyField = this.getEnemyField();
+        
+        // 1. 检查并移除死亡单位
+        const hasDeadUnits = this.battleContext.combatManager.hasDeadUnits(playerField, enemyField);
+        
+        if (hasDeadUnits) {
+            console.log('[BattleTickManager] 检测到死亡单位，准备移除...');
+            
+            const result = this.battleContext.combatManager.removeDeadUnits(
+                playerField,
+                enemyField,
+                (newPlayerField: CardSprite[], newEnemyField: CardSprite[]) => {
+                    this.setPlayerField(newPlayerField);
+                    this.setEnemyField(newEnemyField);
+                    this.battleContext.cardManager.arrangePlayerField(newPlayerField);
+                    this.battleContext.cardManager.arrangeEnemyField(newEnemyField);
+                }
+            );
+            
+            this.setPlayerField(result.playerField);
+            this.setEnemyField(result.enemyField);
+        }
+        
+        // 2. 检查战斗状态（包括胜负条件）
+        const battleScene = this.scene as any;
+        if (battleScene.playerHealth !== undefined) {
+            const currentPlayerField = this.getPlayerField();
+            const currentEnemyField = this.getEnemyField();
+            
+            this.battleContext.battleStateChecker.checkBattleState(
+                currentPlayerField,
+                currentEnemyField,
+                battleScene.playerHealth,
+                () => {}, // onUnitRemoved 已经在上面处理
+                (victory: boolean) => {
+                    // 战斗结束回调
+                    if (battleScene.handleBattleEnd) {
+                        battleScene.handleBattleEnd(victory);
+                    }
+                }
+            );
+        }
+        
+        // 3. 执行所有注册的回调
         this.tickCallbacks.forEach(callback => {
             try {
                 callback();
             } catch (error) {
                 console.error('Tick callback error:', error);
-            }
-        });
-    }
-
-    /**
-     * 注册死亡检查逻辑
-     */
-    private registerDeathCheck(): void {
-        this.registerCallback(() => {
-            const playerField = this.getPlayerField();
-            const enemyField = this.getEnemyField();
-            
-            const hasDeadUnits = this.battleContext.combatManager.hasDeadUnits(playerField, enemyField);
-            
-            if (hasDeadUnits) {
-                console.log('[BattleTickManager] 检测到死亡单位，准备移除...');
-                
-                const result = this.battleContext.combatManager.removeDeadUnits(
-                    playerField,
-                    enemyField,
-                    (newPlayerField: CardSprite[], newEnemyField: CardSprite[]) => {
-                        this.setPlayerField(newPlayerField);
-                        this.setEnemyField(newEnemyField);
-                        this.battleContext.cardManager.arrangePlayerField(newPlayerField);
-                        this.battleContext.cardManager.arrangeEnemyField(newEnemyField);
-                    }
-                );
-                
-                this.setPlayerField(result.playerField);
-                this.setEnemyField(result.enemyField);
-                
-                // 检查战斗状态（包括胜负条件）
-                const battleScene = this.scene as any;
-                if (battleScene.playerHealth !== undefined) {
-                    this.battleContext.battleStateChecker.checkBattleState(
-                        result.playerField,
-                        result.enemyField,
-                        battleScene.playerHealth,
-                        () => {}, // onUnitRemoved 已经在 removeDeadUnits 中处理
-                        (victory: boolean) => {
-                            // 战斗结束回调
-                            if (battleScene.handleBattleEnd) {
-                                battleScene.handleBattleEnd(victory);
-                            }
-                        }
-                    );
-                }
             }
         });
     }

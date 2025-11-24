@@ -36,56 +36,7 @@ export class TurnManager {
 
     // 显示回合切换动画
     public showTurnAnimation(text: string, color: number, onComplete: () => void): void {
-        const { width, height } = this.scene.scale;
-        const fontSize = Math.floor(height * 0.08) + 'px';
-
-        // 创建遮罩
-        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.5);
-        overlay.setDepth(2500);
-        overlay.setAlpha(0);
-
-        // 创建文字
-        const turnText = this.scene.add.text(width / 2, height / 2, text, {
-            fontSize: fontSize,
-            color: '#' + color.toString(16).padStart(6, '0'),
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 8
-        }).setOrigin(0.5);
-        turnText.setDepth(2501);
-        turnText.setScale(0);
-
-        // 动画序列
-        this.scene.tweens.add({
-            targets: overlay,
-            alpha: 1,
-            duration: 200,
-            ease: 'Power2'
-        });
-
-        this.scene.tweens.add({
-            targets: turnText,
-            scale: 1.2,
-            duration: 300,
-            ease: 'Back.easeOut',
-            onComplete: () => {
-                // 停留一会儿
-                this.scene.time.delayedCall(600, () => {
-                    // 淡出
-                    this.scene.tweens.add({
-                        targets: [overlay, turnText],
-                        alpha: 0,
-                        duration: 300,
-                        ease: 'Power2',
-                        onComplete: () => {
-                            overlay.destroy();
-                            turnText.destroy();
-                            onComplete();
-                        }
-                    });
-                });
-            }
-        });
+        this.battleContext.effectManager.showTurnAnimation(text, color, onComplete);
     }
 
     // 显示胜利画面
@@ -157,15 +108,6 @@ export class TurnManager {
             context.enemyField
         );
 
-        // 检查战场状态
-        this.battleContext.battleStateChecker.checkBattleState(
-            context.playerField,
-            context.enemyField,
-            context.playerHealth,
-            context.onRemoveUnit,
-            () => {} // 回合结束阶段不需要额外处理
-        );
-
         // 2. 等待状态动画完成后进入战斗阶段
         this.scene.time.delayedCall(800, () => {
             this.battleContext.battleLog.addLog('═══ 战斗阶段 ═══');
@@ -184,9 +126,6 @@ export class TurnManager {
             context.enemyField,
             context.onPlayerDamaged,
             () => {
-                // 攻击完成后触发通用效果检查
-                this.scene.events.emit('effectApplied');
-
                 // 切换到敌人回合
                 context.onSetIsPlayerTurn(false);
 
@@ -214,15 +153,6 @@ export class TurnManager {
             context.enemyField
         );
 
-        // 检查战场状态
-        this.battleContext.battleStateChecker.checkBattleState(
-            context.playerField,
-            context.enemyField,
-            context.playerHealth,
-            context.onRemoveUnit,
-            () => {} // 敌人回合开始不需要额外处理
-        );
-
         // 2. 等待状态动画完成后进入战斗
         this.scene.time.delayedCall(800, () => {
             this.executeEnemyTurn(context);
@@ -239,28 +169,16 @@ export class TurnManager {
             context.enemyField,
             context.onPlayerDamaged,
             () => {
-                // 攻击完成后触发通用效果检查
-                this.scene.events.emit('effectApplied');
-
                 // 切换到玩家回合并增加回合数
                 context.onSetIsPlayerTurn(true);
                 context.onSetTurnNumber(context.turnNumber + 1);
 
                 // 等待死亡动画完成后，先触发敌人回合结束状态
                 this.scene.time.delayedCall(600, () => {
-                    context.battleLog.addLog('═══ 敌人回合结束 ═══');
-                    context.battleStatusController.triggerTurnEndStatuses(
+                    this.battleContext.battleLog.addLog('═══ 敌人回合结束 ═══');
+                    this.battleContext.battleStatusController.triggerTurnEndStatuses(
                         context.playerField,
                         context.enemyField
-                    );
-
-                    // 检查战场状态
-                    context.battleStateChecker.checkBattleState(
-                        context.playerField,
-                        context.enemyField,
-                        context.playerHealth,
-                        context.onRemoveUnit,
-                        () => {} // 敌人回合结束不需要额外处理
                     );
 
                     // 等待状态动画完成后切换到玩家回合
@@ -285,19 +203,10 @@ export class TurnManager {
         context.onEnablePlayerInteraction();
 
         // 1. 触发回合开始状态
-        context.battleLog.addLog(`═══ 回合 ${context.turnNumber} 开始 ═══`);
-        context.battleStatusController.triggerTurnStartStatuses(
+        this.battleContext.battleLog.addLog(`═══ 回合 ${context.turnNumber} 开始 ═══`);
+        this.battleContext.battleStatusController.triggerTurnStartStatuses(
             context.playerField,
             context.enemyField
-        );
-
-        // 检查战场状态
-        context.battleStateChecker.checkBattleState(
-            context.playerField,
-            context.enemyField,
-            context.playerHealth,
-            context.onRemoveUnit,
-            () => {} // 玩家回合开始不需要额外处理
         );
 
         // 2. 等待状态动画完成后抽卡

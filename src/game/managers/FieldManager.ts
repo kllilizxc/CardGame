@@ -202,11 +202,6 @@ export class FieldManager {
                 this.applyAction(action, unit);
             });
         });
-
-        // 触发效果应用事件
-        if (targetUnits.length > 0) {
-            this.scene.events.emit('effectApplied');
-        }
     }
 
     /**
@@ -232,5 +227,7 @@ export class FieldManager {
                 unit.updateStats();
                 break;
         }
+
+        this.battleContext.battleTickManager.tick();
     }
 }

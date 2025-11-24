@@ -162,13 +162,24 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      * 返回原始位置
      */
     public returnToOriginalPosition(): void {
-        this.scene.tweens.add({
-            targets: this,
-            x: this.originalX,
-            y: this.originalY,
-            duration: 300,
-            ease: 'Back.easeOut'
-        });
+        // 尝试通过 BattleScene 获取 battleContext
+        const battleScene = this.scene as any;
+        if (battleScene.battleContext?.effectManager) {
+            battleScene.battleContext.effectManager.returnCardToPosition(
+                this,
+                this.originalX,
+                this.originalY
+            );
+        } else {
+            // 降级处理：如果没有 battleContext，直接使用 tweens
+            this.scene.tweens.add({
+                targets: this,
+                x: this.originalX,
+                y: this.originalY,
+                duration: 300,
+                ease: 'Back.easeOut'
+            });
+        }
     }
 
     /**

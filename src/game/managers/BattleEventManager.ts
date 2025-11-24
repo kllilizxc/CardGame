@@ -67,40 +67,9 @@ export class BattleEventManager {
      * 初始化所有事件监听
      */
     public setupAllEvents(): void {
-        this.setupCombatEvents();
         this.setupTalismanEvents();
         this.setupFieldEvents();
         this.setupCleanupEvents();
-    }
-
-    /**
-     * 设置战斗相关事件
-     */
-    private setupCombatEvents(): void {
-        // 效果应用完成事件
-        this.scene.events.on('effectApplied', () => {
-            if (this.battleContext.combatManager.hasDeadUnits(this.playerField, this.enemyField)) {
-                this.scene.events.emit('checkDeadUnits');
-            }
-        });
-
-        // 死亡检查事件
-        this.scene.events.on('checkDeadUnits', () => {
-            const result = this.battleContext.combatManager.removeDeadUnits(
-                this.playerField,
-                this.enemyField,
-                (newPlayerField: CardSprite[], newEnemyField: CardSprite[]) => {
-                    // 使用过滤后的新数组进行排列
-                    this.battleContext.cardManager.arrangePlayerField(newPlayerField);
-                    this.battleContext.cardManager.arrangeEnemyField(newEnemyField);
-                }
-            );
-            
-            this.playerField.length = 0;
-            this.playerField.push(...result.playerField);
-            this.enemyField.length = 0;
-            this.enemyField.push(...result.enemyField);
-        });
     }
 
     /**
@@ -274,8 +243,6 @@ export class BattleEventManager {
      */
     private setupCleanupEvents(): void {
         this.scene.events.once('shutdown', () => {
-            this.scene.events.removeAllListeners('effectApplied');
-            this.scene.events.removeAllListeners('checkDeadUnits');
             this.scene.events.removeAllListeners('talismanDragStart');
             this.scene.events.removeAllListeners('talismanDragging');
             this.scene.events.removeAllListeners('talismanDragEnd');
@@ -283,7 +250,6 @@ export class BattleEventManager {
             this.scene.events.removeAllListeners('cardDragEnd');
             this.scene.events.removeAllListeners('showCardPreview');
             this.scene.events.removeAllListeners('hideCardPreview');
-            this.scene.events.removeAllListeners('update');
         });
     }
 
