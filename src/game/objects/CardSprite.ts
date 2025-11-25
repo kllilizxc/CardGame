@@ -3,7 +3,7 @@ import type { UnitCard } from '@data/types/cards/unit';
 import type { Gongfa } from '@data/types/gongfa';
 import type { StatusInstance } from '@data/types/status';
 import { BaseCardSprite } from './BaseCardSprite';
-import { GongfaTooltip } from '../ui/GongfaTooltip';
+import { GongfaTooltip } from '../ui/common/GongfaTooltip';
 import { describeGongfa } from '../utils/GongfaDescriptionBuilder';
 import { getUnitStar, getRealmConfig } from '../utils/RealmHelper';
 import { getStatusDisplayText, getStatusCategoryColor, getStatusFullDescription } from '../utils/StatusHelper';

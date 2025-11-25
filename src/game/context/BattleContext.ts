@@ -1,14 +1,14 @@
 import type { Scene } from 'phaser';
-import type { BattleLog } from '../ui/BattleLog';
-import type { BattleAnimationManager } from '../managers/BattleAnimationManager';
-import type { CombatManager } from '../managers/CombatManager';
-import type { CardManager } from '../managers/CardManager';
-import type { StatusManager } from '../managers/StatusManager';
-import type { BattleStatusController } from '../managers/BattleStatusController';
-import type { BattleTickManager } from '../managers/BattleTickManager';
-import type { BattleStateChecker } from '../managers/BattleStateChecker';
-import type { TurnManager } from '../managers/TurnManager';
-import type { EffectManager } from '../managers/EffectManager';
+import type { BattleLog } from '../ui/battle/BattleLog';
+import type { BattleAnimationManager } from '../managers/battle/BattleAnimationManager';
+import type { CombatManager } from '../managers/battle/CombatManager';
+import type { CardManager } from '../managers/battle/CardManager';
+import type { StatusManager } from '../managers/battle/StatusManager';
+import type { BattleStatusController } from '../managers/battle/BattleStatusController';
+import type { BattleTickManager } from '../managers/battle/BattleTickManager';
+import type { BattleStateChecker } from '../managers/battle/BattleStateChecker';
+import type { TurnManager } from '../managers/battle/TurnManager';
+import type { EffectManager } from '../managers/battle/EffectManager';
 
 /**
  * 战斗上下文 - 集中管理所有通用的管理器引用
