@@ -42,20 +42,22 @@ export class TurnManager {
     // 显示胜利画面
     public showVictory(onRestart: () => void): void {
         const { width, height } = this.scene.scale;
-        
-        // 半透明遮罩
-        this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7).setDepth(1999);
-        
+        const overlayDepth = 10000;
+
+        // 纯黑底遮罩，盖住所有 UI
+        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 1);
+        overlay.setDepth(overlayDepth).setInteractive();
+
         this.scene.add.text(width / 2, height / 2, '胜利！', {
             fontSize: '64px',
             color: '#2ecc71',
             fontStyle: 'bold'
-        }).setOrigin(0.5).setDepth(2000);
+        }).setOrigin(0.5).setDepth(overlayDepth + 1);
 
         this.scene.add.text(width / 2, height / 2 + 80, '点击任意位置重新开始', {
             fontSize: '20px',
             color: '#ffffff'
-        }).setOrigin(0.5).setDepth(2000);
+        }).setOrigin(0.5).setDepth(overlayDepth + 1);
 
         this.scene.input.once('pointerdown', onRestart);
     }
@@ -63,10 +65,10 @@ export class TurnManager {
     // 显示失败画面
     public showDefeat(onRestart: () => void): void {
         const { width, height } = this.scene.scale;
-        
+
         // 半透明遮罩
         this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7).setDepth(1999);
-        
+
         this.scene.add.text(width / 2, height / 2, '失败！', {
             fontSize: '64px',
             color: '#e74c3c',
@@ -89,7 +91,7 @@ export class TurnManager {
             isPlayerTurn: context.isPlayerTurn,
             isProcessingTurn: context.isProcessingTurn
         });
-        
+
         if (!context.isPlayerTurn || context.isProcessingTurn) {
             console.log('endTurn 被拦截：', {
                 reason: !context.isPlayerTurn ? '不是玩家回合' : '正在处理回合'
@@ -109,11 +111,9 @@ export class TurnManager {
         );
 
         // 2. 等待状态动画完成后进入战斗阶段
-        this.scene.time.delayedCall(800, () => {
-            this.battleContext.battleLog.addLog('═══ 战斗阶段 ═══');
-            context.onApplyPlayerTurnEndEffects();
-            this.executePlayerTurn(context);
-        });
+        this.battleContext.battleLog.addLog('═══ 战斗阶段 ═══');
+        context.onApplyPlayerTurnEndEffects();
+        this.executePlayerTurn(context);
     }
 
     /**
@@ -131,8 +131,8 @@ export class TurnManager {
 
                 // 等待死亡动画完成后切换到敌人回合
                 this.scene.time.delayedCall(600, () => {
-                    this.showTurnAnimation('敌人回合', 0xe74c3c, () => {
-                        this.startEnemyTurn(context);
+                this.showTurnAnimation('敌人回合', 0xe74c3c, () => {
+                    this.startEnemyTurn(context);
                     });
                 });
             }
@@ -198,7 +198,7 @@ export class TurnManager {
     public startPlayerTurn(context: TurnManagerContext): void {
         // 重置回合处理标志，允许玩家再次结束回合
         context.onSetIsProcessingTurn(false);
-        
+
         // 启用玩家交互
         context.onEnablePlayerInteraction();
 
@@ -209,9 +209,7 @@ export class TurnManager {
             context.enemyField
         );
 
-        // 2. 等待状态动画完成后抽卡
-        this.scene.time.delayedCall(800, () => {
-            context.onDrawCard();
-        });
+        // 2. 抽卡（立即执行，不再等待）
+        context.onDrawCard();
     }
 }
