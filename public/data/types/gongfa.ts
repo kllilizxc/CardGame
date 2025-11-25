@@ -73,6 +73,7 @@ export enum EffectActionType {
   RecoverCardFromDiscard = 'RecoverCardFromDiscard',
   SearchCardFromDeck = 'SearchCardFromDeck',
   DrawCards = 'DrawCards',
+  DrawAndFilter = 'DrawAndFilter',
   ModifyStats = 'ModifyStats',
   DealDamage = 'DealDamage',
   ApplyStatus = 'ApplyStatus',
@@ -114,6 +115,14 @@ export interface SearchCardFromDeckAction {
 export interface DrawCardsAction {
   type: EffectActionType.DrawCards;
   value: number;
+}
+
+export interface DrawAndFilterAction {
+  type: EffectActionType.DrawAndFilter;
+  amount: number; // 抽取的卡牌数量
+  filter: CardFilter; // 筛选条件
+  matchDestination: EffectActionDestination; // 匹配的卡牌去向
+  nonMatchDestination: EffectActionDestination; // 不匹配的卡牌去向
 }
 
 export interface ModifyStatsAction {
@@ -161,6 +170,7 @@ export type GongfaAction =
   | RecoverCardFromDiscardAction
   | SearchCardFromDeckAction
   | DrawCardsAction
+  | DrawAndFilterAction
   | ModifyStatsAction
   | DealDamageAction
   | ApplyStatusAction

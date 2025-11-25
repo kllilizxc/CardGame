@@ -113,6 +113,17 @@ function describeActions(actions: GongfaAction[]): string {
             }
             case EffectActionType.DrawCards:
                 return `抽${action.value}张牌`;
+            case EffectActionType.DrawAndFilter: {
+                const amountText = action.amount > 1 ? `${action.amount}张` : '1张';
+                const filterText = action.filter.labelsAnyOf && action.filter.labelsAnyOf.length > 0
+                    ? action.filter.labelsAnyOf.join('或')
+                    : action.filter.weaponTypesAnyOf && action.filter.weaponTypesAnyOf.length > 0
+                        ? action.filter.weaponTypesAnyOf.join('或') + '器'
+                        : '特定';
+                const matchDest = action.matchDestination === 'Hand' ? '手牌' : '弃牌堆';
+                const nonMatchDest = action.nonMatchDestination === 'DiscardPile' ? '弃牌堆' : '手牌';
+                return `抽${amountText}牌，其中${filterText}卡牌加入${matchDest}，其余加入${nonMatchDest}`;
+            }
             case EffectActionType.ModifyStats:
                 return '调整单位属性';
             case EffectActionType.DealDamage:

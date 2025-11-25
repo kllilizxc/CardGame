@@ -478,6 +478,27 @@
       "attack": 8,
       "health": 35,
       "gongfaIds": ["gongfa.search_swords_to_discard", "gongfa.sword_heart_slash_aoe"]
+    },
+    {
+      "id": "SX_JYNX_001",
+      "name": "峰主·剑意凝形",
+      "kind": "unit",
+      "description": "剑修宗门的峰主，剑意凝形，能够筛选剑修卡牌并以剑意爆发攻击所有敌人。",
+      "rarity": "epic",
+      "labels": ["剑修", "峰主", "sect_sword_sect"],
+      "limitPerDeck": 1,
+
+      "realmId": "realm_foundation_early",
+      "race": "人族",
+      "linggen": ["金"],
+      "factionId": "sect_sword_sect",
+      "attack": 12,
+      "health": 50,
+      "sacrificeCost": {
+        "minStar": 2,
+        "amount": 1
+      },
+      "gongfaIds": ["gongfa.draw_filter_sword_cultivator", "gongfa.sword_intent_burst_aoe"]
     }
   ]
 }

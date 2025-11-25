@@ -168,6 +168,51 @@
           }
         ]
       }
+    },
+    {
+      "id": "gongfa.draw_filter_sword_cultivator",
+      "name": "剑修筛选",
+      "schema": {
+        "event": {
+          "type": "OnSummon",
+          "side": "Ally"
+        },
+        "actions": [
+          {
+            "type": "DrawAndFilter",
+            "amount": 2,
+            "filter": {
+              "labelsAnyOf": ["剑修"]
+            },
+            "matchDestination": "Hand",
+            "nonMatchDestination": "DiscardPile"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gongfa.sword_intent_burst_aoe",
+      "name": "控剑术·剑意爆发（AOE）",
+      "schema": {
+        "event": {
+          "type": "OnEquipArtifact",
+          "side": "Ally"
+        },
+        "conditions": [
+          {
+            "type": "ArtifactEquipped",
+            "weaponType": "剑",
+            "maxStar": "card.star + 1"
+          }
+        ],
+        "actions": [
+          {
+            "type": "ImmediateAttack",
+            "target": "allEnemies",
+            "damageMultiplier": 0.5
+          }
+        ]
+      }
     }
   ]
 }

@@ -16,6 +16,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
     private selectedUnits: CardSprite[] = [];
     private requiredCount: number = 0;
     private unitHighlights: Map<CardSprite, GameObjects.Graphics> = new Map();
+    private unitOverlays: Map<CardSprite, GameObjects.Rectangle> = new Map();
     
     private onConfirm: ((selected: CardSprite[]) => void) | null = null;
     private onCancel: (() => void) | null = null;
@@ -43,8 +44,8 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         this.add(this.background);
 
         // 标题
-        this.titleText = scene.add.text(width / 2, height * 0.2, '献祭召唤', {
-            fontSize: '32px',
+        this.titleText = scene.add.text(width / 2, height * 0.12, '献祭召唤', {
+            fontSize: '28px',
             color: '#9b59b6',
             fontStyle: 'bold'
         }).setOrigin(0.5);
@@ -53,10 +54,10 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         // 说明文字
         this.instructionText = scene.add.text(
             width / 2,
-            height * 0.28,
+            height * 0.18,
             '请选择要献祭的单位',
             {
-                fontSize: '18px',
+                fontSize: '16px',
                 color: '#ffffff'
             }
         ).setOrigin(0.5);
@@ -65,7 +66,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         // 确认按钮
         this.confirmButton = this.createButton(
             width / 2 - 100,
-            height * 0.75,
+            height * 0.85,
             '确认献祭',
             () => this.handleConfirm()
         );
@@ -74,7 +75,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         // 取消按钮
         this.cancelButton = this.createButton(
             width / 2 + 100,
-            height * 0.75,
+            height * 0.85,
             '取消',
             () => this.handleCancel()
         );
@@ -146,52 +147,57 @@ export class SacrificeSelectionUI extends GameObjects.Container {
 
     /**
      * 设置单位选择交互
+     * 使用透明遮罩层来处理点击，避免干扰卡牌原有的事件
      */
     private setupUnitSelection(): void {
-        // 清除之前的高亮
+        // 清除之前的高亮和遮罩
         this.unitHighlights.forEach(highlight => highlight.destroy());
         this.unitHighlights.clear();
+        this.unitOverlays.forEach(overlay => overlay.destroy());
+        this.unitOverlays.clear();
 
         this.availableUnits.forEach(unit => {
-            // 提升单位深度到UI之上，确保可点击
+            // 提升单位深度到UI之上
             unit.setDepth(5001);
             
-            // 禁用拖拽（保留input配置）
-            (unit.input as any).draggable = false;
+            // 获取卡牌的原始尺寸（不受scale影响）
+            const cardWidth = (unit as any).CARD_WIDTH || 120;
+            const cardHeight = (unit as any).CARD_HEIGHT || 180;
+            const baseScale = (unit as any).getCardBaseScale ? (unit as any).getCardBaseScale() : unit.scaleX;
             
-            // 添加献祭选择专用的点击事件（使用once确保只触发一次，用prependListener确保优先级最高）
-            const sacrificeClickHandler = (pointer: Phaser.Input.Pointer) => {
-                // 阻止默认行为和事件传播
-                if (pointer.event) {
-                    pointer.event.stopPropagation();
-                    pointer.event.preventDefault();
-                }
+            // 创建透明遮罩层（完全透明，但可交互）
+            const overlay = this.scene.add.rectangle(
+                unit.x,
+                unit.y,
+                cardWidth * baseScale,
+                cardHeight * baseScale,
+                0xffffff,
+                0.001 // 几乎完全透明，但必须有一点alpha才能交互
+            );
+            overlay.setDepth(5002); // 在卡牌之上
+            overlay.setInteractive({ useHandCursor: true });
+            
+            // 遮罩层点击事件
+            overlay.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+                pointer.event?.stopPropagation();
                 this.toggleUnitSelection(unit);
-            };
+            });
             
-            const hoverHandler = () => {
+            // 遮罩层悬停事件
+            overlay.on('pointerover', () => {
                 if (!this.selectedUnits.includes(unit)) {
                     this.highlightUnit(unit, 0xffd700, 0.5);
                 }
-            };
+            });
             
-            const outHandler = () => {
+            overlay.on('pointerout', () => {
                 if (!this.selectedUnits.includes(unit)) {
                     this.removeHighlight(unit);
                 }
-            };
+            });
             
-            // 保存处理器以便后续移除
-            (unit as any).__sacrificeHandlers = {
-                click: sacrificeClickHandler,
-                hover: hoverHandler,
-                out: outHandler
-            };
-            
-            // 添加事件监听
-            unit.on('pointerdown', sacrificeClickHandler, unit);
-            unit.on('pointerover', hoverHandler, unit);
-            unit.on('pointerout', outHandler, unit);
+            // 保存遮罩层引用
+            this.unitOverlays.set(unit, overlay);
         });
     }
 
@@ -208,6 +214,17 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         } else {
             // 选择单位
             if (this.selectedUnits.length < this.requiredCount) {
+                // 还没选满，直接添加
+                this.selectedUnits.push(unit);
+                this.highlightUnit(unit, 0x9b59b6, 0.8); // 紫色选中
+            } else {
+                // 已经选满，移除第一个选择的单位，添加新的
+                const firstSelected = this.selectedUnits.shift();
+                if (firstSelected) {
+                    // 恢复第一个单位的高亮为未选中状态
+                    this.removeHighlight(firstSelected);
+                }
+                // 添加新选择的单位
                 this.selectedUnits.push(unit);
                 this.highlightUnit(unit, 0x9b59b6, 0.8); // 紫色选中
             }
@@ -226,17 +243,25 @@ export class SacrificeSelectionUI extends GameObjects.Container {
     private highlightUnit(unit: CardSprite, color: number, alpha: number): void {
         this.removeHighlight(unit);
 
-        const bounds = unit.getBounds();
+        // 获取卡牌的原始尺寸（不受scale影响）
+        const cardWidth = (unit as any).CARD_WIDTH || 120;
+        const cardHeight = (unit as any).CARD_HEIGHT || 180;
+        const baseScale = (unit as any).getCardBaseScale ? (unit as any).getCardBaseScale() : unit.scaleX;
+        
         const highlight = this.scene.add.graphics();
         highlight.lineStyle(4, color, alpha);
+        // 使用固定的内边距，确保所有卡牌高亮宽度一致
+        const width = cardWidth * baseScale;
+        const height = cardHeight * baseScale;
+        
         highlight.strokeRoundedRect(
-            bounds.x,
-            bounds.y,
-            bounds.width,
-            bounds.height,
+            unit.x - width / 2,
+            unit.y - height / 2,
+            width,
+            height,
             8
         );
-        highlight.setDepth(5002); // 高亮在卡片之上
+        highlight.setDepth(5003); // 高亮在遮罩层之上
 
         this.unitHighlights.set(unit, highlight);
     }
@@ -305,24 +330,13 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         this.unitHighlights.forEach(highlight => highlight.destroy());
         this.unitHighlights.clear();
 
-        // 移除单位的交互监听并恢复深度和拖拽功能
+        // 清除所有遮罩层
+        this.unitOverlays.forEach(overlay => overlay.destroy());
+        this.unitOverlays.clear();
+
+        // 恢复单位原始深度（不需要移除事件监听器，因为我们没有修改卡牌的事件）
         this.availableUnits.forEach(unit => {
-            // 移除献祭UI添加的监听器
-            const handlers = (unit as any).__sacrificeHandlers;
-            if (handlers) {
-                unit.off('pointerdown', handlers.click, unit);
-                unit.off('pointerover', handlers.hover, unit);
-                unit.off('pointerout', handlers.out, unit);
-                delete (unit as any).__sacrificeHandlers;
-            }
-            
-            // 恢复单位原始深度
             unit.setDepth(0);
-            
-            // 恢复拖拽功能
-            if (unit.input) {
-                (unit.input as any).draggable = true;
-            }
         });
 
         this.availableUnits = [];

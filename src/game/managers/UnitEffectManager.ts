@@ -10,6 +10,7 @@ import type {
     EffectSchema,
     RecoverCardFromDiscardAction,
     SearchCardFromDeckAction,
+    DrawAndFilterAction,
     ImmediateAttackAction,
     GainArmorAction,
     ArtifactEquippedCondition,
@@ -28,6 +29,7 @@ export interface GongfaRuntimeContext {
     playerField: CardSprite[];
     enemyField?: CardSprite[];
     discardPile: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[];
+    deck?: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[]; // 卡组，用于抽牌筛选
     hand: AnyHandSprite[];
     discardPileButton?: Phaser.GameObjects.Rectangle;
     cardScale: number;
@@ -236,6 +238,12 @@ export class UnitEffectManager {
                     executed = executed || searched;
                     break;
                 }
+                case EffectActionType.DrawAndFilter: {
+                    const drawFilterAction = action as DrawAndFilterAction;
+                    const filtered = this.drawAndFilterCards(drawFilterAction, context);
+                    executed = executed || filtered;
+                    break;
+                }
                 case EffectActionType.ImmediateAttack: {
                     const attackAction = action as ImmediateAttackAction;
                     const attacked = this.executeImmediateAttack(attackAction, context);
@@ -325,6 +333,95 @@ export class UnitEffectManager {
         }
 
         return true;
+    }
+
+    /**
+     * 抽牌并筛选
+     */
+    private drawAndFilterCards(
+        action: DrawAndFilterAction,
+        context: GongfaRuntimeContext
+    ): boolean {
+        if (!context.deck || context.deck.length === 0) {
+            console.warn('[DrawAndFilter] 卡组为空或未提供');
+            return false;
+        }
+
+        if (!context.gameActionHandler) {
+            console.warn('[DrawAndFilter] gameActionHandler 未提供');
+            return false;
+        }
+
+        const { amount, filter, matchDestination, nonMatchDestination } = action;
+        const drawnCards: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[] = [];
+
+        // 从卡组顶部抽取指定数量的卡牌
+        for (let i = 0; i < amount && context.deck.length > 0; i++) {
+            const card = context.deck.shift();
+            if (card) {
+                drawnCards.push(card);
+            }
+        }
+
+        if (drawnCards.length === 0) {
+            return false;
+        }
+
+        // 筛选卡牌
+        const matchedCards: typeof drawnCards = [];
+        const nonMatchedCards: typeof drawnCards = [];
+
+        for (const card of drawnCards) {
+            if (this.isCardMatchFilter(card, filter)) {
+                matchedCards.push(card);
+            } else {
+                nonMatchedCards.push(card);
+            }
+        }
+
+        // 将匹配的卡牌放到指定位置
+        this.moveCardsToDestination(matchedCards, matchDestination, context);
+        // 将不匹配的卡牌放到指定位置
+        this.moveCardsToDestination(nonMatchedCards, nonMatchDestination, context);
+
+        this.battleContext.battleLog.addLog(
+            `抽取${drawnCards.length}张卡牌，其中${matchedCards.length}张符合条件`
+        );
+
+        return true;
+    }
+
+    /**
+     * 将卡牌移动到指定位置
+     */
+    private moveCardsToDestination(
+        cards: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[],
+        destination: EffectActionDestination,
+        context: GongfaRuntimeContext
+    ): void {
+        for (const card of cards) {
+            switch (destination) {
+                case EffectActionDestination.Hand:
+                    // 添加到手牌
+                    if (context.gameActionHandler) {
+                        context.gameActionHandler.addCardToHand(card, context.cardScale);
+                    }
+                    break;
+                case EffectActionDestination.DiscardPile:
+                    // 添加到弃牌堆
+                    context.discardPile.push(card);
+                    break;
+                case EffectActionDestination.DeckTop:
+                    // 放回卡组顶部
+                    if (context.deck) {
+                        context.deck.unshift(card);
+                    }
+                    break;
+                default:
+                    console.warn(`不支持的目标位置：${destination}`);
+                    break;
+            }
+        }
     }
 
     private executeImmediateAttack(
