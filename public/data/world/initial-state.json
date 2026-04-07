@@ -11,6 +11,23 @@
     },
     "tags": ["凡人出身", "初入修仙界"]
   },
+  "stash": {
+    "stashId": "phase01.starter-stash",
+    "deckRef": "starter-deck",
+    "items": [
+      {
+        "id": "tool.return-rope",
+        "itemType": "tool",
+        "count": 1
+      },
+      {
+        "id": "consumable.spirit-salve",
+        "itemType": "consumable",
+        "count": 2
+      }
+    ],
+    "spiritStones": 36
+  },
   "npcs": [],
   "flags": []
 }
