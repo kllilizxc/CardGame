@@ -1,0 +1,67 @@
+{
+  "id": "phase01-prototype-events",
+  "eventsByNodeId": {
+    "event.abandoned-cache": {
+      "nodeId": "event.abandoned-cache",
+      "title": "弃置行囊",
+      "description": "一只被妖风撕开的旧储物袋挂在枯树旁，里面还有些能带走的东西。",
+      "pool": [
+        {
+          "id": "cache.spirit-stones",
+          "weight": 2,
+          "label": "翻找碎袋",
+          "description": "你从夹层里抖出了一小把还能用的灵石。",
+          "rewards": {
+            "cards": [],
+            "items": [],
+            "spiritStones": 18
+          }
+        },
+        {
+          "id": "cache.talisman-roll",
+          "weight": 1,
+          "label": "整理完好的匣子",
+          "description": "匣中还留着一张护体符和一份便携补给。",
+          "rewards": {
+            "cards": [
+              {
+                "id": "TL_002",
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "id": "tool_talisman_basic",
+                "itemType": "tool",
+                "count": 1
+              }
+            ],
+            "spiritStones": 6
+          }
+        },
+        {
+          "id": "cache.wandering-sword",
+          "weight": 1,
+          "label": "拔出半埋飞剑",
+          "description": "一柄灵气未散的青云剑卡在石缝里，还能继续作战。",
+          "rewards": {
+            "cards": [
+              {
+                "id": "AR_001",
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "id": "artifact_fly_sword_basic",
+                "itemType": "artifact",
+                "count": 1
+              }
+            ],
+            "spiritStones": 0
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "id": "phase01-prototype-map",
+  "name": "青云外山试炼",
+  "description": "一张固定拓扑的 Phase 01 原型秘境地图，用于验证带入、搜打撤与 boss 通关闭环。",
+  "entryNodeId": "entrance.mountain-gate",
+  "nodes": [
+    {
+      "id": "entrance.mountain-gate",
+      "type": "entrance",
+      "layer": 0,
+      "label": "山门入口",
+      "outgoingNodeIds": ["battle.mist-foxes", "event.abandoned-cache"],
+      "payloadRef": {
+        "kind": "entrance",
+        "ref": "phase01.starter-stash"
+      }
+    },
+    {
+      "id": "battle.mist-foxes",
+      "type": "battle",
+      "layer": 1,
+      "label": "雾林伏击",
+      "outgoingNodeIds": ["shop.wandering-peddler", "extract.cliff-rope"],
+      "payloadRef": {
+        "kind": "encounter",
+        "ref": "test_encounter_01",
+        "encounterFile": "data/encounters/test-enemy.json"
+      }
+    },
+    {
+      "id": "event.abandoned-cache",
+      "type": "event",
+      "layer": 1,
+      "label": "弃置行囊",
+      "outgoingNodeIds": ["battle.ruined-courtyard", "shop.wandering-peddler"],
+      "payloadRef": {
+        "kind": "event",
+        "ref": "event.abandoned-cache",
+        "contentFile": "data/mijing/prototype-events.json"
+      }
+    },
+    {
+      "id": "shop.wandering-peddler",
+      "type": "shop",
+      "layer": 2,
+      "label": "云游小贩",
+      "outgoingNodeIds": ["boss.sealed-guardian"],
+      "payloadRef": {
+        "kind": "shop",
+        "ref": "shop.wandering-peddler",
+        "contentFile": "data/mijing/prototype-shop.json"
+      }
+    },
+    {
+      "id": "battle.ruined-courtyard",
+      "type": "battle",
+      "layer": 2,
+      "label": "残庭巡守",
+      "outgoingNodeIds": ["boss.sealed-guardian"],
+      "payloadRef": {
+        "kind": "encounter",
+        "ref": "test_encounter_02",
+        "encounterFile": "data/encounters/medium-enemy.json"
+      }
+    },
+    {
+      "id": "extract.cliff-rope",
+      "type": "extract",
+      "layer": 2,
+      "label": "悬桥撤离点",
+      "outgoingNodeIds": [],
+      "payloadRef": {
+        "kind": "extract",
+        "ref": "extract.cliff-rope"
+      }
+    },
+    {
+      "id": "boss.sealed-guardian",
+      "type": "boss",
+      "layer": 3,
+      "label": "封印守关者",
+      "outgoingNodeIds": [],
+      "payloadRef": {
+        "kind": "encounter",
+        "ref": "test_encounter_02",
+        "encounterFile": "data/encounters/medium-enemy.json"
+      }
+    }
+  ]
+}

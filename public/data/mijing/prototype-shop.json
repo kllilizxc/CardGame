@@ -1,0 +1,73 @@
+{
+  "id": "phase01-prototype-shop",
+  "shopsByNodeId": {
+    "shop.wandering-peddler": {
+      "nodeId": "shop.wandering-peddler",
+      "title": "云游小贩",
+      "description": "一位专收战场残货的散修在残墙下摆开摊位，只收 run 内找到的灵石。",
+      "offers": [
+        {
+          "id": "offer.qingyun-sword",
+          "label": "青云剑",
+          "description": "补一张顺手的基础法器卡。",
+          "cost": {
+            "spiritStones": 24
+          },
+          "rewards": {
+            "cards": [
+              {
+                "id": "AR_001",
+                "count": 1
+              }
+            ],
+            "items": [],
+            "spiritStones": 0
+          }
+        },
+        {
+          "id": "offer.healing-talisman",
+          "label": "治愈符",
+          "description": "补一张稳妥的回复符箓，顺带带走一份基础符箓材料。",
+          "cost": {
+            "spiritStones": 16
+          },
+          "rewards": {
+            "cards": [
+              {
+                "id": "TL_004",
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "id": "tool_talisman_basic",
+                "itemType": "tool",
+                "count": 1
+              }
+            ],
+            "spiritStones": 0
+          }
+        },
+        {
+          "id": "offer.fly-sword-charm",
+          "label": "飞剑挂坠",
+          "description": "购买一件可带回 stash 的基础秘境道具。",
+          "cost": {
+            "spiritStones": 18
+          },
+          "rewards": {
+            "cards": [],
+            "items": [
+              {
+                "id": "artifact_fly_sword_basic",
+                "itemType": "artifact",
+                "count": 1
+              }
+            ],
+            "spiritStones": 0
+          }
+        }
+      ]
+    }
+  }
+}
