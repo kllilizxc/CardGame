@@ -26,7 +26,7 @@ describe('expeditionEntryFlow', () => {
 
         expect(view.mode).toBe('preparation');
         expect(view.activeRun).toBeNull();
-        expect(view.statusText).toBe('Starter stash ready: 14 cards, 3 items, 36 spiritStones.');
+        expect(view.statusText).toBe('储物袋已备好：14 张卡、3 件道具、36 枚灵石。');
     });
 
     it('returns active-run mode when a run is already in progress', () => {
@@ -44,7 +44,7 @@ describe('expeditionEntryFlow', () => {
 
         expect(view.mode).toBe('activeRun');
         expect(view.activeRun?.runId).toBe(existingRun.runId);
-        expect(view.statusText).toBe('Run resumed at entrance.mountain-gate with 14 cards, 3 items, and 36 spiritStones.');
+        expect(view.statusText).toBe('已继续探索：当前位置 entrance.mountain-gate，携带 14 张卡、3 件道具、36 枚灵石。');
     });
 
     it('confirms the starter stash into a new active run and returns HUD mode', () => {
@@ -64,6 +64,6 @@ describe('expeditionEntryFlow', () => {
         expect(view.activeRun.carriedDeck).toEqual(expeditionState.persistentStash.deck);
         expect(view.activeRun.carriedItems).toEqual(expeditionState.persistentStash.items);
         expect(view.activeRun.spiritStones).toBe(expeditionState.persistentStash.spiritStones);
-        expect(view.statusText).toBe('Run started at entrance.mountain-gate with 14 cards, 3 items, and 36 spiritStones.');
+        expect(view.statusText).toBe('已进入秘境：当前位置 entrance.mountain-gate，携带 14 张卡、3 件道具、36 枚灵石。');
     });
 });

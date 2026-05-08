@@ -51,7 +51,7 @@ export class PreparationPanel extends GameObjects.Container {
             fontStyle: 'bold',
         });
 
-        const subtitle = this.scene.add.text(leftColumnX, title.y + 46, 'Phase 01 暂不开放卡组构筑；确认当前 starter stash 后即可进入。', {
+        const subtitle = this.scene.add.text(leftColumnX, title.y + 46, '第一阶段暂不开放卡组构筑；确认当前储物袋后即可进入。', {
             fontFamily: 'Arial',
             fontSize: '20px',
             color: '#cbd5e1',
@@ -64,14 +64,14 @@ export class PreparationPanel extends GameObjects.Container {
             color: '#93c5fd',
         });
 
-        const spiritStonesText = this.scene.add.text(leftColumnX, loadoutSummaryText.y + 38, `spiritStones：${summary.spiritStones}`, {
+        const spiritStonesText = this.scene.add.text(leftColumnX, loadoutSummaryText.y + 38, `灵石：${summary.spiritStones}`, {
             fontFamily: 'Arial',
             fontSize: '24px',
             color: '#fde68a',
             fontStyle: 'bold',
         });
 
-        const deckHeading = this.scene.add.text(leftColumnX, spiritStonesText.y + 52, 'Starter Deck', {
+        const deckHeading = this.scene.add.text(leftColumnX, spiritStonesText.y + 52, '初始卡组', {
             fontFamily: 'Arial',
             fontSize: '24px',
             color: '#93c5fd',
@@ -85,7 +85,7 @@ export class PreparationPanel extends GameObjects.Container {
             lineSpacing: 8,
         });
 
-        const itemsHeading = this.scene.add.text(panelX + 110, spiritStonesText.y + 52, 'Starter Items', {
+        const itemsHeading = this.scene.add.text(panelX + 110, spiritStonesText.y + 52, '初始道具', {
             fontFamily: 'Arial',
             fontSize: '24px',
             color: '#86efac',

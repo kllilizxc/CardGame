@@ -25,10 +25,10 @@ export class RunHud extends GameObjects.Container {
         const background = this.scene.add.rectangle(width / 2, 56, width - 96, 84, 0x020617, 0.9);
         background.setStrokeStyle(2, 0x38bdf8, 0.85);
 
-        this.currentNodeValue = this.createValueText(150, '当前节点: -');
-        this.carriedDeckValue = this.createValueText(560, 'carriedDeck: 0');
-        this.carriedItemsValue = this.createValueText(920, 'carriedItems: 0');
-        this.spiritStonesValue = this.createValueText(1280, 'spiritStones: 0');
+        this.currentNodeValue = this.createValueText(150, '当前节点：-');
+        this.carriedDeckValue = this.createValueText(560, '携带卡牌：0');
+        this.carriedItemsValue = this.createValueText(920, '携带道具：0');
+        this.spiritStonesValue = this.createValueText(1280, '灵石：0');
 
         this.add([
             background,
@@ -67,10 +67,10 @@ export class RunHud extends GameObjects.Container {
         carriedItemCount: number,
         spiritStones: number,
     ): void {
-        this.currentNodeValue.setText(`当前节点: ${currentNodeLabel}`);
-        this.carriedDeckValue.setText(`carriedDeck: ${carriedDeckCount}`);
-        this.carriedItemsValue.setText(`carriedItems: ${carriedItemCount}`);
-        this.spiritStonesValue.setText(`spiritStones: ${spiritStones}`);
+        this.currentNodeValue.setText(`当前节点：${currentNodeLabel}`);
+        this.carriedDeckValue.setText(`携带卡牌：${carriedDeckCount}`);
+        this.carriedItemsValue.setText(`携带道具：${carriedItemCount}`);
+        this.spiritStonesValue.setText(`灵石：${spiritStones}`);
     }
 
     public showPostRunSummary(summary: RunResolutionSummary, onAcknowledge: () => void): void {

@@ -4,7 +4,7 @@
     "shop.wandering-peddler": {
       "nodeId": "shop.wandering-peddler",
       "title": "云游小贩",
-      "description": "一位专收战场残货的散修在残墙下摆开摊位，只收 run 内找到的灵石。",
+      "description": "一位专收战场残货的散修在残墙下摆开摊位，只收本次探索里找到的灵石。",
       "offers": [
         {
           "id": "offer.qingyun-sword",
@@ -51,7 +51,7 @@
         {
           "id": "offer.fly-sword-charm",
           "label": "飞剑挂坠",
-          "description": "购买一件可带回 stash 的基础秘境道具。",
+          "description": "购买一件可带回仓库的基础秘境道具。",
           "cost": {
             "spiritStones": 18
           },

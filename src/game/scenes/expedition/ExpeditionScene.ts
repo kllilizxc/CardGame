@@ -91,7 +91,7 @@ export class ExpeditionScene extends Scene {
             color: '#f8fafc',
             fontStyle: 'bold',
         }).setOrigin(0.5);
-        this.add.text(width / 2, 126, 'Phase 01 · Expedition Entry Flow', {
+        this.add.text(width / 2, 126, '第一阶段 · 秘境入口流程', {
             fontFamily: 'Arial',
             fontSize: '22px',
             color: '#93c5fd',

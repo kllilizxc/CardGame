@@ -1,7 +1,7 @@
 {
   "id": "phase01-prototype-map",
   "name": "青云外山试炼",
-  "description": "一张固定拓扑的 Phase 01 原型秘境地图，用于验证带入、搜打撤与 boss 通关闭环。",
+  "description": "一张固定拓扑的第一阶段原型秘境地图，用于验证带入、搜打撤与首领通关闭环。",
   "entryNodeId": "entrance.mountain-gate",
   "nodes": [
     {

@@ -27,7 +27,7 @@ describe('entryFlowModel', () => {
             deckCount: 14,
             itemCount: 3,
             spiritStones: 36,
-            statusText: 'Starter stash ready: 14 cards, 3 items, 36 spiritStones.',
+            statusText: '储物袋已备好：14 张卡、3 件道具、36 枚灵石。',
         });
     });
 
@@ -48,7 +48,7 @@ describe('entryFlowModel', () => {
             carriedDeckCount: 14,
             carriedItemCount: 3,
             spiritStones: 36,
-            statusText: 'Run resumed at entrance.mountain-gate with 14 cards, 3 items, and 36 spiritStones.',
+            statusText: '已继续探索：当前位置 entrance.mountain-gate，携带 14 张卡、3 件道具、36 枚灵石。',
         });
     });
 
@@ -72,7 +72,7 @@ describe('entryFlowModel', () => {
             carriedDeckCount: 14,
             carriedItemCount: 3,
             spiritStones: 36,
-            statusText: 'Run started at 山门入口 with 14 cards, 3 items, and 36 spiritStones.',
+            statusText: '已进入秘境：当前位置 山门入口，携带 14 张卡、3 件道具、36 枚灵石。',
         });
     });
 

@@ -85,16 +85,16 @@ function App()
             <PhaserGame ref={phaserRef} currentActiveScene={currentScene} />
             <div>
                 <div>
-                    <button className="button" onClick={changeScene}>Change Scene</button>
+                    <button className="button" onClick={changeScene}>切换场景</button>
                 </div>
                 <div>
-                    <button disabled={canMoveSprite} className="button" onClick={moveSprite}>Toggle Movement</button>
+                    <button disabled={canMoveSprite} className="button" onClick={moveSprite}>切换移动</button>
                 </div>
-                <div className="spritePosition">Sprite Position:
+                <div className="spritePosition">精灵位置：
                     <pre>{`{\n  x: ${spritePosition.x}\n  y: ${spritePosition.y}\n}`}</pre>
                 </div>
                 <div>
-                    <button className="button" onClick={addSprite}>Add New Sprite</button>
+                    <button className="button" onClick={addSprite}>添加新精灵</button>
                 </div>
             </div>
         </div>

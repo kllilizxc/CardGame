@@ -52,14 +52,14 @@ export function createPreparationSummary(stash: PersistentStash): PreparationSum
         deckCount,
         itemCount,
         spiritStones: stash.spiritStones,
-        statusText: `Starter stash ready: ${deckCount} cards, ${itemCount} items, ${stash.spiritStones} spiritStones.`,
+        statusText: `储物袋已备好：${deckCount} 张卡、${itemCount} 件道具、${stash.spiritStones} 枚灵石。`,
     };
 }
 
 export function createRunSummary(run: RunSnapshot, options: RunSummaryOptions = {}): RunSummary {
     const carriedDeckCount = countStacks(run.carriedDeck);
     const carriedItemCount = countStacks(run.carriedItems);
-    const runVerb = options.mode === 'started' ? 'started' : 'resumed';
+    const runVerb = options.mode === 'started' ? '已进入秘境' : '已继续探索';
     const currentNodeLabel = options.currentNodeLabel ?? run.currentNodeId;
 
     return {
@@ -68,7 +68,7 @@ export function createRunSummary(run: RunSnapshot, options: RunSummaryOptions = 
         carriedDeckCount,
         carriedItemCount,
         spiritStones: run.spiritStones,
-        statusText: `Run ${runVerb} at ${currentNodeLabel} with ${carriedDeckCount} cards, ${carriedItemCount} items, and ${run.spiritStones} spiritStones.`,
+        statusText: `${runVerb}：当前位置 ${currentNodeLabel}，携带 ${carriedDeckCount} 张卡、${carriedItemCount} 件道具、${run.spiritStones} 枚灵石。`,
     };
 }
 
