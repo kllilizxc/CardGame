@@ -40,7 +40,7 @@ export class TurnManager {
     }
 
     // 显示胜利画面
-    public showVictory(onRestart: () => void): void {
+    public showVictory(onContinue: () => void): void {
         const { width, height } = this.scene.scale;
         const overlayDepth = 10000;
 
@@ -54,16 +54,16 @@ export class TurnManager {
             fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(overlayDepth + 1);
 
-        this.scene.add.text(width / 2, height / 2 + 80, '点击任意位置重新开始', {
+        this.scene.add.text(width / 2, height / 2 + 80, '点击任意位置继续', {
             fontSize: '20px',
             color: '#ffffff'
         }).setOrigin(0.5).setDepth(overlayDepth + 1);
 
-        this.scene.input.once('pointerdown', onRestart);
+        this.scene.input.once('pointerdown', onContinue);
     }
 
     // 显示失败画面
-    public showDefeat(onRestart: () => void): void {
+    public showDefeat(onContinue: () => void): void {
         const { width, height } = this.scene.scale;
 
         // 半透明遮罩
@@ -75,12 +75,12 @@ export class TurnManager {
             fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(2000);
 
-        this.scene.add.text(width / 2, height / 2 + 80, '点击任意位置重新开始', {
+        this.scene.add.text(width / 2, height / 2 + 80, '点击任意位置继续', {
             fontSize: '20px',
             color: '#ffffff'
         }).setOrigin(0.5).setDepth(2000);
 
-        this.scene.input.once('pointerdown', onRestart);
+        this.scene.input.once('pointerdown', onContinue);
     }
 
     /**

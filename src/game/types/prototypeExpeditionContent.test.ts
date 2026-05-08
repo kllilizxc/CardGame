@@ -77,6 +77,13 @@ describe('validatePrototypeExpeditionContent', () => {
         ).toThrow(battleNode.id);
     });
 
+    it('points the prototype boss node at the dedicated mijing boss encounter', () => {
+        const bossNode = prototypeMapJson.nodes.find((node) => node.type === 'boss');
+
+        expect(bossNode?.payloadRef.ref).toBe('mijing_boss_01');
+        expect(bossNode?.payloadRef.encounterFile).toBe('data/encounters/mijing-boss.json');
+    });
+
     it('rejects maps whose outgoing edges skip layers', () => {
         const brokenMap = structuredClone(prototypeMapJson);
         const entranceNode = brokenMap.nodes.find((node) => node.type === 'entrance');

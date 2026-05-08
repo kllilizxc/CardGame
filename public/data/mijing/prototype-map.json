@@ -82,8 +82,8 @@
       "outgoingNodeIds": [],
       "payloadRef": {
         "kind": "encounter",
-        "ref": "test_encounter_02",
-        "encounterFile": "data/encounters/medium-enemy.json"
+        "ref": "mijing_boss_01",
+        "encounterFile": "data/encounters/mijing-boss.json"
       }
     }
   ]

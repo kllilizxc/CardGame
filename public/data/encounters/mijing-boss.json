@@ -1,0 +1,34 @@
+{
+  "id": "mijing_boss_01",
+  "name": "封印守关者",
+  "description": "青云外山试炼的原型 BOSS，一名高阶守关者携带妖兽镇守终点。",
+  "difficulty": 3,
+  "units": [
+    {
+      "cardId": "CR_HIGH_001",
+      "position": 1
+    },
+    {
+      "cardId": "CR_002",
+      "position": 0
+    },
+    {
+      "cardId": "CR_001",
+      "position": 2
+    }
+  ],
+  "enemies": [
+    {
+      "cardId": "CR_HIGH_001",
+      "position": 1
+    },
+    {
+      "cardId": "CR_002",
+      "position": 0
+    },
+    {
+      "cardId": "CR_001",
+      "position": 2
+    }
+  ]
+}

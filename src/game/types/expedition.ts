@@ -1,7 +1,8 @@
 export type ExpeditionNodeType = 'entrance' | 'battle' | 'event' | 'shop' | 'extract' | 'boss';
 export type ExpeditionEncounterNodeType = Extract<ExpeditionNodeType, 'battle' | 'boss'>;
 export type ExpeditionContentNodeType = Extract<ExpeditionNodeType, 'event' | 'shop'>;
-export type RunStatus = 'inProgress' | 'defeat' | 'extract' | 'bossClear';
+export type TerminalRunOutcome = 'defeat' | 'extract' | 'boss-clear';
+export type RunStatus = 'inProgress' | TerminalRunOutcome;
 export type RunNodeStatus = 'hidden' | 'reachable' | 'cleared';
 export type ExpeditionItemType = 'artifact' | 'tool' | 'consumable' | 'quest';
 
@@ -36,6 +37,13 @@ export interface RunNodeState {
     status: RunNodeStatus;
     visited: boolean;
     rewardClaimed: boolean;
+    purchasedOfferIds?: string[];
+}
+
+export interface RunTerminalResolutionIntent {
+    kind: 'extract';
+    nodeId: string;
+    requestedAt: string;
 }
 
 export interface RunSnapshot {
@@ -50,6 +58,8 @@ export interface RunSnapshot {
     spiritStones: number;
     visitedNodeIds: string[];
     nodeStates: Record<string, RunNodeState>;
+    pendingEncounter?: BattleLaunchPayload | null;
+    pendingTerminalResolution?: RunTerminalResolutionIntent | null;
     startedAt: string;
     resolvedAt?: string;
 }
@@ -60,13 +70,27 @@ export interface BattleLaunchPayload {
     nodeType: ExpeditionEncounterNodeType;
     encounterId: string;
     encounterFile: string;
-    carriedDeck: ExpeditionCardStack[];
+    carriedDeck?: ExpeditionCardStack[];
+    runDeck: ExpeditionCardStack[];
     rewardPreview?: RunRewardBundle;
+}
+
+export type ExpeditionBattleOutcome = 'battle-victory' | 'boss-clear' | 'defeat';
+
+export interface ExpeditionBattleCompleteEvent {
+    runId: string;
+    nodeId: string;
+    nodeType: ExpeditionEncounterNodeType;
+    encounterId: string;
+    encounterFile: string;
+    victory: boolean;
+    outcome: ExpeditionBattleOutcome;
+    completedAt: string;
 }
 
 export interface RunResolutionSummary {
     runId: string;
-    outcome: Exclude<RunStatus, 'inProgress'>;
+    outcome: TerminalRunOutcome;
     finalNodeId: string;
     kept: RunRewardBundle;
     lost: RunRewardBundle;

@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from 'bun:test';
 
 import initialWorldState from '../../../public/data/world/initial-state.json';
 import starterDeckJson from '../../../public/data/decks/starter-deck.json';
+import prototypeEventsJson from '../../../public/data/mijing/prototype-events.json';
+import prototypeShopJson from '../../../public/data/mijing/prototype-shop.json';
 
 import { resetRunPersistenceForTests, loadActiveRun } from '../services/RunPersistence';
 import { ExpeditionState } from './ExpeditionState';
@@ -49,5 +51,130 @@ describe('ExpeditionState', () => {
             rewardClaimed: true,
         });
         expect(loadActiveRun()?.runId).toBe(run.runId);
+    });
+
+    it('claims one prototype event reward, persists the run, and blocks duplicate claims', () => {
+        const state = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+        });
+        state.createRunSnapshot({
+            expeditionId: 'phase01-first-playable-expedition',
+            mapId: 'phase01-prototype-map',
+            entryNodeId: 'entrance.mountain-gate',
+        });
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+        const outcome = event.pool[0];
+
+        const firstClaim = state.claimEventNodeReward(event.nodeId, structuredClone(outcome.rewards));
+
+        expect(firstClaim.status).toBe('claimed');
+        expect(state.activeRun?.currentNodeId).toBe(event.nodeId);
+        expect(state.activeRun?.spiritStones).toBe(54);
+        expect(state.activeRun?.nodeStates[event.nodeId]).toEqual({
+            nodeId: event.nodeId,
+            status: 'cleared',
+            visited: true,
+            rewardClaimed: true,
+            purchasedOfferIds: [],
+        });
+        expect(loadActiveRun()?.spiritStones).toBe(54);
+
+        const secondClaim = state.claimEventNodeReward(event.nodeId, structuredClone(outcome.rewards));
+
+        expect(secondClaim.status).toBe('alreadyClaimed');
+        expect(state.activeRun?.spiritStones).toBe(54);
+        expect(loadActiveRun()?.spiritStones).toBe(54);
+        expect(state.persistentStash.spiritStones).toBe(36);
+    });
+
+    it('purchases prototype shop offers with run spiritStones and blocks duplicate or unaffordable purchases', () => {
+        const state = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+        });
+        state.createRunSnapshot({
+            expeditionId: 'phase01-first-playable-expedition',
+            mapId: 'phase01-prototype-map',
+            entryNodeId: 'entrance.mountain-gate',
+        });
+        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'];
+        const swordOffer = shop.offers.find((offer) => offer.id === 'offer.qingyun-sword');
+        const charmOffer = shop.offers.find((offer) => offer.id === 'offer.fly-sword-charm');
+
+        if (!swordOffer || !charmOffer) {
+            throw new Error('Expected checked-in prototype shop offers to exist.');
+        }
+
+        const purchase = state.purchaseShopOffer(
+            shop.nodeId,
+            swordOffer.id,
+            structuredClone(swordOffer.cost),
+            structuredClone(swordOffer.rewards),
+        );
+
+        expect(purchase.status).toBe('purchased');
+        expect(state.activeRun?.currentNodeId).toBe(shop.nodeId);
+        expect(state.activeRun?.spiritStones).toBe(12);
+        expect(state.activeRun?.carriedDeck.find((stack) => stack.id === 'AR_001')?.count).toBe(4);
+        expect(state.activeRun?.nodeStates[shop.nodeId].purchasedOfferIds).toEqual([swordOffer.id]);
+        expect(loadActiveRun()?.nodeStates[shop.nodeId].purchasedOfferIds).toEqual([swordOffer.id]);
+
+        const duplicatePurchase = state.purchaseShopOffer(
+            shop.nodeId,
+            swordOffer.id,
+            structuredClone(swordOffer.cost),
+            structuredClone(swordOffer.rewards),
+        );
+        const unaffordablePurchase = state.purchaseShopOffer(
+            shop.nodeId,
+            charmOffer.id,
+            structuredClone(charmOffer.cost),
+            structuredClone(charmOffer.rewards),
+        );
+
+        expect(duplicatePurchase.status).toBe('alreadyPurchased');
+        expect(unaffordablePurchase.status).toBe('insufficientFunds');
+        expect(state.activeRun?.spiritStones).toBe(12);
+        expect(state.activeRun?.carriedItems.some((stack) => stack.id === 'artifact_fly_sword_basic')).toBe(false);
+        expect(state.persistentStash.deck.find((stack) => stack.id === 'AR_001')?.count).toBe(3);
+        expect(state.persistentStash.spiritStones).toBe(36);
+    });
+
+    it('records an extract intent for terminal resolution without resolving the run immediately', () => {
+        const state = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+        });
+        state.createRunSnapshot({
+            expeditionId: 'phase01-first-playable-expedition',
+            mapId: 'phase01-prototype-map',
+            entryNodeId: 'entrance.mountain-gate',
+        });
+        const requestedAt = '2026-05-08T00:00:00.000Z';
+
+        const recordResult = state.recordExtractIntent('extract.cliff-rope', requestedAt);
+
+        expect(recordResult.status).toBe('recorded');
+        expect(state.activeRun?.status).toBe('inProgress');
+        expect(state.activeRun?.currentNodeId).toBe('extract.cliff-rope');
+        expect(state.activeRun?.pendingTerminalResolution).toEqual({
+            kind: 'extract',
+            nodeId: 'extract.cliff-rope',
+            requestedAt,
+        });
+        expect(state.activeRun?.nodeStates['extract.cliff-rope']).toEqual({
+            nodeId: 'extract.cliff-rope',
+            status: 'cleared',
+            visited: true,
+            rewardClaimed: true,
+            purchasedOfferIds: [],
+        });
+        expect(loadActiveRun()?.pendingTerminalResolution?.nodeId).toBe('extract.cliff-rope');
+
+        const duplicateResult = state.recordExtractIntent('extract.cliff-rope', '2026-05-08T00:01:00.000Z');
+
+        expect(duplicateResult.status).toBe('alreadyRecorded');
+        expect(state.activeRun?.pendingTerminalResolution?.requestedAt).toBe(requestedAt);
     });
 });

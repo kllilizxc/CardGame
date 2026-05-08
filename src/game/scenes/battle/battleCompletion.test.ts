@@ -1,0 +1,41 @@
+import { describe, expect, it } from 'bun:test';
+
+import type { BattleLaunchPayload } from '../../types/expedition';
+import { createExpeditionBattleCompleteEvent } from './battleCompletion';
+
+const battlePayload: BattleLaunchPayload = {
+    runId: 'run-test-001',
+    nodeId: 'battle.mist-foxes',
+    nodeType: 'battle',
+    encounterId: 'test_encounter_01',
+    encounterFile: 'data/encounters/test-enemy.json',
+    runDeck: [{ id: 'SX_YJZ_001', count: 1 }],
+};
+
+const bossPayload: BattleLaunchPayload = {
+    ...battlePayload,
+    nodeId: 'boss.sealed-guardian',
+    nodeType: 'boss',
+    encounterId: 'mijing_boss_01',
+    encounterFile: 'data/encounters/mijing-boss.json',
+};
+
+describe('createExpeditionBattleCompleteEvent', () => {
+    it('emits battle-victory for normal encounter wins', () => {
+        expect(createExpeditionBattleCompleteEvent(battlePayload, true, '2026-05-08T01:00:00.000Z')).toEqual({
+            runId: 'run-test-001',
+            nodeId: 'battle.mist-foxes',
+            nodeType: 'battle',
+            encounterId: 'test_encounter_01',
+            encounterFile: 'data/encounters/test-enemy.json',
+            victory: true,
+            outcome: 'battle-victory',
+            completedAt: '2026-05-08T01:00:00.000Z',
+        });
+    });
+
+    it('emits boss-clear for boss wins and defeat for any loss', () => {
+        expect(createExpeditionBattleCompleteEvent(bossPayload, true, '2026-05-08T01:00:00.000Z').outcome).toBe('boss-clear');
+        expect(createExpeditionBattleCompleteEvent(bossPayload, false, '2026-05-08T01:00:00.000Z').outcome).toBe('defeat');
+    });
+});

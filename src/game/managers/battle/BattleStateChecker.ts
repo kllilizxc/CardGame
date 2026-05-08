@@ -10,6 +10,7 @@ import type { BattleContext } from '../../context/BattleContext';
 export class BattleStateChecker {
     private scene: Scene;
     private battleContext: BattleContext;
+    private battleEnded = false;
 
     constructor(scene: Scene, battleContext: BattleContext) {
         this.scene = scene;
@@ -105,24 +106,28 @@ export class BattleStateChecker {
         playerHealth: number,
         onBattleEnd: (victory: boolean) => void
     ): void {
+        if (this.battleEnded) {
+            return;
+        }
+
         // 检查玩家是否失败（生命值归零）
         if (playerHealth <= 0) {
+            this.battleEnded = true;
             this.scene.time.delayedCall(600, () => {
                 this.battleContext.turnManager.showDefeat(() => {
-                    this.scene.scene.restart();
+                    onBattleEnd(false);
                 });
-                onBattleEnd(false);
             });
             return;
         }
 
         // 检查是否所有敌人都被击败
         if (enemyField.length === 0) {
+            this.battleEnded = true;
             this.scene.time.delayedCall(600, () => {
                 this.battleContext.turnManager.showVictory(() => {
-                    this.scene.scene.restart();
+                    onBattleEnd(true);
                 });
-                onBattleEnd(true);
             });
             return;
         }

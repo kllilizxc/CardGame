@@ -38,7 +38,8 @@ Progress: [░░░░░░░░░░] 0%
 ### Decisions
 
 - Phase 01 uses one fixed-topology 秘境 prototype with a small random pool for event and shop content.
-- Existing `BattleScene` stays the combat resolver for battle and boss nodes.
+- Existing `BattleScene` stays the combat resolver for battle and boss nodes. Battle/BOSS map nodes hand off through `BattleLaunchPayload` and return structured `expedition-battle-complete` results.
+- `RunResolution` is the canonical terminal run-resolution service: defeat loses carried run assets, while extract and boss-clear bank carried assets into the persistent stash.
 - Persistent stash is local-only in the first slice and mutates on defeat, extract, or boss clear.
 
 ### Pending Todos
@@ -47,9 +48,8 @@ None yet.
 
 ### Blockers/Concerns
 
-- `BattleScene` currently hardcodes `starterDeck` and `currentEncounter`, so Phase 01 must introduce a clean run payload contract.
-- `BattleTickManager` already looks for `battleScene.handleBattleEnd(victory)`, but `BattleScene` does not implement it yet.
-- Shop / event content formats do not exist yet and must be introduced without rewriting the existing card data pipeline.
+- Dropped-bag recovery, multi-map progression, and full deckbuilding remain deferred beyond the first playable loop.
+- Prototype shop / event content formats exist for Phase 01; richer content packs remain deferred.
 
 ## Session Continuity
 

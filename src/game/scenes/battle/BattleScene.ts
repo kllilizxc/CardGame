@@ -1,5 +1,5 @@
 import { Scene } from 'phaser';
-import { EventBus } from '../../EventBus';
+import { EventBus, EXPEDITION_BATTLE_COMPLETE_EVENT } from '../../EventBus';
 import { CardSprite } from '../../objects/CardSprite';
 import { ArtifactSprite } from '../../objects/ArtifactSprite';
 import { TalismanSprite } from '../../objects/TalismanSprite';
@@ -40,6 +40,15 @@ import { BattleState } from '../../state/BattleState';
 import { BattleUIManager } from '../../ui/battle/BattleUIManager';
 import { CardPreviewManager } from '../../managers/common/CardPreviewManager';
 import { PillTooltipUI } from '../../ui/common/PillTooltipUI';
+import type { BattleLaunchPayload } from '../../types/expedition';
+import { createExpeditionBattleCompleteEvent } from './battleCompletion';
+import {
+    getBattleDeckStacks,
+    getEncounterCacheKey,
+    getEncounterFile,
+    getEncounterUnits,
+    normalizeBattleLaunchPayload,
+} from './battleSceneLaunch';
 
 export class BattleScene extends Scene {
     // 游戏状态（使用 BattleState 管理）
@@ -90,9 +99,18 @@ export class BattleScene extends Scene {
     
     // 布局配置
     private layout!: BattleLayoutConfig;
+    private launchPayload: BattleLaunchPayload | null = null;
+    private encounterCacheKey = 'currentEncounter';
+    private battleEndHandled = false;
 
     constructor() {
         super('BattleScene');
+    }
+
+    init(data?: unknown): void {
+        this.launchPayload = normalizeBattleLaunchPayload(data);
+        this.encounterCacheKey = getEncounterCacheKey(this.launchPayload);
+        this.battleEndHandled = false;
     }
 
     // ===== Getter 方法，用于兼容现有代码 =====
@@ -141,7 +159,7 @@ export class BattleScene extends Scene {
         this.load.json('fieldCards', 'data/cards/fields.json');
         this.load.json('skillCards', 'data/cards/skills.json');
         this.load.json('starterDeck', 'data/decks/starter-deck.json');
-        this.load.json('currentEncounter', 'data/encounters/medium-enemy.json');
+        this.load.json(this.encounterCacheKey, getEncounterFile(this.launchPayload));
         this.load.json('gongfaList', 'data/gongfa/gongfa-list.json');
     }
 
@@ -206,7 +224,7 @@ export class BattleScene extends Scene {
 
         // 根据初始卡组配置构建牌库（支持 UnitCard 和 ArtifactCard）
         this.deck = [];
-        starterDeckData.cards.forEach(({ id, count }) => {
+        getBattleDeckStacks(this.launchPayload, starterDeckData).forEach(({ id, count }) => {
             const cardDataTemplate = allCards.get(id);
             if (cardDataTemplate) {
                 for (let i = 0; i < count; i++) {
@@ -758,7 +776,7 @@ export class BattleScene extends Scene {
     }
 
     private spawnEnemies() {
-        const encounterData = this.cache.json.get('currentEncounter') as any;
+        const encounterData = this.cache.json.get(this.encounterCacheKey) as any;
         if (!encounterData) {
             console.error('遭遇配置加载失败！');
             return;
@@ -768,7 +786,7 @@ export class BattleScene extends Scene {
         const allCards = cardsDataObj.units;
 
         const spawnedEnemies: CardSprite[] = [];
-        encounterData.enemies.forEach((enemyConfig: any) => {
+        getEncounterUnits(encounterData).forEach((enemyConfig) => {
             const cardDataTemplate = allCards.find(c => c.id === enemyConfig.cardId);
             if (cardDataTemplate) {
                 // 深拷贝卡牌数据，避免多个卡牌共享同一个数据对象
@@ -936,5 +954,22 @@ export class BattleScene extends Scene {
                 this.enemyField.splice(index, 1);
             }
         }
+    }
+
+    public handleBattleEnd(victory: boolean): void {
+        if (this.battleEndHandled) {
+            return;
+        }
+
+        this.battleEndHandled = true;
+
+        if (!this.launchPayload) {
+            this.scene.restart();
+            return;
+        }
+
+        const result = createExpeditionBattleCompleteEvent(this.launchPayload, victory);
+        EventBus.emit(EXPEDITION_BATTLE_COMPLETE_EVENT, result);
+        this.scene.start('ExpeditionScene', { battleResult: result });
     }
 }

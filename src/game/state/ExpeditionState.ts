@@ -5,10 +5,13 @@ import {
     saveActiveRun,
     savePersistentStash,
 } from '../services/RunPersistence';
+import { enterReachableNode } from '../scenes/expedition/mapTraversal';
 import type {
     ExpeditionCardStack,
     ExpeditionItemStack,
+    ExpeditionMapDefinition,
     PersistentStash,
+    RunNodeState,
     RunRewardBundle,
     RunSnapshot,
 } from '../types/expedition';
@@ -38,6 +41,26 @@ export interface CreateRunSnapshotParams {
     mapId: string;
     entryNodeId: string;
 }
+
+export interface ShopOfferCost {
+    spiritStones: number;
+}
+
+export type EventRewardClaimResult =
+    | { status: 'claimed'; activeRun: RunSnapshot }
+    | { status: 'alreadyClaimed'; activeRun: RunSnapshot }
+    | { status: 'noActiveRun'; activeRun: null };
+
+export type ShopPurchaseResult =
+    | { status: 'purchased'; activeRun: RunSnapshot }
+    | { status: 'alreadyPurchased'; activeRun: RunSnapshot }
+    | { status: 'insufficientFunds'; activeRun: RunSnapshot }
+    | { status: 'noActiveRun'; activeRun: null };
+
+export type ExtractIntentResult =
+    | { status: 'recorded'; activeRun: RunSnapshot }
+    | { status: 'alreadyRecorded'; activeRun: RunSnapshot }
+    | { status: 'noActiveRun'; activeRun: null };
 
 const DEFAULT_STARTER_ITEMS: ExpeditionItemStack[] = [
     { id: 'tool.return-rope', itemType: 'tool', count: 1 },
@@ -115,6 +138,27 @@ function createRunId(): string {
     return `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function appendUniqueNodeId(nodeIds: string[], nodeId: string): string[] {
+    return nodeIds.includes(nodeId) ? [...nodeIds] : [...nodeIds, nodeId];
+}
+
+function createVisitedNodeState(
+    nodeId: string,
+    existing?: RunNodeState,
+    options: {
+        rewardClaimed?: boolean;
+        purchasedOfferIds?: string[];
+    } = {},
+): RunNodeState {
+    return {
+        nodeId,
+        status: 'cleared',
+        visited: true,
+        rewardClaimed: options.rewardClaimed ?? existing?.rewardClaimed ?? false,
+        purchasedOfferIds: options.purchasedOfferIds ?? existing?.purchasedOfferIds ?? [],
+    };
+}
+
 export class ExpeditionState {
     public persistentStash: PersistentStash;
     public activeRun: RunSnapshot | null;
@@ -180,9 +224,132 @@ export class ExpeditionState {
         return this.activeRun;
     }
 
+    claimEventNodeReward(nodeId: string, rewards: RunRewardBundle): EventRewardClaimResult {
+        if (!this.activeRun) {
+            return { status: 'noActiveRun', activeRun: null };
+        }
+
+        const existingNodeState = this.activeRun.nodeStates[nodeId];
+
+        if (existingNodeState?.rewardClaimed) {
+            return { status: 'alreadyClaimed', activeRun: this.activeRun };
+        }
+
+        const updatedRun: RunSnapshot = {
+            ...this.activeRun,
+            currentNodeId: nodeId,
+            carriedDeck: mergeCardStacks(this.activeRun.carriedDeck, rewards.cards),
+            carriedItems: mergeItemStacks(this.activeRun.carriedItems, rewards.items),
+            spiritStones: this.activeRun.spiritStones + rewards.spiritStones,
+            visitedNodeIds: appendUniqueNodeId(this.activeRun.visitedNodeIds, nodeId),
+            nodeStates: {
+                ...this.activeRun.nodeStates,
+                [nodeId]: createVisitedNodeState(nodeId, existingNodeState, { rewardClaimed: true }),
+            },
+        };
+
+        this.persistActiveRun(updatedRun);
+
+        return { status: 'claimed', activeRun: updatedRun };
+    }
+
+    purchaseShopOffer(
+        nodeId: string,
+        offerId: string,
+        cost: ShopOfferCost,
+        rewards: RunRewardBundle,
+    ): ShopPurchaseResult {
+        if (!this.activeRun) {
+            return { status: 'noActiveRun', activeRun: null };
+        }
+
+        const existingNodeState = this.activeRun.nodeStates[nodeId];
+        const purchasedOfferIds = existingNodeState?.purchasedOfferIds ?? [];
+
+        if (purchasedOfferIds.includes(offerId)) {
+            return { status: 'alreadyPurchased', activeRun: this.activeRun };
+        }
+
+        if (this.activeRun.spiritStones < cost.spiritStones) {
+            return { status: 'insufficientFunds', activeRun: this.activeRun };
+        }
+
+        const updatedPurchasedOfferIds = [...purchasedOfferIds, offerId];
+        const updatedRun: RunSnapshot = {
+            ...this.activeRun,
+            currentNodeId: nodeId,
+            carriedDeck: mergeCardStacks(this.activeRun.carriedDeck, rewards.cards),
+            carriedItems: mergeItemStacks(this.activeRun.carriedItems, rewards.items),
+            spiritStones: this.activeRun.spiritStones - cost.spiritStones + rewards.spiritStones,
+            visitedNodeIds: appendUniqueNodeId(this.activeRun.visitedNodeIds, nodeId),
+            nodeStates: {
+                ...this.activeRun.nodeStates,
+                [nodeId]: createVisitedNodeState(nodeId, existingNodeState, {
+                    rewardClaimed: true,
+                    purchasedOfferIds: updatedPurchasedOfferIds,
+                }),
+            },
+        };
+
+        this.persistActiveRun(updatedRun);
+
+        return { status: 'purchased', activeRun: updatedRun };
+    }
+
+    recordExtractIntent(nodeId: string, requestedAt = new Date().toISOString()): ExtractIntentResult {
+        if (!this.activeRun) {
+            return { status: 'noActiveRun', activeRun: null };
+        }
+
+        if (this.activeRun.pendingTerminalResolution?.kind === 'extract') {
+            return { status: 'alreadyRecorded', activeRun: this.activeRun };
+        }
+
+        const existingNodeState = this.activeRun.nodeStates[nodeId];
+        const updatedRun: RunSnapshot = {
+            ...this.activeRun,
+            currentNodeId: nodeId,
+            visitedNodeIds: appendUniqueNodeId(this.activeRun.visitedNodeIds, nodeId),
+            nodeStates: {
+                ...this.activeRun.nodeStates,
+                [nodeId]: createVisitedNodeState(nodeId, existingNodeState, { rewardClaimed: true }),
+            },
+            pendingTerminalResolution: {
+                kind: 'extract',
+                nodeId,
+                requestedAt,
+            },
+        };
+
+        this.persistActiveRun(updatedRun);
+
+        return { status: 'recorded', activeRun: updatedRun };
+    }
+
+    enterReachableNode(map: ExpeditionMapDefinition, nodeId: string): RunSnapshot | null {
+        if (!this.activeRun) {
+            return null;
+        }
+
+        const nextRun = enterReachableNode(map, this.activeRun, nodeId);
+
+        if (!nextRun) {
+            return null;
+        }
+
+        this.persistActiveRun(nextRun);
+
+        return nextRun;
+    }
+
     resetToEntranceState(): void {
         clearActiveRun();
         this.activeRun = null;
         this.persistentStash = loadPersistentStash() ?? this.persistentStash;
+    }
+
+    private persistActiveRun(run: RunSnapshot): void {
+        this.activeRun = run;
+        saveActiveRun(run);
     }
 }
