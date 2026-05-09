@@ -90,6 +90,7 @@ npm run dev-nolog # 关闭 log.js 匿名统计
 | `src/game/scenes/hub/HubScene.ts` | 最小 Hub / 城镇壳层：读取 Hub JSON 的子地图 `presentation` 与地点行动数据，渲染可拖拽地点标记；选择标记或 `navigate` 行动会保存当前 Hub location，再显示该地点既有行动按钮或启动 `StoryScene`。 |
 | `src/game/scenes/story/StoryScene.ts` | 通用故事场景：按启动 payload 的 `storyResourceId`（未显式提供时默认 `story.qingyun-entry`，旧直启 `storyGraphFile` 可反查 catalog `publicPath`）解析并加载主线或支线剧情图；`storyGraphFile` 仍提供稳定 cache key / session key，场景维护 `StoryState`，渲染剧情节点、元数据、条件化选项和终点重开按钮。 |
 | `src/game/services/StoryHubSessionPersistence.ts` | Story / Hub 本地 session 边界：用 `cardgame.story-hub-session.v1` 保存 Hub 当前位置和按 `hubId + actionId + storyGraphFile` 分区的 StoryState 快照。 |
+| `src/game/services/SaveCompatibility.ts` | 当前本地存档 / world-state 兼容性登记表：集中记录 Story/Hub session、永久仓库、按 route 分区 active run 的 owner、storage key、schema/key version、route-key 推导、legacy active-run key 和未来 migration 占位。 |
 | `src/game/content/contentCatalog.ts` | 内容清单 resolver / 验证层：读取调用方提供的 catalog / public-file source，复用 WorldMap、Hub、Story 与 Expedition 纯校验器，并检查 checked-in 内容路径、领域 ID、首层 Hub / Story / Expedition 引用、Hub `startStory.storyResourceId`、Story battle resource ids、Expedition battle/boss `payloadRef.encounterResourceId` 是否解析到对应 kind 且 `publicPath` 等于运行时文件别名；运行时目前迁移 `WorldMapScene` 入口资源、Hub 资源、Story 图资源、Story-sourced Battle 遭遇 / 卡组资源，以及 `ExpeditionScene` 的 world-state seed / starter deck / map / events / shop 目标资源：前三者分别通过 `worldmap.qingyun-region`、默认 / payload `hubResourceId`、`storyResourceId`（或兼容 `storyGraphFile` publicPath 反查）解析并加载 JSON，Story 战斗通过 `encounterResourceId` / `deckResourceId` 解析加载遭遇与卡组 JSON，ExpeditionScene 通过默认 / payload `worldStateResourceId`、`starterDeckResourceId`、`mapResourceId`、`eventsResourceId`、`shopResourceId` 解析加载 JSON；所有对应 `*File` 字段仍作为兼容别名和 cache-key 语义来源并必须与 catalog `publicPath` 对齐；Expedition-sourced Battle encounter 与 Battle 直启 / 默认启动仍按各自现有 `data/...` 路径加载。 |
 | `src/game/scenes/battle/BattleScene.ts` | 核心战场场景：加载数据、初始化 Manager、创建 UI、驱动回合逻辑与功法触发。 |
 | `src/game/managers/battle/*.ts` / `src/game/managers/common/*.ts` | 各子系统管理器：`CardManager`、`UnitEffectManager`、`UsageManager`、`SkillManager`、`PillManager` 等。 |
@@ -139,6 +140,16 @@ npm run dev-nolog # 关闭 log.js 匿名统计
 - `stories[hubId + actionId + storyGraphFile]`：由 Hub action 启动的 `StoryState`、`selectedChoiceIds`、可选 status text 和更新时间。该 key 会随 StoryScene → BattleScene → StoryScene 往返传递，确保战斗结果也写回同一个故事会话。
 
 这只是本地单机 session 边界，不是云存档、完整 world-state ownership、背包 / 商店 / 奖励系统，也不复用 Expedition `RunSnapshot`。
+
+### Local save compatibility registry
+
+`src/game/services/SaveCompatibility.ts` 是一个不拥有读写流程的兼容性登记表。它引用现有 persistence 常量，不新增 writer，也不改变 persisted JSON shape 或玩家可见的保存 / 恢复行为。
+
+- Story / Hub session 仍由 `StoryHubSessionPersistence` 拥有，使用 `cardgame.story-hub-session.v1`，document `schemaVersion` 为 `1`。
+- 永久仓库仍由 `RunPersistence` 拥有，使用 `cardgame.persistent-stash.v1`；storage key 带 `v1`，但 `PersistentStash` JSON 当前不内嵌 schema version。
+- Active run 仍由 `RunPersistence` 拥有，canonical storage key 为 `cardgame.active-run.v1:expedition:<expeditionId>:<mapId>`；route identity 继续按运行时 persistence 的 `expeditionId + mapId` 规则 trim / fallback 到默认秘境身份。
+- 兼容性登记保留 legacy active-run inventory：未分区旧 key `cardgame.active-run.v1`，以及旧 route-key 形式 `cardgame.active-run.v1:<raw routeKey>`，供现有 migration lookup / cleanup 语义对照。
+- Migration hooks 目前是显式 no-op placeholders；只有未来任务明确改变持久化 schema 时才会加入真实迁移。
 
 ### BattleScene 生命周期
 1. `preload`：载入图片 / JSON（卡牌、功法等）。
