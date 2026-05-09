@@ -482,6 +482,47 @@ describe('content catalog', () => {
         });
     });
 
+    it('resolves checked-in Expedition battle and boss encounter resources by stable catalog ids for runtime BattleScene loading', () => {
+        const resolver = createContentCatalogResolver(readCatalogJson(), {
+            context: 'BattleScene',
+            sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+        });
+
+        expect([
+            resolver.resolveJsonResource({
+                resourceId: 'test_encounter_01',
+                expectedKind: 'encounter',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'test_encounter_02',
+                expectedKind: 'encounter',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'mijing_boss_01',
+                expectedKind: 'encounter',
+            }),
+        ]).toEqual([
+            {
+                resourceId: 'test_encounter_01',
+                kind: 'encounter',
+                schemaVersion: 1,
+                publicPath: 'data/encounters/test-enemy.json',
+            },
+            {
+                resourceId: 'test_encounter_02',
+                kind: 'encounter',
+                schemaVersion: 1,
+                publicPath: 'data/encounters/medium-enemy.json',
+            },
+            {
+                resourceId: 'mijing_boss_01',
+                kind: 'encounter',
+                schemaVersion: 1,
+                publicPath: 'data/encounters/mijing-boss.json',
+            },
+        ]);
+    });
+
     it('resolves checked-in Expedition target resources by stable catalog ids for runtime ExpeditionScene loading', () => {
         const resolver = createContentCatalogResolver(readCatalogJson(), {
             context: 'ExpeditionScene',

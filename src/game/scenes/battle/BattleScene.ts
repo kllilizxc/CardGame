@@ -54,7 +54,9 @@ import {
     getEncounterUnits,
     normalizeBattleLaunchPayload,
     normalizeStoryBattleLaunchPayload,
+    resolveExpeditionBattleRuntimeResources,
     resolveStoryBattleRuntimeResources,
+    type ExpeditionBattleRuntimeResources,
     type StoryBattleRuntimeResources,
 } from './battleSceneLaunch';
 
@@ -110,6 +112,7 @@ export class BattleScene extends Scene {
     private launchPayload: BattleLaunchPayload | null = null;
     private storyLaunchPayload: StoryBattleSceneLaunchPayload | null = null;
     private storyRuntimeResources: StoryBattleRuntimeResources | null = null;
+    private expeditionRuntimeResources: ExpeditionBattleRuntimeResources | null = null;
     private encounterCacheKey = 'currentEncounter';
     private deckCacheKey = 'starterDeck';
     private battleEndHandled = false;
@@ -122,6 +125,7 @@ export class BattleScene extends Scene {
         this.launchPayload = normalizeBattleLaunchPayload(data);
         this.storyLaunchPayload = this.launchPayload ? null : normalizeStoryBattleLaunchPayload(data);
         this.storyRuntimeResources = null;
+        this.expeditionRuntimeResources = null;
         this.encounterCacheKey = getEncounterCacheKey(this.launchPayload, this.storyLaunchPayload);
         this.deckCacheKey = getBattleDeckCacheKey(this.storyLaunchPayload);
         this.battleEndHandled = false;
@@ -176,8 +180,17 @@ export class BattleScene extends Scene {
             this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
             this.storyLaunchPayload,
         );
+        this.expeditionRuntimeResources = resolveExpeditionBattleRuntimeResources(
+            this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+            this.launchPayload,
+        );
         this.load.json(this.deckCacheKey, getBattleDeckFile(this.storyLaunchPayload, this.storyRuntimeResources));
-        this.load.json(this.encounterCacheKey, getEncounterFile(this.launchPayload, this.storyLaunchPayload, this.storyRuntimeResources));
+        this.load.json(this.encounterCacheKey, getEncounterFile(
+            this.launchPayload,
+            this.storyLaunchPayload,
+            this.storyRuntimeResources,
+            this.expeditionRuntimeResources,
+        ));
         this.load.json('gongfaList', 'data/gongfa/gongfa-list.json');
     }
 

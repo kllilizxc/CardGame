@@ -36,6 +36,11 @@ export interface StoryBattleRuntimeResources {
     deckFile: string;
 }
 
+export interface ExpeditionBattleRuntimeResources {
+    encounterResourceId: string;
+    encounterFile: string;
+}
+
 function isRunDeck(value: unknown): value is ExpeditionCardStack[] {
     return Array.isArray(value)
         && value.every((stack) => {
@@ -269,9 +274,14 @@ export function getEncounterFile(
     payload: BattleLaunchPayload | null,
     storyPayload: StoryBattleSceneLaunchPayload | null = null,
     storyRuntimeResources: StoryBattleRuntimeResources | null = null,
+    expeditionRuntimeResources: ExpeditionBattleRuntimeResources | null = null,
 ): string {
     if (storyPayload) {
         return storyRuntimeResources?.encounterFile ?? storyPayload.battleLaunch.encounterFile;
+    }
+
+    if (expeditionRuntimeResources) {
+        return expeditionRuntimeResources.encounterFile;
     }
 
     return payload?.encounterFile ?? 'data/encounters/medium-enemy.json';
@@ -381,5 +391,34 @@ export function resolveStoryBattleRuntimeResources(
         encounterFile: encounterResource.publicPath,
         deckResourceId,
         deckFile: deckResource.publicPath,
+    };
+}
+
+export function resolveExpeditionBattleRuntimeResources(
+    rawCatalog: unknown,
+    payload: BattleLaunchPayload | null,
+): ExpeditionBattleRuntimeResources | null {
+    if (!payload?.encounterResourceId) {
+        return null;
+    }
+
+    const catalogResolver = createContentCatalogResolver(rawCatalog, {
+        context: 'BattleScene',
+        sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+    });
+    const encounterResource = catalogResolver.resolveJsonResource({
+        resourceId: payload.encounterResourceId,
+        expectedKind: 'encounter',
+    });
+
+    if (encounterResource.publicPath !== payload.encounterFile) {
+        throw new Error(
+            `BattleScene Expedition battle ${payload.runId}/${payload.nodeId} encounterResourceId ${payload.encounterResourceId} resolved to catalog publicPath ${encounterResource.publicPath}, but launch encounterFile is ${payload.encounterFile}.`,
+        );
+    }
+
+    return {
+        encounterResourceId: payload.encounterResourceId,
+        encounterFile: encounterResource.publicPath,
     };
 }

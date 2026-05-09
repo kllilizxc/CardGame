@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
+import contentCatalogJson from '../../../../public/data/content-catalog.json';
 import type { BattleLaunchPayload } from '../../types/expedition';
 import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import {
@@ -11,6 +12,7 @@ import {
     getEncounterUnits,
     normalizeBattleLaunchPayload,
     normalizeStoryBattleLaunchPayload,
+    resolveExpeditionBattleRuntimeResources,
     resolveStoryBattleRuntimeResources,
 } from './battleSceneLaunch';
 
@@ -151,5 +153,41 @@ describe('battleSceneLaunch', () => {
         expect(getBattleDeckCacheKey(normalized)).toBe('storyDeck:story.test-battle:story.test-battle.first-duel');
         expect(normalized.battleLaunch.encounterFile).toBe('data/encounters/test-enemy.json');
         expect(normalized.battleLaunch.deckFile).toBe('data/decks/starter-deck.json');
+    });
+
+    it('resolves Expedition-sourced battle encounter files through catalog resource ids while keeping cache keys and file aliases stable', () => {
+        const normalized = normalizeBattleLaunchPayload(payload);
+
+        if (!normalized) {
+            throw new Error('Expected expedition payload to normalize.');
+        }
+
+        const runtimeResources = resolveExpeditionBattleRuntimeResources(contentCatalogJson, normalized);
+
+        expect(runtimeResources).toEqual({
+            encounterResourceId: 'test_encounter_01',
+            encounterFile: 'data/encounters/test-enemy.json',
+        });
+        expect(getEncounterFile(normalized, null, null, runtimeResources)).toBe('data/encounters/test-enemy.json');
+        expect(getEncounterCacheKey(normalized)).toBe('expeditionEncounter:run-test-001:battle.mist-foxes');
+        expect(normalized.encounterFile).toBe('data/encounters/test-enemy.json');
+    });
+
+    it('keeps legacy Expedition encounterFile loading when encounterResourceId is absent', () => {
+        const { encounterResourceId: _omitted, ...legacyPayload } = payload;
+
+        expect(resolveExpeditionBattleRuntimeResources(contentCatalogJson, legacyPayload)).toBeNull();
+        expect(getEncounterFile(legacyPayload, null, null, null)).toBe('data/encounters/test-enemy.json');
+    });
+
+    it('rejects Expedition encounter resource ids whose catalog public paths do not match compatibility encounterFile aliases', () => {
+        const mismatchPayload: BattleLaunchPayload = {
+            ...payload,
+            encounterFile: 'data/encounters/other-enemy.json',
+        };
+
+        expect(() => resolveExpeditionBattleRuntimeResources(contentCatalogJson, mismatchPayload)).toThrow(
+            'BattleScene Expedition battle run-test-001/battle.mist-foxes encounterResourceId test_encounter_01 resolved to catalog publicPath data/encounters/test-enemy.json, but launch encounterFile is data/encounters/other-enemy.json.',
+        );
     });
 });
