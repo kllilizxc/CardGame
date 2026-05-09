@@ -1,6 +1,6 @@
 # Executable Story Content Contracts
 
-`public/data/story/story-graph.executable.json` is the checked-in executable example for story content contracts, validated at dev/test time by `src/game/types/storyContent.ts` instead of being treated as free-form prose. `public/data/story/story-graph.json` remains the UI-facing storyFlow example used by the current StoryScene.
+`public/data/story/story-graph.executable.json` is the checked-in executable example for story content contracts, validated at dev/test time by `src/game/types/storyContent.ts` instead of being treated as free-form prose. `public/data/story/story-graph.json` remains the UI-facing example used by the current StoryScene: `src/game/scenes/story/storyFlow.ts` strictly validates that the example is playable, while `src/game/scenes/story/storyFlowViewModel.ts` owns render and choice-transition view models.
 
 ## Graph shape
 
@@ -47,6 +47,6 @@ Nodes use `onEnter`, and choices use `effects`. Supported operations:
 
 ## Authoring loop
 
-1. Edit `public/data/story/story-graph.executable.json` when authoring executable contract examples. Keep `public/data/story/story-graph.json` compatible with the current `storyFlowViewModel` UI contract until the runtime UI migrates.
+1. Edit `public/data/story/story-graph.executable.json` when authoring executable contract examples. Keep `public/data/story/story-graph.json` compatible with the current `storyFlowViewModel` UI contract and with `storyFlow` strict reference validation until the runtime UI migrates.
 2. Run `bun test src/game/types/storyContent.test.ts` to validate graph structure, references, conditions, and effects.
 3. Use `evaluateStoryCondition` and `applyStoryEffects` from `src/game/types/storyContent.ts` when wiring UI/runtime traversal so content behavior remains data-driven.

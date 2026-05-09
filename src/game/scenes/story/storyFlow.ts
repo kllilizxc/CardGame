@@ -1,3 +1,6 @@
+// StoryScene uses storyFlowViewModel for render/transition state. This module
+// stays focused on strict validation of the UI-facing playable story graph.
+
 export interface StoryAiHints {
     tone?: string;
     theme?: string[];
@@ -41,27 +44,6 @@ export interface StoryGraph {
     nodes: StoryNode[];
     choices: StoryChoice[];
 }
-
-export interface StoryNodeView {
-    node: StoryNode;
-    choices: StoryChoice[];
-    metadataLine: string;
-    tagLine: string;
-    isTerminal: boolean;
-}
-
-export type StoryChoiceResult =
-    | {
-        status: 'advanced';
-        choice: StoryChoice;
-        view: StoryNodeView;
-        statusText: string;
-    }
-    | {
-        status: 'invalid-choice';
-        currentNodeId: string;
-        statusText: string;
-    };
 
 function assertRecord(value: unknown, label: string): asserts value is Record<string, unknown> {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -179,49 +161,5 @@ export function validatePlayableStoryGraph(rawGraph: unknown): StoryGraph {
         entryNodeId,
         nodes,
         choices,
-    };
-}
-
-export function createStoryNodeView(graph: StoryGraph, nodeId: string): StoryNodeView {
-    const node = graph.nodes.find((candidate) => candidate.id === nodeId);
-
-    if (!node) {
-        throw new Error(`Story node does not exist: ${nodeId}`);
-    }
-
-    const choices = graph.choices.filter((choice) => choice.from === nodeId);
-    const metadataLine = [node.chapter, node.location, node.timeHint].filter(Boolean).join(' · ');
-
-    return {
-        node,
-        choices,
-        metadataLine,
-        tagLine: node.tags.join(' / '),
-        isTerminal: choices.length === 0,
-    };
-}
-
-export function chooseStoryChoice(
-    graph: StoryGraph,
-    currentNodeId: string,
-    choiceId: string,
-): StoryChoiceResult {
-    const choice = graph.choices.find((candidate) =>
-        candidate.from === currentNodeId && candidate.id === choiceId,
-    );
-
-    if (!choice) {
-        return {
-            status: 'invalid-choice',
-            currentNodeId,
-            statusText: `该选择不可用：${choiceId}`,
-        };
-    }
-
-    return {
-        status: 'advanced',
-        choice,
-        view: createStoryNodeView(graph, choice.to),
-        statusText: `已选择：${choice.text}`,
     };
 }
