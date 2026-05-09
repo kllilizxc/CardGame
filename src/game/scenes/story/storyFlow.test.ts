@@ -1,10 +1,36 @@
 import { describe, expect, it } from 'bun:test';
 
+import compactStoryGraphJson from '../../../../public/data/story/story-graph.compact.example.json';
 import storyGraphJson from '../../../../public/data/story/story-graph.json';
 
 import { validatePlayableStoryGraph } from './storyFlow';
 
 describe('storyFlow', () => {
+    it('keeps the compact authoring example valid against the playable StoryState schema', () => {
+        const graph = validatePlayableStoryGraph(compactStoryGraphJson);
+
+        expect(graph.storyId).toBe('story.example.compact');
+        expect(graph.entryNodeId).toBe('start');
+        expect(graph.nodes.map((node) => node.id)).toEqual(['start', 'finish']);
+        expect(graph.choices[0]).toMatchObject({
+            id: 'start_choice_finish',
+            from: 'start',
+            to: 'finish',
+            enabledWhen: {
+                kind: 'attribute',
+                attribute: '心性',
+                operator: '>=',
+                value: 1,
+            },
+            effects: [
+                {
+                    kind: 'setFlag',
+                    flag: 'story.example.chose_finish',
+                },
+            ],
+        });
+    });
+
     it('validates the checked-in example story as a StoryState-backed playable graph', () => {
         const graph = validatePlayableStoryGraph(storyGraphJson);
 

@@ -1,0 +1,79 @@
+{
+  "storyId": "story.example.compact",
+  "title": "Compact StoryState Authoring Example",
+  "entryNodeId": "start",
+  "initialState": {
+    "locationId": "location.example",
+    "sublocationId": "sublocation.example.start",
+    "attributes": {
+      "心性": 1
+    },
+    "flags": {},
+    "relations": {}
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "type": "story",
+      "title": "起点",
+      "summary": "玩家看到第一个剧情选择。",
+      "detail": "这里是最小可玩故事图的入口节点。",
+      "tags": ["示例", "入口"],
+      "chapter": "示例章",
+      "location": "示例地点",
+      "sublocation": "起点",
+      "locationId": "location.example",
+      "sublocationId": "sublocation.example.start",
+      "timeHint": "清晨",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "story.example.started"
+        }
+      ]
+    },
+    {
+      "id": "finish",
+      "type": "story",
+      "title": "终点",
+      "summary": "玩家抵达无后续选项的结束节点。",
+      "detail": "StoryScene 会把没有可见选项的节点显示为当前示例的终点。",
+      "tags": ["示例", "终点"],
+      "chapter": "示例章",
+      "location": "示例地点",
+      "sublocation": "终点",
+      "locationId": "location.example",
+      "sublocationId": "sublocation.example.finish",
+      "timeHint": "清晨",
+      "onEnter": [
+        {
+          "kind": "moveTo",
+          "locationId": "location.example",
+          "sublocationId": "sublocation.example.finish"
+        }
+      ]
+    }
+  ],
+  "choices": [
+    {
+      "id": "start_choice_finish",
+      "from": "start",
+      "to": "finish",
+      "text": "完成这个最小示例",
+      "description": "演示一个带属性门槛和 flag 效果的可选项。",
+      "enabledWhen": {
+        "kind": "attribute",
+        "attribute": "心性",
+        "operator": ">=",
+        "value": 1
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "story.example.chose_finish"
+        }
+      ],
+      "flags": ["示例"]
+    }
+  ]
+}

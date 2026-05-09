@@ -1,6 +1,6 @@
 # StoryState-backed Story Content Contracts
 
-`public/data/story/story-graph.json` is the checked-in playable example for StoryScene content. `StoryScene` loads it directly, `src/game/scenes/story/storyFlow.ts` strictly validates that the example is playable, and `src/game/scenes/story/storyFlowViewModel.ts` owns render / transition view models and runtime traversal using `StoryState`, `StoryCondition`, and `StoryEffect` from `src/game/types/story.ts` / `src/game/state/StoryState.ts`. `public/data/story/story-graph.executable.json` remains a standalone contract fixture validated by `src/game/types/storyContent.ts`.
+`public/data/story/story-graph.json` is the checked-in playable example for StoryScene content. `StoryScene` loads it directly, `src/game/scenes/story/storyFlow.ts` strictly validates that the example is playable, and `src/game/scenes/story/storyFlowViewModel.ts` owns render / transition view models and runtime traversal using `StoryState`, `StoryCondition`, and `StoryEffect` from `src/game/types/story.ts` / `src/game/state/StoryState.ts`. `public/data/docs/story-authoring-guide.md` is the author-facing workflow guide, and `public/data/story/story-graph.compact.example.json` is the smallest checked-in StoryState schema example. `public/data/story/story-graph.executable.json` remains a standalone contract fixture validated by `src/game/types/storyContent.ts`.
 
 ## Graph shape
 
@@ -49,6 +49,8 @@ Nodes use `onEnter`, and choices use `effects`. Both fields use `StoryEffect` ar
 ## Authoring loop
 
 1. Edit `public/data/story/story-graph.json` for playable StoryScene content.
-2. Run `bun test src/game/scenes/story/*.test.ts src/game/state/StoryState.test.ts` to validate graph structure, conditions, effects, disabled choices, and state transitions.
-3. Run `bun test src/game/types/storyContent.test.ts` when changing the standalone `story-graph.executable.json` contract fixture.
-4. Run `npm run build-nolog` before handing off UI/runtime changes.
+2. Use `public/data/story/story-graph.compact.example.json` as the minimal copyable template for new chapters or tooling fixtures.
+3. Follow `public/data/docs/story-authoring-guide.md` for ID naming, node / choice authoring, and when to use `visibleWhen`, `enabledWhen`, `effects`, or `onEnter`.
+4. Run `bun test src/game/scenes/story/*.test.ts src/game/state/StoryState.test.ts` to validate graph structure, conditions, effects, disabled choices, and state transitions.
+5. Run `bun test src/game/types/storyContent.test.ts` when changing the standalone `story-graph.executable.json` contract fixture.
+6. Run `npm run build-nolog` before handing off UI/runtime changes.
