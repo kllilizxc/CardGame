@@ -41,7 +41,7 @@ const validWorldMapFixture = {
 };
 
 describe('world map content contract', () => {
-    it('validates the checked-in world map with Qingyun town and outer-mountain trial destinations', () => {
+    it('validates the checked-in world map with two Hub destinations and the outer-mountain trial', () => {
         const worldMap = validateWorldMapDefinition(worldMapJson);
 
         expect(worldMap.id).toBe('worldmap.qingyun-region');
@@ -59,12 +59,43 @@ describe('world map content contract', () => {
                 targetFile: 'data/hub/town-shell.json',
             },
             {
+                id: 'destination.qingyun-sect-gate',
+                kind: 'hub',
+                label: '青云宗山门',
+                targetFile: 'data/hub/qingyun-sect-gate.json',
+            },
+            {
                 id: 'destination.qingyun-outer-mountain-trial',
                 kind: 'expedition',
                 label: '青云外山试炼',
                 targetFile: 'data/mijing/prototype-map.json',
             },
         ]);
+    });
+
+    it('keeps checked-in Hub destinations on distinct route ids, Hub ids, and Hub files', () => {
+        const worldMap = validateWorldMapDefinition(worldMapJson);
+        const hubDestinations = worldMap.destinations.filter((destination) => destination.kind === 'hub');
+
+        expect(hubDestinations.map((destination) => ({
+            destinationId: destination.id,
+            hubId: destination.hubId,
+            hubFile: destination.hubFile,
+        }))).toEqual([
+            {
+                destinationId: 'destination.qingyun-town',
+                hubId: 'hub.qingyun-town',
+                hubFile: 'data/hub/town-shell.json',
+            },
+            {
+                destinationId: 'destination.qingyun-sect-gate',
+                hubId: 'hub.qingyun-sect-gate',
+                hubFile: 'data/hub/qingyun-sect-gate.json',
+            },
+        ]);
+        expect(new Set(hubDestinations.map((destination) => destination.id)).size).toBe(hubDestinations.length);
+        expect(new Set(hubDestinations.map((destination) => destination.hubId)).size).toBe(hubDestinations.length);
+        expect(new Set(hubDestinations.map((destination) => destination.hubFile)).size).toBe(hubDestinations.length);
     });
 
     it('rejects duplicate destination ids before any scene launch code runs', () => {
@@ -112,6 +143,17 @@ describe('world map content contract', () => {
                 hubId: 'hub.qingyun-town',
                 hubFile: 'data/hub/town-shell.json',
                 statusText: '从大地图进入青云镇。',
+            },
+        });
+        expect(createWorldMapDestinationIntent(worldMap, 'destination.qingyun-sect-gate')).toEqual({
+            kind: 'startScene',
+            sceneKey: 'HubScene',
+            payload: {
+                source: 'worldMap',
+                destinationId: 'destination.qingyun-sect-gate',
+                hubId: 'hub.qingyun-sect-gate',
+                hubFile: 'data/hub/qingyun-sect-gate.json',
+                statusText: '从大地图抵达青云宗山门。',
             },
         });
         expect(createWorldMapDestinationIntent(worldMap, 'destination.qingyun-outer-mountain-trial')).toEqual({

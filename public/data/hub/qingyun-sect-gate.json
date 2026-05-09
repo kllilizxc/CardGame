@@ -1,0 +1,25 @@
+{
+  "hubId": "hub.qingyun-sect-gate",
+  "title": "青云宗山门",
+  "subtitle": "云阶尽头的入宗门庭",
+  "description": "青云宗山门是大地图上的第二个独立 Hub 目的地。它使用自己的 Hub JSON 和 hubId，但仍可通过 startStory.action 进入既有可游玩的青云宗入门故事图，从而证明大地图可以路由到多个数据拥有的 Hub，而不需要复制 HubScene 的硬编码状态。",
+  "defaultLocationId": "location.qingyun-sect-gate.archway",
+  "locations": [
+    {
+      "id": "location.qingyun-sect-gate.archway",
+      "title": "山门牌坊",
+      "summary": "云雾缠绕的青石牌坊前，执事弟子正在核对入门名册。",
+      "detail": "这里比山脚集市更接近青云宗本山。你可以直接从山门牌坊进入现有青云宗入门主线；进度会按 hub.qingyun-sect-gate 与本行动 ID 单独保存，不会和青云镇入口共享。",
+      "actions": [
+        {
+          "id": "action.start-sect-gate-entry-story",
+          "kind": "startStory",
+          "label": "叩问青云山门",
+          "description": "从青云宗山门 Hub 启动 public/data/story/story-graph.json 中的入门主线；它与青云镇入口共享故事内容，但使用不同 Hub session key。",
+          "storyGraphFile": "data/story/story-graph.json",
+          "statusText": "山门云阶前，青云宗入门故事已开启。"
+        }
+      ]
+    }
+  ]
+}

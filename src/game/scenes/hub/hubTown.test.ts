@@ -41,6 +41,10 @@ function readPublicJsonFile(publicFile: string): unknown {
     return JSON.parse(readFileSync(absolutePath, 'utf8')) as unknown;
 }
 
+function readHubTownDefinition(publicFile: string): HubTownDefinition {
+    return validateHubTownDefinition(readPublicJsonFile(publicFile));
+}
+
 function createStoryState(params: {
     storyId: string;
     locationId: string;
@@ -128,6 +132,40 @@ describe('hub town shell content', () => {
             'story.qingyun-entry',
             'story.qingyun-teahouse-rumors',
         ]);
+    });
+
+    it('validates the checked-in Qingyun sect-gate Hub and its data-driven story launch', () => {
+        const sectGate = readHubTownDefinition('data/hub/qingyun-sect-gate.json');
+        const startStoryActions = getAllStartStoryActions(sectGate);
+
+        expect(sectGate.hubId).toBe('hub.qingyun-sect-gate');
+        expect(sectGate.defaultLocationId).toBe('location.qingyun-sect-gate.archway');
+        expect(sectGate.locations.map((location) => location.id)).toEqual([
+            'location.qingyun-sect-gate.archway',
+        ]);
+        expect(startStoryActions.map((action) => ({
+            id: action.id,
+            storyGraphFile: action.storyGraphFile,
+        }))).toEqual([
+            {
+                id: 'action.start-sect-gate-entry-story',
+                storyGraphFile: 'data/story/story-graph.json',
+            },
+        ]);
+
+        const graph = validatePlayableStoryGraph(readPublicJsonFile(startStoryActions[0].storyGraphFile));
+        expect(graph.storyId).toBe('story.qingyun-entry');
+        expect(createHubActionIntent(startStoryActions[0])).toEqual({
+            kind: 'startScene',
+            sceneKey: 'StoryScene',
+            payload: {
+                source: 'hub',
+                hubId: 'hub.qingyun-sect-gate',
+                actionId: 'action.start-sect-gate-entry-story',
+                storyGraphFile: 'data/story/story-graph.json',
+                statusText: '山门云阶前，青云宗入门故事已开启。',
+            },
+        });
     });
 
     it('creates a StoryScene launch intent from data without hard-coding the story graph in the hub scene', () => {
@@ -318,6 +356,77 @@ describe('hub town shell content', () => {
                 actionId: 'action.start-teahouse-rumors-story',
                 storyGraphFile: 'data/story/qingyun-teahouse-rumors.json',
                 statusText: '茶棚里传来新的试炼传闻。',
+            },
+        });
+    });
+
+    it('separates StoryScene resume identity across different Hub ids even when actions reuse the same story graph', () => {
+        const town = validateHubTownDefinition(townShellJson);
+        const sectGate = readHubTownDefinition('data/hub/qingyun-sect-gate.json');
+        const townMainlineAction = getStartStoryAction(town, 'action.start-qingyun-entry-story');
+        const sectGateAction = getStartStoryAction(sectGate, 'action.start-sect-gate-entry-story');
+        const townSnapshot: StoryRuntimeSessionSnapshot = {
+            ...createStoryHubSessionKeyFromAction(townMainlineAction),
+            storyState: createStoryState({
+                storyId: 'story.qingyun-entry',
+                locationId: 'location.qingyun-gate',
+                sublocationId: 'sublocation.qingyun.queue-edge',
+                nodeId: 'sect_entry_003_help_girl',
+            }),
+            selectedChoiceIds: ['sect_entry_001_choice_help_girl'],
+            statusText: '已恢复青云镇主线故事进度。',
+            updatedAt: '2026-05-09T06:03:00.000Z',
+        };
+        const sectGateSnapshot: StoryRuntimeSessionSnapshot = {
+            ...createStoryHubSessionKeyFromAction(sectGateAction),
+            storyState: createStoryState({
+                storyId: 'story.qingyun-entry',
+                locationId: 'location.qingyun-gate',
+                sublocationId: 'sublocation.qingyun.trial-bell',
+                nodeId: 'sect_entry_005_trial_bell',
+            }),
+            selectedChoiceIds: ['sect_entry_001_choice_wait', 'sect_entry_004_choice_ring_bell'],
+            statusText: '已恢复青云宗山门故事进度。',
+            updatedAt: '2026-05-09T06:04:00.000Z',
+        };
+
+        expect(createStoryHubSessionKeyFromAction(townMainlineAction)).toEqual({
+            hubId: 'hub.qingyun-town',
+            actionId: 'action.start-qingyun-entry-story',
+            storyGraphFile: 'data/story/story-graph.json',
+        });
+        expect(createStoryHubSessionKeyFromAction(sectGateAction)).toEqual({
+            hubId: 'hub.qingyun-sect-gate',
+            actionId: 'action.start-sect-gate-entry-story',
+            storyGraphFile: 'data/story/story-graph.json',
+        });
+        expect(createStoryHubSessionKeyFromAction(townMainlineAction)).not.toEqual(
+            createStoryHubSessionKeyFromAction(sectGateAction),
+        );
+
+        expect(createHubActionIntent(sectGateAction, townSnapshot)).toEqual({
+            kind: 'startScene',
+            sceneKey: 'StoryScene',
+            payload: {
+                source: 'hub',
+                hubId: 'hub.qingyun-sect-gate',
+                actionId: 'action.start-sect-gate-entry-story',
+                storyGraphFile: 'data/story/story-graph.json',
+                statusText: '山门云阶前，青云宗入门故事已开启。',
+            },
+        });
+        expect(createHubActionIntent(sectGateAction, sectGateSnapshot)).toMatchObject({
+            kind: 'startScene',
+            payload: {
+                hubId: 'hub.qingyun-sect-gate',
+                actionId: 'action.start-sect-gate-entry-story',
+                storyGraphFile: 'data/story/story-graph.json',
+                storyState: {
+                    storyId: 'story.qingyun-entry',
+                    currentNodeId: 'sect_entry_005_trial_bell',
+                },
+                selectedChoiceIds: ['sect_entry_001_choice_wait', 'sect_entry_004_choice_ring_bell'],
+                statusText: '已恢复青云宗山门故事进度。',
             },
         });
     });

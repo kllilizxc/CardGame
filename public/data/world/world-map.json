@@ -2,7 +2,7 @@
   "id": "worldmap.qingyun-region",
   "title": "青云山麓",
   "subtitle": "大地图 · 第一层入口",
-  "description": "青云宗山门外的第一张薄大地图。当前只负责把玩家从主菜单路由到既有青云镇 Hub 和青云外山试炼秘境，不拥有解锁、移动或世界状态。",
+  "description": "青云宗山门外的第一张薄大地图。当前只负责把玩家从主菜单路由到青云镇 Hub、青云宗山门 Hub 和青云外山试炼秘境，不拥有解锁、移动或世界状态。",
   "defaultDestinationId": "destination.qingyun-town",
   "destinations": [
     {
@@ -13,6 +13,15 @@
       "hubId": "hub.qingyun-town",
       "hubFile": "data/hub/town-shell.json",
       "statusText": "从大地图进入青云镇。"
+    },
+    {
+      "id": "destination.qingyun-sect-gate",
+      "kind": "hub",
+      "label": "青云宗山门",
+      "description": "抵达云阶尽头的山门牌坊，以独立 Hub 身份进入既有青云宗入门故事。",
+      "hubId": "hub.qingyun-sect-gate",
+      "hubFile": "data/hub/qingyun-sect-gate.json",
+      "statusText": "从大地图抵达青云宗山门。"
     },
     {
       "id": "destination.qingyun-outer-mountain-trial",
