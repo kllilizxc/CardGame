@@ -402,3 +402,14 @@ export function createWorldMapInitialSurfacePosition(
         y: viewport.top + viewport.height / 2 - presentation.initialCenter.y * presentation.mapHeight,
     });
 }
+
+export function shouldActivateWorldMapMarker(
+    pointerDown: WorldMapSurfacePosition,
+    pointerUp: WorldMapSurfacePosition,
+    dragDistanceThreshold: number,
+): boolean {
+    const deltaX = pointerUp.x - pointerDown.x;
+    const deltaY = pointerUp.y - pointerDown.y;
+
+    return deltaX * deltaX + deltaY * deltaY <= dragDistanceThreshold * dragDistanceThreshold;
+}

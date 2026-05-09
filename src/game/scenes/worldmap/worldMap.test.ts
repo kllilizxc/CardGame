@@ -10,6 +10,7 @@ import {
     createWorldMapReturnIntent,
     createWorldMapDestinationIntent,
     getWorldMapDestinationSurfacePosition,
+    shouldActivateWorldMapMarker,
     type WorldMapDestination,
     type WorldMapExpeditionDestination,
     validateWorldMapDefinition,
@@ -517,6 +518,19 @@ describe('world map content contract', () => {
             x: -600,
             y: -320,
         });
+    });
+
+    it('guards marker activation when a pointer drag exceeds the click threshold', () => {
+        expect(shouldActivateWorldMapMarker(
+            { x: 240, y: 320 },
+            { x: 246, y: 324 },
+            8,
+        )).toBe(true);
+        expect(shouldActivateWorldMapMarker(
+            { x: 240, y: 320 },
+            { x: 255, y: 326 },
+            8,
+        )).toBe(false);
     });
 
     it('fails launch intent resolution for missing destination ids', () => {

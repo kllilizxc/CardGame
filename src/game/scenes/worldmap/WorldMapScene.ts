@@ -6,6 +6,7 @@ import {
     createWorldMapInitialSurfacePosition,
     createWorldMapDestinationIntent,
     getWorldMapDestinationSurfacePosition,
+    shouldActivateWorldMapMarker,
     validateWorldMapDefinition,
     type WorldMapDefinition,
     type WorldMapDestination,
@@ -269,17 +270,19 @@ export class WorldMapScene extends Scene {
                 return;
             }
 
-            const dragDistance = Phaser.Math.Distance.Between(
-                pointerDownPosition.x,
-                pointerDownPosition.y,
-                pointer.x,
-                pointer.y,
+            const shouldActivate = shouldActivateWorldMapMarker(
+                pointerDownPosition,
+                { x: pointer.x, y: pointer.y },
+                this.dragDistanceThreshold,
             );
             pointerDownPosition = undefined;
 
-            if (dragDistance <= this.dragDistanceThreshold) {
+            if (shouldActivate) {
                 this.handleDestinationSelected(destination.id);
+                return;
             }
+
+            this.restoreDefaultStatusText();
         });
         pin.on('pointerover', (pointer: Phaser.Input.Pointer) => {
             if (this.isPointerInsideMapViewport(pointer)) {
