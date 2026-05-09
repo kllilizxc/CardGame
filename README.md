@@ -11,7 +11,7 @@
 - **统一布局系统**：`BattleLayoutConfig` 统一描述所有 UI 面板和场地区域，可按分辨率或模式动态生成。
 - **多管理器架构**：卡牌、法器、技能、丹药、战斗事件、功法效果均由独立 Manager 负责，降低耦合。
 - **数据驱动内容**：卡牌、功法、遭遇均来自 `public/data` JSON，可无代码迭代内容。
-- **薄大地图路由层**：`WorldMapScene` 读取 `public/data/world/world-map.json`，先把主菜单统一路由到青云镇 Hub 或青云外山试炼 Expedition，暂不拥有解锁、程序化移动或世界状态。
+- **薄大地图路由层**：`WorldMapScene` 读取 `public/data/world/world-map.json`，先把主菜单统一路由到青云镇 Hub 或青云外山试炼 Expedition；Hub / Expedition 可用最小返回按钮回到大地图，并依赖各自本地 session / active run 恢复进度。
 - **数据驱动 Hub / 城镇壳层**：`HubScene` 读取 `public/data/hub/town-shell.json` 渲染青云镇多地点入口，支持 `navigate` 小地点切换并通过本地 Story/Hub session 恢复位置；不同 `startStory.storyGraphFile` action 可启动或恢复主线与茶棚支线等多份 StoryScene 图。
 - **StoryState 驱动剧情流**：`storyFlow` 严格校验 `story-graph.json` 的 StoryState 内容合同，`storyFlowViewModel` 将节点、结构化条件、效果应用、推荐理由与缺失节点警告转换为 Phaser 可渲染状态。
 - **功法/Usage 机制**：`UsageManager` 记录武器使用情况，`UnitEffectManager` 解析 `gongfa-list.json` 并在回合事件中执行效果（如“引剑者”回收剑类法器）。
@@ -79,8 +79,8 @@ npm run dev-nolog # 关闭 log.js 匿名统计
 | --- | --- |
 | `src/game/config/LayoutConfig.ts` | 定义 `BattleLayoutConfig` 接口与 `createDefaultLayout(width,height)`，集中管理面板/区域位置。 |
 | `src/game/scenes/MainMenu.ts` | 标准启动菜单：由 `Boot -> Preloader -> MainMenu` 进入，并提供“进入大地图”按钮启动 `WorldMapScene`。 |
-| `src/game/scenes/worldmap/WorldMapScene.ts` | 最小大地图壳层：读取 `public/data/world/world-map.json`，按目的地数据启动既有 `HubScene` 或 `ExpeditionScene`。 |
-| `src/game/scenes/worldmap/worldMap.ts` | 大地图纯合同层：校验目的地 id / kind / 默认入口，并把 `hub` / `expedition` 目的地解析为场景启动 intent。 |
+| `src/game/scenes/worldmap/WorldMapScene.ts` | 最小大地图壳层：读取 `public/data/world/world-map.json`，按目的地数据启动既有 `HubScene` 或 `ExpeditionScene`，并显示从 route 场景返回时传入的状态文案。 |
+| `src/game/scenes/worldmap/worldMap.ts` | 大地图纯合同层：校验目的地 id / kind / 默认入口，把 `hub` / `expedition` 目的地解析为场景启动 intent，并提供 Hub / Expedition 返回大地图的 typed intent。 |
 | `src/game/scenes/hub/HubScene.ts` | 最小 Hub / 城镇壳层：读取 `public/data/hub/town-shell.json`，渲染地点说明与行动按钮，按数据在城镇小地点间导航或启动 `StoryScene`。 |
 | `src/game/scenes/story/StoryScene.ts` | 通用故事场景：按启动 payload 的 `storyGraphFile` 读取主线或支线剧情图，维护 `StoryState`，渲染剧情节点、元数据、条件化选项和终点重开按钮。 |
 | `src/game/services/StoryHubSessionPersistence.ts` | Story / Hub 本地 session 边界：用 `cardgame.story-hub-session.v1` 保存 Hub 当前位置和按 `hubId + actionId + storyGraphFile` 分区的 StoryState 快照。 |
@@ -99,19 +99,21 @@ npm run dev-nolog # 关闭 log.js 匿名统计
 `src/main.tsx` → `App.tsx` / `GameApp.tsx` → `PhaserGame.tsx`。React 仅提供挂载容器及潜在的调试/外部 UI，核心游戏逻辑都在 Phaser。
 
 ### Phaser 游戏实例
-`src/game/main.ts` 配置 Phaser（画布尺寸、渲染、场景）。标准启动链路为 `Boot -> Preloader -> MainMenu -> WorldMapScene -> HubScene | ExpeditionScene`：`Boot` 只加载预加载器所需的最小背景资源，`Preloader` 加载菜单资源后进入 `MainMenu`。玩家在 `MainMenu` 点击“进入大地图”后进入 `WorldMapScene`；`WorldMapScene` 读取 `public/data/world/world-map.json`，目前提供“青云镇”与“青云外山试炼”两个目的地，并按 `kind` 解析为 `HubScene` 或 `ExpeditionScene` 启动 intent。`HubScene` 继续读取 `public/data/hub/town-shell.json`，可先按 `navigate.targetLocationId` 在城镇小地点间切换并保存当前位置，再由不同 `startStory.storyGraphFile` action 启动或恢复 `StoryScene`，例如 `public/data/story/story-graph.json` 主线或 `public/data/story/qingyun-teahouse-rumors.json` 茶棚支线。`BattleScene` 会被 StoryScene 的 `battleLaunch` 往返复用，也会被 ExpeditionScene 的秘境战斗节点复用。
+`src/game/main.ts` 配置 Phaser（画布尺寸、渲染、场景）。标准启动链路为 `Boot -> Preloader -> MainMenu -> WorldMapScene -> HubScene | ExpeditionScene`：`Boot` 只加载预加载器所需的最小背景资源，`Preloader` 加载菜单资源后进入 `MainMenu`。玩家在 `MainMenu` 点击“进入大地图”后进入 `WorldMapScene`；`WorldMapScene` 读取 `public/data/world/world-map.json`，目前提供“青云镇”与“青云外山试炼”两个目的地，并按 `kind` 解析为 `HubScene` 或 `ExpeditionScene` 启动 intent。`HubScene` 与 `ExpeditionScene` 都提供“返回大地图”的最小 route 回路：返回时只启动 `WorldMapScene` 并传递状态文案，不清理 Hub session 或 Expedition active run，因此玩家重新进入 route 时仍由既有持久化逻辑恢复位置 / run。`HubScene` 继续读取 `public/data/hub/town-shell.json`，可先按 `navigate.targetLocationId` 在城镇小地点间切换并保存当前位置，再由不同 `startStory.storyGraphFile` action 启动或恢复 `StoryScene`，例如 `public/data/story/story-graph.json` 主线或 `public/data/story/qingyun-teahouse-rumors.json` 茶棚支线。`BattleScene` 会被 StoryScene 的 `battleLaunch` 往返复用，也会被 ExpeditionScene 的秘境战斗节点复用。
 
 ### WorldMapScene 生命周期
 1. `preload`：载入 `data/world/world-map.json`。
 2. `create`：用 `worldMap.ts` 校验大地图定义；重复目的地 id、缺失默认目的地或不支持的 `kind` 会在进入场景前失败，避免静默错误路由。
 3. 玩家点击 `hub` 目的地：`WorldMapScene` 创建 `sceneKey: "HubScene"` 的启动 intent，进入既有青云镇 Hub；Hub 的故事启动 / 恢复逻辑保持不变。
 4. 玩家点击 `expedition` 目的地：`WorldMapScene` 创建 `sceneKey: "ExpeditionScene"` 的启动 intent，进入既有青云外山试炼；秘境准备、地图遍历、战斗往返和结算循环保持不变。
+5. Hub 或 Expedition 点击“返回大地图”：route 场景通过 `createWorldMapReturnIntent` 回到 `WorldMapScene`，只显示返回状态文案，不拥有或清除 Hub / Expedition 的恢复状态。
 
 ### HubScene 生命周期
 1. `preload`：载入 `data/hub/town-shell.json`。
 2. `create`：校验 Hub / 城镇定义，从 `StoryHubSessionPersistence` 读取该 `hubId` 的已保存位置；若地点仍存在就恢复，否则回退到 `defaultLocationId`，随后渲染地点、说明和行动按钮，并发出 `EventBus.emit('current-scene-ready', this)`。
 3. 玩家点击 `navigate` 行动：`HubScene` 根据该行动的 `targetLocationId` 切换当前地点、写入本地 session 并重新渲染；目标地点必须存在于同一个 Hub JSON 中，场景代码不硬编码目标 id。
 4. 玩家点击 `startStory` 行动：`HubScene` 根据 `hubId + actionId + storyGraphFile` 查找已保存的 Story runtime snapshot；存在时将 `StoryState` 与 `selectedChoiceIds` 放入 launch payload 恢复进度，否则按该行动的 `storyGraphFile` 启动新故事。当前切片仍不包含商店、背包、奖励或秘境出口操作。
+5. 玩家点击“返回大地图”：`HubScene` 先保存当前 Hub location，再回到 `WorldMapScene`；重新从大地图进入 Hub 时继续使用 `StoryHubSessionPersistence` 恢复地点。
 
 ### StoryScene 生命周期
 1. `preload`：载入启动 payload 指定的 `storyGraphFile`；未指定时默认使用 `data/story/story-graph.json`。

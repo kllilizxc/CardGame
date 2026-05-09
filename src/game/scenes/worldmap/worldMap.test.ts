@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 
 import worldMapJson from '../../../../public/data/world/world-map.json';
 import {
+    createWorldMapReturnIntent,
     createWorldMapDestinationIntent,
     validateWorldMapDefinition,
 } from './worldMap';
@@ -122,5 +123,31 @@ describe('world map content contract', () => {
         expect(() => createWorldMapDestinationIntent(worldMap, 'destination.missing')).toThrow(
             'World map destination is missing: destination.missing',
         );
+    });
+
+    it('creates return intents that let route scenes go back to the WorldMapScene without owning resume state', () => {
+        expect(createWorldMapReturnIntent({
+            source: 'hub',
+            statusText: '已从青云镇返回大地图；再次进入城镇会恢复保存位置。',
+        })).toEqual({
+            kind: 'startScene',
+            sceneKey: 'WorldMapScene',
+            payload: {
+                source: 'hub',
+                statusText: '已从青云镇返回大地图；再次进入城镇会恢复保存位置。',
+            },
+        });
+
+        expect(createWorldMapReturnIntent({
+            source: 'expedition',
+            statusText: '已从青云外山试炼返回大地图；再次进入秘境会继续当前探索。',
+        })).toEqual({
+            kind: 'startScene',
+            sceneKey: 'WorldMapScene',
+            payload: {
+                source: 'expedition',
+                statusText: '已从青云外山试炼返回大地图；再次进入秘境会继续当前探索。',
+            },
+        });
     });
 });

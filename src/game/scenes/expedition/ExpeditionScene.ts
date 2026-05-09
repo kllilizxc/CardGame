@@ -29,6 +29,7 @@ import type {
 import { MapNodeView } from '../../ui/expedition/MapNodeView';
 import { PreparationPanel } from '../../ui/expedition/PreparationPanel';
 import { RunHud } from '../../ui/expedition/RunHud';
+import { createWorldMapReturnIntent } from '../worldmap/worldMap';
 import {
     createPostRunEntranceStatus,
     createPreparationSummary,
@@ -96,6 +97,7 @@ export class ExpeditionScene extends Scene {
             fontSize: '22px',
             color: '#93c5fd',
         }).setOrigin(0.5);
+        this.createWorldMapReturnButton();
 
         const worldState = this.cache.json.get('expeditionInitialState') as ExpeditionWorldStateSeed;
         const starterDeck = this.cache.json.get('expeditionStarterDeck') as StarterDeckCacheEntry;
@@ -128,6 +130,34 @@ export class ExpeditionScene extends Scene {
         }
 
         EventBus.emit('current-scene-ready', this);
+    }
+
+    private createWorldMapReturnButton(): void {
+        const { width } = this.scale;
+        const x = width - 180;
+        const y = 74;
+        const button = this.add.rectangle(x, y, 230, 54, 0x334155, 0.94);
+        button.setStrokeStyle(2, 0xffffff, 0.78);
+        button.setInteractive({ useHandCursor: true });
+        button.on('pointerover', () => button.setFillStyle(0x475569, 1));
+        button.on('pointerout', () => button.setFillStyle(0x334155, 0.94));
+        button.on('pointerdown', () => this.returnToWorldMap());
+
+        this.add.text(x, y, '返回大地图', {
+            fontFamily: 'Arial',
+            fontSize: '18px',
+            color: '#f8fafc',
+            fontStyle: 'bold',
+        }).setOrigin(0.5);
+    }
+
+    private returnToWorldMap(): void {
+        const intent = createWorldMapReturnIntent({
+            source: 'expedition',
+            statusText: '已从青云外山试炼返回大地图；再次进入秘境会继续当前探索。',
+        });
+
+        this.scene.start(intent.sceneKey, intent.payload);
     }
 
     private showPreparationPanel(): void {

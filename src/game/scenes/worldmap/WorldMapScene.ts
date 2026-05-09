@@ -6,6 +6,7 @@ import {
     validateWorldMapDefinition,
     type WorldMapDefinition,
     type WorldMapDestination,
+    type WorldMapReturnPayload,
 } from './worldMap';
 
 export const WORLD_MAP_CACHE_KEY = 'worldMapShell';
@@ -14,9 +15,14 @@ export class WorldMapScene extends Scene {
     private worldMap!: WorldMapDefinition;
     private statusText!: Phaser.GameObjects.Text;
     private shellContainer?: Phaser.GameObjects.Container;
+    private returnStatusText?: string;
 
     constructor() {
         super('WorldMapScene');
+    }
+
+    init(data?: WorldMapReturnPayload): void {
+        this.returnStatusText = data?.statusText;
     }
 
     preload(): void {
@@ -86,6 +92,7 @@ export class WorldMapScene extends Scene {
             color: '#fde68a',
             wordWrap: { width: panelWidth - 120 },
         });
+        this.statusText.setText(this.returnStatusText ?? '请选择一个大地图目的地。');
         container.add(this.statusText);
 
         this.worldMap.destinations.forEach((destination, index) => {

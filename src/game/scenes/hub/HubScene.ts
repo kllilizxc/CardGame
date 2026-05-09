@@ -6,6 +6,7 @@ import {
     loadStoryRuntimeSession,
     saveHubSessionSnapshot,
 } from '../../services/StoryHubSessionPersistence';
+import { createWorldMapReturnIntent } from '../worldmap/worldMap';
 import {
     applyHubNavigationIntent,
     createHubActionIntent,
@@ -126,8 +127,27 @@ export class HubScene extends Scene {
         currentLocation.actions.forEach((action, index) => {
             container.add(this.createActionButton(action, panelX, panelTop + 390 + index * 92, panelWidth - 220));
         });
+        container.add(this.createWorldMapReturnButton(panelX + panelWidth / 2 - 150, panelTop + 48));
 
         this.shellContainer = container;
+    }
+
+    private createWorldMapReturnButton(x: number, y: number): Phaser.GameObjects.GameObject[] {
+        const button = this.add.rectangle(x, y, 220, 52, 0x334155, 0.94);
+        button.setStrokeStyle(2, 0xffffff, 0.78);
+        button.setInteractive({ useHandCursor: true });
+        button.on('pointerover', () => button.setFillStyle(0x475569, 1));
+        button.on('pointerout', () => button.setFillStyle(0x334155, 0.94));
+        button.on('pointerdown', () => this.returnToWorldMap());
+
+        const label = this.add.text(x, y, '返回大地图', {
+            fontFamily: 'Arial',
+            fontSize: '18px',
+            color: '#f8fafc',
+            fontStyle: 'bold',
+        }).setOrigin(0.5);
+
+        return [button, label];
     }
 
     private createActionButton(action: HubTownAction, x: number, y: number, width: number): Phaser.GameObjects.GameObject[] {
@@ -165,6 +185,17 @@ export class HubScene extends Scene {
             this.renderShell();
             return;
         }
+
+        this.scene.start(intent.sceneKey, intent.payload);
+    }
+
+    private returnToWorldMap(): void {
+        this.persistHubNavigationState();
+
+        const intent = createWorldMapReturnIntent({
+            source: 'hub',
+            statusText: '已从青云镇返回大地图；再次进入城镇会恢复保存位置。',
+        });
 
         this.scene.start(intent.sceneKey, intent.payload);
     }

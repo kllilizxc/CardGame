@@ -46,6 +46,13 @@ export interface WorldMapExpeditionLaunchPayload {
     statusText?: string;
 }
 
+export type WorldMapReturnSource = 'hub' | 'expedition';
+
+export interface WorldMapReturnPayload {
+    source: WorldMapReturnSource;
+    statusText: string;
+}
+
 export type WorldMapLaunchIntent =
     | {
         kind: 'startScene';
@@ -57,6 +64,12 @@ export type WorldMapLaunchIntent =
         sceneKey: 'ExpeditionScene';
         payload: WorldMapExpeditionLaunchPayload;
     };
+
+export interface WorldMapReturnIntent {
+    kind: 'startScene';
+    sceneKey: 'WorldMapScene';
+    payload: WorldMapReturnPayload;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -201,5 +214,13 @@ export function createWorldMapDestinationIntent(
             mapId: destination.mapId,
             ...(destination.statusText ? { statusText: destination.statusText } : {}),
         },
+    };
+}
+
+export function createWorldMapReturnIntent(payload: WorldMapReturnPayload): WorldMapReturnIntent {
+    return {
+        kind: 'startScene',
+        sceneKey: 'WorldMapScene',
+        payload,
     };
 }
