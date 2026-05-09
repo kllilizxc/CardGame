@@ -1,0 +1,31 @@
+{
+  "id": "world.qingyun-region",
+  "title": "青云地域图",
+  "subtitle": "从一张世界地图进入城镇与秘境",
+  "description": "当前世界地图壳层只负责选择已存在的可玩路线：青云镇 Hub 与青云外山试炼秘境。后续新增地点应继续扩展本文件，而不是在场景里写死入口。",
+  "defaultRouteId": "route.qingyun-town",
+  "routes": [
+    {
+      "id": "route.qingyun-town",
+      "label": "青云镇",
+      "description": "进入现有数据驱动 Hub / 城镇壳层，可在山门集市与茶棚之间移动并启动故事图。",
+      "sceneKey": "HubScene",
+      "position": {
+        "x": 0.38,
+        "y": 0.56
+      },
+      "statusText": "你沿山道回到青云镇。"
+    },
+    {
+      "id": "route.outer-mountain-trial",
+      "label": "青云外山试炼",
+      "description": "进入现有秘境探索入口，使用持久仓库创建 run 并探索固定拓扑试炼地图。",
+      "sceneKey": "ExpeditionScene",
+      "position": {
+        "x": 0.66,
+        "y": 0.42
+      },
+      "statusText": "你离开镇口，前往青云外山试炼秘境。"
+    }
+  ]
+}

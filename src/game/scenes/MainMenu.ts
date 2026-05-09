@@ -43,9 +43,9 @@ export class MainMenu extends Scene
             y: height * 0.6,
             width: 360,
             height: 72,
-            label: '进入青云镇',
-            description: '进入数据驱动的 Hub / 城镇壳层',
-            onClick: () => this.startHubScene()
+            label: '进入大地图',
+            description: '进入数据驱动的 WorldMapScene 路线壳层',
+            onClick: () => this.startWorldMapScene()
         });
 
         EventBus.emit('current-scene-ready', this);
@@ -53,10 +53,10 @@ export class MainMenu extends Scene
     
     changeScene ()
     {
-        this.startHubScene();
+        this.startWorldMapScene();
     }
 
-    private startHubScene ()
+    private startWorldMapScene ()
     {
         if (this.logoTween)
         {
@@ -64,7 +64,7 @@ export class MainMenu extends Scene
             this.logoTween = null;
         }
 
-        this.scene.start('HubScene');
+        this.scene.start('WorldMapScene');
     }
 
     private createMenuButton (config: {

@@ -6,6 +6,7 @@ import { BattleScene } from './scenes/battle/BattleScene';
 import { ExpeditionScene } from './scenes/expedition/ExpeditionScene';
 import { HubScene } from './scenes/hub/HubScene';
 import { StoryScene } from './scenes/story/StoryScene';
+import { WorldMapScene } from './scenes/worldmap/WorldMapScene';
 import { AUTO, Game } from 'phaser';
 import { Preloader } from './scenes/Preloader';
 
@@ -31,6 +32,7 @@ const config: Phaser.Types.Core.GameConfig = {
     scene: [
         Boot,
         Preloader,
+        WorldMapScene,
         HubScene,
         StoryScene,
         ExpeditionScene,
