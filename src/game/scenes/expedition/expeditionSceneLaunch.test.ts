@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, mock } from 'bun:test';
 
+import contentCatalogJson from '../../../../public/data/content-catalog.json';
 import prototypeMapJson from '../../../../public/data/mijing/prototype-map.json';
 import worldMapJson from '../../../../public/data/world/world-map.json';
 import {
@@ -14,9 +15,11 @@ import { createBattleLaunchPayload } from './battleLaunchFlow';
 import {
     DEFAULT_EXPEDITION_ID,
     DEFAULT_EXPEDITION_MAP_ID,
+    DEFAULT_EXPEDITION_TARGET_RESOURCE_IDS,
     DEFAULT_EXPEDITION_TARGET_FILES,
     createExpeditionTargetConfig,
     normalizeExpeditionSceneLaunchData,
+    resolveExpeditionSceneCatalogResources,
 } from './expeditionSceneLaunch';
 
 const worldMapWithSyntheticExpeditionTargets = {
@@ -122,6 +125,7 @@ describe('expeditionSceneLaunch', () => {
             routeKey: `expedition:${DEFAULT_EXPEDITION_ID}:${DEFAULT_EXPEDITION_MAP_ID}`,
             expeditionId: DEFAULT_EXPEDITION_ID,
             mapId: DEFAULT_EXPEDITION_MAP_ID,
+            ...DEFAULT_EXPEDITION_TARGET_RESOURCE_IDS,
             ...DEFAULT_EXPEDITION_TARGET_FILES,
             cacheKeys: {
                 worldState: `expeditionInitialState:${DEFAULT_EXPEDITION_TARGET_FILES.worldStateFile}`,
@@ -131,6 +135,216 @@ describe('expeditionSceneLaunch', () => {
                 shop: `expeditionPrototypeShop:${DEFAULT_EXPEDITION_TARGET_FILES.shopFile}`,
             },
         });
+    });
+
+    it('resolves direct default Expedition targets through stable catalog resource ids while preserving file aliases and cache keys', () => {
+        const launch = normalizeExpeditionSceneLaunchData();
+
+        expect(resolveExpeditionSceneCatalogResources(contentCatalogJson, launch)).toEqual({
+            worldState: {
+                resourceId: 'world.seed.initial-state',
+                publicPath: DEFAULT_EXPEDITION_TARGET_FILES.worldStateFile,
+                cacheKey: launch.cacheKeys.worldState,
+            },
+            starterDeck: {
+                resourceId: 'deck.starter',
+                publicPath: DEFAULT_EXPEDITION_TARGET_FILES.starterDeckFile,
+                cacheKey: launch.cacheKeys.starterDeck,
+            },
+            map: {
+                resourceId: 'phase01-prototype-map',
+                publicPath: DEFAULT_EXPEDITION_TARGET_FILES.mapFile,
+                cacheKey: launch.cacheKeys.map,
+            },
+            events: {
+                resourceId: 'phase01-prototype-events',
+                publicPath: DEFAULT_EXPEDITION_TARGET_FILES.eventsFile,
+                cacheKey: launch.cacheKeys.events,
+            },
+            shop: {
+                resourceId: 'phase01-prototype-shop',
+                publicPath: DEFAULT_EXPEDITION_TARGET_FILES.shopFile,
+                cacheKey: launch.cacheKeys.shop,
+            },
+        });
+    });
+
+    it('rejects catalog resource ids whose public paths do not match Expedition compatibility file aliases', () => {
+        const launch = normalizeExpeditionSceneLaunchData({
+            worldStateResourceId: 'world.seed.initial-state',
+            worldStateFile: 'data/world/other-initial-state.json',
+        });
+
+        expect(() => resolveExpeditionSceneCatalogResources(contentCatalogJson, launch)).toThrow(
+            'ExpeditionScene worldStateResourceId world.seed.initial-state resolved to catalog publicPath data/world/initial-state.json, but launch worldStateFile is data/world/other-initial-state.json.',
+        );
+    });
+
+    it('resolves compatibility-only custom Expedition target files through catalog public paths when resource ids are absent', () => {
+        const launch = normalizeExpeditionSceneLaunchData({
+            worldStateFile: 'data/world/custom-state.json',
+            starterDeckFile: 'data/decks/custom-starter.json',
+            mapFile: 'data/mijing/custom-map.json',
+            eventsFile: 'data/mijing/custom-events.json',
+            shopFile: 'data/mijing/custom-shop.json',
+        });
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'world.seed.custom-state',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/custom-state.json',
+                },
+                {
+                    resourceId: 'deck.custom-starter',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/custom-starter.json',
+                },
+                {
+                    resourceId: 'map.custom',
+                    kind: 'expeditionMap',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/custom-map.json',
+                },
+                {
+                    resourceId: 'events.custom',
+                    kind: 'expeditionEvents',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/custom-events.json',
+                },
+                {
+                    resourceId: 'shop.custom',
+                    kind: 'expeditionShop',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/custom-shop.json',
+                },
+            ],
+        };
+
+        expect(resolveExpeditionSceneCatalogResources(catalog, launch)).toEqual({
+            worldState: {
+                resourceId: 'world.seed.custom-state',
+                publicPath: 'data/world/custom-state.json',
+                cacheKey: 'expeditionInitialState:data/world/custom-state.json',
+            },
+            starterDeck: {
+                resourceId: 'deck.custom-starter',
+                publicPath: 'data/decks/custom-starter.json',
+                cacheKey: 'expeditionStarterDeck:data/decks/custom-starter.json',
+            },
+            map: {
+                resourceId: 'map.custom',
+                publicPath: 'data/mijing/custom-map.json',
+                cacheKey: 'expeditionPrototypeMap:data/mijing/custom-map.json',
+            },
+            events: {
+                resourceId: 'events.custom',
+                publicPath: 'data/mijing/custom-events.json',
+                cacheKey: 'expeditionPrototypeEvents:data/mijing/custom-events.json',
+            },
+            shop: {
+                resourceId: 'shop.custom',
+                publicPath: 'data/mijing/custom-shop.json',
+                cacheKey: 'expeditionPrototypeShop:data/mijing/custom-shop.json',
+            },
+        });
+    });
+
+    it('refreshes catalog-resolved preload resources when the same ExpeditionScene instance restarts for another route', async () => {
+        mock.module('phaser', () => {
+            class FakeScene {
+                constructor(_sceneKey?: string) {}
+            }
+
+            class FakeContainer {
+                protected scene: unknown;
+
+                constructor(scene: unknown) {
+                    this.scene = scene;
+                }
+
+                add(): this {
+                    return this;
+                }
+
+                destroy(): void {}
+
+                setDepth(): this {
+                    return this;
+                }
+            }
+
+            return {
+                Scene: FakeScene,
+                Events: {
+                    EventEmitter: class {
+                        emit(): boolean {
+                            return true;
+                        }
+
+                        on(): this {
+                            return this;
+                        }
+
+                        off(): this {
+                            return this;
+                        }
+                    },
+                },
+                GameObjects: {
+                    Container: FakeContainer,
+                    Rectangle: class {},
+                    Text: class {},
+                },
+            };
+        });
+        let ExpeditionScene: new () => unknown;
+        try {
+            ({ ExpeditionScene } = await import(`./ExpeditionScene${'?catalog-resource-refresh-test'}`));
+        } finally {
+            mock.restore();
+        }
+        const scene = new ExpeditionScene() as unknown as {
+            init: (data?: unknown) => void;
+            preload: () => void;
+            cache: { json: { get: (key: string) => unknown } };
+            load: { json: (cacheKey: string, publicPath: string) => void };
+        };
+        const loadedPublicPaths: string[] = [];
+        scene.cache = {
+            json: {
+                get: (key: string): unknown => {
+                    expect(key).toBe('contentCatalog');
+                    return contentCatalogJson;
+                },
+            },
+        };
+        scene.load = {
+            json: (_cacheKey: string, publicPath: string): void => {
+                loadedPublicPaths.push(publicPath);
+            },
+        };
+
+        scene.init();
+        scene.preload();
+        expect(loadedPublicPaths).toContain('data/mijing/prototype-map.json');
+
+        loadedPublicPaths.length = 0;
+        scene.init({
+            source: 'worldMap',
+            destinationId: 'destination.qingyun-jade-cave-trial',
+            expeditionId: 'phase01-jade-cave-expedition',
+            mapId: 'phase01-jade-cave-map',
+            mapResourceId: 'phase01-jade-cave-map',
+            mapFile: 'data/mijing/jade-cave-map.json',
+        });
+        scene.preload();
+
+        expect(loadedPublicPaths).toContain('data/mijing/jade-cave-map.json');
+        expect(loadedPublicPaths).not.toContain('data/mijing/prototype-map.json');
     });
 
     it('normalizes world-map Expedition payloads as the target config owner', () => {
@@ -191,11 +405,15 @@ describe('expeditionSceneLaunch', () => {
             routeKey: 'expedition:expedition.custom:map.custom',
             expeditionId: 'expedition.custom',
             mapId: 'map.custom',
+            worldStateResourceId: DEFAULT_EXPEDITION_TARGET_RESOURCE_IDS.worldStateResourceId,
             worldStateFile: DEFAULT_EXPEDITION_TARGET_FILES.worldStateFile,
+            starterDeckResourceId: DEFAULT_EXPEDITION_TARGET_RESOURCE_IDS.starterDeckResourceId,
             starterDeckFile: DEFAULT_EXPEDITION_TARGET_FILES.starterDeckFile,
             mapResourceId: 'map.custom',
             mapFile: 'data/mijing/custom-map.json',
+            eventsResourceId: DEFAULT_EXPEDITION_TARGET_RESOURCE_IDS.eventsResourceId,
             eventsFile: DEFAULT_EXPEDITION_TARGET_FILES.eventsFile,
+            shopResourceId: DEFAULT_EXPEDITION_TARGET_RESOURCE_IDS.shopResourceId,
             shopFile: DEFAULT_EXPEDITION_TARGET_FILES.shopFile,
         });
     });

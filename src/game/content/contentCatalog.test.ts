@@ -482,6 +482,67 @@ describe('content catalog', () => {
         });
     });
 
+    it('resolves checked-in Expedition target resources by stable catalog ids for runtime ExpeditionScene loading', () => {
+        const resolver = createContentCatalogResolver(readCatalogJson(), {
+            context: 'ExpeditionScene',
+            sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+        });
+
+        expect([
+            resolver.resolveJsonResource({
+                resourceId: 'world.seed.initial-state',
+                expectedKind: 'worldSeed',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'deck.starter',
+                expectedKind: 'deck',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'phase01-prototype-map',
+                expectedKind: 'expeditionMap',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'phase01-prototype-events',
+                expectedKind: 'expeditionEvents',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'phase01-prototype-shop',
+                expectedKind: 'expeditionShop',
+            }),
+        ]).toEqual([
+            {
+                resourceId: 'world.seed.initial-state',
+                kind: 'worldSeed',
+                schemaVersion: 1,
+                publicPath: 'data/world/initial-state.json',
+            },
+            {
+                resourceId: 'deck.starter',
+                kind: 'deck',
+                schemaVersion: 1,
+                publicPath: 'data/decks/starter-deck.json',
+            },
+            {
+                resourceId: 'phase01-prototype-map',
+                kind: 'expeditionMap',
+                schemaVersion: 1,
+                publicPath: 'data/mijing/prototype-map.json',
+            },
+            {
+                resourceId: 'phase01-prototype-events',
+                kind: 'expeditionEvents',
+                schemaVersion: 1,
+                publicPath: 'data/mijing/prototype-events.json',
+            },
+            {
+                resourceId: 'phase01-prototype-shop',
+                kind: 'expeditionShop',
+                schemaVersion: 1,
+                publicPath: 'data/mijing/prototype-shop.json',
+            },
+        ]);
+    });
+
     it('fails actionably when the runtime catalog cache is missing before WorldMapScene resolves resources', () => {
         expect(() => createContentCatalogResolver(undefined, {
             context: 'WorldMapScene',

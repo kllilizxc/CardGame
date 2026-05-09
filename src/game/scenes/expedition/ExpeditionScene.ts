@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
+import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import {
     ExpeditionState,
     type ExpeditionBootstrapSources,
@@ -41,8 +42,10 @@ import { confirmExpeditionLoadout, getInitialExpeditionEntryView } from './exped
 import {
     createExpeditionTargetConfig,
     normalizeExpeditionSceneLaunchData,
+    resolveExpeditionSceneCatalogResources,
     type ExpeditionSceneLaunchData,
     type NormalizedExpeditionSceneLaunchData,
+    type ResolvedExpeditionSceneCatalogResources,
 } from './expeditionSceneLaunch';
 import { getVisibleNodes, isReachableNode } from './mapTraversal';
 import { createRunAfterBattleVictory, getTerminalBattleOutcome } from './runResultFlow';
@@ -59,6 +62,7 @@ type NonCombatMapNode = EventMapNode | ShopMapNode | ExtractMapNode;
 
 export class ExpeditionScene extends Scene {
     private launchData: NormalizedExpeditionSceneLaunchData = normalizeExpeditionSceneLaunchData();
+    private expeditionResources?: ResolvedExpeditionSceneCatalogResources;
     private expeditionState!: ExpeditionState;
     private mapDefinition!: ExpeditionMapDefinition;
     private eventCollection!: PrototypeEventCollection;
@@ -78,24 +82,28 @@ export class ExpeditionScene extends Scene {
 
     init(data?: ExpeditionSceneLaunchData): void {
         this.launchData = normalizeExpeditionSceneLaunchData(data);
+        this.expeditionResources = undefined;
         this.pendingBattleResult = this.launchData.battleResult ?? null;
     }
 
     preload(): void {
-        this.load.json(this.launchData.cacheKeys.worldState, this.launchData.worldStateFile);
-        this.load.json(this.launchData.cacheKeys.starterDeck, this.launchData.starterDeckFile);
-        this.load.json(this.launchData.cacheKeys.map, this.launchData.mapFile);
-        this.load.json(this.launchData.cacheKeys.events, this.launchData.eventsFile);
-        this.load.json(this.launchData.cacheKeys.shop, this.launchData.shopFile);
+        const expeditionResources = this.getResolvedExpeditionResources();
+
+        this.load.json(expeditionResources.worldState.cacheKey, expeditionResources.worldState.publicPath);
+        this.load.json(expeditionResources.starterDeck.cacheKey, expeditionResources.starterDeck.publicPath);
+        this.load.json(expeditionResources.map.cacheKey, expeditionResources.map.publicPath);
+        this.load.json(expeditionResources.events.cacheKey, expeditionResources.events.publicPath);
+        this.load.json(expeditionResources.shop.cacheKey, expeditionResources.shop.publicPath);
     }
 
     create(): void {
         const { width, height } = this.scale;
-        const worldState = this.cache.json.get(this.launchData.cacheKeys.worldState) as ExpeditionWorldStateSeed;
-        const starterDeck = this.cache.json.get(this.launchData.cacheKeys.starterDeck) as StarterDeckCacheEntry;
-        this.mapDefinition = this.cache.json.get(this.launchData.cacheKeys.map) as ExpeditionMapDefinition;
-        this.eventCollection = this.cache.json.get(this.launchData.cacheKeys.events) as PrototypeEventCollection;
-        this.shopCollection = this.cache.json.get(this.launchData.cacheKeys.shop) as PrototypeShopCollection;
+        const expeditionResources = this.getResolvedExpeditionResources();
+        const worldState = this.cache.json.get(expeditionResources.worldState.cacheKey) as ExpeditionWorldStateSeed;
+        const starterDeck = this.cache.json.get(expeditionResources.starterDeck.cacheKey) as StarterDeckCacheEntry;
+        this.mapDefinition = this.cache.json.get(expeditionResources.map.cacheKey) as ExpeditionMapDefinition;
+        this.eventCollection = this.cache.json.get(expeditionResources.events.cacheKey) as PrototypeEventCollection;
+        this.shopCollection = this.cache.json.get(expeditionResources.shop.cacheKey) as PrototypeShopCollection;
         this.assertLaunchTargetMatchesMapDefinition();
         this.expeditionState = ExpeditionState.bootstrap({
             worldState,
@@ -146,6 +154,17 @@ export class ExpeditionScene extends Scene {
         }
 
         EventBus.emit('current-scene-ready', this);
+    }
+
+    private getResolvedExpeditionResources(): ResolvedExpeditionSceneCatalogResources {
+        if (!this.expeditionResources) {
+            this.expeditionResources = resolveExpeditionSceneCatalogResources(
+                this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+                this.launchData,
+            );
+        }
+
+        return this.expeditionResources;
     }
 
     private assertLaunchTargetMatchesMapDefinition(): void {
