@@ -2,7 +2,7 @@
   "id": "worldmap.qingyun-region",
   "title": "青云山麓",
   "subtitle": "大地图 · 第一层入口",
-  "description": "青云宗山门外的第一张薄大地图。当前只负责把玩家从主菜单路由到青云镇 Hub、青云宗山门 Hub 和青云外山试炼秘境，不拥有解锁、移动或世界状态。",
+  "description": "青云宗山门外的第一张薄大地图。当前只负责把玩家从主菜单路由到青云镇 Hub、青云宗山门 Hub、集市茶棚 Hub 地点和青云外山试炼秘境，不拥有解锁、移动或世界状态。",
   "defaultDestinationId": "destination.qingyun-town",
   "destinations": [
     {
@@ -22,6 +22,16 @@
       "hubId": "hub.qingyun-sect-gate",
       "hubFile": "data/hub/qingyun-sect-gate.json",
       "statusText": "从大地图抵达青云宗山门。"
+    },
+    {
+      "id": "destination.qingyun-town-teahouse",
+      "kind": "hub",
+      "label": "集市茶棚",
+      "description": "直接前往青云镇茶棚地点，听取散修传闻或继续茶棚支线。",
+      "hubId": "hub.qingyun-town",
+      "hubFile": "data/hub/town-shell.json",
+      "targetLocationId": "location.qingyun-town.teahouse",
+      "statusText": "从大地图直接前往青云镇集市茶棚。"
     },
     {
       "id": "destination.qingyun-outer-mountain-trial",

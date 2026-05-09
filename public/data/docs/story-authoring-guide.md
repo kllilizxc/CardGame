@@ -6,6 +6,7 @@
 
 - **青云镇 Hub 入口文件**：`public/data/hub/town-shell.json`（`navigate.targetLocationId` 在城镇小地点间切换；`startStory.storyGraphFile` 指向要启动的剧情图）
 - **青云宗山门 Hub 入口文件**：`public/data/hub/qingyun-sect-gate.json`（第二个大地图 Hub 目的地，使用独立 `hubId` / actionId 指向既有主线图）
+- **World map 入口文件**：`public/data/world/world-map.json`（Hub 目的地可用可选 `targetLocationId` 直接落到某个已声明的 Hub 小地点，例如集市茶棚；也可指向不同 Hub 文件，例如青云宗山门）
 - **可游玩主线文件**：`public/data/story/story-graph.json`
 - **茶棚支线文件**：`public/data/story/qingyun-teahouse-rumors.json`（第二个 Hub-launched 图，用于证明多图与 per-action resume 隔离）
 - **紧凑 schema 示例**：`public/data/story/story-graph.compact.example.json`
@@ -13,7 +14,7 @@
 - **严格内容校验**：`src/game/scenes/story/storyFlow.ts`
 - **渲染与跳转视图模型**：`src/game/scenes/story/storyFlowViewModel.ts`
 
-扩展主线时优先编辑 `story-graph.json`；新增短支线或章节时可以像 `qingyun-teahouse-rumors.json` 一样新增独立 StoryState 图，并在对应 Hub 文件（例如 `public/data/hub/town-shell.json` 或 `public/data/hub/qingyun-sect-gate.json`）中添加唯一 `startStory` action 指向它。每个 Hub 的 `hubId`、action `id` 与 `storyGraphFile` 都是本地 Story/Hub session key 的一部分，改名会让旧进度不再匹配。如果需要在城镇小地点之间移动，新增或修改 `navigate.targetLocationId`，不要在 `HubScene` 或 `StoryScene` 里硬编码新路径或地点 id。不要把只存在于 prose 的状态变化当作剧情事实：后续分支需要读取的内容必须写进 `visibleWhen`、`enabledWhen`、`effects` 或 `onEnter`。
+扩展主线时优先编辑 `story-graph.json`；新增短支线或章节时可以像 `qingyun-teahouse-rumors.json` 一样新增独立 StoryState 图，并在对应 Hub 文件（例如 `public/data/hub/town-shell.json` 或 `public/data/hub/qingyun-sect-gate.json`）中添加唯一 `startStory` action 指向它。每个 Hub 的 `hubId`、action `id` 与 `storyGraphFile` 都是本地 Story/Hub session key 的一部分，改名会让旧进度不再匹配。如果需要在 Hub 小地点之间移动，新增或修改 `navigate.targetLocationId`；如果需要大地图直接进入某个 Hub 小地点，在 `public/data/world/world-map.json` 添加新的 Hub destination 并设置 `targetLocationId`。不要在 `HubScene` 或 `StoryScene` 里硬编码新路径或地点 id。不要把只存在于 prose 的状态变化当作剧情事实：后续分支需要读取的内容必须写进 `visibleWhen`、`enabledWhen`、`effects` 或 `onEnter`。
 
 ## 推荐写作流程
 
@@ -86,7 +87,7 @@
 
 ### Hub town actions
 
-`public/data/hub/*.json` 的每个 `locations[].actions[]` 目前只支持两种数据驱动行动：
+`public/data/hub/town-shell.json` 的每个 `locations[].actions[]` 目前只支持两种数据驱动行动：
 
 ```json
 {

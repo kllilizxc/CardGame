@@ -240,6 +240,27 @@ describe('hub town shell content', () => {
         });
     });
 
+    it('uses a world-map Hub targetLocationId as an explicit location destination before restoring saved location', () => {
+        const town = validateHubTownDefinition(townShellJson);
+
+        expect(createInitialHubNavigationState(
+            town,
+            {
+                hubId: 'hub.qingyun-town',
+                currentLocationId: 'location.qingyun-town.gate-market',
+                statusText: '保存位置仍在山门集市。',
+                updatedAt: '2026-05-09T06:00:00.000Z',
+            },
+            {
+                targetLocationId: 'location.qingyun-town.teahouse',
+                statusText: '从大地图直接前往青云镇集市茶棚。',
+            },
+        )).toEqual({
+            currentLocationId: 'location.qingyun-town.teahouse',
+            statusText: '从大地图直接前往青云镇集市茶棚。',
+        });
+    });
+
     it('creates a StoryScene launch intent that resumes the saved runtime for the same Hub action and graph', () => {
         const town = validateHubTownDefinition(townShellJson);
         const action = town.locations[0].actions[0];

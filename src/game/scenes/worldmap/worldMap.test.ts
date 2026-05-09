@@ -41,7 +41,7 @@ const validWorldMapFixture = {
 };
 
 describe('world map content contract', () => {
-    it('validates the checked-in world map with two Hub destinations and the outer-mountain trial', () => {
+    it('validates the checked-in world map with Qingyun town, sect gate, teahouse, and outer-mountain trial destinations', () => {
         const worldMap = validateWorldMapDefinition(worldMapJson);
 
         expect(worldMap.id).toBe('worldmap.qingyun-region');
@@ -50,34 +50,65 @@ describe('world map content contract', () => {
             id: destination.id,
             kind: destination.kind,
             label: destination.label,
-            targetFile: destination.kind === 'hub' ? destination.hubFile : destination.mapFile,
+            target: destination.kind === 'hub'
+                ? {
+                    hubId: destination.hubId,
+                    hubFile: destination.hubFile,
+                    targetLocationId: destination.targetLocationId,
+                }
+                : {
+                    mapFile: destination.mapFile,
+                },
         }))).toEqual([
             {
                 id: 'destination.qingyun-town',
                 kind: 'hub',
                 label: '青云镇',
-                targetFile: 'data/hub/town-shell.json',
+                target: {
+                    hubId: 'hub.qingyun-town',
+                    hubFile: 'data/hub/town-shell.json',
+                    targetLocationId: undefined,
+                },
             },
             {
                 id: 'destination.qingyun-sect-gate',
                 kind: 'hub',
                 label: '青云宗山门',
-                targetFile: 'data/hub/qingyun-sect-gate.json',
+                target: {
+                    hubId: 'hub.qingyun-sect-gate',
+                    hubFile: 'data/hub/qingyun-sect-gate.json',
+                    targetLocationId: undefined,
+                },
+            },
+            {
+                id: 'destination.qingyun-town-teahouse',
+                kind: 'hub',
+                label: '集市茶棚',
+                target: {
+                    hubId: 'hub.qingyun-town',
+                    hubFile: 'data/hub/town-shell.json',
+                    targetLocationId: 'location.qingyun-town.teahouse',
+                },
             },
             {
                 id: 'destination.qingyun-outer-mountain-trial',
                 kind: 'expedition',
                 label: '青云外山试炼',
-                targetFile: 'data/mijing/prototype-map.json',
+                target: {
+                    mapFile: 'data/mijing/prototype-map.json',
+                },
             },
         ]);
     });
 
-    it('keeps checked-in Hub destinations on distinct route ids, Hub ids, and Hub files', () => {
+    it('keeps full Hub routes distinct while allowing direct Hub-location routes to reuse their parent Hub file', () => {
         const worldMap = validateWorldMapDefinition(worldMapJson);
         const hubDestinations = worldMap.destinations.filter((destination) => destination.kind === 'hub');
+        const fullHubRoutes = hubDestinations.filter((destination) => !destination.targetLocationId);
+        const directLocationRoutes = hubDestinations.filter((destination) => destination.targetLocationId);
 
-        expect(hubDestinations.map((destination) => ({
+        expect(new Set(hubDestinations.map((destination) => destination.id)).size).toBe(hubDestinations.length);
+        expect(fullHubRoutes.map((destination) => ({
             destinationId: destination.id,
             hubId: destination.hubId,
             hubFile: destination.hubFile,
@@ -93,9 +124,21 @@ describe('world map content contract', () => {
                 hubFile: 'data/hub/qingyun-sect-gate.json',
             },
         ]);
-        expect(new Set(hubDestinations.map((destination) => destination.id)).size).toBe(hubDestinations.length);
-        expect(new Set(hubDestinations.map((destination) => destination.hubId)).size).toBe(hubDestinations.length);
-        expect(new Set(hubDestinations.map((destination) => destination.hubFile)).size).toBe(hubDestinations.length);
+        expect(new Set(fullHubRoutes.map((destination) => destination.hubId)).size).toBe(fullHubRoutes.length);
+        expect(new Set(fullHubRoutes.map((destination) => destination.hubFile)).size).toBe(fullHubRoutes.length);
+        expect(directLocationRoutes.map((destination) => ({
+            destinationId: destination.id,
+            hubId: destination.hubId,
+            hubFile: destination.hubFile,
+            targetLocationId: destination.targetLocationId,
+        }))).toEqual([
+            {
+                destinationId: 'destination.qingyun-town-teahouse',
+                hubId: 'hub.qingyun-town',
+                hubFile: 'data/hub/town-shell.json',
+                targetLocationId: 'location.qingyun-town.teahouse',
+            },
+        ]);
     });
 
     it('rejects duplicate destination ids before any scene launch code runs', () => {
@@ -156,6 +199,18 @@ describe('world map content contract', () => {
                 statusText: '从大地图抵达青云宗山门。',
             },
         });
+        expect(createWorldMapDestinationIntent(worldMap, 'destination.qingyun-town-teahouse')).toEqual({
+            kind: 'startScene',
+            sceneKey: 'HubScene',
+            payload: {
+                source: 'worldMap',
+                destinationId: 'destination.qingyun-town-teahouse',
+                hubId: 'hub.qingyun-town',
+                hubFile: 'data/hub/town-shell.json',
+                targetLocationId: 'location.qingyun-town.teahouse',
+                statusText: '从大地图直接前往青云镇集市茶棚。',
+            },
+        });
         expect(createWorldMapDestinationIntent(worldMap, 'destination.qingyun-outer-mountain-trial')).toEqual({
             kind: 'startScene',
             sceneKey: 'ExpeditionScene',
@@ -174,8 +229,6 @@ describe('world map content contract', () => {
         });
     });
 
-
-
     it('rejects destinations that omit required target data files', () => {
         const hubWithoutFile = {
             ...validWorldMapFixture,
@@ -187,6 +240,18 @@ describe('world map content contract', () => {
 
         expect(() => validateWorldMapDefinition(hubWithoutFile)).toThrow(
             'World map destination destination.test-hub hubFile must be a non-empty string.',
+        );
+
+        const hubWithBlankTargetLocation = {
+            ...validWorldMapFixture,
+            destinations: [{
+                ...validWorldMapFixture.destinations[0],
+                targetLocationId: '',
+            }],
+        };
+
+        expect(() => validateWorldMapDefinition(hubWithBlankTargetLocation)).toThrow(
+            'World map destination destination.test-hub targetLocationId must be a non-empty string when provided.',
         );
 
         const expeditionWithoutMapFile = {

@@ -50,6 +50,11 @@ export interface HubNavigationState {
     statusText?: string;
 }
 
+export interface HubLaunchLocationTarget {
+    targetLocationId?: string;
+    statusText?: string;
+}
+
 export interface HubSceneStoryLaunchIntent {
     kind: 'startScene';
     sceneKey: 'StoryScene';
@@ -204,7 +209,17 @@ export function resolveHubLocation(town: HubTownDefinition, locationId: string):
 export function createInitialHubNavigationState(
     town: HubTownDefinition,
     savedSession?: HubSessionSnapshot | null,
+    launchTarget?: HubLaunchLocationTarget | null,
 ): HubNavigationState {
+    if (launchTarget?.targetLocationId) {
+        const targetLocation = resolveHubLocation(town, launchTarget.targetLocationId);
+
+        return {
+            currentLocationId: targetLocation.id,
+            ...(launchTarget.statusText ? { statusText: launchTarget.statusText } : {}),
+        };
+    }
+
     if (savedSession?.hubId === town.hubId && town.locations.some((location) => location.id === savedSession.currentLocationId)) {
         return {
             currentLocationId: savedSession.currentLocationId,

@@ -18,17 +18,19 @@ describe('hubSceneLaunch', () => {
     it('normalizes world-map Hub payloads without losing route identity', () => {
         expect(normalizeHubSceneLaunchData({
             source: 'worldMap',
-            destinationId: 'destination.test-hub',
+            destinationId: 'destination.test-hub-location',
             hubId: 'hub.test-town',
             hubFile: 'data/hub/test-town.json',
-            statusText: '从测试大地图进入 Hub。',
+            targetLocationId: 'location.test-town.teahouse',
+            statusText: '从测试大地图进入指定 Hub 地点。',
         })).toEqual({
             source: 'worldMap',
-            destinationId: 'destination.test-hub',
+            destinationId: 'destination.test-hub-location',
             hubId: 'hub.test-town',
             hubFile: 'data/hub/test-town.json',
             hubCacheKey: 'hubTownShell:data/hub/test-town.json',
-            statusText: '从测试大地图进入 Hub。',
+            targetLocationId: 'location.test-town.teahouse',
+            statusText: '从测试大地图进入指定 Hub 地点。',
         });
     });
 });

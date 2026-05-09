@@ -50,8 +50,12 @@ export class HubScene extends Scene {
         this.navigationState = createInitialHubNavigationState(
             this.town,
             savedSession,
+            {
+                ...(this.launchData.targetLocationId ? { targetLocationId: this.launchData.targetLocationId } : {}),
+                ...(this.launchData.statusText ? { statusText: this.launchData.statusText } : {}),
+            },
         );
-        if (!savedSession?.statusText && this.launchData.statusText) {
+        if (!this.launchData.targetLocationId && !savedSession?.statusText && this.launchData.statusText) {
             this.navigationState = {
                 ...this.navigationState,
                 statusText: this.launchData.statusText,

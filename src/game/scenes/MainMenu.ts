@@ -44,7 +44,7 @@ export class MainMenu extends Scene
             width: 360,
             height: 72,
             label: '进入大地图',
-            description: '选择青云镇 Hub 或青云外山试炼秘境',
+            description: '选择青云镇、青云宗山门、集市茶棚或青云外山试炼',
             onClick: () => this.startWorldMapScene()
         });
 

@@ -6,6 +6,7 @@ export interface HubSceneLaunchData {
     destinationId?: string;
     hubId?: string;
     hubFile?: string;
+    targetLocationId?: string;
     statusText?: string;
 }
 
@@ -15,6 +16,7 @@ export interface NormalizedHubSceneLaunchData {
     hubId: string;
     hubFile: string;
     hubCacheKey: string;
+    targetLocationId?: string;
     statusText?: string;
 }
 
@@ -31,6 +33,7 @@ export function normalizeHubSceneLaunchData(data?: HubSceneLaunchData | null): N
     const hubFile = normalizeString(data?.hubFile, DEFAULT_HUB_FILE);
     const source = data?.source === 'worldMap' ? data.source : undefined;
     const destinationId = normalizeString(data?.destinationId, '');
+    const targetLocationId = normalizeString(data?.targetLocationId, '');
     const statusText = normalizeString(data?.statusText, '');
 
     return {
@@ -39,6 +42,7 @@ export function normalizeHubSceneLaunchData(data?: HubSceneLaunchData | null): N
         hubId: normalizeString(data?.hubId, DEFAULT_HUB_ID),
         hubFile,
         hubCacheKey: createHubTownCacheKey(hubFile),
+        ...(targetLocationId ? { targetLocationId } : {}),
         ...(statusText ? { statusText } : {}),
     };
 }

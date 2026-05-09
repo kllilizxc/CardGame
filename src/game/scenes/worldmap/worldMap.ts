@@ -13,6 +13,7 @@ export interface WorldMapHubDestination extends WorldMapDestinationBase {
     kind: 'hub';
     hubId: string;
     hubFile: string;
+    targetLocationId?: string;
 }
 
 export interface WorldMapExpeditionDestination extends WorldMapDestinationBase {
@@ -42,6 +43,7 @@ export interface WorldMapHubLaunchPayload {
     destinationId: string;
     hubId: string;
     hubFile: string;
+    targetLocationId?: string;
     statusText?: string;
 }
 
@@ -99,6 +101,18 @@ function optionalString(value: unknown): string | undefined {
     return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 }
 
+function optionalRequiredString(value: unknown, field: string): string | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    if (typeof value !== 'string' || value.trim().length === 0) {
+        throw new Error(`World map ${field} must be a non-empty string when provided.`);
+    }
+
+    return value;
+}
+
 function createDestinationBase(
     value: Record<string, unknown>,
     kind: WorldMapDestinationKind,
@@ -123,10 +137,16 @@ function validateWorldMapDestination(value: unknown, index: number): WorldMapDes
     const kind = requireString(value.kind, `destination ${id}.kind`);
 
     if (kind === 'hub') {
+        const targetLocationId = optionalRequiredString(
+            value.targetLocationId,
+            `destination ${id} targetLocationId`,
+        );
+
         return {
             ...createDestinationBase(value, kind),
             hubId: requireString(value.hubId, `destination ${id}.hubId`),
             hubFile: requireString(value.hubFile, `destination ${id} hubFile`),
+            ...(targetLocationId ? { targetLocationId } : {}),
         };
     }
 
@@ -218,6 +238,7 @@ export function createWorldMapDestinationIntent(
                 destinationId: destination.id,
                 hubId: destination.hubId,
                 hubFile: destination.hubFile,
+                ...(destination.targetLocationId ? { targetLocationId: destination.targetLocationId } : {}),
                 ...(destination.statusText ? { statusText: destination.statusText } : {}),
             },
         };
