@@ -198,13 +198,31 @@ describe('storyBattleRoundTrip', () => {
 
         expect(startPayload.storyResourceId).toBe(storyResourceId);
         expect(startPayload.hubSession).toEqual(hubSession);
+        expect(startPayload.battleLaunch).toMatchObject({
+            encounterResourceId: 'test_encounter_01',
+            encounterFile: 'data/encounters/test-enemy.json',
+            deckResourceId: 'deck.starter',
+            deckFile: 'data/decks/starter-deck.json',
+        });
         expect(result.storyResourceId).toBe(storyResourceId);
         expect(result.hubSession).toEqual(hubSession);
+        expect(result).toMatchObject({
+            encounterResourceId: 'test_encounter_01',
+            encounterFile: 'data/encounters/test-enemy.json',
+            deckResourceId: 'deck.starter',
+            deckFile: 'data/decks/starter-deck.json',
+        });
         expect(intent.kind).toBe('startBattleScene');
         if (intent.kind !== 'startBattleScene') {
             throw new Error('Expected battle scene start intent.');
         }
         expect(intent.payload.storyResourceId).toBe(storyResourceId);
         expect(intent.payload.hubSession).toEqual(hubSession);
+        expect(intent.payload.battleLaunch).toMatchObject({
+            encounterResourceId: 'test_encounter_01',
+            encounterFile: 'data/encounters/test-enemy.json',
+            deckResourceId: 'deck.starter',
+            deckFile: 'data/decks/starter-deck.json',
+        });
     });
 });

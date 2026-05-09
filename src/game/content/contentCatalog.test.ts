@@ -456,6 +456,32 @@ describe('content catalog', () => {
         });
     });
 
+    it('resolves checked-in Story battle encounter and deck resources by stable catalog ids for runtime BattleScene loading', () => {
+        const resolver = createContentCatalogResolver(readCatalogJson(), {
+            context: 'BattleScene',
+            sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+        });
+
+        expect(resolver.resolveJsonResource({
+            resourceId: 'test_encounter_01',
+            expectedKind: 'encounter',
+        })).toEqual({
+            resourceId: 'test_encounter_01',
+            kind: 'encounter',
+            schemaVersion: 1,
+            publicPath: 'data/encounters/test-enemy.json',
+        });
+        expect(resolver.resolveJsonResource({
+            resourceId: 'deck.starter',
+            expectedKind: 'deck',
+        })).toEqual({
+            resourceId: 'deck.starter',
+            kind: 'deck',
+            schemaVersion: 1,
+            publicPath: 'data/decks/starter-deck.json',
+        });
+    });
+
     it('fails actionably when the runtime catalog cache is missing before WorldMapScene resolves resources', () => {
         expect(() => createContentCatalogResolver(undefined, {
             context: 'WorldMapScene',
