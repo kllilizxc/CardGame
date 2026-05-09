@@ -21,13 +21,20 @@ describe('storySceneLaunch', () => {
             source: 'hub',
             hubId: 'hub.qingyun-town',
             actionId: 'action.start-qingyun-entry-story',
+            storyResourceId: ' story.qingyun-entry ',
             storyGraphFile: 'data/story/story-graph.json',
             statusText: '从青云镇出发，主线故事已开启。',
         });
 
+        expect(launch.storyResourceId).toBe('story.qingyun-entry');
         expect(launch.storyGraphFile).toBe('data/story/story-graph.json');
         expect(launch.storyGraphCacheKey).toBe('storyGraph:data/story/story-graph.json');
         expect(launch.statusText).toBe('从青云镇出发，主线故事已开启。');
+        expect(getStoryHubSessionKey(launch)).toEqual({
+            hubId: 'hub.qingyun-town',
+            actionId: 'action.start-qingyun-entry-story',
+            storyGraphFile: 'data/story/story-graph.json',
+        });
     });
 
     it('resumes battle results against the graph file that launched the battle', () => {

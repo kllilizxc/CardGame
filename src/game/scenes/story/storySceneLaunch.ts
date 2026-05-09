@@ -6,6 +6,7 @@ export interface StorySceneHubLaunchData {
     source: 'hub';
     hubId: string;
     actionId: string;
+    storyResourceId?: string;
     storyGraphFile: string;
     storyState?: StoryState;
     selectedChoiceIds?: string[];
@@ -16,6 +17,7 @@ export interface StorySceneLaunchData {
     source?: 'hub';
     hubId?: string;
     actionId?: string;
+    storyResourceId?: string;
     storyGraphFile?: string;
     storyState?: StoryState;
     selectedChoiceIds?: string[];
@@ -43,6 +45,12 @@ function getLaunchStoryGraphFile(data?: StorySceneLaunchData | null): string {
     return graphFile.trim().length > 0 ? graphFile : DEFAULT_STORY_GRAPH_FILE;
 }
 
+function getLaunchStoryResourceId(data?: StorySceneLaunchData | null): string | undefined {
+    const resourceId = data?.storyResourceId?.trim();
+
+    return resourceId && resourceId.length > 0 ? resourceId : undefined;
+}
+
 function getLaunchHubSession(data: StorySceneLaunchData | undefined | null, storyGraphFile: string): StoryHubSessionKey | undefined {
     if (data?.hubSession) {
         return { ...data.hubSession };
@@ -65,10 +73,14 @@ function getLaunchHubSession(data: StorySceneLaunchData | undefined | null, stor
 
 export function normalizeStorySceneLaunchData(data?: StorySceneLaunchData | null): NormalizedStorySceneLaunchData {
     const storyGraphFile = getLaunchStoryGraphFile(data);
+    const storyResourceId = getLaunchStoryResourceId(data);
     const hubSession = getLaunchHubSession(data, storyGraphFile);
+    const dataWithoutStoryResourceId = { ...(data ?? {}) };
+    delete dataWithoutStoryResourceId.storyResourceId;
 
     return {
-        ...(data ?? {}),
+        ...dataWithoutStoryResourceId,
+        ...(storyResourceId ? { storyResourceId } : {}),
         storyGraphFile,
         storyGraphCacheKey: createStoryGraphCacheKey(storyGraphFile),
         ...(hubSession ? { hubSession } : {}),

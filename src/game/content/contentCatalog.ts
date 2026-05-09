@@ -415,6 +415,7 @@ function resolveCatalogResourceIdReference(
         publicPathField: string;
         publicPath: string;
         expectedKinds: ContentResourceKind[];
+        publicPathOwnerLabel?: string;
     },
 ): LoadedCatalogResource | undefined {
     const resource = index.byResourceId.get(reference.resourceId);
@@ -440,10 +441,12 @@ function resolveCatalogResourceIdReference(
     }
 
     if (resource.entry.publicPath !== reference.publicPath) {
+        const publicPathOwnerLabel = reference.publicPathOwnerLabel ?? 'destination';
+
         addFailure(
             failures,
             ownerEntry,
-            `${reference.context} ${reference.resourceIdField} references catalog resource id ${reference.resourceId}, but catalog publicPath is ${resource.entry.publicPath}; destination ${reference.publicPathField} is ${reference.publicPath}.`,
+            `${reference.context} ${reference.resourceIdField} references catalog resource id ${reference.resourceId}, but catalog publicPath is ${resource.entry.publicPath}; ${publicPathOwnerLabel} ${reference.publicPathField} is ${reference.publicPath}.`,
         );
         failed = true;
     }
@@ -691,17 +694,39 @@ function validateHubReferences(
                     continue;
                 }
 
-                requireCatalogedResource(
-                    index,
-                    failures,
-                    resource.entry,
-                    action.storyGraphFile,
-                    `Hub ${resource.entry.resourceId} location ${location.id} action ${action.id} storyGraphFile`,
-                    ['story'],
-                );
+                validateHubStoryActionReference(resource.entry, location.id, action, index, failures);
             }
         }
     }
+}
+
+function validateHubStoryActionReference(
+    ownerEntry: ContentCatalogEntry,
+    locationId: string,
+    action: HubTownDefinition['locations'][number]['actions'][number] & { kind: 'startStory' },
+    index: LoadedCatalogIndex,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    const context = `Hub ${ownerEntry.resourceId} location ${locationId} action ${action.id}`;
+
+    if (!action.storyResourceId) {
+        addFailure(
+            failures,
+            ownerEntry,
+            `${context} storyResourceId must be a non-empty string so catalog story targets resolve by resource id.`,
+        );
+        return;
+    }
+
+    resolveCatalogResourceIdReference(index, failures, ownerEntry, {
+        context,
+        resourceIdField: 'storyResourceId',
+        resourceId: action.storyResourceId,
+        publicPathField: 'storyGraphFile',
+        publicPath: action.storyGraphFile,
+        expectedKinds: ['story'],
+        publicPathOwnerLabel: 'action',
+    });
 }
 
 function validateStoryBattleReferences(

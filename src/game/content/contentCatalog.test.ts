@@ -134,6 +134,71 @@ const catalogHubDefinition = {
     ],
 };
 
+function createCatalogStoryHubDefinition(actions: Record<string, unknown>[]): Record<string, unknown> {
+    return {
+        hubId: 'hub.catalog-story',
+        title: 'Catalog Story Hub',
+        subtitle: 'Catalog-backed startStory actions',
+        description: 'Hub fixture used by catalog-backed story target validation tests.',
+        defaultLocationId: 'location.catalog-story',
+        presentation: {
+            mapWidth: 800,
+            mapHeight: 500,
+            initialCenter: {
+                x: 0.5,
+                y: 0.5,
+            },
+        },
+        locations: [
+            {
+                id: 'location.catalog-story',
+                title: 'Catalog Story Location',
+                summary: 'Catalog story test location.',
+                detail: 'A minimal valid Hub location with startStory actions.',
+                presentation: {
+                    position: {
+                        x: 0.5,
+                        y: 0.5,
+                    },
+                    icon: 'town',
+                    regionLabel: 'Catalog',
+                },
+                actions,
+            },
+        ],
+    };
+}
+
+function createCatalogStoryGraph(storyId: string): Record<string, unknown> {
+    return {
+        storyId,
+        title: `Catalog story ${storyId}`,
+        entryNodeId: 'catalog_entry',
+        initialState: {
+            locationId: 'location.catalog-story',
+            sublocationId: 'sublocation.catalog-story',
+        },
+        nodes: [
+            {
+                id: 'catalog_entry',
+                type: 'story',
+                title: 'Catalog Entry',
+                summary: 'Catalog story entry.',
+                detail: 'A minimal playable story graph for catalog validation.',
+                tags: ['catalog'],
+                chapter: 'catalog',
+                location: 'Catalog',
+                sublocation: 'Entry',
+                locationId: 'location.catalog-story',
+                sublocationId: 'sublocation.catalog-story',
+                timeHint: 'now',
+                onEnter: [],
+            },
+        ],
+        choices: [],
+    };
+}
+
 function createCatalogHubDestination(overrides: Record<string, unknown> = {}): Record<string, unknown> {
     return {
         id: 'destination.catalog-hub',
@@ -394,6 +459,85 @@ describe('read-only content catalog', () => {
         expect(result.failures.map((failure) => failure.message)).toContain(
             'WorldMap worldmap.catalog-route destination destination.catalog-expedition shopResourceId references catalog resource id shop.missing, but no catalog entry exists for that resource id.',
         );
+    });
+
+    it('returns actionable failures when Hub startStory storyResourceId is missing, missing from the catalog, wrong kind, or path-mismatched', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'hub.catalog-story',
+                    kind: 'hub',
+                    schemaVersion: 1,
+                    publicPath: 'data/hub/catalog-story-hub.json',
+                },
+                {
+                    resourceId: 'story.qingyun-entry',
+                    kind: 'story',
+                    schemaVersion: 1,
+                    publicPath: 'data/story/story-graph.json',
+                },
+                {
+                    resourceId: 'story.qingyun-teahouse-rumors',
+                    kind: 'story',
+                    schemaVersion: 1,
+                    publicPath: 'data/story/qingyun-teahouse-rumors.json',
+                },
+                {
+                    resourceId: 'story.wrong-kind',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/story/wrong-kind-story.json',
+                },
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/hub/catalog-story-hub.json': createCatalogStoryHubDefinition([
+                {
+                    id: 'action.missing-story-resource-id',
+                    kind: 'startStory',
+                    label: 'Missing ID',
+                    description: 'Missing the catalog-backed story resource id.',
+                    storyGraphFile: 'data/story/story-graph.json',
+                },
+                {
+                    id: 'action.missing-story-resource',
+                    kind: 'startStory',
+                    label: 'Missing resource',
+                    description: 'Points at an absent catalog story resource id.',
+                    storyResourceId: 'story.missing',
+                    storyGraphFile: 'data/story/story-graph.json',
+                },
+                {
+                    id: 'action.wrong-kind',
+                    kind: 'startStory',
+                    label: 'Wrong kind',
+                    description: 'Points at a catalog resource that is not a story.',
+                    storyResourceId: 'story.wrong-kind',
+                    storyGraphFile: 'data/story/wrong-kind-story.json',
+                },
+                {
+                    id: 'action.path-mismatch',
+                    kind: 'startStory',
+                    label: 'Path mismatch',
+                    description: 'Points at a story resource whose path does not match the runtime storyGraphFile alias.',
+                    storyResourceId: 'story.qingyun-teahouse-rumors',
+                    storyGraphFile: 'data/story/story-graph.json',
+                },
+            ]),
+            'data/story/story-graph.json': createCatalogStoryGraph('story.qingyun-entry'),
+            'data/story/qingyun-teahouse-rumors.json': createCatalogStoryGraph('story.qingyun-teahouse-rumors'),
+            'data/story/wrong-kind-story.json': {
+                cards: [],
+            },
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toEqual([
+            'Hub hub.catalog-story location location.catalog-story action action.missing-story-resource-id storyResourceId must be a non-empty string so catalog story targets resolve by resource id.',
+            'Hub hub.catalog-story location location.catalog-story action action.missing-story-resource storyResourceId references catalog resource id story.missing, but no catalog entry exists for that resource id.',
+            'Hub hub.catalog-story location location.catalog-story action action.wrong-kind storyResourceId references catalog resource id story.wrong-kind, but catalog resource has kind deck; expected story.',
+            'Hub hub.catalog-story location location.catalog-story action action.path-mismatch storyResourceId references catalog resource id story.qingyun-teahouse-rumors, but catalog publicPath is data/story/qingyun-teahouse-rumors.json; action storyGraphFile is data/story/story-graph.json.',
+        ]);
     });
 
 

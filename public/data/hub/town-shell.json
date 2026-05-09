@@ -16,6 +16,7 @@
           "kind": "startStory",
           "label": "前往青云宗山门",
           "description": "启动 public/data/story/story-graph.json 中的青云宗入门主线。",
+          "storyResourceId": "story.qingyun-entry",
           "storyGraphFile": "data/story/story-graph.json",
           "statusText": "从青云镇出发，主线故事已开启。"
         },
@@ -56,6 +57,7 @@
           "kind": "startStory",
           "label": "听茶棚传闻",
           "description": "启动 public/data/story/qingyun-teahouse-rumors.json 中的茶棚支线；它与山门主线使用不同 actionId 和 storyGraphFile 保存进度。",
+          "storyResourceId": "story.qingyun-teahouse-rumors",
           "storyGraphFile": "data/story/qingyun-teahouse-rumors.json",
           "statusText": "茶棚里传来新的试炼传闻。"
         }

@@ -18,6 +18,7 @@ export interface HubTownActionBase {
 
 export interface HubTownStartStoryAction extends HubTownActionBase {
     kind: 'startStory';
+    storyResourceId?: string;
     storyGraphFile: string;
 }
 
@@ -121,6 +122,18 @@ function requireString(value: unknown, field: string): string {
     return value;
 }
 
+function optionalRequiredString(value: unknown, field: string): string | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    if (typeof value !== 'string' || value.trim().length === 0) {
+        throw new Error(`Hub town ${field} must be a non-empty string when provided.`);
+    }
+
+    return value.trim();
+}
+
 function requireLocationString(value: unknown, field: string): string {
     if (typeof value !== 'string' || value.trim().length === 0) {
         throw new Error(`Hub location ${field} must be a non-empty string.`);
@@ -206,9 +219,12 @@ function validateHubAction(value: unknown, hubId: string, locationId: string, in
     };
 
     if (kind === 'startStory') {
+        const storyResourceId = optionalRequiredString(value.storyResourceId, `actions.${id}.storyResourceId`);
+
         return {
             ...base,
             kind,
+            ...(storyResourceId ? { storyResourceId } : {}),
             storyGraphFile: requireString(value.storyGraphFile, `actions.${id}.storyGraphFile`),
         };
     }
@@ -357,6 +373,7 @@ function createResumedStoryLaunchPayload(
         source: 'hub',
         hubId: action.hubId,
         actionId: action.id,
+        ...(action.storyResourceId ? { storyResourceId: action.storyResourceId } : {}),
         storyGraphFile: action.storyGraphFile,
         ...(action.statusText ? { statusText: action.statusText } : {}),
     };

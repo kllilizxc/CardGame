@@ -147,6 +147,7 @@ describe('hub town shell content', () => {
                 id: 'action.start-qingyun-entry-story',
                 kind: 'startStory',
                 label: '前往青云宗山门',
+                storyResourceId: 'story.qingyun-entry',
                 storyGraphFile: 'data/story/story-graph.json',
             }),
             expect.objectContaining({
@@ -167,6 +168,7 @@ describe('hub town shell content', () => {
                 id: 'action.start-teahouse-rumors-story',
                 kind: 'startStory',
                 label: '听茶棚传闻',
+                storyResourceId: 'story.qingyun-teahouse-rumors',
                 storyGraphFile: 'data/story/qingyun-teahouse-rumors.json',
             }),
         ]);
@@ -178,14 +180,17 @@ describe('hub town shell content', () => {
 
         expect(startStoryActions.map((action) => ({
             id: action.id,
+            storyResourceId: action.storyResourceId,
             storyGraphFile: action.storyGraphFile,
         }))).toEqual([
             {
                 id: 'action.start-qingyun-entry-story',
+                storyResourceId: 'story.qingyun-entry',
                 storyGraphFile: 'data/story/story-graph.json',
             },
             {
                 id: 'action.start-teahouse-rumors-story',
+                storyResourceId: 'story.qingyun-teahouse-rumors',
                 storyGraphFile: 'data/story/qingyun-teahouse-rumors.json',
             },
         ]);
@@ -211,10 +216,12 @@ describe('hub town shell content', () => {
         ]);
         expect(startStoryActions.map((action) => ({
             id: action.id,
+            storyResourceId: action.storyResourceId,
             storyGraphFile: action.storyGraphFile,
         }))).toEqual([
             {
                 id: 'action.start-sect-gate-entry-story',
+                storyResourceId: 'story.qingyun-entry',
                 storyGraphFile: 'data/story/story-graph.json',
             },
         ]);
@@ -228,6 +235,7 @@ describe('hub town shell content', () => {
                 source: 'hub',
                 hubId: 'hub.qingyun-sect-gate',
                 actionId: 'action.start-sect-gate-entry-story',
+                storyResourceId: 'story.qingyun-entry',
                 storyGraphFile: 'data/story/story-graph.json',
                 statusText: '山门云阶前，青云宗入门故事已开启。',
             },
@@ -245,6 +253,7 @@ describe('hub town shell content', () => {
                 source: 'hub',
                 hubId: 'hub.qingyun-town',
                 actionId: 'action.start-qingyun-entry-story',
+                storyResourceId: 'story.qingyun-entry',
                 storyGraphFile: 'data/story/story-graph.json',
                 statusText: '从青云镇出发，主线故事已开启。',
             },
@@ -365,6 +374,7 @@ describe('hub town shell content', () => {
                 source: 'hub',
                 hubId: 'hub.qingyun-town',
                 actionId: 'action.start-qingyun-entry-story',
+                storyResourceId: 'story.qingyun-entry',
                 storyGraphFile: 'data/story/story-graph.json',
                 statusText: '已恢复青云宗山门故事进度。',
                 storyState: savedStoryState,
@@ -441,6 +451,7 @@ describe('hub town shell content', () => {
                 source: 'hub',
                 hubId: 'hub.qingyun-town',
                 actionId: 'action.start-teahouse-rumors-story',
+                storyResourceId: 'story.qingyun-teahouse-rumors',
                 storyGraphFile: 'data/story/qingyun-teahouse-rumors.json',
                 statusText: '茶棚里传来新的试炼传闻。',
             },
@@ -498,6 +509,7 @@ describe('hub town shell content', () => {
                 source: 'hub',
                 hubId: 'hub.qingyun-sect-gate',
                 actionId: 'action.start-sect-gate-entry-story',
+                storyResourceId: 'story.qingyun-entry',
                 storyGraphFile: 'data/story/story-graph.json',
                 statusText: '山门云阶前，青云宗入门故事已开启。',
             },

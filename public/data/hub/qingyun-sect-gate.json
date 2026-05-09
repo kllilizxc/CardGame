@@ -16,6 +16,7 @@
           "kind": "startStory",
           "label": "叩问青云山门",
           "description": "从青云宗山门 Hub 启动 public/data/story/story-graph.json 中的入门主线；它与青云镇入口共享故事内容，但使用不同 Hub session key。",
+          "storyResourceId": "story.qingyun-entry",
           "storyGraphFile": "data/story/story-graph.json",
           "statusText": "山门云阶前，青云宗入门故事已开启。"
         }
