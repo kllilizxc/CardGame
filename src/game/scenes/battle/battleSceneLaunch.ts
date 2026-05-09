@@ -1,4 +1,8 @@
-import type { BattleLaunchPayload, ExpeditionCardStack } from '../../types/expedition';
+import type {
+    BattleLaunchPayload,
+    ExpeditionCardStack,
+    ExpeditionTargetConfig,
+} from '../../types/expedition';
 import type {
     StoryBattleLaunchMetadata,
     StoryBattleSceneLaunchPayload,
@@ -45,6 +49,34 @@ function isBattleLaunchPayload(value: unknown): value is BattleLaunchPayload {
         && typeof candidate.encounterId === 'string'
         && typeof candidate.encounterFile === 'string'
         && isRunDeck(candidate.runDeck);
+}
+
+function isExpeditionTargetConfig(value: unknown): value is ExpeditionTargetConfig {
+    if (typeof value !== 'object' || value === null) {
+        return false;
+    }
+
+    const candidate = value as Partial<ExpeditionTargetConfig>;
+
+    return typeof candidate.expeditionId === 'string'
+        && typeof candidate.mapId === 'string'
+        && typeof candidate.worldStateFile === 'string'
+        && typeof candidate.starterDeckFile === 'string'
+        && typeof candidate.mapFile === 'string'
+        && typeof candidate.eventsFile === 'string'
+        && typeof candidate.shopFile === 'string';
+}
+
+function cloneExpeditionTargetConfig(targetConfig: ExpeditionTargetConfig): ExpeditionTargetConfig {
+    return {
+        expeditionId: targetConfig.expeditionId,
+        mapId: targetConfig.mapId,
+        worldStateFile: targetConfig.worldStateFile,
+        starterDeckFile: targetConfig.starterDeckFile,
+        mapFile: targetConfig.mapFile,
+        eventsFile: targetConfig.eventsFile,
+        shopFile: targetConfig.shopFile,
+    };
 }
 
 function isStringArray(value: unknown): value is string[] {
@@ -146,6 +178,9 @@ export function normalizeBattleLaunchPayload(data: unknown): BattleLaunchPayload
     if (!isBattleLaunchPayload(data)) {
         return null;
     }
+    const targetConfig = isExpeditionTargetConfig(data.targetConfig)
+        ? cloneExpeditionTargetConfig(data.targetConfig)
+        : undefined;
 
     return {
         runId: data.runId,
@@ -155,6 +190,7 @@ export function normalizeBattleLaunchPayload(data: unknown): BattleLaunchPayload
         encounterFile: data.encounterFile,
         runDeck: data.runDeck.map((stack) => ({ ...stack })),
         rewardPreview: data.rewardPreview,
+        ...(targetConfig ? { targetConfig } : {}),
     };
 }
 

@@ -10,6 +10,7 @@ import type {
     ExpeditionCardStack,
     ExpeditionItemStack,
     ExpeditionMapDefinition,
+    ExpeditionTargetConfig,
     PersistentStash,
     RunNodeState,
     RunRewardBundle,
@@ -326,12 +327,16 @@ export class ExpeditionState {
         return { status: 'recorded', activeRun: updatedRun };
     }
 
-    enterReachableNode(map: ExpeditionMapDefinition, nodeId: string): RunSnapshot | null {
+    enterReachableNode(
+        map: ExpeditionMapDefinition,
+        nodeId: string,
+        targetConfig?: ExpeditionTargetConfig,
+    ): RunSnapshot | null {
         if (!this.activeRun) {
             return null;
         }
 
-        const nextRun = enterReachableNode(map, this.activeRun, nodeId);
+        const nextRun = enterReachableNode(map, this.activeRun, nodeId, targetConfig);
 
         if (!nextRun) {
             return null;

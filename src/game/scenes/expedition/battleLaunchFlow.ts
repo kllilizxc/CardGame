@@ -1,6 +1,7 @@
 import type {
     BattleLaunchPayload,
     ExpeditionEncounterMapNode,
+    ExpeditionTargetConfig,
     RunSnapshot,
 } from '../../types/expedition';
 
@@ -8,12 +9,27 @@ function cloneRunDeck(run: RunSnapshot): BattleLaunchPayload['runDeck'] {
     return run.carriedDeck.map((stack) => ({ ...stack }));
 }
 
+function cloneTargetConfig(targetConfig?: ExpeditionTargetConfig): ExpeditionTargetConfig | undefined {
+    return targetConfig
+        ? {
+            expeditionId: targetConfig.expeditionId,
+            mapId: targetConfig.mapId,
+            worldStateFile: targetConfig.worldStateFile,
+            starterDeckFile: targetConfig.starterDeckFile,
+            mapFile: targetConfig.mapFile,
+            eventsFile: targetConfig.eventsFile,
+            shopFile: targetConfig.shopFile,
+        }
+        : undefined;
+}
 
 export interface BattleSceneStarter {
     start(sceneKey: 'BattleScene', data: BattleLaunchPayload): void;
 }
 
 export function createBattleSceneStartPayload(payload: BattleLaunchPayload): BattleLaunchPayload {
+    const targetConfig = cloneTargetConfig(payload.targetConfig);
+
     return {
         ...payload,
         carriedDeck: payload.carriedDeck?.map((stack) => ({ ...stack })),
@@ -25,6 +41,7 @@ export function createBattleSceneStartPayload(payload: BattleLaunchPayload): Bat
                 spiritStones: payload.rewardPreview.spiritStones,
             }
             : undefined,
+        ...(targetConfig ? { targetConfig } : {}),
     };
 }
 
@@ -35,8 +52,10 @@ export function startBattleSceneFromPayload(scene: BattleSceneStarter, payload: 
 export function createBattleLaunchPayload(
     activeRun: RunSnapshot,
     node: ExpeditionEncounterMapNode,
+    targetConfig?: ExpeditionTargetConfig,
 ): BattleLaunchPayload {
     const runDeck = cloneRunDeck(activeRun);
+    const clonedTargetConfig = cloneTargetConfig(targetConfig);
 
     return {
         runId: activeRun.runId,
@@ -45,5 +64,6 @@ export function createBattleLaunchPayload(
         encounterId: node.payloadRef.ref,
         encounterFile: node.payloadRef.encounterFile,
         runDeck,
+        ...(clonedTargetConfig ? { targetConfig: clonedTargetConfig } : {}),
     };
 }

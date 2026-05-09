@@ -20,6 +20,7 @@ const validWorldMapFixture = {
             label: '测试城镇',
             description: '进入测试 Hub。',
             hubId: 'hub.test-town',
+            hubFile: 'data/hub/test-town.json',
             statusText: '从大地图进入测试城镇。',
         },
         {
@@ -29,6 +30,11 @@ const validWorldMapFixture = {
             description: '进入测试 Expedition。',
             expeditionId: 'expedition.test',
             mapId: 'map.test',
+            worldStateFile: 'data/world/test-initial-state.json',
+            starterDeckFile: 'data/decks/test-starter-deck.json',
+            mapFile: 'data/mijing/test-map.json',
+            eventsFile: 'data/mijing/test-events.json',
+            shopFile: 'data/mijing/test-shop.json',
             statusText: '从大地图进入测试秘境。',
         },
     ],
@@ -44,16 +50,19 @@ describe('world map content contract', () => {
             id: destination.id,
             kind: destination.kind,
             label: destination.label,
+            targetFile: destination.kind === 'hub' ? destination.hubFile : destination.mapFile,
         }))).toEqual([
             {
                 id: 'destination.qingyun-town',
                 kind: 'hub',
                 label: '青云镇',
+                targetFile: 'data/hub/town-shell.json',
             },
             {
                 id: 'destination.qingyun-outer-mountain-trial',
                 kind: 'expedition',
                 label: '青云外山试炼',
+                targetFile: 'data/mijing/prototype-map.json',
             },
         ]);
     });
@@ -101,6 +110,7 @@ describe('world map content contract', () => {
                 source: 'worldMap',
                 destinationId: 'destination.qingyun-town',
                 hubId: 'hub.qingyun-town',
+                hubFile: 'data/hub/town-shell.json',
                 statusText: '从大地图进入青云镇。',
             },
         });
@@ -112,9 +122,42 @@ describe('world map content contract', () => {
                 destinationId: 'destination.qingyun-outer-mountain-trial',
                 expeditionId: 'phase01-first-playable-expedition',
                 mapId: 'phase01-prototype-map',
+                worldStateFile: 'data/world/initial-state.json',
+                starterDeckFile: 'data/decks/starter-deck.json',
+                mapFile: 'data/mijing/prototype-map.json',
+                eventsFile: 'data/mijing/prototype-events.json',
+                shopFile: 'data/mijing/prototype-shop.json',
                 statusText: '从大地图进入青云外山试炼。',
             },
         });
+    });
+
+
+
+    it('rejects destinations that omit required target data files', () => {
+        const hubWithoutFile = {
+            ...validWorldMapFixture,
+            destinations: [{
+                ...validWorldMapFixture.destinations[0],
+                hubFile: '',
+            }],
+        };
+
+        expect(() => validateWorldMapDefinition(hubWithoutFile)).toThrow(
+            'World map destination destination.test-hub hubFile must be a non-empty string.',
+        );
+
+        const expeditionWithoutMapFile = {
+            ...validWorldMapFixture,
+            destinations: [{
+                ...validWorldMapFixture.destinations[1],
+                mapFile: '',
+            }],
+        };
+
+        expect(() => validateWorldMapDefinition(expeditionWithoutMapFile)).toThrow(
+            'World map destination destination.test-expedition mapFile must be a non-empty string.',
+        );
     });
 
     it('fails launch intent resolution for missing destination ids', () => {

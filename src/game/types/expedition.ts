@@ -23,6 +23,16 @@ export interface RunRewardBundle {
     spiritStones: number;
 }
 
+export interface ExpeditionTargetConfig {
+    expeditionId: string;
+    mapId: string;
+    worldStateFile: string;
+    starterDeckFile: string;
+    mapFile: string;
+    eventsFile: string;
+    shopFile: string;
+}
+
 export interface PersistentStash {
     stashId: string;
     deckRef?: string;
@@ -73,6 +83,7 @@ export interface BattleLaunchPayload {
     carriedDeck?: ExpeditionCardStack[];
     runDeck: ExpeditionCardStack[];
     rewardPreview?: RunRewardBundle;
+    targetConfig?: ExpeditionTargetConfig;
 }
 
 export type ExpeditionBattleOutcome = 'battle-victory' | 'boss-clear' | 'defeat';
@@ -86,6 +97,7 @@ export interface ExpeditionBattleCompleteEvent {
     victory: boolean;
     outcome: ExpeditionBattleOutcome;
     completedAt: string;
+    targetConfig?: ExpeditionTargetConfig;
 }
 
 export interface RunResolutionSummary {

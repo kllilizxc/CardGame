@@ -2,6 +2,7 @@ import type {
     BattleLaunchPayload,
     ExpeditionBattleCompleteEvent,
     ExpeditionBattleOutcome,
+    ExpeditionTargetConfig,
 } from '../../types/expedition';
 
 function getBattleOutcome(payload: BattleLaunchPayload, victory: boolean): ExpeditionBattleOutcome {
@@ -12,11 +13,25 @@ function getBattleOutcome(payload: BattleLaunchPayload, victory: boolean): Exped
     return payload.nodeType === 'boss' ? 'boss-clear' : 'battle-victory';
 }
 
+function cloneTargetConfig(targetConfig: ExpeditionTargetConfig): ExpeditionTargetConfig {
+    return {
+        expeditionId: targetConfig.expeditionId,
+        mapId: targetConfig.mapId,
+        worldStateFile: targetConfig.worldStateFile,
+        starterDeckFile: targetConfig.starterDeckFile,
+        mapFile: targetConfig.mapFile,
+        eventsFile: targetConfig.eventsFile,
+        shopFile: targetConfig.shopFile,
+    };
+}
+
 export function createExpeditionBattleCompleteEvent(
     payload: BattleLaunchPayload,
     victory: boolean,
     completedAt = new Date().toISOString(),
 ): ExpeditionBattleCompleteEvent {
+    const targetConfig = payload.targetConfig ? cloneTargetConfig(payload.targetConfig) : undefined;
+
     return {
         runId: payload.runId,
         nodeId: payload.nodeId,
@@ -26,5 +41,6 @@ export function createExpeditionBattleCompleteEvent(
         victory,
         outcome: getBattleOutcome(payload, victory),
         completedAt,
+        ...(targetConfig ? { targetConfig } : {}),
     };
 }

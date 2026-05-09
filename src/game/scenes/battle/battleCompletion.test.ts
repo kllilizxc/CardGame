@@ -10,6 +10,15 @@ const battlePayload: BattleLaunchPayload = {
     encounterId: 'test_encounter_01',
     encounterFile: 'data/encounters/test-enemy.json',
     runDeck: [{ id: 'SX_YJZ_001', count: 1 }],
+    targetConfig: {
+        expeditionId: 'phase01-first-playable-expedition',
+        mapId: 'phase01-prototype-map',
+        worldStateFile: 'data/world/initial-state.json',
+        starterDeckFile: 'data/decks/starter-deck.json',
+        mapFile: 'data/mijing/prototype-map.json',
+        eventsFile: 'data/mijing/prototype-events.json',
+        shopFile: 'data/mijing/prototype-shop.json',
+    },
 };
 
 const bossPayload: BattleLaunchPayload = {
@@ -31,6 +40,7 @@ describe('createExpeditionBattleCompleteEvent', () => {
             victory: true,
             outcome: 'battle-victory',
             completedAt: '2026-05-08T01:00:00.000Z',
+            targetConfig: battlePayload.targetConfig,
         });
     });
 

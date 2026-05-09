@@ -40,6 +40,8 @@ describe('startup scene flow', () => {
         expect(worldMapScene).toContain('this.scene.start(intent.sceneKey, intent.payload)');
         expect(worldMapModel).toContain("sceneKey: 'HubScene'");
         expect(worldMapModel).toContain("sceneKey: 'ExpeditionScene'");
+        expect(worldMapModel).toContain('hubFile');
+        expect(worldMapModel).toContain('mapFile');
     });
 
     it('exposes minimal return actions from Hub and Expedition back to the WorldMapScene while preserving resume stores', () => {
@@ -47,10 +49,14 @@ describe('startup scene flow', () => {
         const expeditionScene = read('src/game/scenes/expedition/ExpeditionScene.ts');
         const worldMapScene = read('src/game/scenes/worldmap/WorldMapScene.ts');
 
+        expect(hubScene).toContain('normalizeHubSceneLaunchData');
+        expect(hubScene).toContain('this.launchData.hubFile');
         expect(hubScene).toContain('返回大地图');
         expect(hubScene).toContain('createWorldMapReturnIntent');
         expect(hubScene).toContain('this.scene.start(intent.sceneKey, intent.payload)');
 
+        expect(expeditionScene).toContain('normalizeExpeditionSceneLaunchData');
+        expect(expeditionScene).toContain('this.launchData.mapFile');
         expect(expeditionScene).toContain('返回大地图');
         expect(expeditionScene).toContain('createWorldMapReturnIntent');
         expect(expeditionScene).toContain('this.scene.start(intent.sceneKey, intent.payload)');

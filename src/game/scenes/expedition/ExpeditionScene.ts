@@ -38,6 +38,12 @@ import {
 } from './entryFlowModel';
 import { createBattleSceneStartPayload } from './battleLaunchFlow';
 import { confirmExpeditionLoadout, getInitialExpeditionEntryView } from './expeditionEntryFlow';
+import {
+    createExpeditionTargetConfig,
+    normalizeExpeditionSceneLaunchData,
+    type ExpeditionSceneLaunchData,
+    type NormalizedExpeditionSceneLaunchData,
+} from './expeditionSceneLaunch';
 import { getVisibleNodes, isReachableNode } from './mapTraversal';
 import { createRunAfterBattleVictory, getTerminalBattleOutcome } from './runResultFlow';
 import {
@@ -52,6 +58,7 @@ type StarterDeckCacheEntry = ExpeditionBootstrapSources['starterDeck'];
 type NonCombatMapNode = EventMapNode | ShopMapNode | ExtractMapNode;
 
 export class ExpeditionScene extends Scene {
+    private launchData: NormalizedExpeditionSceneLaunchData = normalizeExpeditionSceneLaunchData();
     private expeditionState!: ExpeditionState;
     private mapDefinition!: ExpeditionMapDefinition;
     private eventCollection!: PrototypeEventCollection;
@@ -69,24 +76,32 @@ export class ExpeditionScene extends Scene {
         super('ExpeditionScene');
     }
 
-    init(data?: { battleResult?: ExpeditionBattleCompleteEvent }): void {
-        this.pendingBattleResult = data?.battleResult ?? null;
+    init(data?: ExpeditionSceneLaunchData): void {
+        this.launchData = normalizeExpeditionSceneLaunchData(data);
+        this.pendingBattleResult = this.launchData.battleResult ?? null;
     }
 
     preload(): void {
-        this.load.json('expeditionInitialState', 'data/world/initial-state.json');
-        this.load.json('expeditionStarterDeck', 'data/decks/starter-deck.json');
-        this.load.json('expeditionPrototypeMap', 'data/mijing/prototype-map.json');
-        this.load.json('expeditionPrototypeEvents', 'data/mijing/prototype-events.json');
-        this.load.json('expeditionPrototypeShop', 'data/mijing/prototype-shop.json');
+        this.load.json(this.launchData.cacheKeys.worldState, this.launchData.worldStateFile);
+        this.load.json(this.launchData.cacheKeys.starterDeck, this.launchData.starterDeckFile);
+        this.load.json(this.launchData.cacheKeys.map, this.launchData.mapFile);
+        this.load.json(this.launchData.cacheKeys.events, this.launchData.eventsFile);
+        this.load.json(this.launchData.cacheKeys.shop, this.launchData.shopFile);
     }
 
     create(): void {
         const { width, height } = this.scale;
+        const worldState = this.cache.json.get(this.launchData.cacheKeys.worldState) as ExpeditionWorldStateSeed;
+        const starterDeck = this.cache.json.get(this.launchData.cacheKeys.starterDeck) as StarterDeckCacheEntry;
+        this.mapDefinition = this.cache.json.get(this.launchData.cacheKeys.map) as ExpeditionMapDefinition;
+        this.eventCollection = this.cache.json.get(this.launchData.cacheKeys.events) as PrototypeEventCollection;
+        this.shopCollection = this.cache.json.get(this.launchData.cacheKeys.shop) as PrototypeShopCollection;
+        this.assertLaunchTargetMatchesMapDefinition();
+        this.expeditionState = ExpeditionState.bootstrap({ worldState, starterDeck });
 
         this.cameras.main.setBackgroundColor(0x0f172a);
         this.add.rectangle(width / 2, height / 2, width, height, 0x111827, 0.92);
-        this.add.text(width / 2, 80, '青云外山试炼', {
+        this.add.text(width / 2, 80, this.mapDefinition.name, {
             fontFamily: 'Arial',
             fontSize: '44px',
             color: '#f8fafc',
@@ -98,13 +113,6 @@ export class ExpeditionScene extends Scene {
             color: '#93c5fd',
         }).setOrigin(0.5);
         this.createWorldMapReturnButton();
-
-        const worldState = this.cache.json.get('expeditionInitialState') as ExpeditionWorldStateSeed;
-        const starterDeck = this.cache.json.get('expeditionStarterDeck') as StarterDeckCacheEntry;
-        this.mapDefinition = this.cache.json.get('expeditionPrototypeMap') as ExpeditionMapDefinition;
-        this.eventCollection = this.cache.json.get('expeditionPrototypeEvents') as PrototypeEventCollection;
-        this.shopCollection = this.cache.json.get('expeditionPrototypeShop') as PrototypeShopCollection;
-        this.expeditionState = ExpeditionState.bootstrap({ worldState, starterDeck });
 
         this.runHud = new RunHud(this);
         this.runHud.setVisible(false);
@@ -125,11 +133,19 @@ export class ExpeditionScene extends Scene {
                 this.showActiveRun(initialView.activeRun, 'resumed');
             } else {
                 this.showPreparationPanel();
-                this.statusText.setText(initialView.statusText);
+                this.statusText.setText(this.launchData.statusText ?? initialView.statusText);
             }
         }
 
         EventBus.emit('current-scene-ready', this);
+    }
+
+    private assertLaunchTargetMatchesMapDefinition(): void {
+        if (this.mapDefinition.id !== this.launchData.mapId) {
+            throw new Error(
+                `ExpeditionScene launch expected map ${this.launchData.mapId}, but ${this.launchData.mapFile} declares ${this.mapDefinition.id}.`,
+            );
+        }
     }
 
     private createWorldMapReturnButton(): void {
@@ -154,7 +170,7 @@ export class ExpeditionScene extends Scene {
     private returnToWorldMap(): void {
         const intent = createWorldMapReturnIntent({
             source: 'expedition',
-            statusText: '已从青云外山试炼返回大地图；再次进入秘境会继续当前探索。',
+            statusText: `已从${this.mapDefinition.name}返回大地图；再次进入秘境会继续当前探索。`,
         });
 
         this.scene.start(intent.sceneKey, intent.payload);
@@ -178,8 +194,8 @@ export class ExpeditionScene extends Scene {
 
     private confirmLoadout(): void {
         const confirmedView = confirmExpeditionLoadout(this.expeditionState, {
-            expeditionId: 'phase01-first-playable-expedition',
-            mapId: this.mapDefinition.id,
+            expeditionId: this.launchData.expeditionId,
+            mapId: this.launchData.mapId,
             entryNodeId: this.mapDefinition.entryNodeId,
         });
 
@@ -318,7 +334,11 @@ export class ExpeditionScene extends Scene {
             return;
         }
 
-        const nextRun = this.expeditionState.enterReachableNode(this.mapDefinition, nodeId);
+        const nextRun = this.expeditionState.enterReachableNode(
+            this.mapDefinition,
+            nodeId,
+            createExpeditionTargetConfig(this.launchData),
+        );
 
         if (!nextRun) {
             this.statusText.setText('该节点尚未连通；路线保持不变。');
@@ -426,7 +446,11 @@ export class ExpeditionScene extends Scene {
             return;
         }
 
-        const enteredRun = this.expeditionState.enterReachableNode(this.mapDefinition, node.id);
+        const enteredRun = this.expeditionState.enterReachableNode(
+            this.mapDefinition,
+            node.id,
+            createExpeditionTargetConfig(this.launchData),
+        );
 
         if (!enteredRun) {
             this.statusText.setText('该节点尚未连通；路线保持不变。');

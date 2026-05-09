@@ -2,6 +2,7 @@ import type {
     ExpeditionEncounterMapNode,
     ExpeditionMapDefinition,
     ExpeditionMapNode,
+    ExpeditionTargetConfig,
     RunSnapshot,
 } from '../../types/expedition';
 import { createBattleLaunchPayload } from './battleLaunchFlow';
@@ -70,6 +71,7 @@ export function enterReachableNode(
     map: ExpeditionMapDefinition,
     activeRun: RunSnapshot,
     nodeId: string,
+    targetConfig?: ExpeditionTargetConfig,
 ): RunSnapshot | null {
     if (!isReachableNode(map, activeRun, nodeId)) {
         return null;
@@ -99,6 +101,6 @@ export function enterReachableNode(
         currentNodeId: nodeId,
         visitedNodeIds,
         nodeStates,
-        pendingEncounter: isEncounterNode(node) ? createBattleLaunchPayload(activeRun, node) : null,
+        pendingEncounter: isEncounterNode(node) ? createBattleLaunchPayload(activeRun, node, targetConfig) : null,
     };
 }

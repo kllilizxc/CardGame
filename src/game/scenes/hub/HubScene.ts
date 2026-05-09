@@ -8,6 +8,11 @@ import {
 } from '../../services/StoryHubSessionPersistence';
 import { createWorldMapReturnIntent } from '../worldmap/worldMap';
 import {
+    normalizeHubSceneLaunchData,
+    type HubSceneLaunchData,
+    type NormalizedHubSceneLaunchData,
+} from './hubSceneLaunch';
+import {
     applyHubNavigationIntent,
     createHubActionIntent,
     createInitialHubNavigationState,
@@ -20,10 +25,8 @@ import {
     type HubTownDefinition,
 } from './hubTown';
 
-const HUB_TOWN_CACHE_KEY = 'hubTownShell';
-const HUB_TOWN_FILE = 'data/hub/town-shell.json';
-
 export class HubScene extends Scene {
+    private launchData: NormalizedHubSceneLaunchData = normalizeHubSceneLaunchData();
     private town!: HubTownDefinition;
     private navigationState!: HubNavigationState;
     private shellContainer?: Phaser.GameObjects.Container;
@@ -32,20 +35,40 @@ export class HubScene extends Scene {
         super('HubScene');
     }
 
+    init(data?: HubSceneLaunchData): void {
+        this.launchData = normalizeHubSceneLaunchData(data);
+    }
+
     preload(): void {
-        this.load.json(HUB_TOWN_CACHE_KEY, HUB_TOWN_FILE);
+        this.load.json(this.launchData.hubCacheKey, this.launchData.hubFile);
     }
 
     create(): void {
-        this.town = validateHubTownDefinition(this.cache.json.get(HUB_TOWN_CACHE_KEY));
+        this.town = validateHubTownDefinition(this.cache.json.get(this.launchData.hubCacheKey));
+        this.assertLaunchTargetMatchesHubDefinition();
+        const savedSession = loadHubSessionSnapshot(this.launchData.hubId);
         this.navigationState = createInitialHubNavigationState(
             this.town,
-            loadHubSessionSnapshot(this.town.hubId),
+            savedSession,
         );
+        if (!savedSession?.statusText && this.launchData.statusText) {
+            this.navigationState = {
+                ...this.navigationState,
+                statusText: this.launchData.statusText,
+            };
+        }
         this.persistHubNavigationState();
 
         this.renderShell();
         EventBus.emit('current-scene-ready', this);
+    }
+
+    private assertLaunchTargetMatchesHubDefinition(): void {
+        if (this.town.hubId !== this.launchData.hubId) {
+            throw new Error(
+                `HubScene launch expected ${this.launchData.hubId}, but ${this.launchData.hubFile} declares ${this.town.hubId}.`,
+            );
+        }
     }
 
     private renderShell(): void {
@@ -194,7 +217,7 @@ export class HubScene extends Scene {
 
         const intent = createWorldMapReturnIntent({
             source: 'hub',
-            statusText: '已从青云镇返回大地图；再次进入城镇会恢复保存位置。',
+            statusText: `已从${this.town.title}返回大地图；再次进入城镇会恢复保存位置。`,
         });
 
         this.scene.start(intent.sceneKey, intent.payload);
@@ -214,7 +237,7 @@ export class HubScene extends Scene {
 
     private persistHubNavigationState(): void {
         saveHubSessionSnapshot({
-            hubId: this.town.hubId,
+            hubId: this.launchData.hubId,
             currentLocationId: this.navigationState.currentLocationId,
             ...(this.navigationState.statusText ? { statusText: this.navigationState.statusText } : {}),
             updatedAt: new Date().toISOString(),

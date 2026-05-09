@@ -12,12 +12,18 @@ interface WorldMapDestinationBase {
 export interface WorldMapHubDestination extends WorldMapDestinationBase {
     kind: 'hub';
     hubId: string;
+    hubFile: string;
 }
 
 export interface WorldMapExpeditionDestination extends WorldMapDestinationBase {
     kind: 'expedition';
     expeditionId: string;
     mapId: string;
+    worldStateFile: string;
+    starterDeckFile: string;
+    mapFile: string;
+    eventsFile: string;
+    shopFile: string;
 }
 
 export type WorldMapDestination = WorldMapHubDestination | WorldMapExpeditionDestination;
@@ -35,6 +41,7 @@ export interface WorldMapHubLaunchPayload {
     source: 'worldMap';
     destinationId: string;
     hubId: string;
+    hubFile: string;
     statusText?: string;
 }
 
@@ -43,6 +50,11 @@ export interface WorldMapExpeditionLaunchPayload {
     destinationId: string;
     expeditionId: string;
     mapId: string;
+    worldStateFile: string;
+    starterDeckFile: string;
+    mapFile: string;
+    eventsFile: string;
+    shopFile: string;
     statusText?: string;
 }
 
@@ -114,6 +126,7 @@ function validateWorldMapDestination(value: unknown, index: number): WorldMapDes
         return {
             ...createDestinationBase(value, kind),
             hubId: requireString(value.hubId, `destination ${id}.hubId`),
+            hubFile: requireString(value.hubFile, `destination ${id} hubFile`),
         };
     }
 
@@ -122,6 +135,11 @@ function validateWorldMapDestination(value: unknown, index: number): WorldMapDes
             ...createDestinationBase(value, kind),
             expeditionId: requireString(value.expeditionId, `destination ${id}.expeditionId`),
             mapId: requireString(value.mapId, `destination ${id}.mapId`),
+            worldStateFile: requireString(value.worldStateFile, `destination ${id} worldStateFile`),
+            starterDeckFile: requireString(value.starterDeckFile, `destination ${id} starterDeckFile`),
+            mapFile: requireString(value.mapFile, `destination ${id} mapFile`),
+            eventsFile: requireString(value.eventsFile, `destination ${id} eventsFile`),
+            shopFile: requireString(value.shopFile, `destination ${id} shopFile`),
         };
     }
 
@@ -199,6 +217,7 @@ export function createWorldMapDestinationIntent(
                 source: 'worldMap',
                 destinationId: destination.id,
                 hubId: destination.hubId,
+                hubFile: destination.hubFile,
                 ...(destination.statusText ? { statusText: destination.statusText } : {}),
             },
         };
@@ -212,6 +231,11 @@ export function createWorldMapDestinationIntent(
             destinationId: destination.id,
             expeditionId: destination.expeditionId,
             mapId: destination.mapId,
+            worldStateFile: destination.worldStateFile,
+            starterDeckFile: destination.starterDeckFile,
+            mapFile: destination.mapFile,
+            eventsFile: destination.eventsFile,
+            shopFile: destination.shopFile,
             ...(destination.statusText ? { statusText: destination.statusText } : {}),
         },
     };

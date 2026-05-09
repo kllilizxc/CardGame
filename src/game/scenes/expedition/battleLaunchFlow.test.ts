@@ -3,6 +3,7 @@ import { describe, expect, it } from 'bun:test';
 import prototypeMapJson from '../../../../public/data/mijing/prototype-map.json';
 import type { ExpeditionEncounterMapNode, RunSnapshot } from '../../types/expedition';
 import { createBattleLaunchPayload, startBattleSceneFromPayload } from './battleLaunchFlow';
+import { createExpeditionTargetConfig, normalizeExpeditionSceneLaunchData } from './expeditionSceneLaunch';
 
 function createRunSnapshot(): RunSnapshot {
     return {
@@ -50,6 +51,23 @@ describe('createBattleLaunchPayload', () => {
     });
 
 
+
+
+
+    it('attaches the authoritative expedition target config to battle payloads for round trips', () => {
+        const battleNode = prototypeMapJson.nodes.find((node) => node.id === 'battle.mist-foxes') as ExpeditionEncounterMapNode;
+        const targetConfig = createExpeditionTargetConfig(normalizeExpeditionSceneLaunchData({
+            expeditionId: 'expedition.custom',
+            mapId: 'map.custom',
+            mapFile: 'data/mijing/custom-map.json',
+        }));
+
+        expect(createBattleLaunchPayload(createRunSnapshot(), battleNode, targetConfig)).toMatchObject({
+            runId: 'run-test-001',
+            nodeId: 'battle.mist-foxes',
+            targetConfig,
+        });
+    });
 
     it('starts BattleScene with an isolated copy of the pending battle payload', () => {
         const battleNode = prototypeMapJson.nodes.find((node) => node.id === 'battle.mist-foxes') as ExpeditionEncounterMapNode;
