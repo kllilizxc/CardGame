@@ -158,6 +158,7 @@ export interface StoryHubSessionKey {
 
 export interface StoryBattleSceneLaunchPayload {
     source: 'story';
+    storyResourceId?: string;
     battleLaunch: StoryBattleLaunchMetadata;
     storyState: StoryState;
     selectedChoiceIds: string[];
@@ -176,6 +177,7 @@ export interface StoryBattleCompleteEvent {
     encounterFile: string;
     deckResourceId?: string;
     deckFile: string;
+    storyResourceId?: string;
     storyGraphFile?: string;
     victory: boolean;
     outcome: StoryBattleOutcome;

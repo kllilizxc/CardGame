@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
+import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import {
     clearStoryRuntimeSession,
     saveStoryRuntimeSession,
@@ -23,8 +24,11 @@ import {
     createStorySceneTransitionIntent,
 } from './storyBattleRoundTrip';
 import {
+    assertStorySceneCatalogResourceMatchesLoadedGraph,
     normalizeStorySceneLaunchData,
+    resolveStorySceneCatalogResource,
     type NormalizedStorySceneLaunchData,
+    type ResolvedStorySceneCatalogResource,
     type StorySceneLaunchData,
 } from './storySceneLaunch';
 
@@ -35,6 +39,7 @@ export class StoryScene extends Scene {
     private storyContainer?: Phaser.GameObjects.Container;
     private statusText?: Phaser.GameObjects.Text;
     private launchData: NormalizedStorySceneLaunchData = normalizeStorySceneLaunchData();
+    private storyResource?: ResolvedStorySceneCatalogResource;
 
     constructor() {
         super('StoryScene');
@@ -45,11 +50,18 @@ export class StoryScene extends Scene {
     }
 
     preload(): void {
-        this.load.json(this.launchData.storyGraphCacheKey, this.launchData.storyGraphFile);
+        const storyResource = resolveStorySceneCatalogResource(
+            this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+            this.launchData,
+        );
+        this.storyResource = storyResource;
+
+        this.load.json(this.launchData.storyGraphCacheKey, storyResource.publicPath);
     }
 
     create(): void {
-        this.storyGraph = validatePlayableStoryGraph(this.cache.json.get(this.launchData.storyGraphCacheKey));
+        this.storyGraph = this.readValidatedStoryGraph();
+        assertStorySceneCatalogResourceMatchesLoadedGraph(this.storyGraph, this.getResolvedStoryResource());
         const initialStatusText = this.applyLaunchData();
         this.persistStorySession(initialStatusText);
 
@@ -57,6 +69,38 @@ export class StoryScene extends Scene {
         this.renderCurrentNode(initialStatusText);
 
         EventBus.emit('current-scene-ready', this);
+    }
+
+    private readValidatedStoryGraph(): StoryGraph {
+        const rawStoryGraph = this.cache.json.get(this.launchData.storyGraphCacheKey);
+        const storyResource = this.getResolvedStoryResource();
+
+        if (rawStoryGraph === undefined) {
+            throw new Error(
+                `StoryScene failed to load catalog resource ${storyResource.resourceId} from public/${storyResource.publicPath} for launch storyGraphFile ${this.launchData.storyGraphFile}: JSON cache key ${this.launchData.storyGraphCacheKey} is missing after preload.`,
+            );
+        }
+
+        try {
+            return validatePlayableStoryGraph(rawStoryGraph);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+
+            throw new Error(
+                `StoryScene failed to validate catalog resource ${storyResource.resourceId} from public/${storyResource.publicPath}: ${message}`,
+            );
+        }
+    }
+
+    private getResolvedStoryResource(): ResolvedStorySceneCatalogResource {
+        if (!this.storyResource) {
+            this.storyResource = resolveStorySceneCatalogResource(
+                this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+                this.launchData,
+            );
+        }
+
+        return this.storyResource;
     }
 
     private applyLaunchData(): string {
@@ -303,6 +347,7 @@ export class StoryScene extends Scene {
             selectedChoice?.text ?? choiceId,
             this.launchData.storyGraphFile,
             this.launchData.hubSession,
+            this.launchData.storyResourceId,
         );
 
         if (intent.kind === 'startBattleScene') {

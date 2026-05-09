@@ -176,6 +176,7 @@ function isStoryBattleSceneLaunchPayload(value: unknown): value is StoryBattleSc
     const candidate = value as Partial<StoryBattleSceneLaunchPayload>;
 
     return candidate.source === 'story'
+        && (candidate.storyResourceId === undefined || typeof candidate.storyResourceId === 'string')
         && isStoryBattleLaunchMetadata(candidate.battleLaunch)
         && isStoryState(candidate.storyState)
         && isStringArray(candidate.selectedChoiceIds)
@@ -222,6 +223,7 @@ export function normalizeStoryBattleLaunchPayload(data: unknown): StoryBattleSce
 
     return {
         source: 'story',
+        ...(data.storyResourceId ? { storyResourceId: data.storyResourceId } : {}),
         battleLaunch: { ...data.battleLaunch },
         storyState: cloneStoryState(data.storyState),
         selectedChoiceIds: [...data.selectedChoiceIds],

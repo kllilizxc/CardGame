@@ -177,6 +177,7 @@ describe('storyBattleRoundTrip', () => {
             actionId: 'action.start-qingyun-entry-story',
             storyGraphFile: 'data/story/story-graph.json',
         };
+        const storyResourceId = 'story.qingyun-entry';
 
         const startPayload = createStoryBattleSceneStartPayload(
             transition.battleLaunch,
@@ -184,6 +185,7 @@ describe('storyBattleRoundTrip', () => {
             transition.nextSelectedChoiceIds,
             hubSession.storyGraphFile,
             hubSession,
+            storyResourceId,
         );
         const result = createStoryBattleCompleteEvent(startPayload, true, '2026-05-09T06:03:00.000Z');
         const intent = createStorySceneTransitionIntent(
@@ -191,14 +193,18 @@ describe('storyBattleRoundTrip', () => {
             '以卡匣应战',
             hubSession.storyGraphFile,
             hubSession,
+            storyResourceId,
         );
 
+        expect(startPayload.storyResourceId).toBe(storyResourceId);
         expect(startPayload.hubSession).toEqual(hubSession);
+        expect(result.storyResourceId).toBe(storyResourceId);
         expect(result.hubSession).toEqual(hubSession);
         expect(intent.kind).toBe('startBattleScene');
         if (intent.kind !== 'startBattleScene') {
             throw new Error('Expected battle scene start intent.');
         }
+        expect(intent.payload.storyResourceId).toBe(storyResourceId);
         expect(intent.payload.hubSession).toEqual(hubSession);
     });
 });

@@ -429,6 +429,33 @@ describe('content catalog', () => {
         });
     });
 
+    it('resolves checked-in Story resources by stable catalog id and storyGraphFile public path for runtime StoryScene loading', () => {
+        const resolver = createContentCatalogResolver(readCatalogJson(), {
+            context: 'StoryScene',
+            sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+        });
+
+        expect(resolver.resolveJsonResource({
+            resourceId: 'story.qingyun-entry',
+            expectedKind: 'story',
+        })).toEqual({
+            resourceId: 'story.qingyun-entry',
+            kind: 'story',
+            schemaVersion: 1,
+            publicPath: 'data/story/story-graph.json',
+        });
+
+        expect(resolver.resolveJsonResourceByPublicPath({
+            publicPath: 'data/story/qingyun-teahouse-rumors.json',
+            expectedKind: 'story',
+        })).toEqual({
+            resourceId: 'story.qingyun-teahouse-rumors',
+            kind: 'story',
+            schemaVersion: 1,
+            publicPath: 'data/story/qingyun-teahouse-rumors.json',
+        });
+    });
+
     it('fails actionably when the runtime catalog cache is missing before WorldMapScene resolves resources', () => {
         expect(() => createContentCatalogResolver(undefined, {
             context: 'WorldMapScene',

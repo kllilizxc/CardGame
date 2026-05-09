@@ -91,8 +91,14 @@ export interface ContentCatalogResourceRequest {
     expectedKind: ContentResourceKind;
 }
 
+export interface ContentCatalogPublicPathRequest {
+    publicPath: string;
+    expectedKind: ContentResourceKind;
+}
+
 export interface ContentCatalogResolver {
     resolveJsonResource(request: ContentCatalogResourceRequest): ContentCatalogEntry;
+    resolveJsonResourceByPublicPath(request: ContentCatalogPublicPathRequest): ContentCatalogEntry;
 }
 
 interface LoadedCatalogResource {
@@ -244,9 +250,11 @@ export function createContentCatalogResolver(
     }
 
     const byResourceId = new Map<string, ContentCatalogEntry>();
+    const byPublicPath = new Map<string, ContentCatalogEntry>();
 
     for (const entry of catalog.resources) {
         byResourceId.set(entry.resourceId, entry);
+        byPublicPath.set(entry.publicPath, entry);
     }
 
     return {
@@ -262,6 +270,23 @@ export function createContentCatalogResolver(
             if (entry.kind !== request.expectedKind) {
                 throw new Error(
                     `${options.context} could not resolve catalog resource ${request.resourceId}: catalog resource has kind ${entry.kind}; expected ${request.expectedKind}.`,
+                );
+            }
+
+            return { ...entry };
+        },
+        resolveJsonResourceByPublicPath(request: ContentCatalogPublicPathRequest): ContentCatalogEntry {
+            const entry = byPublicPath.get(request.publicPath);
+
+            if (!entry) {
+                throw new Error(
+                    `${options.context} could not resolve catalog public path ${request.publicPath}: no catalog entry exists for that public path.`,
+                );
+            }
+
+            if (entry.kind !== request.expectedKind) {
+                throw new Error(
+                    `${options.context} could not resolve catalog public path ${request.publicPath}: catalog resource ${entry.resourceId} has kind ${entry.kind}; expected ${request.expectedKind}.`,
                 );
             }
 

@@ -61,6 +61,7 @@ describe('battleSceneLaunch', () => {
     it('normalizes a source-aware story battle launch payload with encounter and deck files', () => {
         const storyPayload: StoryBattleSceneLaunchPayload = {
             source: 'story',
+            storyResourceId: 'story.test-battle',
             battleLaunch: {
                 sceneKey: 'BattleScene',
                 storyId: 'story.test-battle',
@@ -98,6 +99,7 @@ describe('battleSceneLaunch', () => {
         expect(normalized?.battleLaunch).not.toBe(storyPayload.battleLaunch);
         expect(normalized?.storyState).not.toBe(storyPayload.storyState);
         expect(normalized?.selectedChoiceIds).not.toBe(storyPayload.selectedChoiceIds);
+        expect(normalized?.storyResourceId).toBe('story.test-battle');
         expect(getEncounterFile(null, normalized)).toBe('data/encounters/test-enemy.json');
         expect(getEncounterCacheKey(null, normalized)).toBe('storyEncounter:story.test-battle:story.test-battle.first-duel');
         expect(getBattleDeckFile(normalized)).toBe('data/decks/starter-deck.json');
