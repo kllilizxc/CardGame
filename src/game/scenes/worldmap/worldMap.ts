@@ -1,11 +1,41 @@
 export type WorldMapDestinationKind = 'hub' | 'expedition';
 export type WorldMapLaunchSceneKey = 'HubScene' | 'ExpeditionScene';
 
+export interface WorldMapNormalizedPosition {
+    x: number;
+    y: number;
+}
+
+export interface WorldMapPresentation {
+    mapWidth: number;
+    mapHeight: number;
+    initialCenter: WorldMapNormalizedPosition;
+}
+
+export interface WorldMapDestinationPresentation {
+    position: WorldMapNormalizedPosition;
+    icon: string;
+    regionLabel: string;
+}
+
+export interface WorldMapViewport {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+}
+
+export interface WorldMapSurfacePosition {
+    x: number;
+    y: number;
+}
+
 interface WorldMapDestinationBase {
     id: string;
     kind: WorldMapDestinationKind;
     label: string;
     description: string;
+    presentation: WorldMapDestinationPresentation;
     statusText?: string;
 }
 
@@ -35,6 +65,7 @@ export interface WorldMapDefinition {
     subtitle: string;
     description: string;
     defaultDestinationId: string;
+    presentation: WorldMapPresentation;
     destinations: WorldMapDestination[];
 }
 
@@ -113,17 +144,70 @@ function optionalRequiredString(value: unknown, field: string): string | undefin
     return value;
 }
 
-function createDestinationBase(
-    value: Record<string, unknown>,
-    kind: WorldMapDestinationKind,
-): WorldMapDestinationBase {
-    const statusText = optionalString(value.statusText);
+function requirePositiveNumber(value: unknown, field: string): number {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+        throw new Error(`World map ${field} must be a positive number.`);
+    }
+
+    return value;
+}
+
+function requireNormalizedNumber(value: unknown, field: string): number {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+        throw new Error(`World map ${field} must be between 0 and 1.`);
+    }
+
+    return value;
+}
+
+function validateNormalizedPosition(value: unknown, field: string): WorldMapNormalizedPosition {
+    if (!isRecord(value)) {
+        throw new Error(`World map ${field} must be an object.`);
+    }
 
     return {
-        id: requireString(value.id, 'destination.id'),
+        x: requireNormalizedNumber(value.x, `${field}.x`),
+        y: requireNormalizedNumber(value.y, `${field}.y`),
+    };
+}
+
+function validateWorldMapPresentation(value: unknown): WorldMapPresentation {
+    if (!isRecord(value)) {
+        throw new Error('World map presentation must be an object.');
+    }
+
+    return {
+        mapWidth: requirePositiveNumber(value.mapWidth, 'presentation.mapWidth'),
+        mapHeight: requirePositiveNumber(value.mapHeight, 'presentation.mapHeight'),
+        initialCenter: validateNormalizedPosition(value.initialCenter, 'presentation.initialCenter'),
+    };
+}
+
+function validateDestinationPresentation(value: unknown, destinationId: string): WorldMapDestinationPresentation {
+    if (!isRecord(value)) {
+        throw new Error(`World map destination ${destinationId} presentation must be an object.`);
+    }
+
+    return {
+        position: validateNormalizedPosition(value.position, `destination ${destinationId} presentation.position`),
+        icon: requireString(value.icon, `destination ${destinationId} presentation.icon`),
+        regionLabel: requireString(value.regionLabel, `destination ${destinationId} presentation.regionLabel`),
+    };
+}
+
+function createDestinationBase<TKind extends WorldMapDestinationKind>(
+    value: Record<string, unknown>,
+    kind: TKind,
+): WorldMapDestinationBase & { kind: TKind } {
+    const statusText = optionalString(value.statusText);
+    const id = requireString(value.id, 'destination.id');
+
+    return {
+        id,
         kind,
         label: requireString(value.label, 'destination.label'),
         description: requireString(value.description, 'destination.description'),
+        presentation: validateDestinationPresentation(value.presentation, id),
         ...(statusText ? { statusText } : {}),
     };
 }
@@ -184,6 +268,7 @@ export function validateWorldMapDefinition(value: unknown): WorldMapDefinition {
     }
 
     const id = requireString(value.id, 'id');
+    const presentation = validateWorldMapPresentation(value.presentation);
     const destinations = Array.isArray(value.destinations)
         ? value.destinations.map((destination, index) => validateWorldMapDestination(destination, index))
         : [];
@@ -206,6 +291,7 @@ export function validateWorldMapDefinition(value: unknown): WorldMapDefinition {
         subtitle: requireString(value.subtitle, 'subtitle'),
         description: requireString(value.description, 'description'),
         defaultDestinationId,
+        presentation,
         destinations,
     };
 }
@@ -268,4 +354,51 @@ export function createWorldMapReturnIntent(payload: WorldMapReturnPayload): Worl
         sceneKey: 'WorldMapScene',
         payload,
     };
+}
+
+export function getWorldMapDestinationSurfacePosition(
+    worldMap: WorldMapDefinition,
+    destination: WorldMapDestination,
+): WorldMapSurfacePosition {
+    return {
+        x: destination.presentation.position.x * worldMap.presentation.mapWidth,
+        y: destination.presentation.position.y * worldMap.presentation.mapHeight,
+    };
+}
+
+function clampSurfaceAxis(
+    surfaceSize: number,
+    viewportStart: number,
+    viewportSize: number,
+    value: number,
+): number {
+    if (surfaceSize <= viewportSize) {
+        return viewportStart + (viewportSize - surfaceSize) / 2;
+    }
+
+    const min = viewportStart + viewportSize - surfaceSize;
+    const max = viewportStart;
+
+    return Math.min(max, Math.max(min, value));
+}
+
+export function clampWorldMapSurfacePosition(
+    presentation: WorldMapPresentation,
+    viewport: WorldMapViewport,
+    position: WorldMapSurfacePosition,
+): WorldMapSurfacePosition {
+    return {
+        x: clampSurfaceAxis(presentation.mapWidth, viewport.left, viewport.width, position.x),
+        y: clampSurfaceAxis(presentation.mapHeight, viewport.top, viewport.height, position.y),
+    };
+}
+
+export function createWorldMapInitialSurfacePosition(
+    presentation: WorldMapPresentation,
+    viewport: WorldMapViewport,
+): WorldMapSurfacePosition {
+    return clampWorldMapSurfacePosition(presentation, viewport, {
+        x: viewport.left + viewport.width / 2 - presentation.initialCenter.x * presentation.mapWidth,
+        y: viewport.top + viewport.height / 2 - presentation.initialCenter.y * presentation.mapHeight,
+    });
 }

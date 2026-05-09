@@ -4,12 +4,28 @@
   "subtitle": "大地图 · 第一层入口",
   "description": "青云宗山门外的第一张薄大地图。当前只负责把玩家从主菜单路由到青云镇 Hub、青云宗山门 Hub、集市茶棚 Hub 地点、青云外山试炼秘境和青玉洞试炼秘境，不拥有解锁、移动或世界状态。",
   "defaultDestinationId": "destination.qingyun-town",
+  "presentation": {
+    "mapWidth": 1640,
+    "mapHeight": 980,
+    "initialCenter": {
+      "x": 0.52,
+      "y": 0.55
+    }
+  },
   "destinations": [
     {
       "id": "destination.qingyun-town",
       "kind": "hub",
       "label": "青云镇",
       "description": "返回山门脚下的城镇壳层，继续主线、茶棚支线或后续城镇行动。",
+      "presentation": {
+        "position": {
+          "x": 0.3,
+          "y": 0.66
+        },
+        "icon": "town",
+        "regionLabel": "山麓城镇"
+      },
       "hubId": "hub.qingyun-town",
       "hubFile": "data/hub/town-shell.json",
       "statusText": "从大地图进入青云镇。"
@@ -19,6 +35,14 @@
       "kind": "hub",
       "label": "青云宗山门",
       "description": "抵达云阶尽头的山门牌坊，以独立 Hub 身份进入既有青云宗入门故事。",
+      "presentation": {
+        "position": {
+          "x": 0.56,
+          "y": 0.29
+        },
+        "icon": "sect-gate",
+        "regionLabel": "青云山门"
+      },
       "hubId": "hub.qingyun-sect-gate",
       "hubFile": "data/hub/qingyun-sect-gate.json",
       "statusText": "从大地图抵达青云宗山门。"
@@ -28,6 +52,14 @@
       "kind": "hub",
       "label": "集市茶棚",
       "description": "直接前往青云镇茶棚地点，听取散修传闻或继续茶棚支线。",
+      "presentation": {
+        "position": {
+          "x": 0.38,
+          "y": 0.73
+        },
+        "icon": "teahouse",
+        "regionLabel": "青云镇集市"
+      },
       "hubId": "hub.qingyun-town",
       "hubFile": "data/hub/town-shell.json",
       "targetLocationId": "location.qingyun-town.teahouse",
@@ -38,6 +70,14 @@
       "kind": "expedition",
       "label": "青云外山试炼",
       "description": "进入现有秘境/ExpeditionScene，保留当前搜打撤地图、战斗和结算循环。",
+      "presentation": {
+        "position": {
+          "x": 0.68,
+          "y": 0.53
+        },
+        "icon": "trial",
+        "regionLabel": "外山秘境"
+      },
       "expeditionId": "phase01-first-playable-expedition",
       "mapId": "phase01-prototype-map",
       "worldStateFile": "data/world/initial-state.json",
@@ -52,6 +92,14 @@
       "kind": "expedition",
       "label": "青玉洞试炼",
       "description": "以独立 Expedition/map 身份进入青玉洞支脉；当前复用原型事件、商店和战斗内容来验证多个秘境入口的 active-run 隔离。",
+      "presentation": {
+        "position": {
+          "x": 0.78,
+          "y": 0.73
+        },
+        "icon": "cave",
+        "regionLabel": "青玉洞支脉"
+      },
       "expeditionId": "phase01-jade-cave-expedition",
       "mapId": "phase01-jade-cave-map",
       "worldStateFile": "data/world/initial-state.json",

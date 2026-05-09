@@ -5,8 +5,11 @@ import { join } from 'node:path';
 import worldMapJson from '../../../../public/data/world/world-map.json';
 import type { ExpeditionMapDefinition } from '../../types/expedition';
 import {
+    clampWorldMapSurfacePosition,
+    createWorldMapInitialSurfacePosition,
     createWorldMapReturnIntent,
     createWorldMapDestinationIntent,
+    getWorldMapDestinationSurfacePosition,
     type WorldMapDestination,
     type WorldMapExpeditionDestination,
     validateWorldMapDefinition,
@@ -18,12 +21,28 @@ const validWorldMapFixture = {
     subtitle: '测试入口',
     description: '用于验证大地图数据合同的最小 fixture。',
     defaultDestinationId: 'destination.test-hub',
+    presentation: {
+        mapWidth: 1400,
+        mapHeight: 900,
+        initialCenter: {
+            x: 0.5,
+            y: 0.5,
+        },
+    },
     destinations: [
         {
             id: 'destination.test-hub',
             kind: 'hub',
             label: '测试城镇',
             description: '进入测试 Hub。',
+            presentation: {
+                position: {
+                    x: 0.25,
+                    y: 0.7,
+                },
+                icon: 'town',
+                regionLabel: '测试山脚',
+            },
             hubId: 'hub.test-town',
             hubFile: 'data/hub/test-town.json',
             statusText: '从大地图进入测试城镇。',
@@ -33,6 +52,14 @@ const validWorldMapFixture = {
             kind: 'expedition',
             label: '测试秘境',
             description: '进入测试 Expedition。',
+            presentation: {
+                position: {
+                    x: 0.72,
+                    y: 0.38,
+                },
+                icon: 'trial',
+                regionLabel: '测试秘境',
+            },
             expeditionId: 'expedition.test',
             mapId: 'map.test',
             worldStateFile: 'data/world/test-initial-state.json',
@@ -59,10 +86,19 @@ describe('world map content contract', () => {
 
         expect(worldMap.id).toBe('worldmap.qingyun-region');
         expect(worldMap.defaultDestinationId).toBe('destination.qingyun-town');
+        expect(worldMap.presentation).toEqual({
+            mapWidth: 1640,
+            mapHeight: 980,
+            initialCenter: {
+                x: 0.52,
+                y: 0.55,
+            },
+        });
         expect(worldMap.destinations.map((destination) => ({
             id: destination.id,
             kind: destination.kind,
             label: destination.label,
+            presentation: destination.presentation,
             target: destination.kind === 'hub'
                 ? {
                     hubId: destination.hubId,
@@ -77,6 +113,14 @@ describe('world map content contract', () => {
                 id: 'destination.qingyun-town',
                 kind: 'hub',
                 label: '青云镇',
+                presentation: {
+                    position: {
+                        x: 0.3,
+                        y: 0.66,
+                    },
+                    icon: 'town',
+                    regionLabel: '山麓城镇',
+                },
                 target: {
                     hubId: 'hub.qingyun-town',
                     hubFile: 'data/hub/town-shell.json',
@@ -87,6 +131,14 @@ describe('world map content contract', () => {
                 id: 'destination.qingyun-sect-gate',
                 kind: 'hub',
                 label: '青云宗山门',
+                presentation: {
+                    position: {
+                        x: 0.56,
+                        y: 0.29,
+                    },
+                    icon: 'sect-gate',
+                    regionLabel: '青云山门',
+                },
                 target: {
                     hubId: 'hub.qingyun-sect-gate',
                     hubFile: 'data/hub/qingyun-sect-gate.json',
@@ -97,6 +149,14 @@ describe('world map content contract', () => {
                 id: 'destination.qingyun-town-teahouse',
                 kind: 'hub',
                 label: '集市茶棚',
+                presentation: {
+                    position: {
+                        x: 0.38,
+                        y: 0.73,
+                    },
+                    icon: 'teahouse',
+                    regionLabel: '青云镇集市',
+                },
                 target: {
                     hubId: 'hub.qingyun-town',
                     hubFile: 'data/hub/town-shell.json',
@@ -107,6 +167,14 @@ describe('world map content contract', () => {
                 id: 'destination.qingyun-outer-mountain-trial',
                 kind: 'expedition',
                 label: '青云外山试炼',
+                presentation: {
+                    position: {
+                        x: 0.68,
+                        y: 0.53,
+                    },
+                    icon: 'trial',
+                    regionLabel: '外山秘境',
+                },
                 target: {
                     mapFile: 'data/mijing/prototype-map.json',
                 },
@@ -115,6 +183,14 @@ describe('world map content contract', () => {
                 id: 'destination.qingyun-jade-cave-trial',
                 kind: 'expedition',
                 label: '青玉洞试炼',
+                presentation: {
+                    position: {
+                        x: 0.78,
+                        y: 0.73,
+                    },
+                    icon: 'cave',
+                    regionLabel: '青玉洞支脉',
+                },
                 target: {
                     mapFile: 'data/mijing/jade-cave-map.json',
                 },
@@ -348,6 +424,99 @@ describe('world map content contract', () => {
         expect(() => validateWorldMapDefinition(expeditionWithoutMapFile)).toThrow(
             'World map destination destination.test-expedition mapFile must be a non-empty string.',
         );
+    });
+
+    it('rejects missing or invalid spatial presentation metadata before rendering markers', () => {
+        expect(() => validateWorldMapDefinition({
+            ...validWorldMapFixture,
+            presentation: {
+                ...validWorldMapFixture.presentation,
+                mapWidth: 0,
+            },
+        })).toThrow('World map presentation.mapWidth must be a positive number.');
+
+        expect(() => validateWorldMapDefinition({
+            ...validWorldMapFixture,
+            presentation: {
+                ...validWorldMapFixture.presentation,
+                initialCenter: {
+                    x: 1.2,
+                    y: 0.5,
+                },
+            },
+        })).toThrow('World map presentation.initialCenter.x must be between 0 and 1.');
+
+        expect(() => validateWorldMapDefinition({
+            ...validWorldMapFixture,
+            destinations: [{
+                ...validWorldMapFixture.destinations[0],
+                presentation: undefined,
+            }],
+        })).toThrow('World map destination destination.test-hub presentation must be an object.');
+
+        expect(() => validateWorldMapDefinition({
+            ...validWorldMapFixture,
+            destinations: [{
+                ...validWorldMapFixture.destinations[0],
+                presentation: {
+                    ...validWorldMapFixture.destinations[0].presentation,
+                    position: {
+                        x: -0.1,
+                        y: 0.7,
+                    },
+                },
+            }],
+        })).toThrow('World map destination destination.test-hub presentation.position.x must be between 0 and 1.');
+
+        expect(() => validateWorldMapDefinition({
+            ...validWorldMapFixture,
+            destinations: [{
+                ...validWorldMapFixture.destinations[0],
+                presentation: {
+                    ...validWorldMapFixture.destinations[0].presentation,
+                    icon: '',
+                },
+            }],
+        })).toThrow('World map destination destination.test-hub presentation.icon must be a non-empty string.');
+    });
+
+    it('converts normalized marker coordinates into draggable map surface positions', () => {
+        const worldMap = validateWorldMapDefinition(validWorldMapFixture);
+        const destination = worldMap.destinations[1];
+
+        expect(getWorldMapDestinationSurfacePosition(worldMap, destination)).toEqual({
+            x: 1008,
+            y: 342,
+        });
+    });
+
+    it('centers and clamps a draggable world map surface against the viewport', () => {
+        const worldMap = validateWorldMapDefinition(validWorldMapFixture);
+        const viewport = {
+            left: 100,
+            top: 80,
+            width: 700,
+            height: 500,
+        };
+
+        expect(createWorldMapInitialSurfacePosition(worldMap.presentation, viewport)).toEqual({
+            x: -250,
+            y: -120,
+        });
+        expect(clampWorldMapSurfacePosition(worldMap.presentation, viewport, {
+            x: 500,
+            y: 300,
+        })).toEqual({
+            x: 100,
+            y: 80,
+        });
+        expect(clampWorldMapSurfacePosition(worldMap.presentation, viewport, {
+            x: -900,
+            y: -600,
+        })).toEqual({
+            x: -600,
+            y: -320,
+        });
     });
 
     it('fails launch intent resolution for missing destination ids', () => {

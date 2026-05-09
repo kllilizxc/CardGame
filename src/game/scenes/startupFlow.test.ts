@@ -37,9 +37,14 @@ describe('startup scene flow', () => {
 
         expect(worldMapScene).toContain("this.load.json(WORLD_MAP_CACHE_KEY, 'data/world/world-map.json')");
         expect(worldMapScene).toContain('createWorldMapDestinationIntent');
+        expect(worldMapScene).toContain('createWorldMapInitialSurfacePosition');
+        expect(worldMapScene).toContain('createDestinationMarker');
+        expect(worldMapScene).toContain('handleMapPointerMove');
         expect(worldMapScene).toContain('this.scene.start(intent.sceneKey, intent.payload)');
+        expect(worldMapScene).not.toContain('createDestinationButton');
         expect(worldMapModel).toContain("sceneKey: 'HubScene'");
         expect(worldMapModel).toContain("sceneKey: 'ExpeditionScene'");
+        expect(worldMapModel).toContain('presentation');
         expect(worldMapModel).toContain('hubFile');
         expect(worldMapModel).toContain('mapFile');
     });

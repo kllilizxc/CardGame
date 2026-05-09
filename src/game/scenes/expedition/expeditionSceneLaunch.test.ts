@@ -25,12 +25,28 @@ const worldMapWithSyntheticExpeditionTargets = {
     subtitle: '测试多个秘境入口',
     description: '仅用于 route identity 测试，不增加 checked-in content。',
     defaultDestinationId: 'destination.synthetic-a',
+    presentation: {
+        mapWidth: 1200,
+        mapHeight: 800,
+        initialCenter: {
+            x: 0.5,
+            y: 0.5,
+        },
+    },
     destinations: [
         {
             id: 'destination.synthetic-a',
             kind: 'expedition',
             label: '测试秘境 A',
             description: '使用原型文件的第一个合成 Expedition 入口。',
+            presentation: {
+                position: {
+                    x: 0.35,
+                    y: 0.5,
+                },
+                icon: 'trial',
+                regionLabel: '测试区域 A',
+            },
             expeditionId: 'expedition.synthetic-a',
             mapId: 'map.synthetic-a',
             worldStateFile: 'data/world/initial-state.json',
@@ -45,6 +61,14 @@ const worldMapWithSyntheticExpeditionTargets = {
             kind: 'expedition',
             label: '测试秘境 B',
             description: '使用原型文件的第二个合成 Expedition 入口。',
+            presentation: {
+                position: {
+                    x: 0.65,
+                    y: 0.5,
+                },
+                icon: 'trial',
+                regionLabel: '测试区域 B',
+            },
             expeditionId: 'expedition.synthetic-b',
             mapId: 'map.synthetic-b',
             worldStateFile: 'data/world/initial-state.json',
