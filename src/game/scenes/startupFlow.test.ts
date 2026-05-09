@@ -64,6 +64,12 @@ describe('startup scene flow', () => {
         const worldMapScene = read('src/game/scenes/worldmap/WorldMapScene.ts');
 
         expect(hubScene).toContain('normalizeHubSceneLaunchData');
+        expect(hubScene).toContain('resolveHubSceneCatalogResource');
+        expect(hubScene).toContain('CONTENT_CATALOG_CACHE_KEY');
+        expect(hubScene).toContain('this.cache.json.get(CONTENT_CATALOG_CACHE_KEY)');
+        expect(hubScene).toContain('this.load.json(this.launchData.hubCacheKey, hubResource.publicPath)');
+        expect(hubScene).not.toContain('this.load.json(this.launchData.hubCacheKey, this.launchData.hubFile)');
+        expect(hubScene).toContain('assertHubSceneCatalogResourceMatchesLoadedHub');
         expect(hubScene).toContain('this.launchData.hubFile');
         expect(hubScene).toContain('返回大地图');
         expect(hubScene).toContain('createWorldMapReturnIntent');

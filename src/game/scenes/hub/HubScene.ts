@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
+import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import {
     loadHubSessionSnapshot,
     loadStoryRuntimeSession,
@@ -8,9 +9,12 @@ import {
 } from '../../services/StoryHubSessionPersistence';
 import { createWorldMapReturnIntent } from '../worldmap/worldMap';
 import {
+    assertHubSceneCatalogResourceMatchesLoadedHub,
     normalizeHubSceneLaunchData,
+    resolveHubSceneCatalogResource,
     type HubSceneLaunchData,
     type NormalizedHubSceneLaunchData,
+    type ResolvedHubSceneCatalogResource,
 } from './hubSceneLaunch';
 import {
     applyHubNavigationIntent,
@@ -35,6 +39,7 @@ import {
 
 export class HubScene extends Scene {
     private launchData: NormalizedHubSceneLaunchData = normalizeHubSceneLaunchData();
+    private hubResource?: ResolvedHubSceneCatalogResource;
     private town!: HubTownDefinition;
     private navigationState!: HubNavigationState;
     private shellContainer?: Phaser.GameObjects.Container;
@@ -58,12 +63,22 @@ export class HubScene extends Scene {
     }
 
     preload(): void {
-        this.load.json(this.launchData.hubCacheKey, this.launchData.hubFile);
+        const hubResource = resolveHubSceneCatalogResource(
+            this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+            this.launchData,
+        );
+        this.hubResource = hubResource;
+
+        this.load.json(this.launchData.hubCacheKey, hubResource.publicPath);
     }
 
     create(): void {
-        this.town = validateHubTownDefinition(this.cache.json.get(this.launchData.hubCacheKey));
-        this.assertLaunchTargetMatchesHubDefinition();
+        this.town = this.readValidatedHubTownDefinition();
+        assertHubSceneCatalogResourceMatchesLoadedHub(
+            this.town,
+            this.launchData,
+            this.getResolvedHubResource(),
+        );
         const savedSession = loadHubSessionSnapshot(this.launchData.hubId);
         this.navigationState = createInitialHubNavigationState(
             this.town,
@@ -85,12 +100,36 @@ export class HubScene extends Scene {
         EventBus.emit('current-scene-ready', this);
     }
 
-    private assertLaunchTargetMatchesHubDefinition(): void {
-        if (this.town.hubId !== this.launchData.hubId) {
+    private readValidatedHubTownDefinition(): HubTownDefinition {
+        const rawHub = this.cache.json.get(this.launchData.hubCacheKey);
+        const hubResource = this.getResolvedHubResource();
+
+        if (rawHub === undefined) {
             throw new Error(
-                `HubScene launch expected ${this.launchData.hubId}, but ${this.launchData.hubFile} declares ${this.town.hubId}.`,
+                `HubScene failed to load catalog resource ${hubResource.resourceId} from public/${hubResource.publicPath} for launch hubFile ${this.launchData.hubFile}: JSON cache key ${this.launchData.hubCacheKey} is missing after preload.`,
             );
         }
+
+        try {
+            return validateHubTownDefinition(rawHub);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+
+            throw new Error(
+                `HubScene failed to validate catalog resource ${hubResource.resourceId} from public/${hubResource.publicPath}: ${message}`,
+            );
+        }
+    }
+
+    private getResolvedHubResource(): ResolvedHubSceneCatalogResource {
+        if (!this.hubResource) {
+            this.hubResource = resolveHubSceneCatalogResource(
+                this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+                this.launchData,
+            );
+        }
+
+        return this.hubResource;
     }
 
     private renderShell(): void {
