@@ -87,7 +87,7 @@ describe('read-only content catalog', () => {
         expect(new Set(catalog.resources.map((entry) => entry.publicPath)).size).toBe(catalog.resources.length);
     });
 
-    it('validates checked-in resources and their first route-critical references with pure validators', () => {
+    it('validates checked-in resources plus route-critical and content ID references with pure validators', () => {
         const catalog = parseContentCatalogDefinition(readCatalogJson());
         const result = validateContentCatalog(catalog, createPublicFileSource());
 
@@ -119,6 +119,180 @@ describe('read-only content catalog', () => {
         expect(result.failures.map((failure) => failure.message)).toContain(
             'WorldMap worldmap.qingyun-region destination destination.qingyun-town hubFile references data/hub/town-shell.json, but no catalog entry exists for that public path.',
         );
+    });
+
+
+    it('returns actionable failures for duplicate catalog-backed card, gongfa, and world item IDs', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'cards.units',
+                    kind: 'card',
+                    schemaVersion: 1,
+                    publicPath: 'data/cards/units.json',
+                },
+                {
+                    resourceId: 'cards.artifacts',
+                    kind: 'card',
+                    schemaVersion: 1,
+                    publicPath: 'data/cards/artifacts.json',
+                },
+                {
+                    resourceId: 'gongfa.list',
+                    kind: 'gongfa',
+                    schemaVersion: 1,
+                    publicPath: 'data/gongfa/gongfa-list.json',
+                },
+                {
+                    resourceId: 'world.seed.items-artifacts',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/items.artifacts.json',
+                },
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/cards/units.json': {
+                units: [{ id: 'DUPLICATE_CARD', kind: 'unit' }],
+            },
+            'data/cards/artifacts.json': {
+                artifacts: [{ id: 'DUPLICATE_CARD', kind: 'artifact' }],
+            },
+            'data/gongfa/gongfa-list.json': {
+                gongfa: [
+                    { id: 'gongfa.duplicate', schema: {} },
+                    { id: 'gongfa.duplicate', schema: {} },
+                ],
+            },
+            'data/world/items.artifacts.json': {
+                artifacts: [{ id: 'duplicate_item' }],
+                tools: [{ id: 'duplicate_item' }],
+            },
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toEqual([
+            'Catalog card id DUPLICATE_CARD is declared more than once: cards.units units[0] in data/cards/units.json; duplicate cards.artifacts artifacts[0] in data/cards/artifacts.json.',
+            'Catalog gongfa id gongfa.duplicate is declared more than once: gongfa.list gongfa[0] in data/gongfa/gongfa-list.json; duplicate gongfa.list gongfa[1] in data/gongfa/gongfa-list.json.',
+            'Catalog world item id duplicate_item is declared more than once: world.seed.items-artifacts artifacts[0] in data/world/items.artifacts.json; duplicate world.seed.items-artifacts tools[0] in data/world/items.artifacts.json.',
+        ]);
+    });
+
+    it('returns actionable failures for missing deck, encounter, Expedition reward, and gongfa content IDs', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'cards.units',
+                    kind: 'card',
+                    schemaVersion: 1,
+                    publicPath: 'data/cards/units.json',
+                },
+                {
+                    resourceId: 'gongfa.list',
+                    kind: 'gongfa',
+                    schemaVersion: 1,
+                    publicPath: 'data/gongfa/gongfa-list.json',
+                },
+                {
+                    resourceId: 'world.seed.items-artifacts',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/items.artifacts.json',
+                },
+                {
+                    resourceId: 'deck.test',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/test-deck.json',
+                },
+                {
+                    resourceId: 'encounter.test',
+                    kind: 'encounter',
+                    schemaVersion: 1,
+                    publicPath: 'data/encounters/test.json',
+                },
+                {
+                    resourceId: 'events.test',
+                    kind: 'expeditionEvents',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/events.json',
+                },
+                {
+                    resourceId: 'shop.test',
+                    kind: 'expeditionShop',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/shop.json',
+                },
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/cards/units.json': {
+                units: [
+                    { id: 'CARD_VALID', kind: 'unit', gongfaIds: ['gongfa.valid'] },
+                    { id: 'CARD_BAD_GONGFA', kind: 'unit', gongfaIds: ['gongfa.missing'] },
+                ],
+            },
+            'data/gongfa/gongfa-list.json': {
+                gongfa: [{ id: 'gongfa.valid', schema: {} }],
+            },
+            'data/world/items.artifacts.json': {
+                artifacts: [{ id: 'item.valid' }],
+            },
+            'data/decks/test-deck.json': {
+                cards: [{ id: 'CARD_MISSING_FROM_DECK', count: 1 }],
+            },
+            'data/encounters/test.json': {
+                id: 'encounter.test',
+                enemies: [{ cardId: 'CARD_MISSING_FROM_ENCOUNTER', position: 0 }],
+            },
+            'data/mijing/events.json': {
+                id: 'events.test',
+                eventsByNodeId: {
+                    'event.test': {
+                        nodeId: 'event.test',
+                        pool: [
+                            {
+                                id: 'event.outcome',
+                                rewards: {
+                                    cards: [{ id: 'CARD_MISSING_FROM_EVENT', count: 1 }],
+                                    items: [{ id: 'item.missing.event', itemType: 'artifact', count: 1 }],
+                                    spiritStones: 0,
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+            'data/mijing/shop.json': {
+                id: 'shop.test',
+                shopsByNodeId: {
+                    'shop.test': {
+                        nodeId: 'shop.test',
+                        offers: [
+                            {
+                                id: 'offer.test',
+                                rewards: {
+                                    cards: [{ id: 'CARD_MISSING_FROM_SHOP', count: 1 }],
+                                    items: [{ id: 'item.missing.shop', itemType: 'artifact', count: 1 }],
+                                    spiritStones: 0,
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toEqual([
+            'Card cards.units units[1] CARD_BAD_GONGFA gongfaIds[0] references gongfa id gongfa.missing, but no catalog gongfa resource declares that id.',
+            'Deck deck.test cards[0].id references card id CARD_MISSING_FROM_DECK, but no catalog card resource declares that id.',
+            'Encounter encounter.test enemies[0].cardId references card id CARD_MISSING_FROM_ENCOUNTER, but no catalog card resource declares that id.',
+            'Expedition events events.test eventsByNodeId.event.test.pool[0].rewards.cards[0].id references card id CARD_MISSING_FROM_EVENT, but no catalog card resource declares that id.',
+            'Expedition events events.test eventsByNodeId.event.test.pool[0].rewards.items[0].id references world item id item.missing.event, but no catalog world item resource declares that id.',
+            'Expedition shop shop.test shopsByNodeId.shop.test.offers[0].rewards.cards[0].id references card id CARD_MISSING_FROM_SHOP, but no catalog card resource declares that id.',
+            'Expedition shop shop.test shopsByNodeId.shop.test.offers[0].rewards.items[0].id references world item id item.missing.shop, but no catalog world item resource declares that id.',
+        ]);
     });
 
     it('returns actionable failures when a catalog path is missing on disk', () => {

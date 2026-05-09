@@ -19,6 +19,7 @@ import {
     validateStoryContentGraph,
     type StoryContentGraph,
 } from '../types/storyContent';
+import { validateCatalogContentIdReferences } from './contentIdRegistry';
 import type {
     ExpeditionEncounterMapNode,
     EventMapNode,
@@ -998,6 +999,7 @@ export function validateContentCatalog(
 
     const { index, validatedResourceCount } = loadCatalogResources(catalog, fileSource, failures);
 
+    validateCatalogContentIdReferences(index.byResourceId.values(), failures);
     validateWorldMapReferences(index, failures);
     validateHubReferences(index, failures);
     validateStoryBattleReferences(index, failures);
