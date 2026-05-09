@@ -6,6 +6,8 @@ import {
     goToStoryNode,
 } from '../../state/StoryState';
 import type {
+    StoryBattleLaunchMetadata,
+    StoryBattleTrigger,
     StoryCondition,
     StoryEffect,
     StoryEffectKind,
@@ -125,6 +127,7 @@ export interface StoryChoiceView {
     enabledWhen?: StoryCondition;
     effects: StoryEffect[];
     targetNodeOnEnter: StoryEffect[];
+    battleTrigger: StoryBattleTrigger | null;
 }
 
 export interface StoryFlowViewModel {
@@ -148,6 +151,7 @@ export type StoryChoiceTransition =
         nextVisitedNodeIds: string[];
         nextSelectedChoiceIds: string[];
         nextStoryState: StoryState;
+        battleLaunch: StoryBattleLaunchMetadata | null;
         appliedEffectKinds: StoryEffectKind[];
     }
     | {
@@ -214,11 +218,36 @@ function getChoiceStoryEffects(choice: StoryChoiceDefinition): StoryEffect[] {
     return Array.isArray(choice.effects) ? [...choice.effects] : [];
 }
 
+function findStoryBattleTrigger(effects: StoryEffect[]): StoryBattleTrigger | null {
+    const battleEffect = effects.find((effect) => effect.kind === 'startBattle');
+
+    return battleEffect?.kind === 'startBattle' ? { ...battleEffect.battle } : null;
+}
+
+function createStoryBattleLaunchMetadata(params: {
+    storyId: string;
+    sourceNodeId: string;
+    sourceChoiceId: string;
+    targetNodeId: string;
+    battle: StoryBattleTrigger;
+}): StoryBattleLaunchMetadata {
+    return {
+        sceneKey: 'BattleScene',
+        storyId: params.storyId,
+        sourceNodeId: params.sourceNodeId,
+        sourceChoiceId: params.sourceChoiceId,
+        targetNodeId: params.targetNodeId,
+        ...params.battle,
+    };
+}
+
 function createChoiceView(
     choice: StoryChoiceDefinition,
     targetNode: StoryNodeDefinition | undefined,
     storyState: StoryState,
 ): StoryChoiceView {
+    const choiceEffects = getChoiceStoryEffects(choice);
+    const targetNodeOnEnter = targetNode?.onEnter ? [...targetNode.onEnter] : [];
     const targetExists = Boolean(targetNode);
     const visible = choice.visibleWhen ? evaluateStoryCondition(storyState, choice.visibleWhen) : true;
     const enabled = choice.enabledWhen ? evaluateStoryCondition(storyState, choice.enabledWhen) : true;
@@ -249,8 +278,9 @@ function createChoiceView(
         effectSummary: createEffectSummary(choice.effects),
         ...(choice.visibleWhen ? { visibleWhen: choice.visibleWhen } : {}),
         ...(choice.enabledWhen ? { enabledWhen: choice.enabledWhen } : {}),
-        effects: getChoiceStoryEffects(choice),
-        targetNodeOnEnter: targetNode?.onEnter ? [...targetNode.onEnter] : [],
+        effects: choiceEffects,
+        targetNodeOnEnter,
+        battleTrigger: findStoryBattleTrigger([...choiceEffects, ...targetNodeOnEnter]),
     };
 }
 
@@ -616,6 +646,7 @@ export function createStoryChoiceTransition(
 
     const enterResult = applyStoryEffects(choiceResult.state, choice.targetNodeOnEnter);
     const nextStoryState = enterResult.state;
+    const pendingBattle = enterResult.pendingBattle ?? choiceResult.pendingBattle;
 
     return {
         status: 'selected',
@@ -625,6 +656,15 @@ export function createStoryChoiceTransition(
         nextVisitedNodeIds: nextStoryState.visitedNodeIds,
         nextSelectedChoiceIds: appendUnique(viewModel.selectedChoiceIds, choiceId),
         nextStoryState,
+        battleLaunch: pendingBattle
+            ? createStoryBattleLaunchMetadata({
+                storyId: viewModel.storyState.storyId,
+                sourceNodeId: choice.from,
+                sourceChoiceId: choice.id,
+                targetNodeId: nextStoryState.currentNodeId,
+                battle: pendingBattle,
+            })
+            : null,
         appliedEffectKinds: [
             ...choiceResult.appliedEffectKinds,
             ...enterResult.appliedEffectKinds,

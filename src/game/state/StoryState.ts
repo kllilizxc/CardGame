@@ -2,6 +2,7 @@ import type {
     ApplyStoryChoiceResult,
     ApplyStoryEffectsResult,
     StoryAttributeOperator,
+    StoryBattleTrigger,
     StoryChoiceRuntimeDefinition,
     StoryCondition,
     StoryEffect,
@@ -20,6 +21,10 @@ function cloneNumberMap(values: Record<string, number> | undefined): Record<stri
 
 function cloneFlagMap(values: Record<string, boolean> | undefined): Record<string, boolean> {
     return { ...(values ?? {}) };
+}
+
+function cloneStoryBattleTrigger(battle: StoryBattleTrigger): StoryBattleTrigger {
+    return { ...battle };
 }
 
 function compareNumber(left: number, operator: StoryAttributeOperator, right: number): boolean {
@@ -176,6 +181,7 @@ export function evaluateStoryCondition(state: StoryState, condition: StoryCondit
 export function applyStoryEffects(state: StoryState, effects: StoryEffect[] = []): ApplyStoryEffectsResult {
     let nextState = state;
     let nextNodeId: string | undefined;
+    let pendingBattle: StoryBattleTrigger | undefined;
     const appliedEffectKinds: StoryEffectKind[] = [];
 
     for (const effect of effects) {
@@ -216,6 +222,9 @@ export function applyStoryEffects(state: StoryState, effects: StoryEffect[] = []
                 nextNodeId = effect.nodeId;
                 nextState = goToStoryNode(nextState, effect.nodeId);
                 break;
+            case 'startBattle':
+                pendingBattle = cloneStoryBattleTrigger(effect.battle);
+                break;
             default:
                 unsupportedStoryEffect(effect);
         }
@@ -224,6 +233,7 @@ export function applyStoryEffects(state: StoryState, effects: StoryEffect[] = []
     return {
         state: nextState,
         nextNodeId,
+        pendingBattle,
         appliedEffectKinds,
     };
 }

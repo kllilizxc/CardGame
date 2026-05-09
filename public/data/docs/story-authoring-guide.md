@@ -60,6 +60,27 @@
 | `effects` | 选择后立即应用的 `StoryEffect[]`。目标节点跳转会由视图模型自动追加。 |
 | `flags` | 供 UI/作者识别的标签，不等同于运行时 `flags`。 |
 
+### Story battle trigger
+
+当剧情选择要引发战斗，但还不需要接完整 Phaser 场景往返时，在 choice `effects` 或目标 node `onEnter` 中加入：
+
+```json
+{
+  "kind": "startBattle",
+  "battle": {
+    "battleId": "story.chapter.first-duel",
+    "encounterId": "test_encounter_01",
+    "encounterFile": "data/encounters/test-enemy.json",
+    "deckFile": "data/decks/starter-deck.json",
+    "onVictoryNodeId": "node.after_victory",
+    "onDefeatNodeId": "node.after_defeat",
+    "launchText": "执事示意你以卡匣应战。"
+  }
+}
+```
+
+`onVictoryNodeId` 和 `onDefeatNodeId` 必须指向同一剧情图中已经存在的节点。当前切片只让运行时返回 `battleLaunch` 元数据，不在 `StoryScene` 内直接 `scene.start('BattleScene')`。
+
 ## Compact schema example
 
 `public/data/story/story-graph.compact.example.json` 是一个两节点、一选项的最小可游玩示例，并由 `src/game/scenes/story/storyFlow.test.ts` 校验。它展示了：
@@ -77,6 +98,7 @@
 - `visibleWhen` 控制“玩家是否知道这个选择存在”。如果只是属性不足，应优先用 `enabledWhen`，让 UI 给出明确原因。
 - `onEnter` 适合“只要抵达节点就发生”的事实，例如移动小地点、记录关键对话、设置阶段 flag。
 - `effects` 适合“因为选择而发生”的事实，例如帮助 NPC、关系变化、属性变化。
+- `startBattle` 只声明战斗启动意图和结果分支；具体战斗场景启动、胜负回填与继续剧情属于后续集成切片。
 - 关系和属性使用数字；缺失属性在条件判断中按 `0` 处理，但作者应在 `initialState` 显式初始化本章会用到的关键值。
 - flag、dialogue id、node id 不要复用自然语言句子；使用稳定命名空间，例如 `story.sect_entry.helped_frail_girl`。
 

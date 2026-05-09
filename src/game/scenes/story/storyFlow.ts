@@ -3,6 +3,7 @@
 
 import type {
     StoryAttributeOperator,
+    StoryBattleTrigger,
     StoryCondition,
     StoryEffect,
     StoryInitialStateSeed,
@@ -247,6 +248,22 @@ function parseOptionalStoryCondition(value: unknown, label: string): StoryCondit
     return parseStoryCondition(value, label);
 }
 
+function parseStoryBattleTrigger(value: unknown, label: string): StoryBattleTrigger {
+    assertRecord(value, label);
+
+    const trigger: StoryBattleTrigger = {
+        battleId: readRequiredString(value, 'battleId', label),
+        encounterId: readRequiredString(value, 'encounterId', label),
+        encounterFile: readRequiredString(value, 'encounterFile', label),
+        deckFile: readRequiredString(value, 'deckFile', label),
+        onVictoryNodeId: readRequiredString(value, 'onVictoryNodeId', label),
+        onDefeatNodeId: readRequiredString(value, 'onDefeatNodeId', label),
+    };
+    const launchText = readOptionalString(value, 'launchText', label);
+
+    return launchText ? { ...trigger, launchText } : trigger;
+}
+
 function parseStoryEffect(value: unknown, label: string): StoryEffect {
     assertRecord(value, label);
 
@@ -312,6 +329,11 @@ function parseStoryEffect(value: unknown, label: string): StoryEffect {
             return {
                 kind,
                 nodeId: readRequiredString(value, 'nodeId', label),
+            };
+        case 'startBattle':
+            return {
+                kind,
+                battle: parseStoryBattleTrigger(value.battle, `${label}.battle`),
             };
         default:
             throw new Error(`Story graph ${label}.kind is unsupported: ${kind}.`);
@@ -412,6 +434,39 @@ function assertUniqueIds(ids: string[], label: string): void {
     }
 }
 
+function assertBattleResultNodeExists(
+    nodeIds: Set<string>,
+    nodeId: string,
+    label: string,
+): void {
+    if (!nodeIds.has(nodeId)) {
+        throw new Error(`Story graph ${label} must reference an existing node: ${nodeId}`);
+    }
+}
+
+function validateStoryBattleTriggers(
+    effects: StoryEffect[],
+    label: string,
+    nodeIds: Set<string>,
+): void {
+    effects.forEach((effect, index) => {
+        if (effect.kind !== 'startBattle') {
+            return;
+        }
+
+        assertBattleResultNodeExists(
+            nodeIds,
+            effect.battle.onVictoryNodeId,
+            `${label}[${index}].battle.onVictoryNodeId`,
+        );
+        assertBattleResultNodeExists(
+            nodeIds,
+            effect.battle.onDefeatNodeId,
+            `${label}[${index}].battle.onDefeatNodeId`,
+        );
+    });
+}
+
 export function validatePlayableStoryGraph(rawGraph: unknown): StoryGraph {
     assertRecord(rawGraph, 'root');
 
@@ -438,6 +493,13 @@ export function validatePlayableStoryGraph(rawGraph: unknown): StoryGraph {
             throw new Error(`Story graph choice ${choice.id} points to missing node: ${choice.to}`);
         }
     }
+
+    nodes.forEach((node, index) => {
+        validateStoryBattleTriggers(node.onEnter, `nodes[${index}].onEnter`, nodeIds);
+    });
+    choices.forEach((choice, index) => {
+        validateStoryBattleTriggers(choice.effects, `choices[${index}].effects`, nodeIds);
+    });
 
     return {
         storyId,

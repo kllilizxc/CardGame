@@ -193,6 +193,100 @@ describe('storyFlowViewModel', () => {
         });
     });
 
+    it('returns battle launch metadata when a selected story choice triggers combat', () => {
+        const graph: StoryGraphDefinition = {
+            storyId: 'story.test-battle',
+            entryNodeId: 'start',
+            nodes: [
+                {
+                    id: 'start',
+                    type: 'story',
+                    title: '山门外',
+                    summary: '等待考核。',
+                    detail: '山风微凉。',
+                    tags: ['主线'],
+                },
+                {
+                    id: 'duel_pending',
+                    type: 'story',
+                    title: '演武台前',
+                    summary: '执事点名要求玩家切磋。',
+                    detail: '战斗场景稍后再接入。',
+                    tags: ['战斗'],
+                },
+                {
+                    id: 'duel_victory',
+                    type: 'story',
+                    title: '胜利',
+                    summary: '赢下切磋。',
+                    detail: '胜利后继续剧情。',
+                    tags: ['战斗'],
+                },
+                {
+                    id: 'duel_defeat',
+                    type: 'story',
+                    title: '失败',
+                    summary: '输掉切磋。',
+                    detail: '失败后继续剧情。',
+                    tags: ['战斗'],
+                },
+            ],
+            choices: [
+                {
+                    id: 'start_to_duel',
+                    from: 'start',
+                    to: 'duel_pending',
+                    text: '以卡匣应战',
+                    flags: ['主线', '战斗'],
+                    effects: [
+                        {
+                            kind: 'startBattle',
+                            battle: {
+                                battleId: 'story.test-battle.first-duel',
+                                encounterId: 'test_encounter_01',
+                                encounterFile: 'data/encounters/test-enemy.json',
+                                deckFile: 'data/decks/starter-deck.json',
+                                onVictoryNodeId: 'duel_victory',
+                                onDefeatNodeId: 'duel_defeat',
+                                launchText: '执事示意你以卡匣应战。',
+                            },
+                        },
+                    ],
+                },
+            ],
+        };
+
+        const view = createStoryFlowViewModel(graph, {
+            currentNodeId: 'start',
+            visitedNodeIds: ['start'],
+            selectedChoiceIds: [],
+            worldState: structuredClone(initialWorldState),
+        });
+        const transition = createStoryChoiceTransition(view, 'start_to_duel');
+
+        expect(transition).toMatchObject({
+            status: 'selected',
+            choiceId: 'start_to_duel',
+            fromNodeId: 'start',
+            toNodeId: 'duel_pending',
+            battleLaunch: {
+                sceneKey: 'BattleScene',
+                storyId: 'story.test-battle',
+                sourceNodeId: 'start',
+                sourceChoiceId: 'start_to_duel',
+                targetNodeId: 'duel_pending',
+                battleId: 'story.test-battle.first-duel',
+                encounterId: 'test_encounter_01',
+                encounterFile: 'data/encounters/test-enemy.json',
+                deckFile: 'data/decks/starter-deck.json',
+                onVictoryNodeId: 'duel_victory',
+                onDefeatNodeId: 'duel_defeat',
+                launchText: '执事示意你以卡匣应战。',
+            },
+            appliedEffectKinds: ['startBattle', 'goToNode'],
+        });
+    });
+
     it('applies choice effects and target node enter effects while moving between sublocations deterministically', () => {
         const graph = validatePlayableStoryGraph(storyGraphJson);
         const initialView = createStoryFlowViewModel(graph, {

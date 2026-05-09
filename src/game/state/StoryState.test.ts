@@ -151,6 +151,38 @@ describe('StoryState', () => {
         ]);
     });
 
+    it('surfaces a story battle trigger as pending launch metadata without mutating story position', () => {
+        const effects: StoryEffect[] = [
+            {
+                kind: 'startBattle',
+                battle: {
+                    battleId: 'story.qingyun.first-duel',
+                    encounterId: 'test_encounter_01',
+                    encounterFile: 'data/encounters/test-enemy.json',
+                    deckFile: 'data/decks/starter-deck.json',
+                    onVictoryNodeId: 'node.duel-victory',
+                    onDefeatNodeId: 'node.duel-defeat',
+                    launchText: '青云执事示意你以卡匣应战。',
+                },
+            },
+        ];
+
+        const result = applyStoryEffects(createTestState(), effects);
+
+        expect(result.pendingBattle).toEqual({
+            battleId: 'story.qingyun.first-duel',
+            encounterId: 'test_encounter_01',
+            encounterFile: 'data/encounters/test-enemy.json',
+            deckFile: 'data/decks/starter-deck.json',
+            onVictoryNodeId: 'node.duel-victory',
+            onDefeatNodeId: 'node.duel-defeat',
+            launchText: '青云执事示意你以卡匣应战。',
+        });
+        expect(result.state.currentNodeId).toBe('node.arrival');
+        expect(result.state.visitedNodeIds).toEqual(['node.arrival']);
+        expect(result.appliedEffectKinds).toEqual(['startBattle']);
+    });
+
     it('blocks choices when conditions fail and applies conditional choices when conditions pass', () => {
         const blockedResult = applyStoryChoice(createTestState(), {
             id: 'choice.ask-elder-private-question',

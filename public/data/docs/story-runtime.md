@@ -36,8 +36,11 @@ Missing numeric attributes default to `0`. Missing flags/history entries count a
 - `setRelation` / `adjustRelation`
 - `moveTo` for location/sublocation changes
 - `goToNode` for node transitions
+- `startBattle` for story-triggered combat intent. It carries `battleId`, `encounterId`, `encounterFile`, `deckFile`, explicit victory/defeat continuation node ids, and optional launch copy.
 
 `applyStoryChoice` checks a choice condition before applying its effects. If blocked, it returns the original state with status `blocked`; if applied, it returns the updated state plus the selected `nextNodeId` when a transition effect or choice `nextNodeId` is present.
+
+`startBattle` does not mutate story position and does not start a Phaser scene by itself. `applyStoryEffects` returns it as `pendingBattle`, and `createStoryChoiceTransition` turns it into `battleLaunch` metadata with `sceneKey: "BattleScene"` and story source/target ids. The full BattleScene round-trip and result handling are intentionally left for a later integration slice.
 
 ## Playable graph integration
 

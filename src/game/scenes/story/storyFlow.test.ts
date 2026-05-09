@@ -106,6 +106,98 @@ describe('storyFlow', () => {
         );
     });
 
+    it('validates story battle trigger effects and their explicit result nodes', () => {
+        const battleGraph = structuredClone(compactStoryGraphJson);
+        battleGraph.storyId = 'story.example.battle-trigger';
+        battleGraph.nodes = [
+            ...battleGraph.nodes,
+            {
+                id: 'duel_pending',
+                type: 'story',
+                title: '试炼切磋',
+                summary: '执事点名要求玩家以卡匣应战。',
+                detail: '战斗尚未接入场景往返，但剧情图已经声明了启动元数据。',
+                tags: ['示例', '战斗'],
+                chapter: '示例章',
+                location: '示例地点',
+                sublocation: '演武台',
+                locationId: 'location.example',
+                sublocationId: 'sublocation.example.duel',
+                timeHint: '清晨',
+                onEnter: [],
+            },
+            {
+                id: 'duel_victory',
+                type: 'story',
+                title: '切磋胜利',
+                summary: '玩家赢下演示战斗。',
+                detail: '胜利后回到剧情图。',
+                tags: ['示例', '胜利'],
+                chapter: '示例章',
+                location: '示例地点',
+                sublocation: '演武台',
+                locationId: 'location.example',
+                sublocationId: 'sublocation.example.duel',
+                timeHint: '清晨',
+                onEnter: [],
+            },
+            {
+                id: 'duel_defeat',
+                type: 'story',
+                title: '切磋失利',
+                summary: '玩家输掉演示战斗。',
+                detail: '失败后回到剧情图。',
+                tags: ['示例', '失败'],
+                chapter: '示例章',
+                location: '示例地点',
+                sublocation: '演武台',
+                locationId: 'location.example',
+                sublocationId: 'sublocation.example.duel',
+                timeHint: '清晨',
+                onEnter: [],
+            },
+        ];
+        battleGraph.choices[0].to = 'duel_pending';
+        battleGraph.choices[0].effects = [
+            {
+                kind: 'startBattle',
+                battle: {
+                    battleId: 'story.example.first-duel',
+                    encounterId: 'test_encounter_01',
+                    encounterFile: 'data/encounters/test-enemy.json',
+                    deckFile: 'data/decks/starter-deck.json',
+                    onVictoryNodeId: 'duel_victory',
+                    onDefeatNodeId: 'duel_defeat',
+                    launchText: '执事示意你以卡匣应战。',
+                },
+            },
+        ];
+
+        const graph = validatePlayableStoryGraph(battleGraph);
+
+        expect(graph.choices[0].effects).toEqual([
+            {
+                kind: 'startBattle',
+                battle: {
+                    battleId: 'story.example.first-duel',
+                    encounterId: 'test_encounter_01',
+                    encounterFile: 'data/encounters/test-enemy.json',
+                    deckFile: 'data/decks/starter-deck.json',
+                    onVictoryNodeId: 'duel_victory',
+                    onDefeatNodeId: 'duel_defeat',
+                    launchText: '执事示意你以卡匣应战。',
+                },
+            },
+        ]);
+
+        const brokenGraph = structuredClone(battleGraph);
+        brokenGraph.choices[0].effects[0].battle.onVictoryNodeId = 'missing_victory_node';
+
+        expect(() => validatePlayableStoryGraph(brokenGraph)).toThrow(
+            'Story graph choices[0].effects[0].battle.onVictoryNodeId must reference an existing node: missing_victory_node',
+        );
+    });
+
     it('exposes only strict graph validation at runtime so storyFlowViewModel owns render and transition view models', async () => {
         const runtimeExports = await import('./storyFlow');
 

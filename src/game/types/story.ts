@@ -130,6 +130,29 @@ export interface StoryGoToNodeEffect {
     nodeId: string;
 }
 
+export interface StoryBattleTrigger {
+    battleId: string;
+    encounterId: string;
+    encounterFile: string;
+    deckFile: string;
+    onVictoryNodeId: string;
+    onDefeatNodeId: string;
+    launchText?: string;
+}
+
+export interface StoryBattleLaunchMetadata extends StoryBattleTrigger {
+    sceneKey: 'BattleScene';
+    storyId: string;
+    sourceNodeId: string;
+    sourceChoiceId?: string;
+    targetNodeId: string;
+}
+
+export interface StoryStartBattleEffect {
+    kind: 'startBattle';
+    battle: StoryBattleTrigger;
+}
+
 export type StoryEffect =
     | StorySetFlagEffect
     | StoryClearFlagEffect
@@ -140,7 +163,8 @@ export type StoryEffect =
     | StorySetRelationEffect
     | StoryAdjustRelationEffect
     | StoryMoveToEffect
-    | StoryGoToNodeEffect;
+    | StoryGoToNodeEffect
+    | StoryStartBattleEffect;
 
 export type StoryEffectKind = StoryEffect['kind'];
 
@@ -154,6 +178,7 @@ export interface StoryChoiceRuntimeDefinition {
 export interface ApplyStoryEffectsResult {
     state: StoryState;
     nextNodeId?: string;
+    pendingBattle?: StoryBattleTrigger;
     appliedEffectKinds: StoryEffectKind[];
 }
 
