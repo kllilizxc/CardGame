@@ -544,23 +544,79 @@ function validateWorldMapExpeditionContentFileAlignment(
     map: ExpeditionMapDefinition,
     failures: ContentCatalogValidationFailure[],
 ): void {
-    for (const node of map.nodes) {
-        if (node.type === 'event' && node.payloadRef.contentFile !== destination.eventsFile) {
+    map.nodes.forEach((node, nodeIndex) => {
+        if (!isRecord(node)) {
             addFailure(
                 failures,
                 ownerEntry,
-                `WorldMap ${ownerEntry.resourceId} destination ${destination.id} eventsFile is ${destination.eventsFile}, but map node ${node.id} references ${node.payloadRef.contentFile}.`,
+                `WorldMap ${ownerEntry.resourceId} destination ${destination.id} map nodes[${nodeIndex}] must be an object before Expedition content-file alignment can be validated.`,
+            );
+            return;
+        }
+
+        if (node.type !== 'event' && node.type !== 'shop') {
+            return;
+        }
+
+        const nodeId = readDiagnosticNodeId(node, `nodes[${nodeIndex}]`);
+        const contentFile = readWorldMapExpeditionNodeContentFile(ownerEntry, destination, node, nodeId, failures);
+
+        if (!contentFile) {
+            return;
+        }
+
+        if (node.type === 'event' && contentFile !== destination.eventsFile) {
+            addFailure(
+                failures,
+                ownerEntry,
+                `WorldMap ${ownerEntry.resourceId} destination ${destination.id} eventsFile is ${destination.eventsFile}, but map node ${nodeId} references ${contentFile}.`,
             );
         }
 
-        if (node.type === 'shop' && node.payloadRef.contentFile !== destination.shopFile) {
+        if (node.type === 'shop' && contentFile !== destination.shopFile) {
             addFailure(
                 failures,
                 ownerEntry,
-                `WorldMap ${ownerEntry.resourceId} destination ${destination.id} shopFile is ${destination.shopFile}, but map node ${node.id} references ${node.payloadRef.contentFile}.`,
+                `WorldMap ${ownerEntry.resourceId} destination ${destination.id} shopFile is ${destination.shopFile}, but map node ${nodeId} references ${contentFile}.`,
             );
         }
+    });
+}
+
+function readDiagnosticNodeId(node: Record<string, unknown>, fallback: string): string {
+    return typeof node.id === 'string' && node.id.trim().length > 0 ? node.id : fallback;
+}
+
+function readWorldMapExpeditionNodeContentFile(
+    ownerEntry: ContentCatalogEntry,
+    destination: WorldMapExpeditionDestination,
+    node: Record<string, unknown>,
+    nodeId: string,
+    failures: ContentCatalogValidationFailure[],
+): string | undefined {
+    const context = `WorldMap ${ownerEntry.resourceId} destination ${destination.id} map node ${nodeId} payloadRef`;
+
+    if (!isRecord(node.payloadRef)) {
+        addFailure(
+            failures,
+            ownerEntry,
+            `${context} must be an object before Expedition content-file alignment can be validated.`,
+        );
+        return undefined;
     }
+
+    const contentFile = node.payloadRef.contentFile;
+
+    if (typeof contentFile !== 'string' || contentFile.trim().length === 0) {
+        addFailure(
+            failures,
+            ownerEntry,
+            `${context}.contentFile must be a non-empty string before Expedition content-file alignment can be validated.`,
+        );
+        return undefined;
+    }
+
+    return contentFile;
 }
 
 function validateHubReferences(
@@ -667,19 +723,30 @@ function validateExpeditionMapNodeReferences(
     index: LoadedCatalogIndex,
     failures: ContentCatalogValidationFailure[],
 ): void {
-    for (const node of map.nodes) {
-        if (node.type === 'battle' || node.type === 'boss') {
-            validateEncounterNodeReference(ownerEntry, node, index, failures);
+    map.nodes.forEach((node, nodeIndex) => {
+        if (!isRecord(node)) {
+            addFailure(
+                failures,
+                ownerEntry,
+                `Expedition map ${ownerEntry.resourceId} nodes[${nodeIndex}] must be an object before route-critical references can be validated.`,
+            );
+            return;
         }
 
-        if (node.type === 'event') {
-            validateEventNodeReference(ownerEntry, node, index, failures);
+        const typedNode = node as ExpeditionMapNode;
+
+        if (typedNode.type === 'battle' || typedNode.type === 'boss') {
+            validateEncounterNodeReference(ownerEntry, typedNode, index, failures);
         }
 
-        if (node.type === 'shop') {
-            validateShopNodeReference(ownerEntry, node, index, failures);
+        if (typedNode.type === 'event') {
+            validateEventNodeReference(ownerEntry, typedNode, index, failures);
         }
-    }
+
+        if (typedNode.type === 'shop') {
+            validateShopNodeReference(ownerEntry, typedNode, index, failures);
+        }
+    });
 }
 
 function validateEncounterNodeReference(
@@ -688,10 +755,19 @@ function validateEncounterNodeReference(
     index: LoadedCatalogIndex,
     failures: ContentCatalogValidationFailure[],
 ): void {
+    const context = `Expedition map ${ownerEntry.resourceId} node ${node.id} payloadRef`;
+    const payloadRef = readExpeditionPayloadRef(ownerEntry, node, context, failures);
+    const encounterFile = readPayloadString(ownerEntry, payloadRef, 'encounterFile', context, failures);
+    const encounterId = readPayloadString(ownerEntry, payloadRef, 'ref', context, failures);
+
+    if (!encounterFile || !encounterId) {
+        return;
+    }
+
     validateEncounterFileReference(
         ownerEntry,
-        node.payloadRef.encounterFile,
-        node.payloadRef.ref,
+        encounterFile,
+        encounterId,
         `Expedition map ${ownerEntry.resourceId} node ${node.id} payloadRef.encounterFile`,
         index,
         failures,
@@ -704,11 +780,20 @@ function validateEventNodeReference(
     index: LoadedCatalogIndex,
     failures: ContentCatalogValidationFailure[],
 ): void {
+    const context = `Expedition map ${ownerEntry.resourceId} node ${node.id} payloadRef`;
+    const payloadRef = readExpeditionPayloadRef(ownerEntry, node, context, failures);
+    const contentFile = readPayloadString(ownerEntry, payloadRef, 'contentFile', context, failures);
+    const eventRef = readPayloadString(ownerEntry, payloadRef, 'ref', context, failures);
+
+    if (!contentFile || !eventRef) {
+        return;
+    }
+
     const eventResource = requireCatalogedResource(
         index,
         failures,
         ownerEntry,
-        node.payloadRef.contentFile,
+        contentFile,
         `Expedition map ${ownerEntry.resourceId} node ${node.id} payloadRef.contentFile`,
         ['expeditionEvents'],
     );
@@ -717,11 +802,11 @@ function validateEventNodeReference(
         return;
     }
 
-    if (!(node.payloadRef.ref in eventResource.json.eventsByNodeId)) {
+    if (!(eventRef in eventResource.json.eventsByNodeId)) {
         addFailure(
             failures,
             ownerEntry,
-            `Expedition map ${ownerEntry.resourceId} node ${node.id} event ref ${node.payloadRef.ref} is missing from ${node.payloadRef.contentFile}.eventsByNodeId.`,
+            `Expedition map ${ownerEntry.resourceId} node ${node.id} event ref ${eventRef} is missing from ${contentFile}.eventsByNodeId.`,
         );
     }
 }
@@ -732,11 +817,20 @@ function validateShopNodeReference(
     index: LoadedCatalogIndex,
     failures: ContentCatalogValidationFailure[],
 ): void {
+    const context = `Expedition map ${ownerEntry.resourceId} node ${node.id} payloadRef`;
+    const payloadRef = readExpeditionPayloadRef(ownerEntry, node, context, failures);
+    const contentFile = readPayloadString(ownerEntry, payloadRef, 'contentFile', context, failures);
+    const shopRef = readPayloadString(ownerEntry, payloadRef, 'ref', context, failures);
+
+    if (!contentFile || !shopRef) {
+        return;
+    }
+
     const shopResource = requireCatalogedResource(
         index,
         failures,
         ownerEntry,
-        node.payloadRef.contentFile,
+        contentFile,
         `Expedition map ${ownerEntry.resourceId} node ${node.id} payloadRef.contentFile`,
         ['expeditionShop'],
     );
@@ -745,13 +839,56 @@ function validateShopNodeReference(
         return;
     }
 
-    if (!(node.payloadRef.ref in shopResource.json.shopsByNodeId)) {
+    if (!(shopRef in shopResource.json.shopsByNodeId)) {
         addFailure(
             failures,
             ownerEntry,
-            `Expedition map ${ownerEntry.resourceId} node ${node.id} shop ref ${node.payloadRef.ref} is missing from ${node.payloadRef.contentFile}.shopsByNodeId.`,
+            `Expedition map ${ownerEntry.resourceId} node ${node.id} shop ref ${shopRef} is missing from ${contentFile}.shopsByNodeId.`,
         );
     }
+}
+
+function readExpeditionPayloadRef(
+    ownerEntry: ContentCatalogEntry,
+    node: ExpeditionMapNode,
+    context: string,
+    failures: ContentCatalogValidationFailure[],
+): Record<string, unknown> | undefined {
+    if (!isRecord(node.payloadRef)) {
+        addFailure(
+            failures,
+            ownerEntry,
+            `${context} must be an object before route-critical references can be validated.`,
+        );
+        return undefined;
+    }
+
+    return node.payloadRef;
+}
+
+function readPayloadString(
+    ownerEntry: ContentCatalogEntry,
+    payloadRef: Record<string, unknown> | undefined,
+    field: string,
+    context: string,
+    failures: ContentCatalogValidationFailure[],
+): string | undefined {
+    if (!payloadRef) {
+        return undefined;
+    }
+
+    const value = payloadRef[field];
+
+    if (typeof value !== 'string' || value.trim().length === 0) {
+        addFailure(
+            failures,
+            ownerEntry,
+            `${context}.${field} must be a non-empty string before route-critical references can be validated.`,
+        );
+        return undefined;
+    }
+
+    return value;
 }
 
 function validateEncounterFileReference(
@@ -785,8 +922,10 @@ function validateExpeditionMapWithRegisteredBundleValidator(
     index: LoadedCatalogIndex,
     failures: ContentCatalogValidationFailure[],
 ): void {
-    const firstEventResource = findFirstContentResourceForMapNode(index, map.nodes, 'event');
-    const firstShopResource = findFirstContentResourceForMapNode(index, map.nodes, 'shop');
+    const firstEventResource = findFirstContentResourceForMapNode(index, map.nodes, 'event')
+        ?? findFirstResourceByKind(index, 'expeditionEvents');
+    const firstShopResource = findFirstContentResourceForMapNode(index, map.nodes, 'shop')
+        ?? findFirstResourceByKind(index, 'expeditionShop');
 
     if (!firstEventResource?.json || !firstShopResource?.json) {
         return;
@@ -813,8 +952,21 @@ function findFirstContentResourceForMapNode(
     nodeType: 'event' | 'shop',
 ): LoadedCatalogResource | undefined {
     for (const node of nodes) {
-        if (node.type === nodeType) {
+        if (node.type === nodeType && isRecord(node.payloadRef) && typeof node.payloadRef.contentFile === 'string') {
             return index.byPath.get(node.payloadRef.contentFile);
+        }
+    }
+
+    return undefined;
+}
+
+function findFirstResourceByKind(
+    index: LoadedCatalogIndex,
+    kind: ContentResourceKind,
+): LoadedCatalogResource | undefined {
+    for (const resource of index.byResourceId.values()) {
+        if (resource.entry.kind === kind) {
+            return resource;
         }
     }
 

@@ -59,6 +59,20 @@ function createPublicFileSource(): ContentCatalogFileSource {
     };
 }
 
+function createPublicFileSourceWithOverrides(overrides: Record<string, unknown>): ContentCatalogFileSource {
+    const publicFileSource = createPublicFileSource();
+
+    return {
+        readText(publicPath: string): string | undefined {
+            if (publicPath in overrides) {
+                return JSON.stringify(overrides[publicPath]);
+            }
+
+            return publicFileSource.readText(publicPath);
+        },
+    };
+}
+
 describe('read-only content catalog', () => {
     it('checks in a versioned manifest covering current data resources without scene loader migration', () => {
         const catalogPath = join('public', CONTENT_CATALOG_PUBLIC_PATH);
@@ -129,5 +143,194 @@ describe('read-only content catalog', () => {
                 message: 'Catalog resource missing.config (config) is missing JSON file at public/data/config/missing.json.',
             },
         ]);
+    });
+
+    it('returns an actionable failure instead of throwing when malformed Expedition map nodes cannot be traversed', () => {
+        const malformedExpeditionCatalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'expedition.map.malformed',
+                    kind: 'expeditionMap',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/malformed-map.json',
+                },
+                {
+                    resourceId: 'phase01-prototype-events',
+                    kind: 'expeditionEvents',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/prototype-events.json',
+                },
+                {
+                    resourceId: 'phase01-prototype-shop',
+                    kind: 'expeditionShop',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/prototype-shop.json',
+                },
+            ],
+        };
+        const malformedMap = {
+            id: 'expedition.map.malformed',
+            name: 'Malformed map',
+            description: 'Synthetic malformed map that is missing a route-critical event payloadRef.',
+            entryNodeId: 'entrance.malformed',
+            nodes: [
+                {
+                    id: 'entrance.malformed',
+                    type: 'entrance',
+                    layer: 0,
+                    label: 'Entrance',
+                    outgoingNodeIds: ['event.malformed'],
+                    payloadRef: {
+                        kind: 'entrance',
+                        ref: 'starter',
+                    },
+                },
+                {
+                    id: 'event.malformed',
+                    type: 'event',
+                    layer: 1,
+                    label: 'Malformed event',
+                    outgoingNodeIds: [],
+                },
+            ],
+        };
+        let result: ReturnType<typeof validateContentCatalog> | undefined;
+
+        expect(() => {
+            result = validateContentCatalog(
+                malformedExpeditionCatalog,
+                createPublicFileSourceWithOverrides({
+                    'data/mijing/malformed-map.json': malformedMap,
+                }),
+            );
+        }).not.toThrow();
+        expect(result?.failures.map((failure) => failure.message)).toContain(
+            'Expedition map expedition.map.malformed failed registered pure validator validatePrototypeExpeditionContent with data/mijing/prototype-events.json and data/mijing/prototype-shop.json: prototypeMap.nodes[1].payloadRef must be an object..',
+        );
+    });
+
+    it('returns an actionable failure instead of throwing when a WorldMap Expedition route points at a malformed map node', () => {
+        const worldMapRouteCatalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'worldmap.malformed-expedition-route',
+                    kind: 'worldMap',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/malformed-expedition-route.json',
+                },
+                {
+                    resourceId: 'expedition.map.worldmap-malformed',
+                    kind: 'expeditionMap',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/worldmap-malformed-map.json',
+                },
+                {
+                    resourceId: 'phase01-prototype-events',
+                    kind: 'expeditionEvents',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/prototype-events.json',
+                },
+                {
+                    resourceId: 'phase01-prototype-shop',
+                    kind: 'expeditionShop',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/prototype-shop.json',
+                },
+                {
+                    resourceId: 'starter-deck',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/starter-deck.json',
+                },
+                {
+                    resourceId: 'world.initial-state',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/initial-state.json',
+                },
+            ],
+        };
+        const worldMapWithMalformedExpedition = {
+            id: 'worldmap.malformed-expedition-route',
+            title: 'Malformed Expedition Route',
+            subtitle: 'Catalog validation regression fixture',
+            description: 'Synthetic WorldMap fixture that points at a malformed Expedition map.',
+            defaultDestinationId: 'destination.malformed-expedition',
+            presentation: {
+                mapWidth: 1000,
+                mapHeight: 600,
+                initialCenter: {
+                    x: 0.5,
+                    y: 0.5,
+                },
+            },
+            destinations: [
+                {
+                    id: 'destination.malformed-expedition',
+                    kind: 'expedition',
+                    label: 'Malformed Expedition',
+                    description: 'Route whose target map has an event node missing payloadRef.',
+                    presentation: {
+                        position: {
+                            x: 0.5,
+                            y: 0.5,
+                        },
+                        icon: 'trial',
+                        regionLabel: 'Regression',
+                    },
+                    expeditionId: 'expedition.malformed',
+                    mapId: 'expedition.map.worldmap-malformed',
+                    worldStateFile: 'data/world/initial-state.json',
+                    starterDeckFile: 'data/decks/starter-deck.json',
+                    mapFile: 'data/mijing/worldmap-malformed-map.json',
+                    eventsFile: 'data/mijing/prototype-events.json',
+                    shopFile: 'data/mijing/prototype-shop.json',
+                },
+            ],
+        };
+        const malformedMap = {
+            id: 'expedition.map.worldmap-malformed',
+            name: 'WorldMap malformed map',
+            description: 'Synthetic malformed map reached through a WorldMap Expedition route.',
+            entryNodeId: 'entrance.malformed',
+            nodes: [
+                {
+                    id: 'entrance.malformed',
+                    type: 'entrance',
+                    layer: 0,
+                    label: 'Entrance',
+                    outgoingNodeIds: ['event.malformed'],
+                    payloadRef: {
+                        kind: 'entrance',
+                        ref: 'starter',
+                    },
+                },
+                {
+                    id: 'event.malformed',
+                    type: 'event',
+                    layer: 1,
+                    label: 'Malformed event',
+                    outgoingNodeIds: [],
+                },
+            ],
+        };
+        let result: ReturnType<typeof validateContentCatalog> | undefined;
+
+        expect(() => {
+            result = validateContentCatalog(
+                worldMapRouteCatalog,
+                createPublicFileSourceWithOverrides({
+                    'data/world/malformed-expedition-route.json': worldMapWithMalformedExpedition,
+                    'data/mijing/worldmap-malformed-map.json': malformedMap,
+                }),
+            );
+        }).not.toThrow();
+        expect(result?.failures).toContainEqual({
+            resourceId: 'worldmap.malformed-expedition-route',
+            publicPath: 'data/world/malformed-expedition-route.json',
+            message: 'WorldMap worldmap.malformed-expedition-route destination destination.malformed-expedition map node event.malformed payloadRef must be an object before Expedition content-file alignment can be validated.',
+        });
     });
 });
