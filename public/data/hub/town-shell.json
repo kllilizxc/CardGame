@@ -1,0 +1,25 @@
+{
+  "hubId": "hub.qingyun-town",
+  "title": "青云镇",
+  "subtitle": "山门脚下的临时落脚点",
+  "description": "一座依附青云宗山门而生的小镇。当前版本只保留最小城镇壳层，用于承接数据驱动的主线入口。",
+  "defaultLocationId": "location.qingyun-town.gate-market",
+  "locations": [
+    {
+      "id": "location.qingyun-town.gate-market",
+      "title": "山门集市",
+      "summary": "凡人、散修和商贩在此等待青云宗入门试炼。",
+      "detail": "茶棚旁贴着今日试炼告示，远处山门云雾翻涌。你可以从这里前往现有主线故事图。",
+      "actions": [
+        {
+          "id": "action.start-qingyun-entry-story",
+          "kind": "startStory",
+          "label": "前往青云宗山门",
+          "description": "启动 public/data/story/story-graph.json 中的青云宗入门主线。",
+          "storyGraphFile": "data/story/story-graph.json",
+          "statusText": "从青云镇出发，主线故事已开启。"
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # StoryState-backed Story Content Contracts
 
-`public/data/story/story-graph.json` is the checked-in playable example for StoryScene content. `StoryScene` loads it directly, `src/game/scenes/story/storyFlow.ts` strictly validates that the example is playable, and `src/game/scenes/story/storyFlowViewModel.ts` owns render / transition view models and runtime traversal using `StoryState`, `StoryCondition`, and `StoryEffect` from `src/game/types/story.ts` / `src/game/state/StoryState.ts`. `public/data/docs/story-authoring-guide.md` is the author-facing workflow guide, and `public/data/story/story-graph.compact.example.json` is the smallest checked-in StoryState schema example. `public/data/story/story-graph.executable.json` remains a standalone contract fixture validated by `src/game/types/storyContent.ts`.
+`public/data/story/story-graph.json` is the checked-in playable example for StoryScene content. `public/data/hub/town-shell.json` is the minimal Hub entry that points its `startStory.storyGraphFile` action at that graph. `StoryScene` loads the graph file provided by its launch payload, defaulting to `data/story/story-graph.json`, `src/game/scenes/story/storyFlow.ts` strictly validates that the example is playable, and `src/game/scenes/story/storyFlowViewModel.ts` owns render / transition view models and runtime traversal using `StoryState`, `StoryCondition`, and `StoryEffect` from `src/game/types/story.ts` / `src/game/state/StoryState.ts`. `public/data/docs/story-authoring-guide.md` is the author-facing workflow guide, and `public/data/story/story-graph.compact.example.json` is the smallest checked-in StoryState schema example. `public/data/story/story-graph.executable.json` remains a standalone contract fixture validated by `src/game/types/storyContent.ts`.
 
 ## Graph shape
 
@@ -49,11 +49,15 @@ Nodes use `onEnter`, and choices use `effects`. Both fields use `StoryEffect` ar
 
 `startBattle.battle` is the story-combat contract for the first enabling slice. It requires stable `battleId`, `encounterId`, `encounterFile`, `deckFile`, `onVictoryNodeId`, and `onDefeatNodeId`, plus optional `launchText`. `storyFlow` validates that victory and defeat node ids exist in the same graph. `storyFlowViewModel.createStoryChoiceTransition` exposes the selected transition's `battleLaunch` metadata (`sceneKey: "BattleScene"`, source node / choice ids, target node id, encounter file, deck file, and result node ids). `StoryScene` wraps that metadata with the current `StoryState` and selected choice ids, starts `BattleScene`, and resumes at `onVictoryNodeId` or `onDefeatNodeId` after combat.
 
+## Hub launch contract
+
+The minimal Hub shell lives in `public/data/hub/town-shell.json`. Its supported action kind is `startStory`, and that action must provide a `storyGraphFile` such as `data/story/story-graph.json`. `HubScene` validates this data and passes the file path to `StoryScene`; `StoryScene` then keeps that path through story-triggered BattleScene round trips so battle results resume against the same graph file.
+
 ## Authoring loop
 
-1. Edit `public/data/story/story-graph.json` for playable StoryScene content.
+1. Edit `public/data/story/story-graph.json` for playable StoryScene content, or `public/data/hub/town-shell.json` when changing the town entry copy or target graph.
 2. Use `public/data/story/story-graph.compact.example.json` as the minimal copyable template for new chapters or tooling fixtures.
 3. Follow `public/data/docs/story-authoring-guide.md` for ID naming, node / choice authoring, and when to use `visibleWhen`, `enabledWhen`, `effects`, or `onEnter`.
-4. Run `bun test src/game/scenes/story/*.test.ts src/game/state/StoryState.test.ts` to validate graph structure, conditions, effects, disabled choices, and state transitions.
+4. Run `bun test src/game/scenes/hub/hubTown.test.ts src/game/scenes/story/*.test.ts src/game/state/StoryState.test.ts` to validate the Hub launch contract plus graph structure, conditions, effects, disabled choices, and state transitions.
 5. Run `bun test src/game/types/storyContent.test.ts` when changing the standalone `story-graph.executable.json` contract fixture.
 6. Run `npm run build-nolog` before handing off UI/runtime changes.

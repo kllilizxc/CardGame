@@ -58,12 +58,14 @@ export function createStoryBattleSceneStartPayload(
     battleLaunch: StoryBattleLaunchMetadata,
     storyState: StoryState,
     selectedChoiceIds: string[],
+    storyGraphFile?: string,
 ): StoryBattleSceneLaunchPayload {
     return {
         source: 'story',
         battleLaunch: cloneStoryBattleLaunchMetadata(battleLaunch),
         storyState: cloneStoryState(storyState),
         selectedChoiceIds: cloneStringArray(selectedChoiceIds),
+        ...(storyGraphFile ? { storyGraphFile } : {}),
     };
 }
 
@@ -83,6 +85,7 @@ export function createStoryBattleCompleteEvent(
         encounterId: payload.battleLaunch.encounterId,
         encounterFile: payload.battleLaunch.encounterFile,
         deckFile: payload.battleLaunch.deckFile,
+        ...(payload.storyGraphFile ? { storyGraphFile: payload.storyGraphFile } : {}),
         victory,
         outcome: victory ? 'victory' : 'defeat',
         sourceNodeId: payload.battleLaunch.sourceNodeId,
@@ -130,6 +133,7 @@ export function applyStoryBattleResultToRuntime(
 export function createStorySceneTransitionIntent(
     transition: Extract<StoryChoiceTransition, { status: 'selected' }>,
     selectedChoiceText: string,
+    storyGraphFile?: string,
 ): StorySceneTransitionIntent {
     if (!transition.battleLaunch) {
         return {
@@ -146,6 +150,7 @@ export function createStorySceneTransitionIntent(
             transition.battleLaunch,
             transition.nextStoryState,
             transition.nextSelectedChoiceIds,
+            storyGraphFile,
         ),
     };
 }

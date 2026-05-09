@@ -11,11 +11,19 @@ describe('startup scene flow', () => {
         expect(bootScene).not.toContain("this.scene.start('StoryScene')");
     });
 
-    it('exposes a clear MainMenu action that starts the example StoryScene', () => {
+    it('registers HubScene before story and battle scenes so the town shell can launch content', () => {
+        const mainConfig = read('src/game/main.ts');
+
+        expect(mainConfig).toContain("import { HubScene } from './scenes/hub/HubScene'");
+        expect(mainConfig).toContain('HubScene,\n        StoryScene,');
+    });
+
+    it('exposes a clear MainMenu action that starts the data-driven HubScene', () => {
         const mainMenuScene = read('src/game/scenes/MainMenu.ts');
 
-        expect(mainMenuScene).toContain('开始主线故事');
-        expect(mainMenuScene).toContain("this.scene.start('StoryScene')");
+        expect(mainMenuScene).toContain('进入青云镇');
+        expect(mainMenuScene).toContain("this.scene.start('HubScene')");
+        expect(mainMenuScene).not.toContain("this.scene.start('StoryScene')");
         expect(mainMenuScene).not.toContain("this.scene.start('Game')");
     });
 });

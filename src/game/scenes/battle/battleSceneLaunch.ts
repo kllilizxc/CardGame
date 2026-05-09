@@ -113,7 +113,8 @@ function isStoryBattleSceneLaunchPayload(value: unknown): value is StoryBattleSc
     return candidate.source === 'story'
         && isStoryBattleLaunchMetadata(candidate.battleLaunch)
         && isStoryState(candidate.storyState)
-        && isStringArray(candidate.selectedChoiceIds);
+        && isStringArray(candidate.selectedChoiceIds)
+        && (candidate.storyGraphFile === undefined || typeof candidate.storyGraphFile === 'string');
 }
 
 function cloneStoryState(state: StoryState): StoryState {
@@ -153,6 +154,7 @@ export function normalizeStoryBattleLaunchPayload(data: unknown): StoryBattleSce
         battleLaunch: { ...data.battleLaunch },
         storyState: cloneStoryState(data.storyState),
         selectedChoiceIds: [...data.selectedChoiceIds],
+        ...(data.storyGraphFile ? { storyGraphFile: data.storyGraphFile } : {}),
     };
 }
 

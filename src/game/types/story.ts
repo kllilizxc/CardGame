@@ -153,6 +153,7 @@ export interface StoryBattleSceneLaunchPayload {
     battleLaunch: StoryBattleLaunchMetadata;
     storyState: StoryState;
     selectedChoiceIds: string[];
+    storyGraphFile?: string;
 }
 
 export type StoryBattleOutcome = 'victory' | 'defeat';
@@ -164,6 +165,7 @@ export interface StoryBattleCompleteEvent {
     encounterId: string;
     encounterFile: string;
     deckFile: string;
+    storyGraphFile?: string;
     victory: boolean;
     outcome: StoryBattleOutcome;
     sourceNodeId: string;

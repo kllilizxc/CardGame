@@ -4,13 +4,14 @@
 
 ## 当前 source of truth
 
+- **Hub 入口文件**：`public/data/hub/town-shell.json`（`startStory.storyGraphFile` 指向要启动的剧情图）
 - **可游玩主线文件**：`public/data/story/story-graph.json`
 - **紧凑 schema 示例**：`public/data/story/story-graph.compact.example.json`
 - **运行时状态类型**：`src/game/types/story.ts`
 - **严格内容校验**：`src/game/scenes/story/storyFlow.ts`
 - **渲染与跳转视图模型**：`src/game/scenes/story/storyFlowViewModel.ts`
 
-新增真实剧情时优先编辑 `story-graph.json`。不要把只存在于 prose 的状态变化当作剧情事实：后续分支需要读取的内容必须写进 `visibleWhen`、`enabledWhen`、`effects` 或 `onEnter`。
+新增真实剧情时优先编辑 `story-graph.json`。如果需要从城镇入口切换到另一份剧情图，更新 `public/data/hub/town-shell.json` 中对应行动的 `storyGraphFile`，不要在 `HubScene` 或 `StoryScene` 里硬编码新路径。不要把只存在于 prose 的状态变化当作剧情事实：后续分支需要读取的内容必须写进 `visibleWhen`、`enabledWhen`、`effects` 或 `onEnter`。
 
 ## 推荐写作流程
 
@@ -105,9 +106,9 @@
 ## 验证命令
 
 ```bash
-bun test src/game/scenes/story/*.test.ts src/game/state/StoryState.test.ts
+bun test src/game/scenes/hub/hubTown.test.ts src/game/scenes/story/*.test.ts src/game/state/StoryState.test.ts
 bun test src/game/types/storyContent.test.ts
 npm run build-nolog
 ```
 
-如果只改 `story-graph.json` 或 compact example，至少运行第一条命令。改动 standalone `story-graph.executable.json` 时再运行第二条命令。涉及 UI/runtime TypeScript 时运行构建命令。
+如果只改 `story-graph.json`、`town-shell.json` 或 compact example，至少运行第一条命令。改动 standalone `story-graph.executable.json` 时再运行第二条命令。涉及 UI/runtime TypeScript 时运行构建命令。

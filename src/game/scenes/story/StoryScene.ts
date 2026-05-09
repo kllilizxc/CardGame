@@ -1,7 +1,7 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
-import type { StoryBattleCompleteEvent, StoryState } from '../../types/story';
+import type { StoryState } from '../../types/story';
 import {
     createInitialStoryRuntime,
     createStoryChoiceTransition,
@@ -18,13 +18,11 @@ import {
     cloneStoryState,
     createStorySceneTransitionIntent,
 } from './storyBattleRoundTrip';
-
-interface StorySceneLaunchData {
-    storyState?: StoryState;
-    selectedChoiceIds?: string[];
-    statusText?: string;
-    storyBattleResult?: StoryBattleCompleteEvent;
-}
+import {
+    normalizeStorySceneLaunchData,
+    type NormalizedStorySceneLaunchData,
+    type StorySceneLaunchData,
+} from './storySceneLaunch';
 
 export class StoryScene extends Scene {
     private storyGraph!: StoryGraph;
@@ -32,22 +30,22 @@ export class StoryScene extends Scene {
     private selectedChoiceIds: string[] = [];
     private storyContainer?: Phaser.GameObjects.Container;
     private statusText?: Phaser.GameObjects.Text;
-    private launchData: StorySceneLaunchData = {};
+    private launchData: NormalizedStorySceneLaunchData = normalizeStorySceneLaunchData();
 
     constructor() {
         super('StoryScene');
     }
 
     init(data?: StorySceneLaunchData): void {
-        this.launchData = data ?? {};
+        this.launchData = normalizeStorySceneLaunchData(data);
     }
 
     preload(): void {
-        this.load.json('exampleStoryGraph', 'data/story/story-graph.json');
+        this.load.json(this.launchData.storyGraphCacheKey, this.launchData.storyGraphFile);
     }
 
     create(): void {
-        this.storyGraph = validatePlayableStoryGraph(this.cache.json.get('exampleStoryGraph'));
+        this.storyGraph = validatePlayableStoryGraph(this.cache.json.get(this.launchData.storyGraphCacheKey));
         const initialStatusText = this.applyLaunchData();
 
         this.renderSceneFrame();
@@ -82,14 +80,14 @@ export class StoryScene extends Scene {
         this.add.circle(230, 160, 360, 0x1d4ed8, 0.15);
         this.add.circle(width - 220, height - 120, 420, 0x7c3aed, 0.12);
 
-        this.add.text(width / 2, 72, '主线故事 · 青云宗入门', {
+        this.add.text(width / 2, 72, this.storyGraph.title ?? '主线故事', {
             fontFamily: 'Arial',
             fontSize: '44px',
             color: '#f8fafc',
             fontStyle: 'bold',
         }).setOrigin(0.5);
 
-        this.add.text(width / 2, 120, '点击选项推进 StoryState 驱动的 public/data/story/story-graph.json 示例故事', {
+        this.add.text(width / 2, 120, `点击选项推进 StoryState 驱动的 ${this.launchData.storyGraphFile} 示例故事`, {
             fontFamily: 'Arial',
             fontSize: '20px',
             color: '#93c5fd',
@@ -293,7 +291,11 @@ export class StoryScene extends Scene {
         this.selectedChoiceIds = result.nextSelectedChoiceIds;
 
         const selectedChoice = currentView.choices.find((choice) => choice.id === choiceId);
-        const intent = createStorySceneTransitionIntent(result, selectedChoice?.text ?? choiceId);
+        const intent = createStorySceneTransitionIntent(
+            result,
+            selectedChoice?.text ?? choiceId,
+            this.launchData.storyGraphFile,
+        );
 
         if (intent.kind === 'startBattleScene') {
             this.statusText?.setText(intent.statusText);

@@ -43,9 +43,9 @@ export class MainMenu extends Scene
             y: height * 0.6,
             width: 360,
             height: 72,
-            label: '开始主线故事',
-            description: '进入 StoryScene 示例剧情',
-            onClick: () => this.startStoryScene()
+            label: '进入青云镇',
+            description: '进入数据驱动的 Hub / 城镇壳层',
+            onClick: () => this.startHubScene()
         });
 
         EventBus.emit('current-scene-ready', this);
@@ -53,10 +53,10 @@ export class MainMenu extends Scene
     
     changeScene ()
     {
-        this.startStoryScene();
+        this.startHubScene();
     }
 
-    private startStoryScene ()
+    private startHubScene ()
     {
         if (this.logoTween)
         {
@@ -64,7 +64,7 @@ export class MainMenu extends Scene
             this.logoTween = null;
         }
 
-        this.scene.start('StoryScene');
+        this.scene.start('HubScene');
     }
 
     private createMenuButton (config: {
