@@ -11,7 +11,7 @@ describe('startup scene flow', () => {
         expect(bootScene).not.toContain("this.scene.start('StoryScene')");
     });
 
-    it('registers WorldMapScene before Hub and Expedition scenes so route data can launch them', () => {
+    it('registers WorldMapScene before Hub and Expedition scenes so the map shell can launch content', () => {
         const mainConfig = read('src/game/main.ts');
 
         expect(mainConfig).toContain("import { WorldMapScene } from './scenes/worldmap/WorldMapScene'");
@@ -29,5 +29,16 @@ describe('startup scene flow', () => {
         expect(mainMenuScene).not.toContain("this.scene.start('HubScene')");
         expect(mainMenuScene).not.toContain("this.scene.start('StoryScene')");
         expect(mainMenuScene).not.toContain("this.scene.start('Game')");
+    });
+
+    it('routes world map selections to the existing HubScene and ExpeditionScene without changing their loops', () => {
+        const worldMapScene = read('src/game/scenes/worldmap/WorldMapScene.ts');
+        const worldMapModel = read('src/game/scenes/worldmap/worldMap.ts');
+
+        expect(worldMapScene).toContain("this.load.json(WORLD_MAP_CACHE_KEY, 'data/world/world-map.json')");
+        expect(worldMapScene).toContain('createWorldMapDestinationIntent');
+        expect(worldMapScene).toContain('this.scene.start(intent.sceneKey, intent.payload)');
+        expect(worldMapModel).toContain("sceneKey: 'HubScene'");
+        expect(worldMapModel).toContain("sceneKey: 'ExpeditionScene'");
     });
 });

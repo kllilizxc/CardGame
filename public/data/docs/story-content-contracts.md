@@ -1,6 +1,6 @@
 # StoryState-backed Story Content Contracts
 
-`public/data/story/story-graph.json` is the checked-in playable mainline example for StoryScene content, and `public/data/story/qingyun-teahouse-rumors.json` is a tiny checked-in side-story graph launched from the tea-house Hub location. `public/data/hub/town-shell.json` is the minimal multi-location Hub entry: its `navigate.targetLocationId` actions move between Hub locations and save the current Hub location to local Story/Hub session storage, and its `startStory.storyGraphFile` actions point at playable story graphs. `StoryScene` loads the graph file provided by its launch payload, defaulting to `data/story/story-graph.json`, `src/game/scenes/story/storyFlow.ts` strictly validates that each Hub-launched example is playable, and `src/game/scenes/story/storyFlowViewModel.ts` owns render / transition view models and runtime traversal using `StoryState`, `StoryCondition`, and `StoryEffect` from `src/game/types/story.ts` / `src/game/state/StoryState.ts`. `src/game/services/StoryHubSessionPersistence.ts` is the versioned local session boundary for Hub location and per-Hub-action Story runtime snapshots. `public/data/docs/story-authoring-guide.md` is the author-facing workflow guide, and `public/data/story/story-graph.compact.example.json` is the smallest checked-in StoryState schema example. `public/data/story/story-graph.executable.json` remains a standalone contract fixture validated by `src/game/types/storyContent.ts`.
+`public/data/world/world-map.json` is the first thin world-map shell: it declares one 青云镇 Hub destination and one 青云外山试炼 Expedition destination, and `WorldMapScene` routes those destinations into the existing scenes. `public/data/story/story-graph.json` is the checked-in playable mainline example for StoryScene content, and `public/data/story/qingyun-teahouse-rumors.json` is a tiny checked-in side-story graph launched from the tea-house Hub location. `public/data/hub/town-shell.json` is the minimal multi-location Hub entry: its `navigate.targetLocationId` actions move between Hub locations and save the current Hub location to local Story/Hub session storage, and its `startStory.storyGraphFile` actions point at playable story graphs. `StoryScene` loads the graph file provided by its launch payload, defaulting to `data/story/story-graph.json`, `src/game/scenes/story/storyFlow.ts` strictly validates that each Hub-launched example is playable, and `src/game/scenes/story/storyFlowViewModel.ts` owns render / transition view models and runtime traversal using `StoryState`, `StoryCondition`, and `StoryEffect` from `src/game/types/story.ts` / `src/game/state/StoryState.ts`. `src/game/services/StoryHubSessionPersistence.ts` is the versioned local session boundary for Hub location and per-Hub-action Story runtime snapshots. `public/data/docs/story-authoring-guide.md` is the author-facing workflow guide, and `public/data/story/story-graph.compact.example.json` is the smallest checked-in StoryState schema example. `public/data/story/story-graph.executable.json` remains a standalone contract fixture validated by `src/game/types/storyContent.ts`.
 
 ## Graph shape
 
@@ -49,6 +49,19 @@ Nodes use `onEnter`, and choices use `effects`. Both fields use `StoryEffect` ar
 
 `startBattle.battle` is the story-combat contract for the first enabling slice. It requires stable `battleId`, `encounterId`, `encounterFile`, `deckFile`, `onVictoryNodeId`, and `onDefeatNodeId`, plus optional `launchText`. `storyFlow` validates that victory and defeat node ids exist in the same graph. `storyFlowViewModel.createStoryChoiceTransition` exposes the selected transition's `battleLaunch` metadata (`sceneKey: "BattleScene"`, source node / choice ids, target node id, encounter file, deck file, and result node ids). `StoryScene` wraps that metadata with the current `StoryState` and selected choice ids, starts `BattleScene`, and resumes at `onVictoryNodeId` or `onDefeatNodeId` after combat.
 
+## World map launch contract
+
+The minimal world map lives in `public/data/world/world-map.json`. A world-map definition has a stable `id`, display copy, a `defaultDestinationId`, and `destinations[]`. `src/game/scenes/worldmap/worldMap.ts` validates that destination ids are unique, the default destination exists, and every destination kind is supported before `WorldMapScene` renders launch buttons.
+
+Supported world-map destination kinds:
+
+| Kind | Required fields | Meaning |
+| --- | --- | --- |
+| `hub` | `hubId` | Start the existing `HubScene`. The first checked-in destination is `destination.qingyun-town` for `hub.qingyun-town`. |
+| `expedition` | `expeditionId`, `mapId` | Start the existing `ExpeditionScene`. The first checked-in destination is `destination.qingyun-outer-mountain-trial` for `phase01-first-playable-expedition` / `phase01-prototype-map`. |
+
+`WorldMapScene` only owns this routing shell. It does not own unlock state, procedural overworld movement, Hub shops/training/inventory, Expedition rewards, or migration of `mijing` events into Story JSON. Add a new destination id for a new long-lived route instead of repurposing an existing id.
+
 ## Hub launch contract
 
 The minimal Hub shell lives in `public/data/hub/town-shell.json`. A Hub definition has a stable `hubId`, display copy, `defaultLocationId`, and `locations[]`. Each location has an `id`, display copy, and at least one action.
@@ -75,9 +88,10 @@ This boundary does not own broad world state and is intentionally separate from 
 
 ## Authoring loop
 
-1. Edit `public/data/story/story-graph.json` for mainline StoryScene content; add a separate graph file such as `public/data/story/qingyun-teahouse-rumors.json` for a new side story; edit `public/data/hub/town-shell.json` when changing the town entry copy or target graph.
+1. Edit `public/data/world/world-map.json` when changing the top-level world-map routes; edit `public/data/story/story-graph.json` for mainline StoryScene content; add a separate graph file such as `public/data/story/qingyun-teahouse-rumors.json` for a new side story; edit `public/data/hub/town-shell.json` when changing the town entry copy or target graph.
 2. Use `public/data/story/story-graph.compact.example.json` as the minimal copyable template for new chapters or tooling fixtures.
 3. Follow `public/data/docs/story-authoring-guide.md` for ID naming, node / choice authoring, and when to use `visibleWhen`, `enabledWhen`, `effects`, or `onEnter`.
-4. Run `bun test src/game/services/StoryHubSessionPersistence.test.ts src/game/scenes/hub/hubTown.test.ts src/game/scenes/story/*.test.ts src/game/state/StoryState.test.ts` to validate the Hub launch/session contract plus graph structure, conditions, effects, disabled choices, and state transitions.
-5. Run `bun test src/game/types/storyContent.test.ts` when changing the standalone `story-graph.executable.json` contract fixture.
-6. Run `npm run build-nolog` before handing off UI/runtime changes.
+4. Run `bun test src/game/scenes/worldmap/worldMap.test.ts src/game/scenes/startupFlow.test.ts` to validate the world-map data contract and `MainMenu -> WorldMapScene -> HubScene | ExpeditionScene` routing.
+5. Run `bun test src/game/services/StoryHubSessionPersistence.test.ts src/game/scenes/hub/hubTown.test.ts src/game/scenes/story/*.test.ts src/game/state/StoryState.test.ts` to validate the Hub launch/session contract plus graph structure, conditions, effects, disabled choices, and state transitions.
+6. Run `bun test src/game/types/storyContent.test.ts` when changing the standalone `story-graph.executable.json` contract fixture.
+7. Run `npm run build-nolog` before handing off UI/runtime changes.

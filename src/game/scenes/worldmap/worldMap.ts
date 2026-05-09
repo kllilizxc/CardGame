@@ -1,53 +1,65 @@
-export type WorldMapSceneKey = 'HubScene' | 'ExpeditionScene';
+export type WorldMapDestinationKind = 'hub' | 'expedition';
+export type WorldMapLaunchSceneKey = 'HubScene' | 'ExpeditionScene';
 
-export interface WorldMapRoutePosition {
-    x: number;
-    y: number;
-}
-
-export interface WorldMapRouteDefinition {
+interface WorldMapDestinationBase {
     id: string;
+    kind: WorldMapDestinationKind;
     label: string;
     description: string;
-    sceneKey: WorldMapSceneKey;
-    position: WorldMapRoutePosition;
     statusText?: string;
 }
+
+export interface WorldMapHubDestination extends WorldMapDestinationBase {
+    kind: 'hub';
+    hubId: string;
+}
+
+export interface WorldMapExpeditionDestination extends WorldMapDestinationBase {
+    kind: 'expedition';
+    expeditionId: string;
+    mapId: string;
+}
+
+export type WorldMapDestination = WorldMapHubDestination | WorldMapExpeditionDestination;
 
 export interface WorldMapDefinition {
     id: string;
     title: string;
     subtitle: string;
     description: string;
-    defaultRouteId: string;
-    routes: WorldMapRouteDefinition[];
+    defaultDestinationId: string;
+    destinations: WorldMapDestination[];
 }
 
-export interface WorldMapRouteLaunchPayload {
+export interface WorldMapHubLaunchPayload {
     source: 'worldMap';
-    worldMapId: string;
-    routeId: string;
+    destinationId: string;
+    hubId: string;
     statusText?: string;
 }
 
-export interface WorldMapRouteLaunchIntent {
-    kind: 'startScene';
-    sceneKey: WorldMapSceneKey;
-    payload: WorldMapRouteLaunchPayload;
+export interface WorldMapExpeditionLaunchPayload {
+    source: 'worldMap';
+    destinationId: string;
+    expeditionId: string;
+    mapId: string;
+    statusText?: string;
 }
 
-const SUPPORTED_WORLD_MAP_SCENE_KEYS: WorldMapSceneKey[] = ['HubScene', 'ExpeditionScene'];
+export type WorldMapLaunchIntent =
+    | {
+        kind: 'startScene';
+        sceneKey: 'HubScene';
+        payload: WorldMapHubLaunchPayload;
+    }
+    | {
+        kind: 'startScene';
+        sceneKey: 'ExpeditionScene';
+        payload: WorldMapExpeditionLaunchPayload;
+    };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function requireRecord(value: unknown, field: string): Record<string, unknown> {
-    if (!isRecord(value)) {
-        throw new Error(`World map ${field} must be an object.`);
-    }
-
-    return value;
 }
 
 function requireString(value: unknown, field: string): string {
@@ -58,116 +70,136 @@ function requireString(value: unknown, field: string): string {
     return value;
 }
 
-function requireNumber(value: unknown, field: string): number {
-    if (typeof value !== 'number' || Number.isNaN(value)) {
-        throw new Error(`World map ${field} must be a number.`);
-    }
-
-    return value;
+function optionalString(value: unknown): string | undefined {
+    return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 }
 
-function validateNormalizedCoordinate(value: unknown, field: string): number {
-    const coordinate = requireNumber(value, field);
-
-    if (coordinate < 0 || coordinate > 1) {
-        throw new Error(`World map ${field} must be between 0 and 1.`);
-    }
-
-    return coordinate;
-}
-
-function validateSceneKey(value: unknown, routeId: string): WorldMapSceneKey {
-    const sceneKey = requireString(value, `routes.${routeId}.sceneKey`);
-
-    if (!SUPPORTED_WORLD_MAP_SCENE_KEYS.includes(sceneKey as WorldMapSceneKey)) {
-        throw new Error(`World map route ${routeId} uses unsupported sceneKey: ${sceneKey}`);
-    }
-
-    return sceneKey as WorldMapSceneKey;
-}
-
-function validateWorldMapRoute(value: unknown, index: number): WorldMapRouteDefinition {
-    const route = requireRecord(value, `routes[${index}]`);
-    const id = requireString(route.id, `routes[${index}].id`);
-    const position = requireRecord(route.position, `routes.${id}.position`);
+function createDestinationBase(
+    value: Record<string, unknown>,
+    kind: WorldMapDestinationKind,
+): WorldMapDestinationBase {
+    const statusText = optionalString(value.statusText);
 
     return {
-        id,
-        label: requireString(route.label, `routes.${id}.label`),
-        description: requireString(route.description, `routes.${id}.description`),
-        sceneKey: validateSceneKey(route.sceneKey, id),
-        position: {
-            x: validateNormalizedCoordinate(position.x, `routes.${id}.position.x`),
-            y: validateNormalizedCoordinate(position.y, `routes.${id}.position.y`),
-        },
-        ...(typeof route.statusText === 'string' && route.statusText.trim().length > 0
-            ? { statusText: route.statusText }
-            : {}),
+        id: requireString(value.id, 'destination.id'),
+        kind,
+        label: requireString(value.label, 'destination.label'),
+        description: requireString(value.description, 'destination.description'),
+        ...(statusText ? { statusText } : {}),
     };
 }
 
-function validateUniqueRouteIds(mapId: string, routes: WorldMapRouteDefinition[]): void {
-    const routeIds = new Set<string>();
+function validateWorldMapDestination(value: unknown, index: number): WorldMapDestination {
+    if (!isRecord(value)) {
+        throw new Error(`World map destinations[${index}] must be an object.`);
+    }
 
-    routes.forEach((route) => {
-        if (routeIds.has(route.id)) {
-            throw new Error(`World map ${mapId} has duplicate route id: ${route.id}`);
-        }
+    const id = requireString(value.id, `destinations[${index}].id`);
+    const kind = requireString(value.kind, `destination ${id}.kind`);
 
-        routeIds.add(route.id);
-    });
+    if (kind === 'hub') {
+        return {
+            ...createDestinationBase(value, kind),
+            hubId: requireString(value.hubId, `destination ${id}.hubId`),
+        };
+    }
+
+    if (kind === 'expedition') {
+        return {
+            ...createDestinationBase(value, kind),
+            expeditionId: requireString(value.expeditionId, `destination ${id}.expeditionId`),
+            mapId: requireString(value.mapId, `destination ${id}.mapId`),
+        };
+    }
+
+    throw new Error(`World map destination ${id} uses unsupported kind: ${kind}`);
 }
 
-function validateRequiredRouteTargets(mapId: string, routes: WorldMapRouteDefinition[]): void {
-    SUPPORTED_WORLD_MAP_SCENE_KEYS.forEach((sceneKey) => {
-        if (!routes.some((route) => route.sceneKey === sceneKey)) {
-            throw new Error(`World map ${mapId} must declare a route for ${sceneKey}.`);
+function validateUniqueDestinationIds(worldMapId: string, destinations: WorldMapDestination[]): void {
+    const seenDestinationIds = new Set<string>();
+
+    destinations.forEach((destination) => {
+        if (seenDestinationIds.has(destination.id)) {
+            throw new Error(`World map ${worldMapId} has duplicate destination id: ${destination.id}`);
         }
+
+        seenDestinationIds.add(destination.id);
     });
 }
 
 export function validateWorldMapDefinition(value: unknown): WorldMapDefinition {
-    const map = requireRecord(value, 'definition');
-    const id = requireString(map.id, 'id');
-    const routes = Array.isArray(map.routes)
-        ? map.routes.map((route, index) => validateWorldMapRoute(route, index))
-        : [];
-
-    if (routes.length === 0) {
-        throw new Error(`World map ${id} must define at least one route.`);
+    if (!isRecord(value)) {
+        throw new Error('World map definition must be an object.');
     }
 
-    validateUniqueRouteIds(id, routes);
-    validateRequiredRouteTargets(id, routes);
+    const id = requireString(value.id, 'id');
+    const destinations = Array.isArray(value.destinations)
+        ? value.destinations.map((destination, index) => validateWorldMapDestination(destination, index))
+        : [];
 
-    const defaultRouteId = requireString(map.defaultRouteId, 'defaultRouteId');
+    if (destinations.length === 0) {
+        throw new Error(`World map ${id} must define at least one destination.`);
+    }
 
-    if (!routes.some((route) => route.id === defaultRouteId)) {
-        throw new Error(`World map ${id} defaultRouteId does not match a route: ${defaultRouteId}`);
+    validateUniqueDestinationIds(id, destinations);
+
+    const defaultDestinationId = requireString(value.defaultDestinationId, 'defaultDestinationId');
+
+    if (!destinations.some((destination) => destination.id === defaultDestinationId)) {
+        throw new Error(`World map ${id} defaultDestinationId does not match a destination: ${defaultDestinationId}`);
     }
 
     return {
         id,
-        title: requireString(map.title, 'title'),
-        subtitle: requireString(map.subtitle, 'subtitle'),
-        description: requireString(map.description, 'description'),
-        defaultRouteId,
-        routes,
+        title: requireString(value.title, 'title'),
+        subtitle: requireString(value.subtitle, 'subtitle'),
+        description: requireString(value.description, 'description'),
+        defaultDestinationId,
+        destinations,
     };
 }
 
-export function createWorldMapRouteIntent(
+export function resolveWorldMapDestination(
     worldMap: WorldMapDefinition,
-    route: WorldMapRouteDefinition,
-): WorldMapRouteLaunchIntent {
+    destinationId: string,
+): WorldMapDestination {
+    const destination = worldMap.destinations.find((candidate) => candidate.id === destinationId);
+
+    if (!destination) {
+        throw new Error(`World map destination is missing: ${destinationId}`);
+    }
+
+    return destination;
+}
+
+export function createWorldMapDestinationIntent(
+    worldMap: WorldMapDefinition,
+    destinationId: string,
+): WorldMapLaunchIntent {
+    const destination = resolveWorldMapDestination(worldMap, destinationId);
+
+    if (destination.kind === 'hub') {
+        return {
+            kind: 'startScene',
+            sceneKey: 'HubScene',
+            payload: {
+                source: 'worldMap',
+                destinationId: destination.id,
+                hubId: destination.hubId,
+                ...(destination.statusText ? { statusText: destination.statusText } : {}),
+            },
+        };
+    }
+
     return {
         kind: 'startScene',
-        sceneKey: route.sceneKey,
+        sceneKey: 'ExpeditionScene',
         payload: {
             source: 'worldMap',
-            worldMapId: worldMap.id,
-            routeId: route.id,
-            ...(route.statusText ? { statusText: route.statusText } : {}),
+            destinationId: destination.id,
+            expeditionId: destination.expeditionId,
+            mapId: destination.mapId,
+            ...(destination.statusText ? { statusText: destination.statusText } : {}),
         },
     };
 }

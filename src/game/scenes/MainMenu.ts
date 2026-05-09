@@ -44,7 +44,7 @@ export class MainMenu extends Scene
             width: 360,
             height: 72,
             label: '进入大地图',
-            description: '进入数据驱动的 WorldMapScene 路线壳层',
+            description: '选择青云镇 Hub 或青云外山试炼秘境',
             onClick: () => this.startWorldMapScene()
         });
 

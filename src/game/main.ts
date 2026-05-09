@@ -32,12 +32,12 @@ const config: Phaser.Types.Core.GameConfig = {
     scene: [
         Boot,
         Preloader,
+        MainMenu,
         WorldMapScene,
         HubScene,
         StoryScene,
         ExpeditionScene,
         BattleScene,
-        MainMenu,
         MainGame,
         GameOver
     ]
