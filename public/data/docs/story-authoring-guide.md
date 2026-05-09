@@ -62,7 +62,7 @@
 
 ### Story battle trigger
 
-当剧情选择要引发战斗，但还不需要接完整 Phaser 场景往返时，在 choice `effects` 或目标 node `onEnter` 中加入：
+当剧情选择要引发战斗时，在 choice `effects` 或目标 node `onEnter` 中加入：
 
 ```json
 {
@@ -79,7 +79,7 @@
 }
 ```
 
-`onVictoryNodeId` 和 `onDefeatNodeId` 必须指向同一剧情图中已经存在的节点。当前切片只让运行时返回 `battleLaunch` 元数据，不在 `StoryScene` 内直接 `scene.start('BattleScene')`。
+`onVictoryNodeId` 和 `onDefeatNodeId` 必须指向同一剧情图中已经存在的节点。`StoryScene` 会把 `battleLaunch` 元数据连同当前 `StoryState` 包装为 source-aware payload，启动 `BattleScene`，并在战斗结束后分别回到胜利或失败续接节点。
 
 ## Compact schema example
 
@@ -98,7 +98,7 @@
 - `visibleWhen` 控制“玩家是否知道这个选择存在”。如果只是属性不足，应优先用 `enabledWhen`，让 UI 给出明确原因。
 - `onEnter` 适合“只要抵达节点就发生”的事实，例如移动小地点、记录关键对话、设置阶段 flag。
 - `effects` 适合“因为选择而发生”的事实，例如帮助 NPC、关系变化、属性变化。
-- `startBattle` 只声明战斗启动意图和结果分支；具体战斗场景启动、胜负回填与继续剧情属于后续集成切片。
+- `startBattle` 只声明战斗启动意图和结果分支；`StoryScene` / `BattleScene` 负责按该元数据启动战斗、回填胜负，并继续到明确的胜利或失败节点。
 - 关系和属性使用数字；缺失属性在条件判断中按 `0` 处理，但作者应在 `initialState` 显式初始化本章会用到的关键值。
 - flag、dialogue id、node id 不要复用自然语言句子；使用稳定命名空间，例如 `story.sect_entry.helped_frail_girl`。
 

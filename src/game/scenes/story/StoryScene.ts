@@ -1,7 +1,7 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
-import type { StoryState } from '../../types/story';
+import type { StoryBattleCompleteEvent, StoryState } from '../../types/story';
 import {
     createInitialStoryRuntime,
     createStoryChoiceTransition,
@@ -13,6 +13,18 @@ import {
     validatePlayableStoryGraph,
     type StoryGraph,
 } from './storyFlow';
+import {
+    applyStoryBattleResultToRuntime,
+    cloneStoryState,
+    createStorySceneTransitionIntent,
+} from './storyBattleRoundTrip';
+
+interface StorySceneLaunchData {
+    storyState?: StoryState;
+    selectedChoiceIds?: string[];
+    statusText?: string;
+    storyBattleResult?: StoryBattleCompleteEvent;
+}
 
 export class StoryScene extends Scene {
     private storyGraph!: StoryGraph;
@@ -20,9 +32,14 @@ export class StoryScene extends Scene {
     private selectedChoiceIds: string[] = [];
     private storyContainer?: Phaser.GameObjects.Container;
     private statusText?: Phaser.GameObjects.Text;
+    private launchData: StorySceneLaunchData = {};
 
     constructor() {
         super('StoryScene');
+    }
+
+    init(data?: StorySceneLaunchData): void {
+        this.launchData = data ?? {};
     }
 
     preload(): void {
@@ -31,13 +48,30 @@ export class StoryScene extends Scene {
 
     create(): void {
         this.storyGraph = validatePlayableStoryGraph(this.cache.json.get('exampleStoryGraph'));
-        this.storyState = createInitialStoryRuntime(this.storyGraph);
-        this.selectedChoiceIds = [];
+        const initialStatusText = this.applyLaunchData();
 
         this.renderSceneFrame();
-        this.renderCurrentNode('请选择你的行动。');
+        this.renderCurrentNode(initialStatusText);
 
         EventBus.emit('current-scene-ready', this);
+    }
+
+    private applyLaunchData(): string {
+        if (this.launchData.storyBattleResult) {
+            const resume = applyStoryBattleResultToRuntime(this.storyGraph, this.launchData.storyBattleResult);
+
+            this.storyState = resume.storyState;
+            this.selectedChoiceIds = resume.selectedChoiceIds;
+
+            return resume.statusText;
+        }
+
+        this.storyState = this.launchData.storyState
+            ? cloneStoryState(this.launchData.storyState)
+            : createInitialStoryRuntime(this.storyGraph);
+        this.selectedChoiceIds = [...(this.launchData.selectedChoiceIds ?? [])];
+
+        return this.launchData.statusText ?? '请选择你的行动。';
     }
 
     private renderSceneFrame(): void {
@@ -259,6 +293,14 @@ export class StoryScene extends Scene {
         this.selectedChoiceIds = result.nextSelectedChoiceIds;
 
         const selectedChoice = currentView.choices.find((choice) => choice.id === choiceId);
-        this.renderCurrentNode(`已选择：${selectedChoice?.text ?? choiceId}`);
+        const intent = createStorySceneTransitionIntent(result, selectedChoice?.text ?? choiceId);
+
+        if (intent.kind === 'startBattleScene') {
+            this.statusText?.setText(intent.statusText);
+            this.scene.start(intent.sceneKey, intent.payload);
+            return;
+        }
+
+        this.renderCurrentNode(intent.statusText);
     }
 }

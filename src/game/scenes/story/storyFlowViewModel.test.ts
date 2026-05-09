@@ -332,6 +332,19 @@ describe('storyFlowViewModel', () => {
 
         expect(trialResult.nextStoryState.currentNodeId).toBe('sect_entry_004_trial_bell');
         expect(trialResult.nextStoryState.currentSublocationId).toBe('sublocation.qingyun.trial-bell');
+        expect(trialResult.battleLaunch).toMatchObject({
+            sceneKey: 'BattleScene',
+            storyId: 'story.qingyun-entry',
+            sourceNodeId: 'sect_entry_002_wait_in_line',
+            sourceChoiceId: 'sect_entry_002_choice_trial_bell',
+            targetNodeId: 'sect_entry_004_trial_bell',
+            battleId: 'story.qingyun.trial-bell-duel',
+            encounterId: 'test_encounter_01',
+            encounterFile: 'data/encounters/test-enemy.json',
+            deckFile: 'data/decks/starter-deck.json',
+            onVictoryNodeId: 'sect_entry_005_trial_victory',
+            onDefeatNodeId: 'sect_entry_005_trial_defeat',
+        });
         expect(createStoryFlowViewModel(graph, { storyState: trialResult.nextStoryState }).choices.filter((choice) => choice.visible)).toEqual([]);
     });
 

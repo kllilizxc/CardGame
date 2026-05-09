@@ -1,5 +1,5 @@
 import { Scene } from 'phaser';
-import { EventBus, EXPEDITION_BATTLE_COMPLETE_EVENT } from '../../EventBus';
+import { EventBus, EXPEDITION_BATTLE_COMPLETE_EVENT, STORY_BATTLE_COMPLETE_EVENT } from '../../EventBus';
 import { CardSprite } from '../../objects/CardSprite';
 import { ArtifactSprite } from '../../objects/ArtifactSprite';
 import { TalismanSprite } from '../../objects/TalismanSprite';
@@ -41,13 +41,18 @@ import { BattleUIManager } from '../../ui/battle/BattleUIManager';
 import { CardPreviewManager } from '../../managers/common/CardPreviewManager';
 import { PillTooltipUI } from '../../ui/common/PillTooltipUI';
 import type { BattleLaunchPayload } from '../../types/expedition';
+import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import { createExpeditionBattleCompleteEvent } from './battleCompletion';
+import { createStoryBattleCompleteEvent } from '../story/storyBattleRoundTrip';
 import {
+    getBattleDeckCacheKey,
+    getBattleDeckFile,
     getBattleDeckStacks,
     getEncounterCacheKey,
     getEncounterFile,
     getEncounterUnits,
     normalizeBattleLaunchPayload,
+    normalizeStoryBattleLaunchPayload,
 } from './battleSceneLaunch';
 
 export class BattleScene extends Scene {
@@ -100,7 +105,9 @@ export class BattleScene extends Scene {
     // 布局配置
     private layout!: BattleLayoutConfig;
     private launchPayload: BattleLaunchPayload | null = null;
+    private storyLaunchPayload: StoryBattleSceneLaunchPayload | null = null;
     private encounterCacheKey = 'currentEncounter';
+    private deckCacheKey = 'starterDeck';
     private battleEndHandled = false;
 
     constructor() {
@@ -109,7 +116,9 @@ export class BattleScene extends Scene {
 
     init(data?: unknown): void {
         this.launchPayload = normalizeBattleLaunchPayload(data);
-        this.encounterCacheKey = getEncounterCacheKey(this.launchPayload);
+        this.storyLaunchPayload = this.launchPayload ? null : normalizeStoryBattleLaunchPayload(data);
+        this.encounterCacheKey = getEncounterCacheKey(this.launchPayload, this.storyLaunchPayload);
+        this.deckCacheKey = getBattleDeckCacheKey(this.storyLaunchPayload);
         this.battleEndHandled = false;
     }
 
@@ -158,8 +167,8 @@ export class BattleScene extends Scene {
         this.load.json('pillCards', 'data/cards/pills.json');
         this.load.json('fieldCards', 'data/cards/fields.json');
         this.load.json('skillCards', 'data/cards/skills.json');
-        this.load.json('starterDeck', 'data/decks/starter-deck.json');
-        this.load.json(this.encounterCacheKey, getEncounterFile(this.launchPayload));
+        this.load.json(this.deckCacheKey, getBattleDeckFile(this.storyLaunchPayload));
+        this.load.json(this.encounterCacheKey, getEncounterFile(this.launchPayload, this.storyLaunchPayload));
         this.load.json('gongfaList', 'data/gongfa/gongfa-list.json');
     }
 
@@ -212,7 +221,7 @@ export class BattleScene extends Scene {
         const fieldCardsData = this.cache.json.get('fieldCards') as { fields: any[] };
         const pillCardsData = this.cache.json.get('pillCards') as { pills: any[] };
         const skillCardsData = this.cache.json.get('skillCards') as { skills: SkillCard[] };
-        const starterDeckData = this.cache.json.get('starterDeck') as { cards: Array<{ id: string; count: number }> };
+        const starterDeckData = this.cache.json.get(this.deckCacheKey) as { cards: Array<{ id: string; count: number }> };
 
         // 创建卡牌索引
         const allCards = new Map<string, any>();
@@ -962,6 +971,13 @@ export class BattleScene extends Scene {
         }
 
         this.battleEndHandled = true;
+
+        if (this.storyLaunchPayload) {
+            const result = createStoryBattleCompleteEvent(this.storyLaunchPayload, victory);
+            EventBus.emit(STORY_BATTLE_COMPLETE_EVENT, result);
+            this.scene.start('StoryScene', { storyBattleResult: result });
+            return;
+        }
 
         if (!this.launchPayload) {
             this.scene.restart();

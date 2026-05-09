@@ -148,6 +148,35 @@ export interface StoryBattleLaunchMetadata extends StoryBattleTrigger {
     targetNodeId: string;
 }
 
+export interface StoryBattleSceneLaunchPayload {
+    source: 'story';
+    battleLaunch: StoryBattleLaunchMetadata;
+    storyState: StoryState;
+    selectedChoiceIds: string[];
+}
+
+export type StoryBattleOutcome = 'victory' | 'defeat';
+
+export interface StoryBattleCompleteEvent {
+    source: 'story';
+    storyId: string;
+    battleId: string;
+    encounterId: string;
+    encounterFile: string;
+    deckFile: string;
+    victory: boolean;
+    outcome: StoryBattleOutcome;
+    sourceNodeId: string;
+    sourceChoiceId?: string;
+    pendingNodeId: string;
+    onVictoryNodeId: string;
+    onDefeatNodeId: string;
+    resultNodeId: string;
+    storyState: StoryState;
+    selectedChoiceIds: string[];
+    completedAt: string;
+}
+
 export interface StoryStartBattleEffect {
     kind: 'startBattle';
     battle: StoryBattleTrigger;

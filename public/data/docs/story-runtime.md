@@ -40,7 +40,7 @@ Missing numeric attributes default to `0`. Missing flags/history entries count a
 
 `applyStoryChoice` checks a choice condition before applying its effects. If blocked, it returns the original state with status `blocked`; if applied, it returns the updated state plus the selected `nextNodeId` when a transition effect or choice `nextNodeId` is present.
 
-`startBattle` does not mutate story position and does not start a Phaser scene by itself. `applyStoryEffects` returns it as `pendingBattle`, and `createStoryChoiceTransition` turns it into `battleLaunch` metadata with `sceneKey: "BattleScene"` and story source/target ids. The full BattleScene round-trip and result handling are intentionally left for a later integration slice.
+`startBattle` does not mutate story position by itself. `applyStoryEffects` returns it as `pendingBattle`, and `createStoryChoiceTransition` turns it into `battleLaunch` metadata with `sceneKey: "BattleScene"` and story source/target ids. `StoryScene` now uses that metadata to start `BattleScene` with a source-aware story payload containing the encounter and deck files; when combat ends, story battle results return to `onVictoryNodeId` or `onDefeatNodeId`.
 
 ## Playable graph integration
 

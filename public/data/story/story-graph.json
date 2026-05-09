@@ -153,12 +153,84 @@
         {
           "kind": "setFlag",
           "flag": "story.sect_entry.trial_bell_rang"
+        },
+        {
+          "kind": "startBattle",
+          "battle": {
+            "battleId": "story.qingyun.trial-bell-duel",
+            "encounterId": "test_encounter_01",
+            "encounterFile": "data/encounters/test-enemy.json",
+            "deckFile": "data/decks/starter-deck.json",
+            "onVictoryNodeId": "sect_entry_005_trial_victory",
+            "onDefeatNodeId": "sect_entry_005_trial_defeat",
+            "launchText": "执事抬手一点，示意你以卡匣应对第一轮演武试炼。"
+          }
         }
       ],
       "aiHints": {
         "tone": "庄严、紧张、预告挑战",
         "theme": ["试炼开启", "凡人求仙"],
-        "forbid": ["直接判定玩家通过试炼", "展开尚未实现的战斗系统"]
+        "forbid": ["直接判定玩家通过试炼", "绕过 BattleScene 战斗结果"]
+      }
+    },
+    {
+      "id": "sect_entry_005_trial_victory",
+      "type": "story",
+      "title": "演武试炼初胜",
+      "summary": "玩家赢下第一轮演武试炼，外门执事示意继续登阶。",
+      "detail": "卡匣灵光渐敛，演武台四周的符纹缓缓暗下。青袍执事多看了你一眼：‘心志尚稳，继续登阶。’",
+      "tags": ["门派", "入门试炼", "战斗胜利"],
+      "chapter": "第一章·入宗",
+      "location": "青云宗山门",
+      "sublocation": "试炼钟台",
+      "locationId": "location.qingyun-gate",
+      "sublocationId": "sublocation.qingyun.trial-bell",
+      "timeHint": "钟鸣后",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "story.sect_entry.trial_duel_won"
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.qingyun-outer-elder",
+          "delta": 2
+        }
+      ],
+      "aiHints": {
+        "tone": "克制、振奋、仍有后续考验",
+        "theme": ["初战告捷", "试炼继续"],
+        "forbid": ["直接让玩家入宗", "跳过后续试炼"]
+      }
+    },
+    {
+      "id": "sect_entry_005_trial_defeat",
+      "type": "story",
+      "title": "演武试炼失利",
+      "summary": "玩家在第一轮演武中落败，但执事允许从失败中重新整理心神。",
+      "detail": "灵光散乱，卡匣轻震。青袍执事没有立刻逐你下山，只淡淡道：‘败而不乱，也算问心一环。记住这一阵，再往前走。’",
+      "tags": ["门派", "入门试炼", "战斗失败"],
+      "chapter": "第一章·入宗",
+      "location": "青云宗山门",
+      "sublocation": "试炼钟台",
+      "locationId": "location.qingyun-gate",
+      "sublocationId": "sublocation.qingyun.trial-bell",
+      "timeHint": "钟鸣后",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "story.sect_entry.trial_duel_lost"
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "心性",
+          "delta": 1
+        }
+      ],
+      "aiHints": {
+        "tone": "受挫但保留希望",
+        "theme": ["失败反馈", "问心试炼"],
+        "forbid": ["永久卡死主线", "把失败写成无代价胜利"]
       }
     }
   ],

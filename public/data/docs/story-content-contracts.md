@@ -43,11 +43,11 @@ Nodes use `onEnter`, and choices use `effects`. Both fields use `StoryEffect` ar
 | `setRelation` / `adjustRelation` | `relationId`, `value` or `delta` | Set or change an NPC/faction relationship score. |
 | `moveTo` | `locationId`, `sublocationId`, optional `nodeId` | Move the current story position between locations / sublocations. |
 | `goToNode` | `nodeId` | Jump to another story node. Choice traversal normally appends this automatically from `to`. |
-| `startBattle` | `battle` | Queue story-triggered combat launch metadata without switching Phaser scenes yet. |
+| `startBattle` | `battle` | Queue story-triggered combat launch metadata; StoryScene uses it to start BattleScene and route the result back into the graph. |
 
 `storyFlowViewModel.createStoryChoiceTransition` applies choice effects, appends the target-node transition, then applies the target node's `onEnter` effects. This keeps output deterministic and makes sublocation changes part of the checked-in content rather than free-form prose hints.
 
-`startBattle.battle` is the story-combat contract for the first enabling slice. It requires stable `battleId`, `encounterId`, `encounterFile`, `deckFile`, `onVictoryNodeId`, and `onDefeatNodeId`, plus optional `launchText`. `storyFlow` validates that victory and defeat node ids exist in the same graph. `storyFlowViewModel.createStoryChoiceTransition` exposes the selected transition's `battleLaunch` metadata (`sceneKey: "BattleScene"`, source node / choice ids, target node id, encounter file, deck file, and result node ids), but `StoryScene` does not yet perform the full BattleScene round-trip.
+`startBattle.battle` is the story-combat contract for the first enabling slice. It requires stable `battleId`, `encounterId`, `encounterFile`, `deckFile`, `onVictoryNodeId`, and `onDefeatNodeId`, plus optional `launchText`. `storyFlow` validates that victory and defeat node ids exist in the same graph. `storyFlowViewModel.createStoryChoiceTransition` exposes the selected transition's `battleLaunch` metadata (`sceneKey: "BattleScene"`, source node / choice ids, target node id, encounter file, deck file, and result node ids). `StoryScene` wraps that metadata with the current `StoryState` and selected choice ids, starts `BattleScene`, and resumes at `onVictoryNodeId` or `onDefeatNodeId` after combat.
 
 ## Authoring loop
 
