@@ -1,12 +1,66 @@
 import { describe, expect, it } from 'bun:test';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import townShellJson from '../../../../public/data/hub/town-shell.json';
+import type { StoryRuntimeSessionSnapshot } from '../../services/StoryHubSessionPersistence';
+import type { StoryState } from '../../types/story';
+import { validatePlayableStoryGraph } from '../story/storyFlow';
 import {
     applyHubNavigationIntent,
     createHubActionIntent,
     createInitialHubNavigationState,
+    createStoryHubSessionKeyFromAction,
     validateHubTownDefinition,
+    type HubTownDefinition,
+    type HubTownStartStoryAction,
 } from './hubTown';
+
+function getAllStartStoryActions(town: HubTownDefinition): HubTownStartStoryAction[] {
+    return town.locations.flatMap((location) =>
+        location.actions.filter((action): action is HubTownStartStoryAction => action.kind === 'startStory'),
+    );
+}
+
+function getStartStoryAction(town: HubTownDefinition, actionId: string): HubTownStartStoryAction {
+    const action = getAllStartStoryActions(town).find((candidate) => candidate.id === actionId);
+
+    expect(action).toBeDefined();
+    if (!action) {
+        throw new Error(`Expected Hub startStory action to exist: ${actionId}`);
+    }
+
+    return action;
+}
+
+function readPublicJsonFile(publicFile: string): unknown {
+    const absolutePath = join(process.cwd(), 'public', publicFile);
+
+    expect(existsSync(absolutePath)).toBe(true);
+
+    return JSON.parse(readFileSync(absolutePath, 'utf8')) as unknown;
+}
+
+function createStoryState(params: {
+    storyId: string;
+    locationId: string;
+    sublocationId: string;
+    nodeId: string;
+}): StoryState {
+    return {
+        storyId: params.storyId,
+        currentLocationId: params.locationId,
+        currentSublocationId: params.sublocationId,
+        currentNodeId: params.nodeId,
+        visitedNodeIds: [params.nodeId],
+        triggeredDialogueIds: [],
+        flags: {},
+        attributes: {
+            心性: 55,
+        },
+        relations: {},
+    };
+}
 
 describe('hub town shell content', () => {
     it('validates the checked-in town shell with multiple data-declared locations and navigation actions', () => {
@@ -39,6 +93,40 @@ describe('hub town shell content', () => {
                 label: '返回山门集市',
                 targetLocationId: 'location.qingyun-town.gate-market',
             }),
+            expect.objectContaining({
+                id: 'action.start-teahouse-rumors-story',
+                kind: 'startStory',
+                label: '听茶棚传闻',
+                storyGraphFile: 'data/story/qingyun-teahouse-rumors.json',
+            }),
+        ]);
+    });
+
+    it('validates every Hub-launched playable story graph and keeps action ids distinct per graph', () => {
+        const town = validateHubTownDefinition(townShellJson);
+        const startStoryActions = getAllStartStoryActions(town);
+
+        expect(startStoryActions.map((action) => ({
+            id: action.id,
+            storyGraphFile: action.storyGraphFile,
+        }))).toEqual([
+            {
+                id: 'action.start-qingyun-entry-story',
+                storyGraphFile: 'data/story/story-graph.json',
+            },
+            {
+                id: 'action.start-teahouse-rumors-story',
+                storyGraphFile: 'data/story/qingyun-teahouse-rumors.json',
+            },
+        ]);
+
+        const graphs = startStoryActions.map((action) => validatePlayableStoryGraph(
+            readPublicJsonFile(action.storyGraphFile),
+        ));
+
+        expect(graphs.map((graph) => graph.storyId)).toEqual([
+            'story.qingyun-entry',
+            'story.qingyun-teahouse-rumors',
         ]);
     });
 
@@ -162,6 +250,76 @@ describe('hub town shell content', () => {
             throw new Error('Expected a StoryScene start intent.');
         }
         expect(intent.payload.storyState).not.toBe(savedStoryState);
+    });
+
+    it('isolates StoryScene resume payloads by Hub action id and story graph file', () => {
+        const town = validateHubTownDefinition(townShellJson);
+        const mainlineAction = getStartStoryAction(town, 'action.start-qingyun-entry-story');
+        const teahouseAction = getStartStoryAction(town, 'action.start-teahouse-rumors-story');
+        const mainlineSnapshot: StoryRuntimeSessionSnapshot = {
+            ...createStoryHubSessionKeyFromAction(mainlineAction),
+            storyState: createStoryState({
+                storyId: 'story.qingyun-entry',
+                locationId: 'location.qingyun-gate',
+                sublocationId: 'sublocation.qingyun.queue-edge',
+                nodeId: 'sect_entry_003_help_girl',
+            }),
+            selectedChoiceIds: ['sect_entry_001_choice_help_girl'],
+            statusText: '已恢复青云宗山门故事进度。',
+            updatedAt: '2026-05-09T06:01:00.000Z',
+        };
+        const teahouseSnapshot: StoryRuntimeSessionSnapshot = {
+            ...createStoryHubSessionKeyFromAction(teahouseAction),
+            storyState: createStoryState({
+                storyId: 'story.qingyun-teahouse-rumors',
+                locationId: 'location.qingyun-town',
+                sublocationId: 'sublocation.qingyun-town.teahouse',
+                nodeId: 'teahouse_rumors_002_listen',
+            }),
+            selectedChoiceIds: ['teahouse_rumors_001_choice_listen'],
+            statusText: '已恢复茶棚传闻支线进度。',
+            updatedAt: '2026-05-09T06:02:00.000Z',
+        };
+
+        expect(createStoryHubSessionKeyFromAction(mainlineAction)).not.toEqual(createStoryHubSessionKeyFromAction(teahouseAction));
+
+        expect(createHubActionIntent(mainlineAction, mainlineSnapshot)).toMatchObject({
+            kind: 'startScene',
+            payload: {
+                actionId: 'action.start-qingyun-entry-story',
+                storyGraphFile: 'data/story/story-graph.json',
+                storyState: {
+                    storyId: 'story.qingyun-entry',
+                    currentNodeId: 'sect_entry_003_help_girl',
+                },
+                selectedChoiceIds: ['sect_entry_001_choice_help_girl'],
+                statusText: '已恢复青云宗山门故事进度。',
+            },
+        });
+        expect(createHubActionIntent(teahouseAction, teahouseSnapshot)).toMatchObject({
+            kind: 'startScene',
+            payload: {
+                actionId: 'action.start-teahouse-rumors-story',
+                storyGraphFile: 'data/story/qingyun-teahouse-rumors.json',
+                storyState: {
+                    storyId: 'story.qingyun-teahouse-rumors',
+                    currentNodeId: 'teahouse_rumors_002_listen',
+                },
+                selectedChoiceIds: ['teahouse_rumors_001_choice_listen'],
+                statusText: '已恢复茶棚传闻支线进度。',
+            },
+        });
+        expect(createHubActionIntent(teahouseAction, mainlineSnapshot)).toEqual({
+            kind: 'startScene',
+            sceneKey: 'StoryScene',
+            payload: {
+                source: 'hub',
+                hubId: 'hub.qingyun-town',
+                actionId: 'action.start-teahouse-rumors-story',
+                storyGraphFile: 'data/story/qingyun-teahouse-rumors.json',
+                statusText: '茶棚里传来新的试炼传闻。',
+            },
+        });
     });
 
     it('rejects navigation actions that point to missing town locations', () => {

@@ -47,11 +47,11 @@ Missing numeric attributes default to `0`. Missing flags/history entries count a
 `src/game/services/StoryHubSessionPersistence.ts` is the first durable local boundary for Story / Hub session state. It writes versioned JSON to `cardgame.story-hub-session.v1` and owns all direct storage access for this slice.
 
 - Hub location snapshots are keyed by `hubId` and store the current location id, optional status text, and update time. A saved location is only restored if it still exists in the current Hub JSON; corrupt or stale storage falls back to the default Hub location.
-- Story runtime snapshots are keyed by `hubId + actionId + storyGraphFile` and store `StoryState`, selected choice ids, optional status text, and update time. `HubScene` resumes a matching snapshot when the same `startStory` action launches again.
+- Story runtime snapshots are keyed by `hubId + actionId + storyGraphFile` and store `StoryState`, selected choice ids, optional status text, and update time. `HubScene` resumes a matching snapshot when the same `startStory` action launches again. The checked-in town shell now uses this to keep the gate-market mainline (`data/story/story-graph.json`) and tea-house side story (`data/story/qingyun-teahouse-rumors.json`) from sharing progress.
 - Story battle payloads carry the Hub session key through `BattleScene`, so the post-battle resume node is saved back into the same Story runtime snapshot.
 
 This is a local session boundary only. It intentionally does not own Expedition `RunSnapshot`, inventory, shops, rewards, backend/cloud save, or broad world-state progression.
 
 ## Playable graph integration
 
-`src/game/scenes/story/storyFlow.ts` now uses this runtime directly for the playable `public/data/story/story-graph.json` sample. The graph seeds `StoryState.initialState`, stores choice gates in `visibleWhen` / `enabledWhen`, stores deterministic state changes in `effects`, and stores node-entry movement or dialogue history in `onEnter`. `StoryScene` renders disabled choices with their failed condition reason and only advances after `chooseStoryChoice` returns an updated `StoryState`.
+`src/game/scenes/story/storyFlow.ts` now uses this runtime directly for playable Hub-launched graph samples such as `public/data/story/story-graph.json` and `public/data/story/qingyun-teahouse-rumors.json`. Each graph seeds `StoryState.initialState`, stores choice gates in `visibleWhen` / `enabledWhen`, stores deterministic state changes in `effects`, and stores node-entry movement or dialogue history in `onEnter`. `StoryScene` renders disabled choices with their failed condition reason and only advances after `chooseStoryChoice` returns an updated `StoryState`.

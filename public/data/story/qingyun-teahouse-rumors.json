@@ -1,0 +1,105 @@
+{
+  "storyId": "story.qingyun-teahouse-rumors",
+  "title": "青云镇茶棚传闻（支线示例）",
+  "entryNodeId": "teahouse_rumors_001_arrive",
+  "initialState": {
+    "locationId": "location.qingyun-town",
+    "sublocationId": "sublocation.qingyun-town.teahouse",
+    "attributes": {
+      "心性": 55,
+      "机缘": 50
+    },
+    "relations": {
+      "npc.teahouse-keeper": 0
+    },
+    "flags": {}
+  },
+  "nodes": [
+    {
+      "id": "teahouse_rumors_001_arrive",
+      "type": "story",
+      "title": "茶棚里的试炼传闻",
+      "summary": "你在集市茶棚坐下，听见散修们压低声音议论今日山门试炼。",
+      "detail": "竹棚外人声嘈杂，炉上粗茶翻着热气。掌柜见你带着卡匣，示意你若想等山门放榜，不妨先听几句旧年试炼的传闻。",
+      "tags": ["青云镇", "茶棚", "支线"],
+      "chapter": "青云镇支线",
+      "location": "青云镇",
+      "sublocation": "集市茶棚",
+      "locationId": "location.qingyun-town",
+      "sublocationId": "sublocation.qingyun-town.teahouse",
+      "timeHint": "试炼前",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "story.teahouse_rumors.arrived"
+        }
+      ],
+      "aiHints": {
+        "tone": "市井、低声、带一点试炼前的不安",
+        "theme": ["传闻", "山门试炼", "支线入口"],
+        "forbid": ["直接给予奖励", "提前揭露主线试炼结果"]
+      }
+    },
+    {
+      "id": "teahouse_rumors_002_listen",
+      "type": "story",
+      "title": "掌柜提起问心阶旧事",
+      "summary": "掌柜说每年总有人被钟声里的幻象吓退，真正稳住心神的人反而不多。",
+      "detail": "掌柜替你续上一碗淡茶：‘青云宗问心阶不只看灵根，也看人能不能守住本心。越是急着一步登天，越容易在钟声里乱了脚步。’这话未必全真，却足够让你记在心上。",
+      "tags": ["青云镇", "传闻", "问心阶"],
+      "chapter": "青云镇支线",
+      "location": "青云镇",
+      "sublocation": "集市茶棚",
+      "locationId": "location.qingyun-town",
+      "sublocationId": "sublocation.qingyun-town.teahouse",
+      "timeHint": "试炼前",
+      "onEnter": [
+        {
+          "kind": "moveTo",
+          "locationId": "location.qingyun-town",
+          "sublocationId": "sublocation.qingyun-town.teahouse"
+        },
+        {
+          "kind": "recordDialogue",
+          "dialogueId": "dialogue.teahouse.rumor.ask-trial"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "story.teahouse_rumors.heard_trial_rumor"
+        }
+      ],
+      "aiHints": {
+        "tone": "克制、含蓄、像过来人的提醒",
+        "theme": ["问心", "市井经验", "主线前置氛围"],
+        "forbid": ["承诺具体战斗加成", "新增商店或奖励系统"]
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "teahouse_rumors_001_choice_listen",
+      "from": "teahouse_rumors_001_arrive",
+      "to": "teahouse_rumors_002_listen",
+      "text": "坐下听掌柜讲试炼传闻",
+      "description": "一个极短支线，用来验证茶棚 action 启动独立故事图并独立保存进度。",
+      "enabledWhen": {
+        "kind": "attribute",
+        "attribute": "心性",
+        "operator": ">=",
+        "value": 1
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "story.teahouse_rumors.chose_to_listen"
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.teahouse-keeper",
+          "delta": 1
+        }
+      ],
+      "flags": ["支线", "传闻", "茶棚"]
+    }
+  ]
+}

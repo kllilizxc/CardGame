@@ -6,12 +6,13 @@
 
 - **Hub 入口文件**：`public/data/hub/town-shell.json`（`navigate.targetLocationId` 在城镇小地点间切换；`startStory.storyGraphFile` 指向要启动的剧情图）
 - **可游玩主线文件**：`public/data/story/story-graph.json`
+- **茶棚支线文件**：`public/data/story/qingyun-teahouse-rumors.json`（第二个 Hub-launched 图，用于证明多图与 per-action resume 隔离）
 - **紧凑 schema 示例**：`public/data/story/story-graph.compact.example.json`
 - **运行时状态类型**：`src/game/types/story.ts`
 - **严格内容校验**：`src/game/scenes/story/storyFlow.ts`
 - **渲染与跳转视图模型**：`src/game/scenes/story/storyFlowViewModel.ts`
 
-新增真实剧情时优先编辑 `story-graph.json`。如果需要从城镇入口切换到另一份剧情图，更新 `public/data/hub/town-shell.json` 中对应行动的 `storyGraphFile`；如果需要在城镇小地点之间移动，新增或修改 `navigate.targetLocationId`，不要在 `HubScene` 或 `StoryScene` 里硬编码新路径或地点 id。不要把只存在于 prose 的状态变化当作剧情事实：后续分支需要读取的内容必须写进 `visibleWhen`、`enabledWhen`、`effects` 或 `onEnter`。
+扩展主线时优先编辑 `story-graph.json`；新增短支线或章节时可以像 `qingyun-teahouse-rumors.json` 一样新增独立 StoryState 图，并在 `public/data/hub/town-shell.json` 中添加唯一 `startStory` action 指向它。每个 Hub action 的 `id` 与 `storyGraphFile` 都是本地 Story/Hub session key 的一部分，改名会让旧进度不再匹配。如果需要在城镇小地点之间移动，新增或修改 `navigate.targetLocationId`，不要在 `HubScene` 或 `StoryScene` 里硬编码新路径或地点 id。不要把只存在于 prose 的状态变化当作剧情事实：后续分支需要读取的内容必须写进 `visibleWhen`、`enabledWhen`、`effects` 或 `onEnter`。
 
 ## 推荐写作流程
 
@@ -112,6 +113,8 @@
 
 `startStory.storyGraphFile` 由 `HubScene` 传给 `StoryScene`，并会在 StoryScene 触发 BattleScene 往返时继续保留。Hub 启动故事时会用 `hubId + actionId + storyGraphFile` 查找本地 Story runtime snapshot；同一个 action 再次启动会恢复已保存的 `StoryState` 和 `selectedChoiceIds`，终点页的“重新开始故事”会把该 action 的进度重置到入口。不要把商店、背包、奖励、秘境出口、完整 world-state 或云存档塞进当前 Hub action；这些需要先定义新的数据合同。
 
+同一个 Hub 可以声明多个 `startStory` action。当前青云镇示例中，山门集市的 `action.start-qingyun-entry-story` 指向 `data/story/story-graph.json`，茶棚的 `action.start-teahouse-rumors-story` 指向 `data/story/qingyun-teahouse-rumors.json`。它们必须使用不同 action id，并各自维护独立 Story runtime snapshot；不要通过复用 action id 后只替换文件名来“覆盖”已有入口。
+
 ## Compact schema example
 
 `public/data/story/story-graph.compact.example.json` 是一个两节点、一选项的最小可游玩示例，并由 `src/game/scenes/story/storyFlow.test.ts` 校验。它展示了：
@@ -141,4 +144,4 @@ bun test src/game/types/storyContent.test.ts
 npm run build-nolog
 ```
 
-如果只改 `story-graph.json`、`town-shell.json` 或 compact example，至少运行第一条命令。改动 standalone `story-graph.executable.json` 时再运行第二条命令。涉及 UI/runtime TypeScript 时运行构建命令。
+如果只改 `story-graph.json`、`qingyun-teahouse-rumors.json`、`town-shell.json` 或 compact example，至少运行第一条命令。改动 standalone `story-graph.executable.json` 时再运行第二条命令。涉及 UI/runtime TypeScript 时运行构建命令。

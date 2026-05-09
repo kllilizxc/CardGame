@@ -2,7 +2,7 @@
   "hubId": "hub.qingyun-town",
   "title": "青云镇",
   "subtitle": "山门脚下的临时落脚点",
-  "description": "一座依附青云宗山门而生的小镇。当前版本证明 Hub 可以由数据声明多个小地点，将当前位置保存到本地 Story/Hub session，并继续承接数据驱动的主线入口。",
+  "description": "一座依附青云宗山门而生的小镇。当前版本证明 Hub 可以由数据声明多个小地点，将当前位置保存到本地 Story/Hub session，并从不同 Hub action 启动主线或茶棚支线故事图。",
   "defaultLocationId": "location.qingyun-town.gate-market",
   "locations": [
     {
@@ -33,7 +33,7 @@
       "id": "location.qingyun-town.teahouse",
       "title": "集市茶棚",
       "summary": "竹棚下坐满等待试炼的散修，掌柜一边续水一边留意山门动静。",
-      "detail": "这里暂时只承担 Hub 小地点导航示例：玩家可以从山门集市来到茶棚，再返回集市。后续若要加入对话、商店或修炼操作，应继续通过新的数据合同扩展，而不是写死在 HubScene。",
+      "detail": "这里承担 Hub 小地点导航和第二个故事图入口示例：玩家可以从山门集市来到茶棚，再从这里启动一段极短茶棚传闻支线。后续若要加入商店、修炼或奖励操作，应继续通过新的数据合同扩展，而不是写死在 HubScene。",
       "actions": [
         {
           "id": "action.return-gate-market",
@@ -42,6 +42,14 @@
           "description": "回到默认集市地点，继续选择主线入口或其他城镇行动。",
           "targetLocationId": "location.qingyun-town.gate-market",
           "statusText": "你回到山门集市，试炼告示仍贴在茶棚旁。"
+        },
+        {
+          "id": "action.start-teahouse-rumors-story",
+          "kind": "startStory",
+          "label": "听茶棚传闻",
+          "description": "启动 public/data/story/qingyun-teahouse-rumors.json 中的茶棚支线；它与山门主线使用不同 actionId 和 storyGraphFile 保存进度。",
+          "storyGraphFile": "data/story/qingyun-teahouse-rumors.json",
+          "statusText": "茶棚里传来新的试炼传闻。"
         }
       ]
     }
