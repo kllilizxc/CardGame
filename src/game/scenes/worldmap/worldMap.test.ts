@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import worldMapJson from '../../../../public/data/world/world-map.json';
+import type { ExpeditionMapDefinition } from '../../types/expedition';
 import {
     createWorldMapReturnIntent,
     createWorldMapDestinationIntent,
+    type WorldMapDestination,
+    type WorldMapExpeditionDestination,
     validateWorldMapDefinition,
 } from './worldMap';
 
@@ -40,8 +45,16 @@ const validWorldMapFixture = {
     ],
 };
 
+function isExpeditionDestination(destination: WorldMapDestination): destination is WorldMapExpeditionDestination {
+    return destination.kind === 'expedition';
+}
+
+function readPublicJsonFile<T>(publicFile: string): T {
+    return JSON.parse(readFileSync(join('public', publicFile), 'utf8')) as T;
+}
+
 describe('world map content contract', () => {
-    it('validates the checked-in world map with Qingyun town, sect gate, teahouse, and outer-mountain trial destinations', () => {
+    it('validates the checked-in world map with Qingyun town, sect gate, teahouse, and two Expedition destinations', () => {
         const worldMap = validateWorldMapDefinition(worldMapJson);
 
         expect(worldMap.id).toBe('worldmap.qingyun-region');
@@ -98,7 +111,61 @@ describe('world map content contract', () => {
                     mapFile: 'data/mijing/prototype-map.json',
                 },
             },
+            {
+                id: 'destination.qingyun-jade-cave-trial',
+                kind: 'expedition',
+                label: '青玉洞试炼',
+                target: {
+                    mapFile: 'data/mijing/jade-cave-map.json',
+                },
+            },
         ]);
+    });
+
+    it('keeps checked-in Expedition routes distinct by expeditionId and mapId while using explicit target files', () => {
+        const worldMap = validateWorldMapDefinition(worldMapJson);
+        const expeditionDestinations = worldMap.destinations.filter(isExpeditionDestination);
+
+        expect(expeditionDestinations.map((destination) => ({
+            destinationId: destination.id,
+            expeditionId: destination.expeditionId,
+            mapId: destination.mapId,
+            worldStateFile: destination.worldStateFile,
+            starterDeckFile: destination.starterDeckFile,
+            mapFile: destination.mapFile,
+            eventsFile: destination.eventsFile,
+            shopFile: destination.shopFile,
+        }))).toEqual([
+            {
+                destinationId: 'destination.qingyun-outer-mountain-trial',
+                expeditionId: 'phase01-first-playable-expedition',
+                mapId: 'phase01-prototype-map',
+                worldStateFile: 'data/world/initial-state.json',
+                starterDeckFile: 'data/decks/starter-deck.json',
+                mapFile: 'data/mijing/prototype-map.json',
+                eventsFile: 'data/mijing/prototype-events.json',
+                shopFile: 'data/mijing/prototype-shop.json',
+            },
+            {
+                destinationId: 'destination.qingyun-jade-cave-trial',
+                expeditionId: 'phase01-jade-cave-expedition',
+                mapId: 'phase01-jade-cave-map',
+                worldStateFile: 'data/world/initial-state.json',
+                starterDeckFile: 'data/decks/starter-deck.json',
+                mapFile: 'data/mijing/jade-cave-map.json',
+                eventsFile: 'data/mijing/prototype-events.json',
+                shopFile: 'data/mijing/prototype-shop.json',
+            },
+        ]);
+        expect(new Set(expeditionDestinations.map((destination) => destination.id)).size).toBe(expeditionDestinations.length);
+        expect(new Set(expeditionDestinations.map((destination) => destination.expeditionId)).size).toBe(expeditionDestinations.length);
+        expect(new Set(expeditionDestinations.map((destination) => destination.mapId)).size).toBe(expeditionDestinations.length);
+
+        for (const destination of expeditionDestinations) {
+            const mapDefinition = readPublicJsonFile<ExpeditionMapDefinition>(destination.mapFile);
+
+            expect(mapDefinition.id).toBe(destination.mapId);
+        }
     });
 
     it('keeps full Hub routes distinct while allowing direct Hub-location routes to reuse their parent Hub file', () => {
@@ -225,6 +292,22 @@ describe('world map content contract', () => {
                 eventsFile: 'data/mijing/prototype-events.json',
                 shopFile: 'data/mijing/prototype-shop.json',
                 statusText: '从大地图进入青云外山试炼。',
+            },
+        });
+        expect(createWorldMapDestinationIntent(worldMap, 'destination.qingyun-jade-cave-trial')).toEqual({
+            kind: 'startScene',
+            sceneKey: 'ExpeditionScene',
+            payload: {
+                source: 'worldMap',
+                destinationId: 'destination.qingyun-jade-cave-trial',
+                expeditionId: 'phase01-jade-cave-expedition',
+                mapId: 'phase01-jade-cave-map',
+                worldStateFile: 'data/world/initial-state.json',
+                starterDeckFile: 'data/decks/starter-deck.json',
+                mapFile: 'data/mijing/jade-cave-map.json',
+                eventsFile: 'data/mijing/prototype-events.json',
+                shopFile: 'data/mijing/prototype-shop.json',
+                statusText: '从大地图进入青玉洞试炼。',
             },
         });
     });

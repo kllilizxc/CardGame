@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'bun:test';
+import { readFileSync } from 'node:fs';
 
 import prototypeEventsJson from '../../../public/data/mijing/prototype-events.json';
 import prototypeMapJson from '../../../public/data/mijing/prototype-map.json';
 import prototypeShopJson from '../../../public/data/mijing/prototype-shop.json';
 
 import { validatePrototypeExpeditionContent } from './prototypeExpeditionContent';
+
+function readJsonFixture<T>(path: string): T {
+    return JSON.parse(readFileSync(path, 'utf8')) as T;
+}
 
 describe('validatePrototypeExpeditionContent', () => {
     it('parses the checked-in Phase 01 prototype content bundle', () => {
@@ -82,6 +87,19 @@ describe('validatePrototypeExpeditionContent', () => {
 
         expect(bossNode?.payloadRef.ref).toBe('mijing_boss_01');
         expect(bossNode?.payloadRef.encounterFile).toBe('data/encounters/mijing-boss.json');
+    });
+
+    it('parses the checked-in jade-cave map against the reused prototype event and shop content', () => {
+        const jadeCaveMapJson = readJsonFixture('public/data/mijing/jade-cave-map.json');
+        const content = validatePrototypeExpeditionContent({
+            map: jadeCaveMapJson,
+            events: prototypeEventsJson,
+            shops: prototypeShopJson,
+        });
+
+        expect(content.map.id).toBe('phase01-jade-cave-map');
+        expect(content.map.entryNodeId).toBe('entrance.mountain-gate');
+        expect(content.map.nodes.some((node) => node.type === 'boss')).toBe(true);
     });
 
     it('rejects maps whose outgoing edges skip layers', () => {

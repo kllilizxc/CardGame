@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'bun:test';
 
 import prototypeMapJson from '../../../../public/data/mijing/prototype-map.json';
+import worldMapJson from '../../../../public/data/world/world-map.json';
 import {
     createWorldMapDestinationIntent,
+    type WorldMapDestination,
+    type WorldMapExpeditionDestination,
     validateWorldMapDefinition,
 } from '../worldmap/worldMap';
 import type { ExpeditionEncounterMapNode, RunSnapshot } from '../../types/expedition';
@@ -53,6 +56,10 @@ const worldMapWithSyntheticExpeditionTargets = {
         },
     ],
 };
+
+function isExpeditionDestination(destination: WorldMapDestination): destination is WorldMapExpeditionDestination {
+    return destination.kind === 'expedition';
+}
 
 function createRunSnapshot(target: { expeditionId: string; mapId: string }): RunSnapshot {
     return {
@@ -214,5 +221,49 @@ describe('expeditionSceneLaunch', () => {
             shopFile: 'data/mijing/prototype-shop.json',
             battleResult: { targetConfig },
         });
+    });
+
+    it('normalizes the checked-in Expedition world-map destinations to independent route keys', () => {
+        const worldMap = validateWorldMapDefinition(worldMapJson);
+        const expeditionDestinations = worldMap.destinations.filter(isExpeditionDestination);
+
+        expect(expeditionDestinations.map((destination) => {
+            const intent = createWorldMapDestinationIntent(worldMap, destination.id);
+
+            if (intent.sceneKey !== 'ExpeditionScene') {
+                throw new Error(`Expected ${destination.id} to launch ExpeditionScene.`);
+            }
+
+            const launch = normalizeExpeditionSceneLaunchData(intent.payload);
+
+            return {
+                destinationId: launch.destinationId,
+                expeditionId: launch.expeditionId,
+                mapId: launch.mapId,
+                routeKey: launch.routeKey,
+                mapFile: launch.mapFile,
+                eventsFile: launch.eventsFile,
+                shopFile: launch.shopFile,
+            };
+        })).toEqual([
+            {
+                destinationId: 'destination.qingyun-outer-mountain-trial',
+                expeditionId: 'phase01-first-playable-expedition',
+                mapId: 'phase01-prototype-map',
+                routeKey: 'expedition:phase01-first-playable-expedition:phase01-prototype-map',
+                mapFile: 'data/mijing/prototype-map.json',
+                eventsFile: 'data/mijing/prototype-events.json',
+                shopFile: 'data/mijing/prototype-shop.json',
+            },
+            {
+                destinationId: 'destination.qingyun-jade-cave-trial',
+                expeditionId: 'phase01-jade-cave-expedition',
+                mapId: 'phase01-jade-cave-map',
+                routeKey: 'expedition:phase01-jade-cave-expedition:phase01-jade-cave-map',
+                mapFile: 'data/mijing/jade-cave-map.json',
+                eventsFile: 'data/mijing/prototype-events.json',
+                shopFile: 'data/mijing/prototype-shop.json',
+            },
+        ]);
     });
 });

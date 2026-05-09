@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it } from 'bun:test';
 
 import initialWorldState from '../../../public/data/world/initial-state.json';
 import starterDeckJson from '../../../public/data/decks/starter-deck.json';
+import worldMapJson from '../../../public/data/world/world-map.json';
 
 import { ExpeditionState } from '../state/ExpeditionState';
+import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
 import {
     loadActiveRun,
     loadPersistentStash,
@@ -26,9 +28,24 @@ const SYNTHETIC_TARGET = {
     mapId: 'synthetic-map',
 };
 
+function getCheckedInExpeditionTarget(destinationId: string): { expeditionId: string; mapId: string } {
+    const worldMap = validateWorldMapDefinition(worldMapJson);
+    const destination = worldMap.destinations.find((candidate) => candidate.id === destinationId);
+
+    if (!destination || destination.kind !== 'expedition') {
+        throw new Error(`Expected checked-in Expedition destination: ${destinationId}`);
+    }
+
+    return {
+        expeditionId: destination.expeditionId,
+        mapId: destination.mapId,
+    };
+}
+
 function startRewardedRun(
     targetIdentity: { expeditionId: string; mapId: string } = DEFAULT_TARGET,
     rewardCardId = 'TL_002',
+    entryNodeId = targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'entrance.mountain-gate' : 'entrance.synthetic',
 ): ExpeditionState {
     const state = ExpeditionState.bootstrap({
         worldState: structuredClone(initialWorldState),
@@ -38,7 +55,7 @@ function startRewardedRun(
 
     state.createRunSnapshot({
         ...targetIdentity,
-        entryNodeId: targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'entrance.mountain-gate' : 'entrance.synthetic',
+        entryNodeId,
     });
 
     state.applyNodeRewardPreview({
@@ -159,6 +176,25 @@ describe('RunResolution', () => {
             expect(loadActiveRun(SYNTHETIC_TARGET)?.runId).toBe(syntheticRunId);
             expect(loadActiveRun(SYNTHETIC_TARGET)?.carriedDeck).toContainEqual({ id: 'AR_001', count: 4 });
         }
+    });
+
+    it('terminal resolution for the checked-in outer-mountain route leaves the checked-in jade-cave route active', () => {
+        const outerMountainTarget = getCheckedInExpeditionTarget('destination.qingyun-outer-mountain-trial');
+        const jadeCaveTarget = getCheckedInExpeditionTarget('destination.qingyun-jade-cave-trial');
+
+        startRewardedRun(outerMountainTarget, 'TL_002', 'entrance.mountain-gate');
+        const jadeCaveState = startRewardedRun(jadeCaveTarget, 'AR_001', 'entrance.mountain-gate');
+        const jadeCaveRunId = jadeCaveState.activeRun?.runId;
+
+        const summary = resolveExtract({
+            targetIdentity: outerMountainTarget,
+            finalNodeId: 'extract.cliff-rope',
+        });
+
+        expect(summary.outcome).toBe('extract');
+        expect(loadActiveRun(outerMountainTarget)).toBeNull();
+        expect(loadActiveRun(jadeCaveTarget)?.runId).toBe(jadeCaveRunId);
+        expect(loadActiveRun(jadeCaveTarget)?.carriedDeck).toContainEqual({ id: 'AR_001', count: 4 });
     });
 
     it('battle victory persists the continued run under the same target identity', () => {

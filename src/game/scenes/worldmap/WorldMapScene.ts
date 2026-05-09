@@ -95,12 +95,23 @@ export class WorldMapScene extends Scene {
         this.statusText.setText(this.returnStatusText ?? '请选择一个大地图目的地。');
         container.add(this.statusText);
 
+        const destinationCount = this.worldMap.destinations.length;
+        const columnCount = destinationCount > 4 ? 2 : 1;
+        const buttonGap = 40;
+        const buttonWidth = columnCount === 1 ? panelWidth - 180 : (panelWidth - 220) / 2;
+        const startY = panelTop + 292;
+        const rowGap = 104;
+
         this.worldMap.destinations.forEach((destination, index) => {
+            const column = index % columnCount;
+            const row = Math.floor(index / columnCount);
+            const destinationX = panelX + (column - (columnCount - 1) / 2) * (buttonWidth + buttonGap);
+
             container.add(this.createDestinationButton(
                 destination,
-                panelX,
-                panelTop + 292 + index * 116,
-                panelWidth - 180,
+                destinationX,
+                startY + row * rowGap,
+                buttonWidth,
             ));
         });
 
