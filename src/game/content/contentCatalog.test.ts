@@ -482,6 +482,37 @@ describe('content catalog', () => {
         });
     });
 
+    it('resolves checked-in direct/default Battle resources by stable catalog ids for runtime BattleScene loading', () => {
+        const resolver = createContentCatalogResolver(readCatalogJson(), {
+            context: 'BattleScene',
+            sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+        });
+
+        expect([
+            resolver.resolveJsonResource({
+                resourceId: 'test_encounter_02',
+                expectedKind: 'encounter',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'deck.starter',
+                expectedKind: 'deck',
+            }),
+        ]).toEqual([
+            {
+                resourceId: 'test_encounter_02',
+                kind: 'encounter',
+                schemaVersion: 1,
+                publicPath: 'data/encounters/medium-enemy.json',
+            },
+            {
+                resourceId: 'deck.starter',
+                kind: 'deck',
+                schemaVersion: 1,
+                publicPath: 'data/decks/starter-deck.json',
+            },
+        ]);
+    });
+
     it('resolves checked-in Expedition battle and boss encounter resources by stable catalog ids for runtime BattleScene loading', () => {
         const resolver = createContentCatalogResolver(readCatalogJson(), {
             context: 'BattleScene',

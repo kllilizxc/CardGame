@@ -12,6 +12,7 @@ import {
     getEncounterUnits,
     normalizeBattleLaunchPayload,
     normalizeStoryBattleLaunchPayload,
+    resolveDefaultBattleRuntimeResources,
     resolveExpeditionBattleRuntimeResources,
     resolveStoryBattleRuntimeResources,
 } from './battleSceneLaunch';
@@ -91,6 +92,135 @@ describe('battleSceneLaunch', () => {
         expect(getBattleDeckStacks(null, starterDeck)).toEqual([{ id: 'AR_001', count: 3 }]);
         expect(getEncounterCacheKey(null)).toBe('currentEncounter');
         expect(getEncounterFile(null)).toBe('data/encounters/medium-enemy.json');
+    });
+
+    it('resolves direct/default Battle encounter and starter deck through catalog resource ids while preserving cache keys', () => {
+        const runtimeResources = resolveDefaultBattleRuntimeResources(contentCatalogJson, null, null);
+
+        expect(runtimeResources).toEqual({
+            encounterResourceId: 'test_encounter_02',
+            encounterFile: 'data/encounters/medium-enemy.json',
+            deckResourceId: 'deck.starter',
+            deckFile: 'data/decks/starter-deck.json',
+        });
+        expect(getEncounterFile(null, null, null, null, runtimeResources)).toBe('data/encounters/medium-enemy.json');
+        expect(getBattleDeckFile(null, null, runtimeResources)).toBe('data/decks/starter-deck.json');
+        expect(getEncounterCacheKey(null)).toBe('currentEncounter');
+        expect(getBattleDeckCacheKey(null)).toBe('starterDeck');
+    });
+
+    it('skips direct/default catalog resolution for Story and Expedition launches so their ownership rules stay isolated', () => {
+        const storyPayload = createStoryPayload();
+
+        expect(resolveDefaultBattleRuntimeResources(contentCatalogJson, payload, null)).toBeNull();
+        expect(resolveDefaultBattleRuntimeResources(contentCatalogJson, null, storyPayload)).toBeNull();
+    });
+
+    it('fails actionably when direct/default Battle catalog defaults are missing, malformed, absent, wrong-kind, or path-mismatched', () => {
+        expect(() => resolveDefaultBattleRuntimeResources(undefined, null, null)).toThrow(
+            'BattleScene requires runtime content catalog data/content-catalog.json, but it was not loaded or is missing from the JSON cache.',
+        );
+
+        expect(() => resolveDefaultBattleRuntimeResources({
+            schemaVersion: 1,
+            resources: 'not-an-array',
+        }, null, null)).toThrow(
+            'BattleScene runtime content catalog data/content-catalog.json is malformed: contentCatalog.resources must be an array.',
+        );
+
+        expect(() => resolveDefaultBattleRuntimeResources({
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'deck.starter',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/starter-deck.json',
+                },
+            ],
+        }, null, null)).toThrow(
+            'BattleScene could not resolve catalog resource test_encounter_02: no catalog entry exists for that resource id.',
+        );
+
+        expect(() => resolveDefaultBattleRuntimeResources({
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'test_encounter_02',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/encounters/medium-enemy.json',
+                },
+                {
+                    resourceId: 'deck.starter',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/starter-deck.json',
+                },
+            ],
+        }, null, null)).toThrow(
+            'BattleScene could not resolve catalog resource test_encounter_02: catalog resource has kind deck; expected encounter.',
+        );
+
+        expect(() => resolveDefaultBattleRuntimeResources({
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'test_encounter_02',
+                    kind: 'encounter',
+                    schemaVersion: 1,
+                    publicPath: 'data/encounters/medium-enemy.json',
+                },
+                {
+                    resourceId: 'deck.starter',
+                    kind: 'encounter',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/starter-deck.json',
+                },
+            ],
+        }, null, null)).toThrow(
+            'BattleScene could not resolve catalog resource deck.starter: catalog resource has kind encounter; expected deck.',
+        );
+
+        expect(() => resolveDefaultBattleRuntimeResources({
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'test_encounter_02',
+                    kind: 'encounter',
+                    schemaVersion: 1,
+                    publicPath: 'data/encounters/other-medium-enemy.json',
+                },
+                {
+                    resourceId: 'deck.starter',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/starter-deck.json',
+                },
+            ],
+        }, null, null)).toThrow(
+            'BattleScene direct/default encounterResourceId test_encounter_02 resolved to catalog publicPath data/encounters/other-medium-enemy.json, but default encounterFile is data/encounters/medium-enemy.json.',
+        );
+
+        expect(() => resolveDefaultBattleRuntimeResources({
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'test_encounter_02',
+                    kind: 'encounter',
+                    schemaVersion: 1,
+                    publicPath: 'data/encounters/medium-enemy.json',
+                },
+                {
+                    resourceId: 'deck.starter',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/other-starter-deck.json',
+                },
+            ],
+        }, null, null)).toThrow(
+            'BattleScene direct/default deckResourceId deck.starter resolved to catalog publicPath data/decks/other-starter-deck.json, but default deckFile is data/decks/starter-deck.json.',
+        );
     });
 
     it('uses runDeck and a run-scoped encounter cache key for expedition launches', () => {

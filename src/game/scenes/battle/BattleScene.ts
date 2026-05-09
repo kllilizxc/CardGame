@@ -54,8 +54,10 @@ import {
     getEncounterUnits,
     normalizeBattleLaunchPayload,
     normalizeStoryBattleLaunchPayload,
+    resolveDefaultBattleRuntimeResources,
     resolveExpeditionBattleRuntimeResources,
     resolveStoryBattleRuntimeResources,
+    type DefaultBattleRuntimeResources,
     type ExpeditionBattleRuntimeResources,
     type StoryBattleRuntimeResources,
 } from './battleSceneLaunch';
@@ -111,6 +113,7 @@ export class BattleScene extends Scene {
     private layout!: BattleLayoutConfig;
     private launchPayload: BattleLaunchPayload | null = null;
     private storyLaunchPayload: StoryBattleSceneLaunchPayload | null = null;
+    private defaultRuntimeResources: DefaultBattleRuntimeResources | null = null;
     private storyRuntimeResources: StoryBattleRuntimeResources | null = null;
     private expeditionRuntimeResources: ExpeditionBattleRuntimeResources | null = null;
     private encounterCacheKey = 'currentEncounter';
@@ -124,6 +127,7 @@ export class BattleScene extends Scene {
     init(data?: unknown): void {
         this.launchPayload = normalizeBattleLaunchPayload(data);
         this.storyLaunchPayload = this.launchPayload ? null : normalizeStoryBattleLaunchPayload(data);
+        this.defaultRuntimeResources = null;
         this.storyRuntimeResources = null;
         this.expeditionRuntimeResources = null;
         this.encounterCacheKey = getEncounterCacheKey(this.launchPayload, this.storyLaunchPayload);
@@ -176,6 +180,11 @@ export class BattleScene extends Scene {
         this.load.json('pillCards', 'data/cards/pills.json');
         this.load.json('fieldCards', 'data/cards/fields.json');
         this.load.json('skillCards', 'data/cards/skills.json');
+        this.defaultRuntimeResources = resolveDefaultBattleRuntimeResources(
+            this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+            this.launchPayload,
+            this.storyLaunchPayload,
+        );
         this.storyRuntimeResources = resolveStoryBattleRuntimeResources(
             this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
             this.storyLaunchPayload,
@@ -184,12 +193,17 @@ export class BattleScene extends Scene {
             this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
             this.launchPayload,
         );
-        this.load.json(this.deckCacheKey, getBattleDeckFile(this.storyLaunchPayload, this.storyRuntimeResources));
+        this.load.json(this.deckCacheKey, getBattleDeckFile(
+            this.storyLaunchPayload,
+            this.storyRuntimeResources,
+            this.defaultRuntimeResources,
+        ));
         this.load.json(this.encounterCacheKey, getEncounterFile(
             this.launchPayload,
             this.storyLaunchPayload,
             this.storyRuntimeResources,
             this.expeditionRuntimeResources,
+            this.defaultRuntimeResources,
         ));
         this.load.json('gongfaList', 'data/gongfa/gongfa-list.json');
     }
