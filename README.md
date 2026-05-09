@@ -64,7 +64,8 @@ npm run dev-nolog # 关闭 log.js 匿名统计
 │  └─game/
 │     ├─main.ts            # Phaser Game 配置
 │     ├─config/LayoutConfig.ts
-│     ├─scenes/BattleScene.ts
+│     ├─scenes/story/StoryScene.ts
+│     ├─scenes/battle/BattleScene.ts
 │     ├─managers/          # 战斗子系统管理器
 │     ├─objects/           # 卡牌、法器等精灵
 │     └─ui/                # UI 面板、面板逻辑
@@ -74,7 +75,8 @@ npm run dev-nolog # 关闭 log.js 匿名统计
 | 路径 | 作用 |
 | --- | --- |
 | `src/game/config/LayoutConfig.ts` | 定义 `BattleLayoutConfig` 接口与 `createDefaultLayout(width,height)`，集中管理面板/区域位置。 |
-| `src/game/scenes/BattleScene.ts` | 核心战场场景：加载数据、初始化 Manager、创建 UI、驱动回合逻辑与功法触发。 |
+| `src/game/scenes/story/StoryScene.ts` | 示例主线故事场景：读取 `story-graph.json`，渲染剧情节点、元数据、选项和终点重开按钮。 |
+| `src/game/scenes/battle/BattleScene.ts` | 核心战场场景：加载数据、初始化 Manager、创建 UI、驱动回合逻辑与功法触发。 |
 | `src/game/managers/*.ts` | 各子系统管理器：`CardManager`、`UnitEffectManager`、`UsageManager`、`SkillManager`、`PillManager` 等。 |
 | `src/game/ui/*.ts` | UI 组件（战斗日志、卡牌预览、丹药槽、技能栏等），通过布局配置定位。 |
 | `src/game/objects/*.ts` | Phaser 精灵与交互（单位卡、法器、符箓等）。 |
@@ -89,7 +91,12 @@ npm run dev-nolog # 关闭 log.js 匿名统计
 `src/main.tsx` → `App.tsx` / `GameApp.tsx` → `PhaserGame.tsx`。React 仅提供挂载容器及潜在的调试/外部 UI，核心游戏逻辑都在 Phaser。
 
 ### Phaser 游戏实例
-`src/game/main.ts` 配置 Phaser（画布尺寸、渲染、场景）。当前仅注册 `BattleScene`，未来可拓展多个场景。
+`src/game/main.ts` 配置 Phaser（画布尺寸、渲染、场景）。`Boot` 当前默认启动 `StoryScene`，让玩家先游玩 `public/data/story/story-graph.json` 中的示例主线；`ExpeditionScene` 与 `BattleScene` 仍保留在场景列表中，供后续流程切换复用。
+
+### StoryScene 生命周期
+1. `preload`：载入 `data/story/story-graph.json`。
+2. `create`：校验示例故事图、进入 `entryNodeId`，并发出 `EventBus.emit('current-scene-ready', this)`。
+3. 玩家点击选项：`storyFlow` 根据当前节点和 choice id 计算下一节点视图；如果抵达无后续选项的节点，场景显示终点提示和“重新开始故事”按钮。
 
 ### BattleScene 生命周期
 1. `preload`：载入图片 / JSON（卡牌、功法等）。

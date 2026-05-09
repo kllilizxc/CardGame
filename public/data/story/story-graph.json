@@ -22,6 +22,69 @@
         "theme": ["初入仙门", "凡人对仙道的向往"],
         "forbid": ["直接给予过强的实力", "无缘由的金手指掉落"]
       }
+    },
+    {
+      "id": "sect_entry_002_wait_in_line",
+      "type": "story",
+      "title": "山门石阶前的队伍",
+      "summary": "玩家按规矩排在凡人队伍中，听外门执事宣读入宗试炼规矩。",
+      "detail": "山风掠过石阶，前方弟子逐一核验名册。你没有灵根凭证，也没有世家推荐，只能把那枚沉甸甸的古旧卡匣贴身收好，随着队伍一步步向山门挪去。",
+
+      "tags": ["门派", "入门试炼", "稳重"],
+      "chapter": "第一章·入宗",
+      "location": "青云宗山门石阶",
+      "timeHint": "白日偏午",
+
+      "worldPrecondition": "玩家选择按规矩排队，没有主动引发额外支线。",
+      "worldEffectHint": "玩家在凡人队伍中保持低调，正式等待入宗试炼开启。",
+
+      "aiHints": {
+        "tone": "克制, 庄严, 略带紧张",
+        "theme": ["凡人求道", "规则与秩序"],
+        "forbid": ["突然获得宗门长老青睐", "跳过入宗试炼"]
+      }
+    },
+    {
+      "id": "sect_entry_003_help_girl",
+      "type": "story",
+      "title": "体弱少女的轻声道谢",
+      "summary": "玩家主动与体弱少女搭话，帮她在拥挤队伍中稳住身形。",
+      "detail": "少女脸色苍白，却仍紧紧攥着一枚木牌。你低声提醒她山路湿滑，又替她挡住身后推搡的人群。她抬头道谢，眼中有一瞬惊讶，似乎没想到在山门前还能遇到愿意停步的人。",
+
+      "tags": ["门派", "入门试炼", "善良倾向"],
+      "chapter": "第一章·入宗",
+      "location": "青云宗山门队伍",
+      "timeHint": "白日偏午",
+
+      "worldPrecondition": "玩家选择主动关照体弱少女。",
+      "worldEffectHint": "少女记住了玩家的善意，未来可继续展开相关支线。",
+
+      "aiHints": {
+        "tone": "温和, 细腻, 保持仙门试炼的压迫感",
+        "theme": ["善意", "潜在支线", "凡人互助"],
+        "forbid": ["立刻揭露少女的全部身世", "直接奖励高阶法宝"]
+      }
+    },
+    {
+      "id": "sect_entry_004_trial_bell",
+      "type": "story",
+      "title": "试炼钟鸣",
+      "summary": "青云宗山门钟声响起，外门执事宣布入宗试炼即将开始。",
+      "detail": "一声清越钟鸣自云端落下，喧闹的凡人队伍瞬间安静。青袍执事踏云而至，目光扫过石阶上的众人：‘入宗试炼，问心、登阶、验资质。能走到最后者，方可入我青云外门。’",
+
+      "tags": ["门派", "入门试炼", "阶段终点"],
+      "chapter": "第一章·入宗",
+      "location": "青云宗山门",
+      "timeHint": "钟鸣时分",
+
+      "worldPrecondition": "玩家已经在山门前完成一个入门选择。",
+      "worldEffectHint": "示例故事到达第一段终点，后续可接入问心或登阶玩法。",
+
+      "aiHints": {
+        "tone": "庄严, 紧张, 预告挑战",
+        "theme": ["试炼开启", "凡人求仙"],
+        "forbid": ["直接判定玩家通过试炼", "展开尚未实现的战斗系统"]
+      }
     }
   ],
 
@@ -65,6 +128,46 @@
       },
 
       "flags": ["支线", "善良倾向", "潜在机缘"]
+    },
+    {
+      "id": "sect_entry_002_choice_1",
+      "from": "sect_entry_002_wait_in_line",
+      "to": "sect_entry_004_trial_bell",
+
+      "text": "跟随队伍踏上试炼石阶",
+      "description": "保持低调，准备进入正式试炼。",
+
+      "condition": {
+        "expression": "无特殊条件，所有玩家可见。",
+        "worldStateHint": "玩家仍在凡人队伍中等待入宗试炼。"
+      },
+
+      "effects": {
+        "worldChangeHint": "玩家以稳妥姿态进入入宗试炼。",
+        "relationChangeHint": "与其他凡人弟子保持普通关系。"
+      },
+
+      "flags": ["主线", "稳重倾向"]
+    },
+    {
+      "id": "sect_entry_003_choice_1",
+      "from": "sect_entry_003_help_girl",
+      "to": "sect_entry_004_trial_bell",
+
+      "text": "扶她一起回到队伍，等待试炼钟声",
+      "description": "不耽误考核，同时保留这份善缘。",
+
+      "condition": {
+        "expression": "玩家已主动关照体弱少女。",
+        "worldStateHint": "少女仍能自行参加试炼，只需要短暂帮助。"
+      },
+
+      "effects": {
+        "worldChangeHint": "玩家带着一段潜在善缘进入入宗试炼。",
+        "relationChangeHint": "少女对玩家的初始好感提升。"
+      },
+
+      "flags": ["主线", "善良倾向", "潜在支线"]
     }
   ]
 }

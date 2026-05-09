@@ -4,6 +4,7 @@ import { Game as MainGame } from './scenes/Game';
 import { MainMenu } from './scenes/MainMenu';
 import { BattleScene } from './scenes/battle/BattleScene';
 import { ExpeditionScene } from './scenes/expedition/ExpeditionScene';
+import { StoryScene } from './scenes/story/StoryScene';
 import { AUTO, Game } from 'phaser';
 import { Preloader } from './scenes/Preloader';
 
@@ -29,6 +30,7 @@ const config: Phaser.Types.Core.GameConfig = {
     scene: [
         Boot,
         Preloader,
+        StoryScene,
         ExpeditionScene,
         BattleScene,
         MainMenu,

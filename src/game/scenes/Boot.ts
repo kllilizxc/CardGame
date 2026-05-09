@@ -17,7 +17,7 @@ export class Boot extends Scene
 
     create ()
     {
-        // 直接启动秘境入口场景
-        this.scene.start('ExpeditionScene');
+        // 直接启动示例主线故事场景
+        this.scene.start('StoryScene');
     }
 }
