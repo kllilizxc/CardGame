@@ -60,6 +60,7 @@ function isExpeditionTargetConfig(value: unknown): value is ExpeditionTargetConf
 
     return typeof candidate.expeditionId === 'string'
         && typeof candidate.mapId === 'string'
+        && (candidate.routeKey === undefined || typeof candidate.routeKey === 'string')
         && typeof candidate.worldStateFile === 'string'
         && typeof candidate.starterDeckFile === 'string'
         && typeof candidate.mapFile === 'string'
@@ -67,8 +68,17 @@ function isExpeditionTargetConfig(value: unknown): value is ExpeditionTargetConf
         && typeof candidate.shopFile === 'string';
 }
 
+function getExpeditionTargetRouteKey(targetConfig: ExpeditionTargetConfig): string {
+    const normalizedRouteKey = targetConfig.routeKey?.trim();
+
+    return normalizedRouteKey && normalizedRouteKey.length > 0
+        ? normalizedRouteKey
+        : `expedition:${targetConfig.expeditionId}:${targetConfig.mapId}`;
+}
+
 function cloneExpeditionTargetConfig(targetConfig: ExpeditionTargetConfig): ExpeditionTargetConfig {
     return {
+        routeKey: getExpeditionTargetRouteKey(targetConfig),
         expeditionId: targetConfig.expeditionId,
         mapId: targetConfig.mapId,
         worldStateFile: targetConfig.worldStateFile,

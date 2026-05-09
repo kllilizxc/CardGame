@@ -97,7 +97,15 @@ export class ExpeditionScene extends Scene {
         this.eventCollection = this.cache.json.get(this.launchData.cacheKeys.events) as PrototypeEventCollection;
         this.shopCollection = this.cache.json.get(this.launchData.cacheKeys.shop) as PrototypeShopCollection;
         this.assertLaunchTargetMatchesMapDefinition();
-        this.expeditionState = ExpeditionState.bootstrap({ worldState, starterDeck });
+        this.expeditionState = ExpeditionState.bootstrap({
+            worldState,
+            starterDeck,
+            activeRunRouteKey: this.launchData.routeKey,
+            activeRunIdentity: {
+                expeditionId: this.launchData.expeditionId,
+                mapId: this.launchData.mapId,
+            },
+        });
 
         this.cameras.main.setBackgroundColor(0x0f172a);
         this.add.rectangle(width / 2, height / 2, width, height, 0x111827, 0.92);

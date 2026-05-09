@@ -15,6 +15,7 @@ function getBattleOutcome(payload: BattleLaunchPayload, victory: boolean): Exped
 
 function cloneTargetConfig(targetConfig: ExpeditionTargetConfig): ExpeditionTargetConfig {
     return {
+        routeKey: targetConfig.routeKey,
         expeditionId: targetConfig.expeditionId,
         mapId: targetConfig.mapId,
         worldStateFile: targetConfig.worldStateFile,

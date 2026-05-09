@@ -20,6 +20,7 @@ export interface RunResolutionOptions {
     endedAt?: string;
     run?: RunSnapshot | null;
     stash?: PersistentStash | null;
+    activeRunRouteKey?: string;
 }
 
 export interface BattleVictoryResolution {
@@ -172,7 +173,7 @@ function addCarriedBundle(stash: PersistentStash, carried: RunRewardBundle): Per
 }
 
 function resolveRun(options: RunResolutionOptions): { run: RunSnapshot; stash: PersistentStash } {
-    const run = options.run ?? loadActiveRun();
+    const run = options.run ?? loadActiveRun(options.activeRunRouteKey);
     const stash = options.stash ?? loadPersistentStash();
 
     if (!run) {
@@ -184,6 +185,10 @@ function resolveRun(options: RunResolutionOptions): { run: RunSnapshot; stash: P
     }
 
     return { run, stash };
+}
+
+function getActiveRunRouteKey(run: RunSnapshot, options: RunResolutionOptions): string | undefined {
+    return options.activeRunRouteKey ?? run.routeKey;
 }
 
 function resolveTerminalOutcome(
@@ -211,7 +216,7 @@ function resolveTerminalOutcome(
     };
 
     savePersistentStash(resolvedStash);
-    clearActiveRun();
+    clearActiveRun(getActiveRunRouteKey(run, options));
 
     return summary;
 }
@@ -226,7 +231,7 @@ export function resolveBattleVictory(options: RunResolutionOptions = {}): Battle
         pendingEncounter: null,
     };
 
-    saveActiveRun(resolvedRun);
+    saveActiveRun(resolvedRun, getActiveRunRouteKey(run, options));
 
     return {
         run: resolvedRun,

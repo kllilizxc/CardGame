@@ -53,6 +53,52 @@ describe('ExpeditionState', () => {
         expect(loadActiveRun()?.runId).toBe(run.runId);
     });
 
+    it('persists active runs by route key so a second Expedition destination does not resume the first route', () => {
+        const outerMountainRouteKey = 'worldMap:destination.qingyun-outer-mountain-trial';
+        const jadeCaveRouteKey = 'worldMap:destination.jade-cave-trial';
+        const outerMountainState = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            activeRunRouteKey: outerMountainRouteKey,
+        });
+
+        const outerMountainRun = outerMountainState.createRunSnapshot({
+            expeditionId: 'phase01-first-playable-expedition',
+            mapId: 'phase01-prototype-map',
+            entryNodeId: 'entrance.mountain-gate',
+        });
+        const jadeCaveState = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            activeRunRouteKey: jadeCaveRouteKey,
+        });
+
+        expect(outerMountainRun.routeKey).toBe(outerMountainRouteKey);
+        expect(jadeCaveState.activeRun).toBeNull();
+
+        const jadeCaveRun = jadeCaveState.createRunSnapshot({
+            expeditionId: 'phase01-jade-cave-expedition',
+            mapId: 'phase01-jade-cave-map',
+            entryNodeId: 'entrance.jade-cave',
+        });
+        const restoredOuterMountainState = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            activeRunRouteKey: outerMountainRouteKey,
+        });
+        const restoredJadeCaveState = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            activeRunRouteKey: jadeCaveRouteKey,
+        });
+
+        expect(jadeCaveRun.routeKey).toBe(jadeCaveRouteKey);
+        expect(loadActiveRun(outerMountainRouteKey)?.runId).toBe(outerMountainRun.runId);
+        expect(loadActiveRun(jadeCaveRouteKey)?.runId).toBe(jadeCaveRun.runId);
+        expect(restoredOuterMountainState.activeRun?.runId).toBe(outerMountainRun.runId);
+        expect(restoredJadeCaveState.activeRun?.runId).toBe(jadeCaveRun.runId);
+    });
+
     it('claims one prototype event reward, persists the run, and blocks duplicate claims', () => {
         const state = ExpeditionState.bootstrap({
             worldState: structuredClone(initialWorldState),

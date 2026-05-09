@@ -11,6 +11,7 @@ const battlePayload: BattleLaunchPayload = {
     encounterFile: 'data/encounters/test-enemy.json',
     runDeck: [{ id: 'SX_YJZ_001', count: 1 }],
     targetConfig: {
+        routeKey: 'worldMap:destination.qingyun-outer-mountain-trial',
         expeditionId: 'phase01-first-playable-expedition',
         mapId: 'phase01-prototype-map',
         worldStateFile: 'data/world/initial-state.json',

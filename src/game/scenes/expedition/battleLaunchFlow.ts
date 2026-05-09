@@ -12,6 +12,7 @@ function cloneRunDeck(run: RunSnapshot): BattleLaunchPayload['runDeck'] {
 function cloneTargetConfig(targetConfig?: ExpeditionTargetConfig): ExpeditionTargetConfig | undefined {
     return targetConfig
         ? {
+            routeKey: targetConfig.routeKey,
             expeditionId: targetConfig.expeditionId,
             mapId: targetConfig.mapId,
             worldStateFile: targetConfig.worldStateFile,

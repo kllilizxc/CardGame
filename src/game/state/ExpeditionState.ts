@@ -2,8 +2,10 @@ import {
     clearActiveRun,
     loadActiveRun,
     loadPersistentStash,
+    normalizeActiveRunRouteKey,
     saveActiveRun,
     savePersistentStash,
+    type ActiveRunStorageIdentity,
 } from '../services/RunPersistence';
 import { enterReachableNode } from '../scenes/expedition/mapTraversal';
 import type {
@@ -35,6 +37,8 @@ export interface ExpeditionWorldStateSeed {
 export interface ExpeditionBootstrapSources {
     worldState: ExpeditionWorldStateSeed;
     starterDeck: StarterDeckSeed;
+    activeRunRouteKey?: string;
+    activeRunIdentity?: ActiveRunStorageIdentity;
 }
 
 export interface CreateRunSnapshotParams {
@@ -163,25 +167,38 @@ function createVisitedNodeState(
 export class ExpeditionState {
     public persistentStash: PersistentStash;
     public activeRun: RunSnapshot | null;
+    private readonly activeRunRouteKey: string;
 
-    constructor(persistentStash: PersistentStash, activeRun: RunSnapshot | null) {
+    constructor(
+        persistentStash: PersistentStash,
+        activeRun: RunSnapshot | null,
+        activeRunRouteKey?: string,
+    ) {
         this.persistentStash = persistentStash;
         this.activeRun = activeRun;
+        this.activeRunRouteKey = normalizeActiveRunRouteKey(activeRunRouteKey);
     }
 
-    static bootstrap({ worldState, starterDeck }: ExpeditionBootstrapSources): ExpeditionState {
+    static bootstrap({
+        worldState,
+        starterDeck,
+        activeRunRouteKey,
+        activeRunIdentity,
+    }: ExpeditionBootstrapSources): ExpeditionState {
+        const normalizedRouteKey = normalizeActiveRunRouteKey(activeRunRouteKey);
         const persistentStash = loadPersistentStash() ?? createSeedPersistentStash(worldState, starterDeck);
-        const activeRun = loadActiveRun();
+        const activeRun = loadActiveRun(normalizedRouteKey, activeRunIdentity);
 
         savePersistentStash(persistentStash);
 
-        return new ExpeditionState(persistentStash, activeRun);
+        return new ExpeditionState(persistentStash, activeRun, normalizedRouteKey);
     }
 
     createRunSnapshot({ expeditionId, mapId, entryNodeId }: CreateRunSnapshotParams): RunSnapshot {
         const startedAt = new Date().toISOString();
         const activeRun: RunSnapshot = {
             runId: createRunId(),
+            routeKey: this.activeRunRouteKey,
             expeditionId,
             mapId,
             status: 'inProgress',
@@ -203,7 +220,7 @@ export class ExpeditionState {
         };
 
         this.activeRun = activeRun;
-        saveActiveRun(activeRun);
+        saveActiveRun(activeRun, this.activeRunRouteKey);
 
         return activeRun;
     }
@@ -220,7 +237,7 @@ export class ExpeditionState {
             spiritStones: this.activeRun.spiritStones + rewards.spiritStones,
         };
 
-        saveActiveRun(this.activeRun);
+        saveActiveRun(this.activeRun, this.activeRunRouteKey);
 
         return this.activeRun;
     }
@@ -348,13 +365,16 @@ export class ExpeditionState {
     }
 
     resetToEntranceState(): void {
-        clearActiveRun();
+        clearActiveRun(this.activeRunRouteKey);
         this.activeRun = null;
         this.persistentStash = loadPersistentStash() ?? this.persistentStash;
     }
 
     private persistActiveRun(run: RunSnapshot): void {
-        this.activeRun = run;
-        saveActiveRun(run);
+        this.activeRun = {
+            ...run,
+            routeKey: this.activeRunRouteKey,
+        };
+        saveActiveRun(this.activeRun, this.activeRunRouteKey);
     }
 }

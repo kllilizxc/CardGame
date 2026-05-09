@@ -11,6 +11,7 @@ import {
 describe('expeditionSceneLaunch', () => {
     it('provides safe defaults for direct ExpeditionScene starts', () => {
         expect(normalizeExpeditionSceneLaunchData(undefined)).toEqual({
+            routeKey: `expedition:${DEFAULT_EXPEDITION_ID}:${DEFAULT_EXPEDITION_MAP_ID}`,
             expeditionId: DEFAULT_EXPEDITION_ID,
             mapId: DEFAULT_EXPEDITION_MAP_ID,
             ...DEFAULT_EXPEDITION_TARGET_FILES,
@@ -39,6 +40,7 @@ describe('expeditionSceneLaunch', () => {
         })).toEqual({
             source: 'worldMap',
             destinationId: 'destination.test-expedition',
+            routeKey: 'worldMap:destination.test-expedition',
             expeditionId: 'expedition.test',
             mapId: 'map.test',
             worldStateFile: 'data/world/test-initial-state.json',
@@ -67,6 +69,7 @@ describe('expeditionSceneLaunch', () => {
         });
 
         expect(createExpeditionTargetConfig(normalizedLaunch)).toEqual({
+            routeKey: 'worldMap:destination.custom',
             expeditionId: 'expedition.custom',
             mapId: 'map.custom',
             worldStateFile: DEFAULT_EXPEDITION_TARGET_FILES.worldStateFile,
@@ -99,6 +102,7 @@ describe('expeditionSceneLaunch', () => {
                 targetConfig,
             },
         })).toMatchObject({
+            routeKey: targetConfig.routeKey,
             expeditionId: 'expedition.custom',
             mapId: 'map.custom',
             mapFile: 'data/mijing/custom-map.json',

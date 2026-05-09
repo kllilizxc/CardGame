@@ -24,6 +24,7 @@ export interface RunRewardBundle {
 }
 
 export interface ExpeditionTargetConfig {
+    routeKey: string;
     expeditionId: string;
     mapId: string;
     worldStateFile: string;
@@ -58,6 +59,7 @@ export interface RunTerminalResolutionIntent {
 
 export interface RunSnapshot {
     runId: string;
+    routeKey?: string;
     expeditionId: string;
     mapId: string;
     status: RunStatus;

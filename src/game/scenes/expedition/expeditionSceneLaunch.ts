@@ -44,6 +44,7 @@ function normalizeString(value: string | undefined, fallback: string): string {
 
 function cloneTargetConfig(config: ExpeditionTargetConfig): ExpeditionTargetConfig {
     return {
+        routeKey: config.routeKey,
         expeditionId: config.expeditionId,
         mapId: config.mapId,
         worldStateFile: config.worldStateFile,
@@ -52,6 +53,16 @@ function cloneTargetConfig(config: ExpeditionTargetConfig): ExpeditionTargetConf
         eventsFile: config.eventsFile,
         shopFile: config.shopFile,
     };
+}
+
+function createDirectExpeditionRouteKey(expeditionId: string, mapId: string): string {
+    return `expedition:${expeditionId}:${mapId}`;
+}
+
+function createWorldMapExpeditionRouteKey(destinationId?: string): string | null {
+    const normalizedDestinationId = normalizeString(destinationId, '');
+
+    return normalizedDestinationId ? `worldMap:${normalizedDestinationId}` : null;
 }
 
 export function createExpeditionCacheKeys(targetFiles: Pick<
@@ -77,7 +88,10 @@ export function normalizeExpeditionSceneLaunchData(
     data?: ExpeditionSceneLaunchData | null,
 ): NormalizedExpeditionSceneLaunchData {
     const targetOwner = (data?.battleResult?.targetConfig ?? data ?? {}) as Partial<ExpeditionTargetConfig>;
+    const source = data?.source === 'worldMap' ? data.source : undefined;
+    const destinationId = normalizeString(data?.destinationId, '');
     const targetConfig: ExpeditionTargetConfig = {
+        routeKey: '',
         expeditionId: normalizeString(targetOwner.expeditionId, DEFAULT_EXPEDITION_ID),
         mapId: normalizeString(targetOwner.mapId, DEFAULT_EXPEDITION_MAP_ID),
         worldStateFile: normalizeString(targetOwner.worldStateFile, DEFAULT_EXPEDITION_TARGET_FILES.worldStateFile),
@@ -86,8 +100,11 @@ export function normalizeExpeditionSceneLaunchData(
         eventsFile: normalizeString(targetOwner.eventsFile, DEFAULT_EXPEDITION_TARGET_FILES.eventsFile),
         shopFile: normalizeString(targetOwner.shopFile, DEFAULT_EXPEDITION_TARGET_FILES.shopFile),
     };
-    const source = data?.source === 'worldMap' ? data.source : undefined;
-    const destinationId = normalizeString(data?.destinationId, '');
+    targetConfig.routeKey = normalizeString(
+        targetOwner.routeKey,
+        createWorldMapExpeditionRouteKey(destinationId)
+            ?? createDirectExpeditionRouteKey(targetConfig.expeditionId, targetConfig.mapId),
+    );
     const statusText = normalizeString(data?.statusText, '');
 
     return {
