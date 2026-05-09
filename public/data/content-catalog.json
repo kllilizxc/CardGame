@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "resources": [
+    {
+      "resourceId": "worldmap.qingyun-region",
+      "kind": "worldMap",
+      "schemaVersion": 1,
+      "publicPath": "data/world/world-map.json"
+    },
+    {
+      "resourceId": "hub.qingyun-sect-gate",
+      "kind": "hub",
+      "schemaVersion": 1,
+      "publicPath": "data/hub/qingyun-sect-gate.json"
+    },
+    {
+      "resourceId": "hub.qingyun-town",
+      "kind": "hub",
+      "schemaVersion": 1,
+      "publicPath": "data/hub/town-shell.json"
+    },
+    {
+      "resourceId": "story.qingyun-teahouse-rumors",
+      "kind": "story",
+      "schemaVersion": 1,
+      "publicPath": "data/story/qingyun-teahouse-rumors.json"
+    },
+    {
+      "resourceId": "story.example.compact",
+      "kind": "story",
+      "schemaVersion": 1,
+      "publicPath": "data/story/story-graph.compact.example.json"
+    },
+    {
+      "resourceId": "mainline.qingyun-entry.executable",
+      "kind": "story",
+      "schemaVersion": 1,
+      "publicPath": "data/story/story-graph.executable.json"
+    },
+    {
+      "resourceId": "story.qingyun-entry",
+      "kind": "story",
+      "schemaVersion": 1,
+      "publicPath": "data/story/story-graph.json"
+    },
+    {
+      "resourceId": "phase01-jade-cave-map",
+      "kind": "expeditionMap",
+      "schemaVersion": 1,
+      "publicPath": "data/mijing/jade-cave-map.json"
+    },
+    {
+      "resourceId": "phase01-prototype-map",
+      "kind": "expeditionMap",
+      "schemaVersion": 1,
+      "publicPath": "data/mijing/prototype-map.json"
+    },
+    {
+      "resourceId": "phase01-prototype-events",
+      "kind": "expeditionEvents",
+      "schemaVersion": 1,
+      "publicPath": "data/mijing/prototype-events.json"
+    },
+    {
+      "resourceId": "phase01-prototype-shop",
+      "kind": "expeditionShop",
+      "schemaVersion": 1,
+      "publicPath": "data/mijing/prototype-shop.json"
+    },
+    {
+      "resourceId": "deck.starter",
+      "kind": "deck",
+      "schemaVersion": 1,
+      "publicPath": "data/decks/starter-deck.json"
+    },
+    {
+      "resourceId": "test_encounter_02",
+      "kind": "encounter",
+      "schemaVersion": 1,
+      "publicPath": "data/encounters/medium-enemy.json"
+    },
+    {
+      "resourceId": "mijing_boss_01",
+      "kind": "encounter",
+      "schemaVersion": 1,
+      "publicPath": "data/encounters/mijing-boss.json"
+    },
+    {
+      "resourceId": "test_encounter_01",
+      "kind": "encounter",
+      "schemaVersion": 1,
+      "publicPath": "data/encounters/test-enemy.json"
+    },
+    {
+      "resourceId": "cards.artifacts",
+      "kind": "card",
+      "schemaVersion": 1,
+      "publicPath": "data/cards/artifacts.json"
+    },
+    {
+      "resourceId": "cards.fields",
+      "kind": "card",
+      "schemaVersion": 1,
+      "publicPath": "data/cards/fields.json"
+    },
+    {
+      "resourceId": "cards.pills",
+      "kind": "card",
+      "schemaVersion": 1,
+      "publicPath": "data/cards/pills.json"
+    },
+    {
+      "resourceId": "cards.skills",
+      "kind": "card",
+      "schemaVersion": 1,
+      "publicPath": "data/cards/skills.json"
+    },
+    {
+      "resourceId": "cards.talismans",
+      "kind": "card",
+      "schemaVersion": 1,
+      "publicPath": "data/cards/talismans.json"
+    },
+    {
+      "resourceId": "cards.units",
+      "kind": "card",
+      "schemaVersion": 1,
+      "publicPath": "data/cards/units.json"
+    },
+    {
+      "resourceId": "status.definitions",
+      "kind": "status",
+      "schemaVersion": 1,
+      "publicPath": "data/config/status-definitions.json"
+    },
+    {
+      "resourceId": "gongfa.list",
+      "kind": "gongfa",
+      "schemaVersion": 1,
+      "publicPath": "data/gongfa/gongfa-list.json"
+    },
+    {
+      "resourceId": "config.artifact-grade",
+      "kind": "config",
+      "schemaVersion": 1,
+      "publicPath": "data/config/artifact-grade.json"
+    },
+    {
+      "resourceId": "config.combat-baseline",
+      "kind": "config",
+      "schemaVersion": 1,
+      "publicPath": "data/config/combat-baseline.json"
+    },
+    {
+      "resourceId": "config.realm-presets",
+      "kind": "config",
+      "schemaVersion": 1,
+      "publicPath": "data/config/realm-presets.json"
+    },
+    {
+      "resourceId": "world.seed.factions",
+      "kind": "worldSeed",
+      "schemaVersion": 1,
+      "publicPath": "data/world/factions.json"
+    },
+    {
+      "resourceId": "world.seed.initial-state",
+      "kind": "worldSeed",
+      "schemaVersion": 1,
+      "publicPath": "data/world/initial-state.json"
+    },
+    {
+      "resourceId": "world.seed.items-artifacts",
+      "kind": "worldSeed",
+      "schemaVersion": 1,
+      "publicPath": "data/world/items.artifacts.json"
+    },
+    {
+      "resourceId": "world.seed.meta",
+      "kind": "worldSeed",
+      "schemaVersion": 1,
+      "publicPath": "data/world/meta.json"
+    },
+    {
+      "resourceId": "world.seed.npcs",
+      "kind": "worldSeed",
+      "schemaVersion": 1,
+      "publicPath": "data/world/npcs.json"
+    },
+    {
+      "resourceId": "world.seed.protagonist",
+      "kind": "worldSeed",
+      "schemaVersion": 1,
+      "publicPath": "data/world/protagonist.json"
+    },
+    {
+      "resourceId": "world.seed.skills-techniques",
+      "kind": "worldSeed",
+      "schemaVersion": 1,
+      "publicPath": "data/world/skills.techniques.json"
+    }
+  ]
+}
