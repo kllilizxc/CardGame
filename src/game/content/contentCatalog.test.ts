@@ -3,8 +3,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
+    CONTENT_CATALOG_CACHE_KEY,
     CONTENT_CATALOG_PUBLIC_PATH,
+    QINGYUN_WORLD_MAP_RESOURCE_ID,
     type ContentCatalogFileSource,
+    createContentCatalogResolver,
     parseContentCatalogDefinition,
     validateContentCatalog,
 } from './contentCatalog';
@@ -403,8 +406,100 @@ const catalogExpeditionShop = {
     },
 };
 
-describe('read-only content catalog', () => {
-    it('checks in a versioned manifest covering current data resources without scene loader migration', () => {
+describe('content catalog', () => {
+    it('exposes the runtime catalog cache identity used by the boot preload chain', () => {
+        expect(CONTENT_CATALOG_CACHE_KEY).toBe('contentCatalog');
+        expect(CONTENT_CATALOG_PUBLIC_PATH).toBe('data/content-catalog.json');
+    });
+
+    it('resolves the checked-in WorldMap resource by stable catalog id for runtime scene loading', () => {
+        const resolver = createContentCatalogResolver(readCatalogJson(), {
+            context: 'WorldMapScene',
+            sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+        });
+
+        expect(resolver.resolveJsonResource({
+            resourceId: QINGYUN_WORLD_MAP_RESOURCE_ID,
+            expectedKind: 'worldMap',
+        })).toEqual({
+            resourceId: 'worldmap.qingyun-region',
+            kind: 'worldMap',
+            schemaVersion: 1,
+            publicPath: 'data/world/world-map.json',
+        });
+    });
+
+    it('fails actionably when the runtime catalog cache is missing before WorldMapScene resolves resources', () => {
+        expect(() => createContentCatalogResolver(undefined, {
+            context: 'WorldMapScene',
+            sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+        })).toThrow(
+            'WorldMapScene requires runtime content catalog data/content-catalog.json, but it was not loaded or is missing from the JSON cache.',
+        );
+    });
+
+    it('fails actionably when the runtime catalog is malformed', () => {
+        expect(() => createContentCatalogResolver({
+            schemaVersion: 1,
+            resources: 'not-an-array',
+        }, {
+            context: 'WorldMapScene',
+            sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+        })).toThrow(
+            'WorldMapScene runtime content catalog data/content-catalog.json is malformed: contentCatalog.resources must be an array.',
+        );
+    });
+
+    it('fails actionably when a runtime resource id is absent or has the wrong kind', () => {
+        const resolver = createContentCatalogResolver({
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'deck.starter',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/starter-deck.json',
+                },
+            ],
+        }, {
+            context: 'WorldMapScene',
+            sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+        });
+
+        expect(() => resolver.resolveJsonResource({
+            resourceId: QINGYUN_WORLD_MAP_RESOURCE_ID,
+            expectedKind: 'worldMap',
+        })).toThrow(
+            'WorldMapScene could not resolve catalog resource worldmap.qingyun-region: no catalog entry exists for that resource id.',
+        );
+        expect(() => resolver.resolveJsonResource({
+            resourceId: 'deck.starter',
+            expectedKind: 'worldMap',
+        })).toThrow(
+            'WorldMapScene could not resolve catalog resource deck.starter: catalog resource has kind deck; expected worldMap.',
+        );
+    });
+
+    it('fails actionably when a runtime resource resolves to an invalid public JSON path', () => {
+        expect(() => createContentCatalogResolver({
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: QINGYUN_WORLD_MAP_RESOURCE_ID,
+                    kind: 'worldMap',
+                    schemaVersion: 1,
+                    publicPath: '/data/world/world-map.json',
+                },
+            ],
+        }, {
+            context: 'WorldMapScene',
+            sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+        })).toThrow(
+            'WorldMapScene runtime content catalog data/content-catalog.json is malformed: contentCatalog.resources[0].publicPath must be relative to public/, for example data/world/world-map.json.',
+        );
+    });
+
+    it('checks in a versioned manifest covering current data resources for validation and the WorldMap runtime resolver', () => {
         const catalogPath = join('public', CONTENT_CATALOG_PUBLIC_PATH);
 
         expect(existsSync(catalogPath)).toBe(true);

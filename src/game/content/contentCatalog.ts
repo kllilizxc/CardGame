@@ -32,6 +32,8 @@ import type {
 import type { StoryBattleTrigger } from '../types/story';
 
 export const CONTENT_CATALOG_PUBLIC_PATH = 'data/content-catalog.json';
+export const CONTENT_CATALOG_CACHE_KEY = 'contentCatalog';
+export const QINGYUN_WORLD_MAP_RESOURCE_ID = 'worldmap.qingyun-region';
 
 export const CONTENT_RESOURCE_KINDS = [
     'worldMap',
@@ -77,6 +79,20 @@ export interface ContentCatalogValidationResult {
     validatedResourceCount: number;
     registeredValidatorNames: string[];
     failures: ContentCatalogValidationFailure[];
+}
+
+export interface ContentCatalogResolverOptions {
+    context: string;
+    sourcePublicPath?: string;
+}
+
+export interface ContentCatalogResourceRequest {
+    resourceId: string;
+    expectedKind: ContentResourceKind;
+}
+
+export interface ContentCatalogResolver {
+    resolveJsonResource(request: ContentCatalogResourceRequest): ContentCatalogEntry;
 }
 
 interface LoadedCatalogResource {
@@ -202,6 +218,55 @@ export function parseContentCatalogDefinition(value: unknown): ContentCatalogDef
     return {
         schemaVersion: 1,
         resources,
+    };
+}
+
+export function createContentCatalogResolver(
+    rawCatalog: unknown,
+    options: ContentCatalogResolverOptions,
+): ContentCatalogResolver {
+    const sourcePublicPath = options.sourcePublicPath ?? CONTENT_CATALOG_PUBLIC_PATH;
+
+    if (rawCatalog === undefined) {
+        throw new Error(
+            `${options.context} requires runtime content catalog ${sourcePublicPath}, but it was not loaded or is missing from the JSON cache.`,
+        );
+    }
+
+    let catalog: ContentCatalogDefinition;
+
+    try {
+        catalog = parseContentCatalogDefinition(rawCatalog);
+    } catch (error) {
+        throw new Error(
+            `${options.context} runtime content catalog ${sourcePublicPath} is malformed: ${formatErrorMessage(error)}`,
+        );
+    }
+
+    const byResourceId = new Map<string, ContentCatalogEntry>();
+
+    for (const entry of catalog.resources) {
+        byResourceId.set(entry.resourceId, entry);
+    }
+
+    return {
+        resolveJsonResource(request: ContentCatalogResourceRequest): ContentCatalogEntry {
+            const entry = byResourceId.get(request.resourceId);
+
+            if (!entry) {
+                throw new Error(
+                    `${options.context} could not resolve catalog resource ${request.resourceId}: no catalog entry exists for that resource id.`,
+                );
+            }
+
+            if (entry.kind !== request.expectedKind) {
+                throw new Error(
+                    `${options.context} could not resolve catalog resource ${request.resourceId}: catalog resource has kind ${entry.kind}; expected ${request.expectedKind}.`,
+                );
+            }
+
+            return { ...entry };
+        },
     };
 }
 

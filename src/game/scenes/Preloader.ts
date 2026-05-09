@@ -1,5 +1,10 @@
 import { Scene } from 'phaser';
 
+import {
+    CONTENT_CATALOG_CACHE_KEY,
+    CONTENT_CATALOG_PUBLIC_PATH,
+} from '../content/contentCatalog';
+
 export class Preloader extends Scene
 {
     constructor ()
@@ -29,6 +34,9 @@ export class Preloader extends Scene
 
     preload ()
     {
+        //  Load runtime metadata before any gameplay scene needs catalog-backed resource resolution.
+        this.load.json(CONTENT_CATALOG_CACHE_KEY, CONTENT_CATALOG_PUBLIC_PATH);
+
         //  Load the assets for the game - Replace with your own assets
         this.load.setPath('assets');
 

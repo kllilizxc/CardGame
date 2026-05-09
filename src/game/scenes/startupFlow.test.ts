@@ -6,9 +6,14 @@ const read = (path: string) => readFileSync(path, 'utf8');
 describe('startup scene flow', () => {
     it('boots through the normal preload path before showing MainMenu', () => {
         const bootScene = read('src/game/scenes/Boot.ts');
+        const preloaderScene = read('src/game/scenes/Preloader.ts');
 
         expect(bootScene).toContain("this.scene.start('Preloader')");
         expect(bootScene).not.toContain("this.scene.start('StoryScene')");
+        expect(preloaderScene).toContain('CONTENT_CATALOG_CACHE_KEY');
+        expect(preloaderScene).toContain('CONTENT_CATALOG_PUBLIC_PATH');
+        expect(preloaderScene).toContain('this.load.json(CONTENT_CATALOG_CACHE_KEY, CONTENT_CATALOG_PUBLIC_PATH)');
+        expect(preloaderScene).toContain("this.scene.start('MainMenu')");
     });
 
     it('registers WorldMapScene before Hub and Expedition scenes so the map shell can launch content', () => {
@@ -35,7 +40,11 @@ describe('startup scene flow', () => {
         const worldMapScene = read('src/game/scenes/worldmap/WorldMapScene.ts');
         const worldMapModel = read('src/game/scenes/worldmap/worldMap.ts');
 
-        expect(worldMapScene).toContain("this.load.json(WORLD_MAP_CACHE_KEY, 'data/world/world-map.json')");
+        expect(worldMapScene).toContain('QINGYUN_WORLD_MAP_RESOURCE_ID');
+        expect(worldMapScene).toContain('createContentCatalogResolver');
+        expect(worldMapScene).toContain('resolveJsonResource');
+        expect(worldMapScene).toContain('this.load.json(WORLD_MAP_CACHE_KEY, worldMapResource.publicPath)');
+        expect(worldMapScene).not.toContain("this.load.json(WORLD_MAP_CACHE_KEY, 'data/world/world-map.json')");
         expect(worldMapScene).toContain('createWorldMapDestinationIntent');
         expect(worldMapScene).toContain('createWorldMapInitialSurfacePosition');
         expect(worldMapScene).toContain('createDestinationMarker');

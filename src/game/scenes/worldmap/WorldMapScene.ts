@@ -2,6 +2,12 @@ import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
 import {
+    CONTENT_CATALOG_CACHE_KEY,
+    CONTENT_CATALOG_PUBLIC_PATH,
+    QINGYUN_WORLD_MAP_RESOURCE_ID,
+    createContentCatalogResolver,
+} from '../../content/contentCatalog';
+import {
     clampWorldMapSurfacePosition,
     createWorldMapInitialSurfacePosition,
     createWorldMapDestinationIntent,
@@ -19,6 +25,7 @@ export const WORLD_MAP_CACHE_KEY = 'worldMapShell';
 
 export class WorldMapScene extends Scene {
     private worldMap!: WorldMapDefinition;
+    private worldMapPublicPath?: string;
     private statusText!: Phaser.GameObjects.Text;
     private shellContainer?: Phaser.GameObjects.Container;
     private mapSurfaceContainer?: Phaser.GameObjects.Container;
@@ -41,13 +48,47 @@ export class WorldMapScene extends Scene {
     }
 
     preload(): void {
-        this.load.json(WORLD_MAP_CACHE_KEY, 'data/world/world-map.json');
+        const catalogResolver = createContentCatalogResolver(
+            this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+            {
+                context: 'WorldMapScene',
+                sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+            },
+        );
+        const worldMapResource = catalogResolver.resolveJsonResource({
+            resourceId: QINGYUN_WORLD_MAP_RESOURCE_ID,
+            expectedKind: 'worldMap',
+        });
+        this.worldMapPublicPath = worldMapResource.publicPath;
+
+        this.load.json(WORLD_MAP_CACHE_KEY, worldMapResource.publicPath);
     }
 
     create(): void {
-        this.worldMap = validateWorldMapDefinition(this.cache.json.get(WORLD_MAP_CACHE_KEY));
+        this.worldMap = this.readValidatedWorldMapResource();
         this.renderShell();
         EventBus.emit('current-scene-ready', this);
+    }
+
+    private readValidatedWorldMapResource(): WorldMapDefinition {
+        const rawWorldMap = this.cache.json.get(WORLD_MAP_CACHE_KEY);
+        const publicPath = this.worldMapPublicPath ?? 'unresolved public path';
+
+        if (rawWorldMap === undefined) {
+            throw new Error(
+                `WorldMapScene failed to load catalog resource ${QINGYUN_WORLD_MAP_RESOURCE_ID} from public/${publicPath}: JSON cache key ${WORLD_MAP_CACHE_KEY} is missing after preload.`,
+            );
+        }
+
+        try {
+            return validateWorldMapDefinition(rawWorldMap);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+
+            throw new Error(
+                `WorldMapScene failed to validate catalog resource ${QINGYUN_WORLD_MAP_RESOURCE_ID} from public/${publicPath}: ${message}`,
+            );
+        }
     }
 
     private renderShell(): void {
