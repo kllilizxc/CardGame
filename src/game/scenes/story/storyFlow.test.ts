@@ -163,8 +163,10 @@ describe('storyFlow', () => {
                 kind: 'startBattle',
                 battle: {
                     battleId: 'story.example.first-duel',
+                    encounterResourceId: 'test_encounter_01',
                     encounterId: 'test_encounter_01',
                     encounterFile: 'data/encounters/test-enemy.json',
+                    deckResourceId: 'deck.starter',
                     deckFile: 'data/decks/starter-deck.json',
                     onVictoryNodeId: 'duel_victory',
                     onDefeatNodeId: 'duel_defeat',
@@ -180,8 +182,10 @@ describe('storyFlow', () => {
                 kind: 'startBattle',
                 battle: {
                     battleId: 'story.example.first-duel',
+                    encounterResourceId: 'test_encounter_01',
                     encounterId: 'test_encounter_01',
                     encounterFile: 'data/encounters/test-enemy.json',
+                    deckResourceId: 'deck.starter',
                     deckFile: 'data/decks/starter-deck.json',
                     onVictoryNodeId: 'duel_victory',
                     onDefeatNodeId: 'duel_defeat',

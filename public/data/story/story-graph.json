@@ -158,8 +158,10 @@
           "kind": "startBattle",
           "battle": {
             "battleId": "story.qingyun.trial-bell-duel",
+            "encounterResourceId": "test_encounter_01",
             "encounterId": "test_encounter_01",
             "encounterFile": "data/encounters/test-enemy.json",
+            "deckResourceId": "deck.starter",
             "deckFile": "data/decks/starter-deck.json",
             "onVictoryNodeId": "sect_entry_005_trial_victory",
             "onDefeatNodeId": "sect_entry_005_trial_defeat",

@@ -199,6 +199,74 @@ function createCatalogStoryGraph(storyId: string): Record<string, unknown> {
     };
 }
 
+function createCatalogStoryGraphWithBattle(
+    storyId: string,
+    battle: Record<string, unknown>,
+): Record<string, unknown> {
+    return {
+        storyId,
+        title: `Catalog story ${storyId}`,
+        entryNodeId: 'catalog_entry',
+        initialState: {
+            locationId: 'location.catalog-story',
+            sublocationId: 'sublocation.catalog-story',
+        },
+        nodes: [
+            {
+                id: 'catalog_entry',
+                type: 'story',
+                title: 'Catalog Entry',
+                summary: 'Catalog story entry.',
+                detail: 'A minimal playable story graph for catalog validation.',
+                tags: ['catalog'],
+                chapter: 'catalog',
+                location: 'Catalog',
+                sublocation: 'Entry',
+                locationId: 'location.catalog-story',
+                sublocationId: 'sublocation.catalog-story',
+                timeHint: 'now',
+                onEnter: [
+                    {
+                        kind: 'startBattle',
+                        battle,
+                    },
+                ],
+            },
+            {
+                id: 'catalog_victory',
+                type: 'story',
+                title: 'Catalog Victory',
+                summary: 'The catalog battle was won.',
+                detail: 'Victory continuation node.',
+                tags: ['catalog'],
+                chapter: 'catalog',
+                location: 'Catalog',
+                sublocation: 'Victory',
+                locationId: 'location.catalog-story',
+                sublocationId: 'sublocation.catalog-story.victory',
+                timeHint: 'after battle',
+                onEnter: [],
+            },
+            {
+                id: 'catalog_defeat',
+                type: 'story',
+                title: 'Catalog Defeat',
+                summary: 'The catalog battle was lost.',
+                detail: 'Defeat continuation node.',
+                tags: ['catalog'],
+                chapter: 'catalog',
+                location: 'Catalog',
+                sublocation: 'Defeat',
+                locationId: 'location.catalog-story',
+                sublocationId: 'sublocation.catalog-story.defeat',
+                timeHint: 'after battle',
+                onEnter: [],
+            },
+        ],
+        choices: [],
+    };
+}
+
 function createCatalogHubDestination(overrides: Record<string, unknown> = {}): Record<string, unknown> {
     return {
         id: 'destination.catalog-hub',
@@ -537,6 +605,130 @@ describe('read-only content catalog', () => {
             'Hub hub.catalog-story location location.catalog-story action action.missing-story-resource storyResourceId references catalog resource id story.missing, but no catalog entry exists for that resource id.',
             'Hub hub.catalog-story location location.catalog-story action action.wrong-kind storyResourceId references catalog resource id story.wrong-kind, but catalog resource has kind deck; expected story.',
             'Hub hub.catalog-story location location.catalog-story action action.path-mismatch storyResourceId references catalog resource id story.qingyun-teahouse-rumors, but catalog publicPath is data/story/qingyun-teahouse-rumors.json; action storyGraphFile is data/story/story-graph.json.',
+        ]);
+    });
+
+    it('returns actionable failures when Story startBattle encounter/deck resource ids are missing, absent, wrong kind, or path-mismatched', () => {
+        const baseBattle = {
+            battleId: 'story.catalog-battle.first-duel',
+            encounterId: 'test_encounter_01',
+            encounterFile: 'data/encounters/test-enemy.json',
+            deckFile: 'data/decks/starter-deck.json',
+            onVictoryNodeId: 'catalog_victory',
+            onDefeatNodeId: 'catalog_defeat',
+        };
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'story.catalog-battle-missing-ids',
+                    kind: 'story',
+                    schemaVersion: 1,
+                    publicPath: 'data/story/catalog-battle-missing-ids.json',
+                },
+                {
+                    resourceId: 'story.catalog-battle-absent-ids',
+                    kind: 'story',
+                    schemaVersion: 1,
+                    publicPath: 'data/story/catalog-battle-absent-ids.json',
+                },
+                {
+                    resourceId: 'story.catalog-battle-wrong-kind',
+                    kind: 'story',
+                    schemaVersion: 1,
+                    publicPath: 'data/story/catalog-battle-wrong-kind.json',
+                },
+                {
+                    resourceId: 'story.catalog-battle-path-mismatch',
+                    kind: 'story',
+                    schemaVersion: 1,
+                    publicPath: 'data/story/catalog-battle-path-mismatch.json',
+                },
+                {
+                    resourceId: 'test_encounter_01',
+                    kind: 'encounter',
+                    schemaVersion: 1,
+                    publicPath: 'data/encounters/test-enemy.json',
+                },
+                {
+                    resourceId: 'deck.starter',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/starter-deck.json',
+                },
+                {
+                    resourceId: 'encounter.wrong-kind',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/encounters/wrong-kind.json',
+                },
+                {
+                    resourceId: 'deck.wrong-kind',
+                    kind: 'encounter',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/wrong-kind-deck.json',
+                },
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/story/catalog-battle-missing-ids.json': createCatalogStoryGraphWithBattle(
+                'story.catalog-battle-missing-ids',
+                baseBattle,
+            ),
+            'data/story/catalog-battle-absent-ids.json': createCatalogStoryGraphWithBattle(
+                'story.catalog-battle-absent-ids',
+                {
+                    ...baseBattle,
+                    encounterResourceId: 'encounter.missing',
+                    deckResourceId: 'deck.missing',
+                },
+            ),
+            'data/story/catalog-battle-wrong-kind.json': createCatalogStoryGraphWithBattle(
+                'story.catalog-battle-wrong-kind',
+                {
+                    ...baseBattle,
+                    encounterId: 'encounter.wrong-kind',
+                    encounterResourceId: 'encounter.wrong-kind',
+                    encounterFile: 'data/encounters/wrong-kind.json',
+                    deckResourceId: 'deck.wrong-kind',
+                    deckFile: 'data/decks/wrong-kind-deck.json',
+                },
+            ),
+            'data/story/catalog-battle-path-mismatch.json': createCatalogStoryGraphWithBattle(
+                'story.catalog-battle-path-mismatch',
+                {
+                    ...baseBattle,
+                    encounterResourceId: 'test_encounter_01',
+                    encounterFile: 'data/encounters/other-enemy.json',
+                    deckResourceId: 'deck.starter',
+                    deckFile: 'data/decks/other-starter-deck.json',
+                },
+            ),
+            'data/encounters/wrong-kind.json': {
+                cards: [],
+            },
+            'data/decks/wrong-kind-deck.json': {
+                id: 'deck.wrong-kind',
+                enemies: [],
+            },
+            'data/encounters/test-enemy.json': {
+                id: 'test_encounter_01',
+                enemies: [],
+            },
+            'data/decks/starter-deck.json': {
+                cards: [],
+            },
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toEqual([
+            'Story story.catalog-battle-missing-ids nodes[0] catalog_entry onEnter[0].battle encounterResourceId must be a non-empty string so catalog encounter targets resolve by resource id.',
+            'Story story.catalog-battle-missing-ids nodes[0] catalog_entry onEnter[0].battle deckResourceId must be a non-empty string so catalog deck targets resolve by resource id.',
+            'Story story.catalog-battle-absent-ids nodes[0] catalog_entry onEnter[0].battle encounterResourceId references catalog resource id encounter.missing, but no catalog entry exists for that resource id.',
+            'Story story.catalog-battle-absent-ids nodes[0] catalog_entry onEnter[0].battle deckResourceId references catalog resource id deck.missing, but no catalog entry exists for that resource id.',
+            'Story story.catalog-battle-wrong-kind nodes[0] catalog_entry onEnter[0].battle encounterResourceId references catalog resource id encounter.wrong-kind, but catalog resource has kind deck; expected encounter.',
+            'Story story.catalog-battle-wrong-kind nodes[0] catalog_entry onEnter[0].battle deckResourceId references catalog resource id deck.wrong-kind, but catalog resource has kind encounter; expected deck.',
+            'Story story.catalog-battle-path-mismatch nodes[0] catalog_entry onEnter[0].battle encounterResourceId references catalog resource id test_encounter_01, but catalog publicPath is data/encounters/test-enemy.json; battle encounterFile is data/encounters/other-enemy.json.',
+            'Story story.catalog-battle-path-mismatch nodes[0] catalog_entry onEnter[0].battle deckResourceId references catalog resource id deck.starter, but catalog publicPath is data/decks/starter-deck.json; battle deckFile is data/decks/other-starter-deck.json.',
         ]);
     });
 

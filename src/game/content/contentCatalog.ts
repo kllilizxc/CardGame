@@ -29,6 +29,7 @@ import type {
     PrototypeShopCollection,
     ShopMapNode,
 } from '../types/expedition';
+import type { StoryBattleTrigger } from '../types/story';
 
 export const CONTENT_CATALOG_PUBLIC_PATH = 'data/content-catalog.json';
 
@@ -743,9 +744,7 @@ function validateStoryBattleReferences(
                 if (effect.kind === 'startBattle') {
                     validateStoryBattleTriggerReferences(
                         resource.entry,
-                        effect.battle.encounterFile,
-                        effect.battle.encounterId,
-                        effect.battle.deckFile,
+                        effect.battle,
                         `Story ${resource.entry.resourceId} nodes[${nodeIndex}] ${node.id} onEnter[${effectIndex}].battle`,
                         index,
                         failures,
@@ -759,9 +758,7 @@ function validateStoryBattleReferences(
                 if (effect.kind === 'startBattle') {
                     validateStoryBattleTriggerReferences(
                         resource.entry,
-                        effect.battle.encounterFile,
-                        effect.battle.encounterId,
-                        effect.battle.deckFile,
+                        effect.battle,
                         `Story ${resource.entry.resourceId} choices[${choiceIndex}] ${choice.id} effects[${effectIndex}].battle`,
                         index,
                         failures,
@@ -774,15 +771,100 @@ function validateStoryBattleReferences(
 
 function validateStoryBattleTriggerReferences(
     ownerEntry: ContentCatalogEntry,
-    encounterFile: string,
-    encounterId: string,
-    deckFile: string,
+    battle: StoryBattleTrigger,
     context: string,
     index: LoadedCatalogIndex,
     failures: ContentCatalogValidationFailure[],
 ): void {
-    validateEncounterFileReference(ownerEntry, encounterFile, encounterId, `${context}.encounterFile`, index, failures);
-    requireCatalogedResource(index, failures, ownerEntry, deckFile, `${context}.deckFile`, ['deck']);
+    const encounterResource = resolveRequiredStoryBattleTargetResource(
+        ownerEntry,
+        battle.encounterResourceId,
+        {
+            context,
+            resourceIdField: 'encounterResourceId',
+            missingMessage: `${context} encounterResourceId must be a non-empty string so catalog encounter targets resolve by resource id.`,
+            publicPathField: 'encounterFile',
+            publicPath: battle.encounterFile,
+            expectedKinds: ['encounter'],
+        },
+        index,
+        failures,
+    );
+    validateResolvedEncounterId(
+        ownerEntry,
+        encounterResource,
+        battle.encounterFile,
+        battle.encounterId,
+        `${context}.encounterResourceId`,
+        failures,
+    );
+    resolveRequiredStoryBattleTargetResource(
+        ownerEntry,
+        battle.deckResourceId,
+        {
+            context,
+            resourceIdField: 'deckResourceId',
+            missingMessage: `${context} deckResourceId must be a non-empty string so catalog deck targets resolve by resource id.`,
+            publicPathField: 'deckFile',
+            publicPath: battle.deckFile,
+            expectedKinds: ['deck'],
+        },
+        index,
+        failures,
+    );
+}
+
+function resolveRequiredStoryBattleTargetResource(
+    ownerEntry: ContentCatalogEntry,
+    resourceId: string | undefined,
+    reference: {
+        context: string;
+        resourceIdField: string;
+        missingMessage: string;
+        publicPathField: string;
+        publicPath: string;
+        expectedKinds: ContentResourceKind[];
+    },
+    index: LoadedCatalogIndex,
+    failures: ContentCatalogValidationFailure[],
+): LoadedCatalogResource | undefined {
+    if (!resourceId) {
+        addFailure(failures, ownerEntry, reference.missingMessage);
+        return undefined;
+    }
+
+    return resolveCatalogResourceIdReference(index, failures, ownerEntry, {
+        context: reference.context,
+        resourceIdField: reference.resourceIdField,
+        resourceId,
+        publicPathField: reference.publicPathField,
+        publicPath: reference.publicPath,
+        expectedKinds: reference.expectedKinds,
+        publicPathOwnerLabel: 'battle',
+    });
+}
+
+function validateResolvedEncounterId(
+    ownerEntry: ContentCatalogEntry,
+    encounterResource: LoadedCatalogResource | undefined,
+    encounterFile: string,
+    expectedEncounterId: string,
+    context: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (!encounterResource || !isRecord(encounterResource.json)) {
+        return;
+    }
+
+    const declaredEncounterId = encounterResource.json.id;
+
+    if (typeof declaredEncounterId === 'string' && declaredEncounterId !== expectedEncounterId) {
+        addFailure(
+            failures,
+            ownerEntry,
+            `${context} expects encounterId ${expectedEncounterId}, but ${encounterFile} declares ${declaredEncounterId}.`,
+        );
+    }
 }
 
 function validateExpeditionReferences(

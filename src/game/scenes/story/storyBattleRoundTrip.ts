@@ -85,8 +85,14 @@ export function createStoryBattleCompleteEvent(
         source: 'story',
         storyId: payload.battleLaunch.storyId,
         battleId: payload.battleLaunch.battleId,
+        ...(payload.battleLaunch.encounterResourceId
+            ? { encounterResourceId: payload.battleLaunch.encounterResourceId }
+            : {}),
         encounterId: payload.battleLaunch.encounterId,
         encounterFile: payload.battleLaunch.encounterFile,
+        ...(payload.battleLaunch.deckResourceId
+            ? { deckResourceId: payload.battleLaunch.deckResourceId }
+            : {}),
         deckFile: payload.battleLaunch.deckFile,
         ...(payload.storyGraphFile ? { storyGraphFile: payload.storyGraphFile } : {}),
         victory,

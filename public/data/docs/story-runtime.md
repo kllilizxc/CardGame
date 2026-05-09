@@ -36,11 +36,11 @@ Missing numeric attributes default to `0`. Missing flags/history entries count a
 - `setRelation` / `adjustRelation`
 - `moveTo` for location/sublocation changes
 - `goToNode` for node transitions
-- `startBattle` for story-triggered combat intent. It carries `battleId`, `encounterId`, `encounterFile`, `deckFile`, explicit victory/defeat continuation node ids, and optional launch copy.
+- `startBattle` for story-triggered combat intent. It carries `battleId`, `encounterResourceId`, `encounterId`, `encounterFile`, `deckResourceId`, `deckFile`, explicit victory/defeat continuation node ids, and optional launch copy.
 
 `applyStoryChoice` checks a choice condition before applying its effects. If blocked, it returns the original state with status `blocked`; if applied, it returns the updated state plus the selected `nextNodeId` when a transition effect or choice `nextNodeId` is present.
 
-`startBattle` does not mutate story position by itself. `applyStoryEffects` returns it as `pendingBattle`, and `createStoryChoiceTransition` turns it into `battleLaunch` metadata with `sceneKey: "BattleScene"` and story source/target ids. `StoryScene` now uses that metadata to start `BattleScene` with a source-aware story payload containing the encounter and deck files; when combat ends, story battle results return to `onVictoryNodeId` or `onDefeatNodeId`.
+`startBattle` does not mutate story position by itself. `applyStoryEffects` returns it as `pendingBattle`, and `createStoryChoiceTransition` turns it into `battleLaunch` metadata with `sceneKey: "BattleScene"` and story source/target ids. `StoryScene` now uses that metadata to start `BattleScene` with a source-aware story payload containing catalog resource ids plus the encounter and deck files; `BattleScene` still loads `encounterFile` and `deckFile` at runtime. When combat ends, story battle results preserve those target identifiers and return to `onVictoryNodeId` or `onDefeatNodeId`.
 
 ## Story / Hub session persistence
 

@@ -132,8 +132,10 @@ export interface StoryGoToNodeEffect {
 
 export interface StoryBattleTrigger {
     battleId: string;
+    encounterResourceId?: string;
     encounterId: string;
     encounterFile: string;
+    deckResourceId?: string;
     deckFile: string;
     onVictoryNodeId: string;
     onDefeatNodeId: string;
@@ -169,8 +171,10 @@ export interface StoryBattleCompleteEvent {
     source: 'story';
     storyId: string;
     battleId: string;
+    encounterResourceId?: string;
     encounterId: string;
     encounterFile: string;
+    deckResourceId?: string;
     deckFile: string;
     storyGraphFile?: string;
     victory: boolean;

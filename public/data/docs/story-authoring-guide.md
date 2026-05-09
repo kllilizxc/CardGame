@@ -74,8 +74,10 @@
   "kind": "startBattle",
   "battle": {
     "battleId": "story.chapter.first-duel",
+    "encounterResourceId": "test_encounter_01",
     "encounterId": "test_encounter_01",
     "encounterFile": "data/encounters/test-enemy.json",
+    "deckResourceId": "deck.starter",
     "deckFile": "data/decks/starter-deck.json",
     "onVictoryNodeId": "node.after_victory",
     "onDefeatNodeId": "node.after_defeat",
@@ -84,7 +86,7 @@
 }
 ```
 
-`onVictoryNodeId` 和 `onDefeatNodeId` 必须指向同一剧情图中已经存在的节点。`StoryScene` 会把 `battleLaunch` 元数据连同当前 `StoryState` 包装为 source-aware payload，启动 `BattleScene`，并在战斗结束后分别回到胜利或失败续接节点。
+`encounterResourceId` / `deckResourceId` 必须能在 `public/data/content-catalog.json` 中解析到对应的 `encounter` / `deck` 资源，并且 catalog `publicPath` 必须分别等于 `encounterFile` / `deckFile`；`BattleScene` 运行时仍读取这两个文件路径。`onVictoryNodeId` 和 `onDefeatNodeId` 必须指向同一剧情图中已经存在的节点。`StoryScene` 会把 `battleLaunch` 元数据连同当前 `StoryState` 包装为 source-aware payload，启动 `BattleScene`，并在战斗结束后分别回到胜利或失败续接节点。
 
 ### Hub sub-map presentation
 

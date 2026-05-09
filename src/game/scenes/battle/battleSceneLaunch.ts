@@ -145,8 +145,10 @@ function isStoryBattleLaunchMetadata(value: unknown): value is StoryBattleLaunch
         && (candidate.sourceChoiceId === undefined || typeof candidate.sourceChoiceId === 'string')
         && typeof candidate.targetNodeId === 'string'
         && typeof candidate.battleId === 'string'
+        && (candidate.encounterResourceId === undefined || typeof candidate.encounterResourceId === 'string')
         && typeof candidate.encounterId === 'string'
         && typeof candidate.encounterFile === 'string'
+        && (candidate.deckResourceId === undefined || typeof candidate.deckResourceId === 'string')
         && typeof candidate.deckFile === 'string'
         && typeof candidate.onVictoryNodeId === 'string'
         && typeof candidate.onDefeatNodeId === 'string'

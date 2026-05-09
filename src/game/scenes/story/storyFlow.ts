@@ -251,10 +251,14 @@ function parseOptionalStoryCondition(value: unknown, label: string): StoryCondit
 function parseStoryBattleTrigger(value: unknown, label: string): StoryBattleTrigger {
     assertRecord(value, label);
 
+    const encounterResourceId = readOptionalString(value, 'encounterResourceId', label);
+    const deckResourceId = readOptionalString(value, 'deckResourceId', label);
     const trigger: StoryBattleTrigger = {
         battleId: readRequiredString(value, 'battleId', label),
+        ...(encounterResourceId ? { encounterResourceId } : {}),
         encounterId: readRequiredString(value, 'encounterId', label),
         encounterFile: readRequiredString(value, 'encounterFile', label),
+        ...(deckResourceId ? { deckResourceId } : {}),
         deckFile: readRequiredString(value, 'deckFile', label),
         onVictoryNodeId: readRequiredString(value, 'onVictoryNodeId', label),
         onDefeatNodeId: readRequiredString(value, 'onDefeatNodeId', label),
