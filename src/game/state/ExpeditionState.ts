@@ -2,16 +2,19 @@ import {
     clearActiveRun,
     loadActiveRun,
     loadPersistentStash,
+    normalizeActiveRunIdentity,
     normalizeActiveRunRouteKey,
+    parseActiveRunRouteKey,
     saveActiveRun,
     savePersistentStash,
-    type ActiveRunStorageIdentity,
+    type ActiveRunTargetIdentity,
 } from '../services/RunPersistence';
 import { enterReachableNode } from '../scenes/expedition/mapTraversal';
 import type {
     ExpeditionCardStack,
     ExpeditionItemStack,
     ExpeditionMapDefinition,
+    ExpeditionRouteIdentity,
     ExpeditionTargetConfig,
     PersistentStash,
     RunNodeState,
@@ -37,13 +40,12 @@ export interface ExpeditionWorldStateSeed {
 export interface ExpeditionBootstrapSources {
     worldState: ExpeditionWorldStateSeed;
     starterDeck: StarterDeckSeed;
-    activeRunRouteKey?: string;
-    activeRunIdentity?: ActiveRunStorageIdentity;
+    targetIdentity?: ActiveRunTargetIdentity;
+    activeRunRouteKey?: string | null;
+    activeRunIdentity?: ActiveRunTargetIdentity;
 }
 
-export interface CreateRunSnapshotParams {
-    expeditionId: string;
-    mapId: string;
+export interface CreateRunSnapshotParams extends ExpeditionRouteIdentity {
     entryNodeId: string;
 }
 
@@ -167,34 +169,51 @@ function createVisitedNodeState(
 export class ExpeditionState {
     public persistentStash: PersistentStash;
     public activeRun: RunSnapshot | null;
+    private readonly targetIdentity: ExpeditionRouteIdentity;
     private readonly activeRunRouteKey: string;
 
     constructor(
         persistentStash: PersistentStash,
         activeRun: RunSnapshot | null,
-        activeRunRouteKey?: string,
+        targetIdentity: ExpeditionRouteIdentity = normalizeActiveRunIdentity(),
+        activeRunRouteKey?: string | null,
     ) {
         this.persistentStash = persistentStash;
-        this.activeRun = activeRun;
-        this.activeRunRouteKey = normalizeActiveRunRouteKey(activeRunRouteKey);
+        this.targetIdentity = normalizeActiveRunIdentity(targetIdentity);
+        this.activeRunRouteKey = normalizeActiveRunRouteKey(activeRunRouteKey, this.targetIdentity);
+        this.activeRun = activeRun
+            ? {
+                ...activeRun,
+                routeKey: this.activeRunRouteKey,
+            }
+            : null;
     }
 
     static bootstrap({
         worldState,
         starterDeck,
+        targetIdentity,
         activeRunRouteKey,
         activeRunIdentity,
     }: ExpeditionBootstrapSources): ExpeditionState {
-        const normalizedRouteKey = normalizeActiveRunRouteKey(activeRunRouteKey);
+        const normalizedTargetIdentity = normalizeActiveRunIdentity(
+            targetIdentity
+                ?? activeRunIdentity
+                ?? parseActiveRunRouteKey(activeRunRouteKey)
+                ?? undefined,
+        );
+        const normalizedRouteKey = normalizeActiveRunRouteKey(activeRunRouteKey, normalizedTargetIdentity);
         const persistentStash = loadPersistentStash() ?? createSeedPersistentStash(worldState, starterDeck);
-        const activeRun = loadActiveRun(normalizedRouteKey, activeRunIdentity);
+        const activeRun = loadActiveRun(activeRunRouteKey ?? normalizedRouteKey, normalizedTargetIdentity);
 
         savePersistentStash(persistentStash);
 
-        return new ExpeditionState(persistentStash, activeRun, normalizedRouteKey);
+        return new ExpeditionState(persistentStash, activeRun, normalizedTargetIdentity, normalizedRouteKey);
     }
 
     createRunSnapshot({ expeditionId, mapId, entryNodeId }: CreateRunSnapshotParams): RunSnapshot {
+        this.assertRunIdentityMatchesState({ expeditionId, mapId });
+
         const startedAt = new Date().toISOString();
         const activeRun: RunSnapshot = {
             runId: createRunId(),
@@ -219,8 +238,7 @@ export class ExpeditionState {
             startedAt,
         };
 
-        this.activeRun = activeRun;
-        saveActiveRun(activeRun, this.activeRunRouteKey);
+        this.persistActiveRun(activeRun);
 
         return activeRun;
     }
@@ -230,16 +248,16 @@ export class ExpeditionState {
             return null;
         }
 
-        this.activeRun = {
+        const updatedRun: RunSnapshot = {
             ...this.activeRun,
             carriedDeck: mergeCardStacks(this.activeRun.carriedDeck, rewards.cards),
             carriedItems: mergeItemStacks(this.activeRun.carriedItems, rewards.items),
             spiritStones: this.activeRun.spiritStones + rewards.spiritStones,
         };
 
-        saveActiveRun(this.activeRun, this.activeRunRouteKey);
+        this.persistActiveRun(updatedRun);
 
-        return this.activeRun;
+        return updatedRun;
     }
 
     claimEventNodeReward(nodeId: string, rewards: RunRewardBundle): EventRewardClaimResult {
@@ -365,16 +383,33 @@ export class ExpeditionState {
     }
 
     resetToEntranceState(): void {
-        clearActiveRun(this.activeRunRouteKey);
+        clearActiveRun(this.targetIdentity);
         this.activeRun = null;
         this.persistentStash = loadPersistentStash() ?? this.persistentStash;
     }
 
     private persistActiveRun(run: RunSnapshot): void {
+        this.assertRunIdentityMatchesState(run);
+
         this.activeRun = {
             ...run,
             routeKey: this.activeRunRouteKey,
         };
-        saveActiveRun(this.activeRun, this.activeRunRouteKey);
+        saveActiveRun(this.activeRun, this.targetIdentity);
+    }
+
+    private assertRunIdentityMatchesState(identity: ExpeditionRouteIdentity): void {
+        const normalizedIdentity = normalizeActiveRunIdentity(identity);
+
+        if (
+            normalizedIdentity.expeditionId === this.targetIdentity.expeditionId
+            && normalizedIdentity.mapId === this.targetIdentity.mapId
+        ) {
+            return;
+        }
+
+        throw new Error(
+            `Cannot persist active run for ${identity.expeditionId}/${identity.mapId} from ExpeditionState scoped to ${this.targetIdentity.expeditionId}/${this.targetIdentity.mapId}.`,
+        );
     }
 }

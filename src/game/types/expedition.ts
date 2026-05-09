@@ -23,10 +23,13 @@ export interface RunRewardBundle {
     spiritStones: number;
 }
 
-export interface ExpeditionTargetConfig {
-    routeKey: string;
+export interface ExpeditionRouteIdentity {
     expeditionId: string;
     mapId: string;
+}
+
+export interface ExpeditionTargetConfig extends ExpeditionRouteIdentity {
+    routeKey: string;
     worldStateFile: string;
     starterDeckFile: string;
     mapFile: string;

@@ -11,24 +11,38 @@ import {
 } from './RunPersistence';
 import {
     resolveBattleDefeat,
+    resolveBattleVictory,
     resolveBossClear,
     resolveExtract,
 } from './RunResolution';
 
-function startRewardedRun(): ExpeditionState {
+const DEFAULT_TARGET = {
+    expeditionId: 'phase01-first-playable-expedition',
+    mapId: 'phase01-prototype-map',
+};
+
+const SYNTHETIC_TARGET = {
+    expeditionId: 'synthetic-expedition',
+    mapId: 'synthetic-map',
+};
+
+function startRewardedRun(
+    targetIdentity: { expeditionId: string; mapId: string } = DEFAULT_TARGET,
+    rewardCardId = 'TL_002',
+): ExpeditionState {
     const state = ExpeditionState.bootstrap({
         worldState: structuredClone(initialWorldState),
         starterDeck: structuredClone(starterDeckJson),
+        targetIdentity,
     });
 
     state.createRunSnapshot({
-        expeditionId: 'phase01-first-playable-expedition',
-        mapId: 'phase01-prototype-map',
-        entryNodeId: 'entrance.mountain-gate',
+        ...targetIdentity,
+        entryNodeId: targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'entrance.mountain-gate' : 'entrance.synthetic',
     });
 
     state.applyNodeRewardPreview({
-        cards: [{ id: 'TL_002', count: 1 }],
+        cards: [{ id: rewardCardId, count: 1 }],
         items: [{ id: 'tool_talisman_basic', itemType: 'tool', count: 1 }],
         spiritStones: 18,
     });
@@ -99,5 +113,78 @@ describe('RunResolution', () => {
         expect(freshRun.carriedDeck).toContainEqual({ id: 'TL_002', count: 1 });
         expect(freshRun.carriedItems).toContainEqual({ id: 'tool_talisman_basic', itemType: 'tool', count: 1 });
         expect(freshRun.spiritStones).toBe(54);
+    });
+
+    it('terminal defeat clears only the matching target active run', () => {
+        const defaultState = startRewardedRun(DEFAULT_TARGET, 'TL_002');
+        const syntheticState = startRewardedRun(SYNTHETIC_TARGET, 'AR_001');
+        const syntheticRunId = syntheticState.activeRun?.runId;
+
+        const summary = resolveBattleDefeat({
+            targetIdentity: DEFAULT_TARGET,
+            finalNodeId: 'battle.mist-foxes',
+        });
+
+        expect(summary.runId).toBe(defaultState.activeRun?.runId);
+        expect(loadActiveRun(DEFAULT_TARGET)).toBeNull();
+        expect(loadActiveRun(SYNTHETIC_TARGET)?.runId).toBe(syntheticRunId);
+        expect(loadActiveRun(SYNTHETIC_TARGET)?.carriedDeck).toContainEqual({ id: 'AR_001', count: 4 });
+    });
+
+    it('extract and boss-clear terminal outcomes also clear only the matching target active run', () => {
+        for (const scenario of [
+            {
+                outcome: 'extract' as const,
+                finalNodeId: 'extract.cliff-rope',
+                resolve: resolveExtract,
+            },
+            {
+                outcome: 'boss-clear' as const,
+                finalNodeId: 'boss.sealed-guardian',
+                resolve: resolveBossClear,
+            },
+        ]) {
+            resetRunPersistenceForTests();
+            startRewardedRun(DEFAULT_TARGET, 'TL_002');
+            const syntheticState = startRewardedRun(SYNTHETIC_TARGET, 'AR_001');
+            const syntheticRunId = syntheticState.activeRun?.runId;
+
+            const summary = scenario.resolve({
+                targetIdentity: DEFAULT_TARGET,
+                finalNodeId: scenario.finalNodeId,
+            });
+
+            expect(summary.outcome).toBe(scenario.outcome);
+            expect(loadActiveRun(DEFAULT_TARGET)).toBeNull();
+            expect(loadActiveRun(SYNTHETIC_TARGET)?.runId).toBe(syntheticRunId);
+            expect(loadActiveRun(SYNTHETIC_TARGET)?.carriedDeck).toContainEqual({ id: 'AR_001', count: 4 });
+        }
+    });
+
+    it('battle victory persists the continued run under the same target identity', () => {
+        const defaultState = startRewardedRun(DEFAULT_TARGET, 'TL_002');
+        const syntheticState = startRewardedRun(SYNTHETIC_TARGET, 'AR_001');
+        const syntheticRunId = syntheticState.activeRun?.runId;
+
+        const victory = resolveBattleVictory({
+            run: {
+                ...defaultState.activeRun!,
+                currentNodeId: 'battle.mist-foxes',
+                pendingEncounter: {
+                    runId: defaultState.activeRun!.runId,
+                    nodeId: 'battle.mist-foxes',
+                    nodeType: 'battle',
+                    encounterId: 'test_encounter_01',
+                    encounterFile: 'data/encounters/test-enemy.json',
+                    runDeck: defaultState.activeRun!.carriedDeck,
+                },
+            },
+            finalNodeId: 'battle.mist-foxes',
+            endedAt: '2026-05-08T01:00:00.000Z',
+        });
+
+        expect(victory.run.pendingEncounter).toBeNull();
+        expect(loadActiveRun(DEFAULT_TARGET)).toEqual(victory.run);
+        expect(loadActiveRun(SYNTHETIC_TARGET)?.runId).toBe(syntheticRunId);
     });
 });

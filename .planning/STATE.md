@@ -40,7 +40,8 @@ Progress: [░░░░░░░░░░] 0%
 - Phase 01 uses one fixed-topology 秘境 prototype with a small random pool for event and shop content.
 - Existing `BattleScene` stays the combat resolver for battle and boss nodes. Battle/BOSS map nodes hand off through `BattleLaunchPayload` and return structured `expedition-battle-complete` results.
 - `RunResolution` is the canonical terminal run-resolution service: defeat loses carried run assets, while extract and boss-clear bank carried assets into the persistent stash.
-- Persistent stash is local-only in the first slice and mutates on defeat, extract, or boss clear.
+- Expedition active-run persistence is scoped by normalized route identity (`expeditionId + mapId`); direct Expedition starts use the default `phase01-first-playable-expedition / phase01-prototype-map` identity.
+- Persistent stash is local-only and global in the first slice; it mutates on defeat, extract, or boss clear. Route-scoped stash ownership is explicitly out of scope.
 
 ### Pending Todos
 

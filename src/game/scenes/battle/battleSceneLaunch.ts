@@ -9,6 +9,7 @@ import type {
     StoryHubSessionKey,
     StoryState,
 } from '../../types/story';
+import { createActiveRunRouteKey } from '../../services/RunPersistence';
 
 export interface StarterDeckData {
     cards: ExpeditionCardStack[];
@@ -69,11 +70,7 @@ function isExpeditionTargetConfig(value: unknown): value is ExpeditionTargetConf
 }
 
 function getExpeditionTargetRouteKey(targetConfig: ExpeditionTargetConfig): string {
-    const normalizedRouteKey = targetConfig.routeKey?.trim();
-
-    return normalizedRouteKey && normalizedRouteKey.length > 0
-        ? normalizedRouteKey
-        : `expedition:${targetConfig.expeditionId}:${targetConfig.mapId}`;
+    return createActiveRunRouteKey(targetConfig);
 }
 
 function cloneExpeditionTargetConfig(targetConfig: ExpeditionTargetConfig): ExpeditionTargetConfig {

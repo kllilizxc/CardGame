@@ -2,17 +2,18 @@ import type {
     ExpeditionBattleCompleteEvent,
     ExpeditionTargetConfig,
 } from '../../types/expedition';
+import {
+    DEFAULT_EXPEDITION_ID,
+    DEFAULT_EXPEDITION_MAP_ID,
+    DEFAULT_EXPEDITION_TARGET_FILES,
+} from '../../config/ExpeditionDefaults';
+import { createActiveRunRouteKey } from '../../services/RunPersistence';
 
-export const DEFAULT_EXPEDITION_ID = 'phase01-first-playable-expedition';
-export const DEFAULT_EXPEDITION_MAP_ID = 'phase01-prototype-map';
-
-export const DEFAULT_EXPEDITION_TARGET_FILES = {
-    worldStateFile: 'data/world/initial-state.json',
-    starterDeckFile: 'data/decks/starter-deck.json',
-    mapFile: 'data/mijing/prototype-map.json',
-    eventsFile: 'data/mijing/prototype-events.json',
-    shopFile: 'data/mijing/prototype-shop.json',
-};
+export {
+    DEFAULT_EXPEDITION_ID,
+    DEFAULT_EXPEDITION_MAP_ID,
+    DEFAULT_EXPEDITION_TARGET_FILES,
+} from '../../config/ExpeditionDefaults';
 
 export interface ExpeditionSceneLaunchData extends Partial<ExpeditionTargetConfig> {
     source?: 'worldMap';
@@ -55,16 +56,6 @@ function cloneTargetConfig(config: ExpeditionTargetConfig): ExpeditionTargetConf
     };
 }
 
-function createDirectExpeditionRouteKey(expeditionId: string, mapId: string): string {
-    return `expedition:${expeditionId}:${mapId}`;
-}
-
-function createWorldMapExpeditionRouteKey(destinationId?: string): string | null {
-    const normalizedDestinationId = normalizeString(destinationId, '');
-
-    return normalizedDestinationId ? `worldMap:${normalizedDestinationId}` : null;
-}
-
 export function createExpeditionCacheKeys(targetFiles: Pick<
     ExpeditionTargetConfig,
     'worldStateFile' | 'starterDeckFile' | 'mapFile' | 'eventsFile' | 'shopFile'
@@ -100,11 +91,7 @@ export function normalizeExpeditionSceneLaunchData(
         eventsFile: normalizeString(targetOwner.eventsFile, DEFAULT_EXPEDITION_TARGET_FILES.eventsFile),
         shopFile: normalizeString(targetOwner.shopFile, DEFAULT_EXPEDITION_TARGET_FILES.shopFile),
     };
-    targetConfig.routeKey = normalizeString(
-        targetOwner.routeKey,
-        createWorldMapExpeditionRouteKey(destinationId)
-            ?? createDirectExpeditionRouteKey(targetConfig.expeditionId, targetConfig.mapId),
-    );
+    targetConfig.routeKey = createActiveRunRouteKey(targetConfig);
     const statusText = normalizeString(data?.statusText, '');
 
     return {

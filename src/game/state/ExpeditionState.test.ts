@@ -8,6 +8,16 @@ import prototypeShopJson from '../../../public/data/mijing/prototype-shop.json';
 import { resetRunPersistenceForTests, loadActiveRun } from '../services/RunPersistence';
 import { ExpeditionState } from './ExpeditionState';
 
+const DEFAULT_TARGET = {
+    expeditionId: 'phase01-first-playable-expedition',
+    mapId: 'phase01-prototype-map',
+};
+
+const SYNTHETIC_TARGET = {
+    expeditionId: 'synthetic-expedition',
+    mapId: 'synthetic-map',
+};
+
 describe('ExpeditionState', () => {
     beforeEach(() => {
         resetRunPersistenceForTests();
@@ -53,48 +63,53 @@ describe('ExpeditionState', () => {
         expect(loadActiveRun()?.runId).toBe(run.runId);
     });
 
-    it('persists active runs by route key so a second Expedition destination does not resume the first route', () => {
-        const outerMountainRouteKey = 'worldMap:destination.qingyun-outer-mountain-trial';
-        const jadeCaveRouteKey = 'worldMap:destination.jade-cave-trial';
+    it('normalizes active-run ownership to expeditionId and mapId instead of destination id', () => {
+        const outerMountainTarget = DEFAULT_TARGET;
+        const jadeCaveTarget = {
+            expeditionId: 'phase01-jade-cave-expedition',
+            mapId: 'phase01-jade-cave-map',
+        };
         const outerMountainState = ExpeditionState.bootstrap({
             worldState: structuredClone(initialWorldState),
             starterDeck: structuredClone(starterDeckJson),
-            activeRunRouteKey: outerMountainRouteKey,
+            activeRunRouteKey: 'worldMap:destination.qingyun-outer-mountain-trial',
+            activeRunIdentity: outerMountainTarget,
         });
 
         const outerMountainRun = outerMountainState.createRunSnapshot({
-            expeditionId: 'phase01-first-playable-expedition',
-            mapId: 'phase01-prototype-map',
+            ...outerMountainTarget,
             entryNodeId: 'entrance.mountain-gate',
         });
         const jadeCaveState = ExpeditionState.bootstrap({
             worldState: structuredClone(initialWorldState),
             starterDeck: structuredClone(starterDeckJson),
-            activeRunRouteKey: jadeCaveRouteKey,
+            activeRunRouteKey: 'worldMap:destination.jade-cave-trial',
+            activeRunIdentity: jadeCaveTarget,
         });
 
-        expect(outerMountainRun.routeKey).toBe(outerMountainRouteKey);
+        expect(outerMountainRun.routeKey).toBe('expedition:phase01-first-playable-expedition:phase01-prototype-map');
         expect(jadeCaveState.activeRun).toBeNull();
 
         const jadeCaveRun = jadeCaveState.createRunSnapshot({
-            expeditionId: 'phase01-jade-cave-expedition',
-            mapId: 'phase01-jade-cave-map',
+            ...jadeCaveTarget,
             entryNodeId: 'entrance.jade-cave',
         });
         const restoredOuterMountainState = ExpeditionState.bootstrap({
             worldState: structuredClone(initialWorldState),
             starterDeck: structuredClone(starterDeckJson),
-            activeRunRouteKey: outerMountainRouteKey,
+            activeRunRouteKey: 'worldMap:destination.qingyun-outer-mountain-trial',
+            activeRunIdentity: outerMountainTarget,
         });
         const restoredJadeCaveState = ExpeditionState.bootstrap({
             worldState: structuredClone(initialWorldState),
             starterDeck: structuredClone(starterDeckJson),
-            activeRunRouteKey: jadeCaveRouteKey,
+            activeRunRouteKey: 'worldMap:destination.jade-cave-trial',
+            activeRunIdentity: jadeCaveTarget,
         });
 
-        expect(jadeCaveRun.routeKey).toBe(jadeCaveRouteKey);
-        expect(loadActiveRun(outerMountainRouteKey)?.runId).toBe(outerMountainRun.runId);
-        expect(loadActiveRun(jadeCaveRouteKey)?.runId).toBe(jadeCaveRun.runId);
+        expect(jadeCaveRun.routeKey).toBe('expedition:phase01-jade-cave-expedition:phase01-jade-cave-map');
+        expect(loadActiveRun(outerMountainTarget)?.runId).toBe(outerMountainRun.runId);
+        expect(loadActiveRun(jadeCaveTarget)?.runId).toBe(jadeCaveRun.runId);
         expect(restoredOuterMountainState.activeRun?.runId).toBe(outerMountainRun.runId);
         expect(restoredJadeCaveState.activeRun?.runId).toBe(jadeCaveRun.runId);
     });
@@ -222,5 +237,85 @@ describe('ExpeditionState', () => {
 
         expect(duplicateResult.status).toBe('alreadyRecorded');
         expect(state.activeRun?.pendingTerminalResolution?.requestedAt).toBe(requestedAt);
+    });
+
+    it('loads and persists active runs independently by expeditionId and mapId', () => {
+        const defaultState = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            targetIdentity: DEFAULT_TARGET,
+        });
+        const defaultRun = defaultState.createRunSnapshot({
+            ...DEFAULT_TARGET,
+            entryNodeId: 'entrance.mountain-gate',
+        });
+        defaultState.applyNodeRewardPreview({
+            cards: [{ id: 'TL_002', count: 1 }],
+            items: [],
+            spiritStones: 9,
+        });
+
+        const syntheticState = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            targetIdentity: SYNTHETIC_TARGET,
+        });
+        const syntheticRun = syntheticState.createRunSnapshot({
+            ...SYNTHETIC_TARGET,
+            entryNodeId: 'entrance.synthetic',
+        });
+        syntheticState.applyNodeRewardPreview({
+            cards: [{ id: 'AR_001', count: 1 }],
+            items: [{ id: 'artifact.synthetic', itemType: 'artifact', count: 1 }],
+            spiritStones: 21,
+        });
+
+        const resumedDefaultState = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            targetIdentity: DEFAULT_TARGET,
+        });
+        const directDefaultState = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+        });
+
+        expect(resumedDefaultState.activeRun?.runId).toBe(defaultRun.runId);
+        expect(resumedDefaultState.activeRun?.carriedDeck).toContainEqual({ id: 'TL_002', count: 1 });
+        expect(directDefaultState.activeRun?.runId).toBe(defaultRun.runId);
+        expect(loadActiveRun(DEFAULT_TARGET)?.runId).toBe(defaultRun.runId);
+        expect(loadActiveRun(SYNTHETIC_TARGET)?.runId).toBe(syntheticRun.runId);
+        expect(loadActiveRun(SYNTHETIC_TARGET)?.carriedItems).toContainEqual({
+            id: 'artifact.synthetic',
+            itemType: 'artifact',
+            count: 1,
+        });
+    });
+
+    it('clears only the current target active run when returning to the entrance', () => {
+        const defaultState = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            targetIdentity: DEFAULT_TARGET,
+        });
+        const defaultRun = defaultState.createRunSnapshot({
+            ...DEFAULT_TARGET,
+            entryNodeId: 'entrance.mountain-gate',
+        });
+        const syntheticState = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            targetIdentity: SYNTHETIC_TARGET,
+        });
+        const syntheticRun = syntheticState.createRunSnapshot({
+            ...SYNTHETIC_TARGET,
+            entryNodeId: 'entrance.synthetic',
+        });
+
+        defaultState.resetToEntranceState();
+
+        expect(loadActiveRun(DEFAULT_TARGET)).toBeNull();
+        expect(loadActiveRun(SYNTHETIC_TARGET)?.runId).toBe(syntheticRun.runId);
+        expect(defaultRun.runId).not.toBe(syntheticRun.runId);
     });
 });

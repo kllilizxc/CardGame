@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'bun:test';
 
+import prototypeMapJson from '../../../../public/data/mijing/prototype-map.json';
+import {
+    createWorldMapDestinationIntent,
+    validateWorldMapDefinition,
+} from '../worldmap/worldMap';
+import type { ExpeditionEncounterMapNode, RunSnapshot } from '../../types/expedition';
+import { createExpeditionBattleCompleteEvent } from '../battle/battleCompletion';
+import { createBattleLaunchPayload } from './battleLaunchFlow';
 import {
     DEFAULT_EXPEDITION_ID,
     DEFAULT_EXPEDITION_MAP_ID,
@@ -7,6 +15,65 @@ import {
     createExpeditionTargetConfig,
     normalizeExpeditionSceneLaunchData,
 } from './expeditionSceneLaunch';
+
+const worldMapWithSyntheticExpeditionTargets = {
+    id: 'worldmap.synthetic-expeditions',
+    title: '测试大地图',
+    subtitle: '测试多个秘境入口',
+    description: '仅用于 route identity 测试，不增加 checked-in content。',
+    defaultDestinationId: 'destination.synthetic-a',
+    destinations: [
+        {
+            id: 'destination.synthetic-a',
+            kind: 'expedition',
+            label: '测试秘境 A',
+            description: '使用原型文件的第一个合成 Expedition 入口。',
+            expeditionId: 'expedition.synthetic-a',
+            mapId: 'map.synthetic-a',
+            worldStateFile: 'data/world/initial-state.json',
+            starterDeckFile: 'data/decks/starter-deck.json',
+            mapFile: 'data/mijing/prototype-map.json',
+            eventsFile: 'data/mijing/prototype-events.json',
+            shopFile: 'data/mijing/prototype-shop.json',
+            statusText: '进入测试秘境 A。',
+        },
+        {
+            id: 'destination.synthetic-b',
+            kind: 'expedition',
+            label: '测试秘境 B',
+            description: '使用原型文件的第二个合成 Expedition 入口。',
+            expeditionId: 'expedition.synthetic-b',
+            mapId: 'map.synthetic-b',
+            worldStateFile: 'data/world/initial-state.json',
+            starterDeckFile: 'data/decks/starter-deck.json',
+            mapFile: 'data/mijing/prototype-map.json',
+            eventsFile: 'data/mijing/prototype-events.json',
+            shopFile: 'data/mijing/prototype-shop.json',
+            statusText: '进入测试秘境 B。',
+        },
+    ],
+};
+
+function createRunSnapshot(target: { expeditionId: string; mapId: string }): RunSnapshot {
+    return {
+        runId: 'run-route-identity',
+        expeditionId: target.expeditionId,
+        mapId: target.mapId,
+        status: 'inProgress',
+        currentNodeId: 'battle.mist-foxes',
+        startingLoadout: {
+            cards: [{ id: 'SX_YJZ_001', count: 1 }],
+            items: [],
+            spiritStones: 0,
+        },
+        carriedDeck: [{ id: 'SX_YJZ_001', count: 1 }],
+        carriedItems: [],
+        spiritStones: 12,
+        visitedNodeIds: ['entrance.mountain-gate', 'battle.mist-foxes'],
+        nodeStates: {},
+        startedAt: '2026-05-08T00:00:00.000Z',
+    };
+}
 
 describe('expeditionSceneLaunch', () => {
     it('provides safe defaults for direct ExpeditionScene starts', () => {
@@ -40,7 +107,7 @@ describe('expeditionSceneLaunch', () => {
         })).toEqual({
             source: 'worldMap',
             destinationId: 'destination.test-expedition',
-            routeKey: 'worldMap:destination.test-expedition',
+            routeKey: 'expedition:expedition.test:map.test',
             expeditionId: 'expedition.test',
             mapId: 'map.test',
             worldStateFile: 'data/world/test-initial-state.json',
@@ -69,7 +136,7 @@ describe('expeditionSceneLaunch', () => {
         });
 
         expect(createExpeditionTargetConfig(normalizedLaunch)).toEqual({
-            routeKey: 'worldMap:destination.custom',
+            routeKey: 'expedition:expedition.custom:map.custom',
             expeditionId: 'expedition.custom',
             mapId: 'map.custom',
             worldStateFile: DEFAULT_EXPEDITION_TARGET_FILES.worldStateFile,
@@ -108,6 +175,43 @@ describe('expeditionSceneLaunch', () => {
             mapFile: 'data/mijing/custom-map.json',
             eventsFile: 'data/mijing/custom-events.json',
             shopFile: 'data/mijing/custom-shop.json',
+            battleResult: { targetConfig },
+        });
+    });
+
+    it('preserves target config through WorldMapScene to ExpeditionScene to BattleScene and back', () => {
+        const worldMap = validateWorldMapDefinition(worldMapWithSyntheticExpeditionTargets);
+        const worldMapIntent = createWorldMapDestinationIntent(worldMap, 'destination.synthetic-b');
+
+        if (worldMapIntent.sceneKey !== 'ExpeditionScene') {
+            throw new Error('Expected synthetic destination to launch ExpeditionScene.');
+        }
+
+        const expeditionLaunch = normalizeExpeditionSceneLaunchData(worldMapIntent.payload);
+        const targetConfig = createExpeditionTargetConfig(expeditionLaunch);
+        const battleNode = prototypeMapJson.nodes.find((node) => node.id === 'battle.mist-foxes') as ExpeditionEncounterMapNode;
+        const battlePayload = createBattleLaunchPayload(createRunSnapshot(targetConfig), battleNode, targetConfig);
+        const battleResult = createExpeditionBattleCompleteEvent(
+            battlePayload,
+            true,
+            '2026-05-09T01:00:00.000Z',
+        );
+        const returnLaunch = normalizeExpeditionSceneLaunchData({ battleResult });
+
+        expect(expeditionLaunch).toMatchObject({
+            source: 'worldMap',
+            destinationId: 'destination.synthetic-b',
+            expeditionId: 'expedition.synthetic-b',
+            mapId: 'map.synthetic-b',
+        });
+        expect(battlePayload.targetConfig).toEqual(targetConfig);
+        expect(battleResult.targetConfig).toEqual(targetConfig);
+        expect(returnLaunch).toMatchObject({
+            expeditionId: 'expedition.synthetic-b',
+            mapId: 'map.synthetic-b',
+            mapFile: 'data/mijing/prototype-map.json',
+            eventsFile: 'data/mijing/prototype-events.json',
+            shopFile: 'data/mijing/prototype-shop.json',
             battleResult: { targetConfig },
         });
     });

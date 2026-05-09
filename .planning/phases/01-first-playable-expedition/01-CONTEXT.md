@@ -15,8 +15,9 @@ Deliver one complete prototype 秘境 run loop on top of the existing battle sce
 
 ### Run structure
 - **D-01:** Phase 01 uses one persistent local starter stash, not a full deckbuilder. The player reviews and confirms that stash before entering the run.
-- **D-02:** Only one active run exists at a time, and entering the map snapshots carried deck, items, and currency into run state.
+- **D-02:** One active run may exist per Expedition route identity. Active-run persistence is keyed by normalized `expeditionId + mapId`; direct/default Expedition starts use `phase01-first-playable-expedition / phase01-prototype-map`.
 - **D-03:** The first slice ships a single prototype 秘境 with fixed topology and guaranteed entrance / battle / event / shop / extract / boss coverage.
+- **D-03a:** The persistent stash remains a single global local store for Phase 01. Route-scoped stash ownership is out of scope until a later economy / ownership design.
 
 ### Map and visibility
 - **D-04:** Movement is node-to-node on a Slay the Spire style layered map; only directly connected adjacent nodes are selectable.
@@ -91,7 +92,7 @@ Deliver one complete prototype 秘境 run loop on top of the existing battle sce
 ### Integration Points
 - A new expedition entry scene must become the default boot target.
 - Battle nodes need to pass a run-specific deck + encounter payload into `BattleScene` and receive a structured result back.
-- Persistent stash and active-run storage must live outside individual scene instances so extract and defeat can mutate them safely.
+- Persistent stash and active-run storage must live outside individual scene instances so extract and defeat can mutate them safely. Active runs are route-scoped by `expeditionId + mapId`; the stash is intentionally global.
 
 </code_context>
 

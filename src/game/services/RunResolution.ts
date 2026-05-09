@@ -2,8 +2,10 @@ import {
     clearActiveRun,
     loadActiveRun,
     loadPersistentStash,
+    normalizeActiveRunRouteKey,
     saveActiveRun,
     savePersistentStash,
+    type ActiveRunTargetIdentity,
 } from './RunPersistence';
 import type {
     ExpeditionCardStack,
@@ -20,6 +22,7 @@ export interface RunResolutionOptions {
     endedAt?: string;
     run?: RunSnapshot | null;
     stash?: PersistentStash | null;
+    targetIdentity?: ActiveRunTargetIdentity;
     activeRunRouteKey?: string;
 }
 
@@ -173,7 +176,7 @@ function addCarriedBundle(stash: PersistentStash, carried: RunRewardBundle): Per
 }
 
 function resolveRun(options: RunResolutionOptions): { run: RunSnapshot; stash: PersistentStash } {
-    const run = options.run ?? loadActiveRun(options.activeRunRouteKey);
+    const run = options.run ?? loadActiveRun(options.activeRunRouteKey, options.targetIdentity);
     const stash = options.stash ?? loadPersistentStash();
 
     if (!run) {
@@ -187,8 +190,19 @@ function resolveRun(options: RunResolutionOptions): { run: RunSnapshot; stash: P
     return { run, stash };
 }
 
-function getActiveRunRouteKey(run: RunSnapshot, options: RunResolutionOptions): string | undefined {
-    return options.activeRunRouteKey ?? run.routeKey;
+function getActiveRunIdentity(run: RunSnapshot, options: RunResolutionOptions): ActiveRunTargetIdentity {
+    return options.targetIdentity ?? run;
+}
+
+function getActiveRunRouteKey(run: RunSnapshot, options: RunResolutionOptions): string {
+    return normalizeActiveRunRouteKey(
+        options.activeRunRouteKey ?? run.routeKey,
+        getActiveRunIdentity(run, options),
+    );
+}
+
+function clearResolvedActiveRun(run: RunSnapshot, options: RunResolutionOptions): void {
+    clearActiveRun(options.activeRunRouteKey, getActiveRunIdentity(run, options));
 }
 
 function resolveTerminalOutcome(
@@ -216,7 +230,7 @@ function resolveTerminalOutcome(
     };
 
     savePersistentStash(resolvedStash);
-    clearActiveRun(getActiveRunRouteKey(run, options));
+    clearResolvedActiveRun(run, options);
 
     return summary;
 }
@@ -224,17 +238,22 @@ function resolveTerminalOutcome(
 export function resolveBattleVictory(options: RunResolutionOptions = {}): BattleVictoryResolution {
     const { run } = resolveRun(options);
     const finalNodeId = options.finalNodeId ?? run.currentNodeId;
+    const routeKey = getActiveRunRouteKey(run, options);
     const resolvedRun: RunSnapshot = {
         ...run,
+        routeKey,
         currentNodeId: finalNodeId,
         status: 'inProgress',
         pendingEncounter: null,
     };
-
-    saveActiveRun(resolvedRun, getActiveRunRouteKey(run, options));
+    const persistedRun = saveActiveRun(
+        resolvedRun,
+        options.activeRunRouteKey,
+        getActiveRunIdentity(run, options),
+    );
 
     return {
-        run: resolvedRun,
+        run: persistedRun,
         finalNodeId,
     };
 }
