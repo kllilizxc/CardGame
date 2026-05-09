@@ -17,7 +17,7 @@ export class Boot extends Scene
 
     create ()
     {
-        // 直接启动示例主线故事场景
-        this.scene.start('StoryScene');
+        // 进入标准预加载流程；预加载完成后由 MainMenu 承接可选入口。
+        this.scene.start('Preloader');
     }
 }

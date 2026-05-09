@@ -16,20 +16,47 @@ export class MainMenu extends Scene
 
     create ()
     {
-        this.background = this.add.image(512, 384, 'background');
+        const { width, height } = this.scale;
 
-        this.logo = this.add.image(512, 300, 'logo').setDepth(100);
+        this.background = this.add.image(width / 2, height / 2, 'background');
+        this.background.setDisplaySize(width, height);
 
-        this.title = this.add.text(512, 460, '主菜单', {
+        this.logo = this.add.image(width / 2, height * 0.28, 'logo').setDepth(100);
+
+        this.title = this.add.text(width / 2, height * 0.44, '主菜单', {
             fontFamily: 'Arial Black', fontSize: 38, color: '#ffffff',
             stroke: '#000000', strokeThickness: 8,
             align: 'center'
         }).setOrigin(0.5).setDepth(100);
 
+        this.add.text(width / 2, height * 0.5, '选择一个入口开始游玩', {
+            fontFamily: 'Arial',
+            fontSize: 22,
+            color: '#dbeafe',
+            stroke: '#000000',
+            strokeThickness: 4,
+            align: 'center'
+        }).setOrigin(0.5).setDepth(100);
+
+        this.createMenuButton({
+            x: width / 2,
+            y: height * 0.6,
+            width: 360,
+            height: 72,
+            label: '开始主线故事',
+            description: '进入 StoryScene 示例剧情',
+            onClick: () => this.startStoryScene()
+        });
+
         EventBus.emit('current-scene-ready', this);
     }
     
     changeScene ()
+    {
+        this.startStoryScene();
+    }
+
+    private startStoryScene ()
     {
         if (this.logoTween)
         {
@@ -37,7 +64,39 @@ export class MainMenu extends Scene
             this.logoTween = null;
         }
 
-        this.scene.start('Game');
+        this.scene.start('StoryScene');
+    }
+
+    private createMenuButton (config: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        label: string;
+        description: string;
+        onClick: () => void;
+    })
+    {
+        const button = this.add.rectangle(config.x, config.y, config.width, config.height, 0x1d4ed8, 0.92);
+        button.setStrokeStyle(3, 0xffffff, 0.86);
+        button.setInteractive({ useHandCursor: true });
+        button.setDepth(100);
+        button.on('pointerover', () => button.setFillStyle(0x2563eb, 1));
+        button.on('pointerout', () => button.setFillStyle(0x1d4ed8, 0.92));
+        button.on('pointerdown', config.onClick);
+
+        this.add.text(config.x, config.y - 12, config.label, {
+            fontFamily: 'Arial',
+            fontSize: 24,
+            color: '#f8fafc',
+            fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(101);
+
+        this.add.text(config.x, config.y + 18, config.description, {
+            fontFamily: 'Arial',
+            fontSize: 16,
+            color: '#bfdbfe'
+        }).setOrigin(0.5).setDepth(101);
     }
 
     moveLogo (vueCallback: ({ x, y }: { x: number, y: number }) => void)
