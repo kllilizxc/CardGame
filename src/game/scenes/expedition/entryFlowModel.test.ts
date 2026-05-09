@@ -132,7 +132,7 @@ describe('entryFlowModel', () => {
         };
 
         expect(createPostRunEntranceStatus(stash, summary)).toBe(
-            'Starter stash ready: 2 cards, 1 items, 24 spiritStones.\n上次结果：撤离成功（extract.cliff-rope）。可立即开始新的秘境探索。',
+            '储物袋已备好：2 张卡、1 件道具、24 枚灵石。\n上次结果：撤离成功（extract.cliff-rope）。可立即开始新的秘境探索。',
         );
     });
 });
