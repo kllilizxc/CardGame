@@ -86,7 +86,76 @@ describe('validatePrototypeExpeditionContent', () => {
         const bossNode = prototypeMapJson.nodes.find((node) => node.type === 'boss');
 
         expect(bossNode?.payloadRef.ref).toBe('mijing_boss_01');
+        expect(bossNode?.payloadRef.encounterResourceId).toBe('mijing_boss_01');
         expect(bossNode?.payloadRef.encounterFile).toBe('data/encounters/mijing-boss.json');
+    });
+
+    it('keeps checked-in battle and boss payload refs catalog-addressable without dropping encounter ref/file aliases', () => {
+        const jadeCaveMapJson = readJsonFixture<typeof prototypeMapJson>('public/data/mijing/jade-cave-map.json');
+
+        for (const mapJson of [prototypeMapJson, jadeCaveMapJson]) {
+            const content = validatePrototypeExpeditionContent({
+                map: mapJson,
+                events: prototypeEventsJson,
+                shops: prototypeShopJson,
+            });
+            const encounterRefs = content.map.nodes
+                .filter((node) => node.type === 'battle' || node.type === 'boss')
+                .map((node) => ({
+                    nodeId: node.id,
+                    ref: node.payloadRef.ref,
+                    encounterResourceId: node.payloadRef.encounterResourceId,
+                    encounterFile: node.payloadRef.encounterFile,
+                }));
+
+            expect(encounterRefs).toEqual([
+                {
+                    nodeId: 'battle.mist-foxes',
+                    ref: 'test_encounter_01',
+                    encounterResourceId: 'test_encounter_01',
+                    encounterFile: 'data/encounters/test-enemy.json',
+                },
+                {
+                    nodeId: 'battle.ruined-courtyard',
+                    ref: 'test_encounter_02',
+                    encounterResourceId: 'test_encounter_02',
+                    encounterFile: 'data/encounters/medium-enemy.json',
+                },
+                {
+                    nodeId: 'boss.sealed-guardian',
+                    ref: 'mijing_boss_01',
+                    encounterResourceId: 'mijing_boss_01',
+                    encounterFile: 'data/encounters/mijing-boss.json',
+                },
+            ]);
+        }
+    });
+
+    it('continues to parse legacy encounter payload refs that only carry ref and encounterFile', () => {
+        const legacyMap = structuredClone(prototypeMapJson);
+
+        for (const node of legacyMap.nodes) {
+            if (node.type === 'battle' || node.type === 'boss') {
+                delete node.payloadRef.encounterResourceId;
+            }
+        }
+
+        const content = validatePrototypeExpeditionContent({
+            map: legacyMap,
+            events: prototypeEventsJson,
+            shops: prototypeShopJson,
+        });
+
+        const legacyBattleNode = content.map.nodes.find((node) => node.id === 'battle.mist-foxes');
+
+        expect(legacyBattleNode?.type).toBe('battle');
+        if (legacyBattleNode?.type === 'battle') {
+            expect(legacyBattleNode.payloadRef).toEqual({
+                kind: 'encounter',
+                ref: 'test_encounter_01',
+                encounterFile: 'data/encounters/test-enemy.json',
+            });
+        }
     });
 
     it('parses the checked-in jade-cave map against the reused prototype event and shop content', () => {

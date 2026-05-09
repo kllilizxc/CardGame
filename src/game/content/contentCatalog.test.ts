@@ -288,6 +288,121 @@ function createCatalogHubDestination(overrides: Record<string, unknown> = {}): R
     };
 }
 
+function createCatalogExpeditionMap(
+    resourceId: string,
+    battlePayloadRef: Record<string, unknown>,
+): Record<string, unknown> {
+    const validEncounterPayloadRef = {
+        kind: 'encounter',
+        ref: 'encounter.good',
+        encounterResourceId: 'encounter.good',
+        encounterFile: 'data/encounters/good.json',
+    };
+
+    return {
+        id: resourceId,
+        name: `Catalog Expedition ${resourceId}`,
+        description: 'Synthetic Expedition map fixture for catalog-backed encounter target validation.',
+        entryNodeId: 'entrance.catalog',
+        nodes: [
+            {
+                id: 'entrance.catalog',
+                type: 'entrance',
+                layer: 0,
+                label: 'Entrance',
+                outgoingNodeIds: ['battle.catalog', 'event.abandoned-cache'],
+                payloadRef: {
+                    kind: 'entrance',
+                    ref: 'phase01.starter-stash',
+                },
+            },
+            {
+                id: 'battle.catalog',
+                type: 'battle',
+                layer: 1,
+                label: 'Catalog Battle',
+                outgoingNodeIds: ['shop.wandering-peddler', 'extract.cliff-rope'],
+                payloadRef: battlePayloadRef,
+            },
+            {
+                id: 'event.abandoned-cache',
+                type: 'event',
+                layer: 1,
+                label: 'Catalog Event',
+                outgoingNodeIds: ['battle.ruined-courtyard', 'shop.wandering-peddler'],
+                payloadRef: {
+                    kind: 'event',
+                    ref: 'event.abandoned-cache',
+                    contentFile: 'data/mijing/catalog-events.json',
+                },
+            },
+            {
+                id: 'shop.wandering-peddler',
+                type: 'shop',
+                layer: 2,
+                label: 'Catalog Shop',
+                outgoingNodeIds: ['boss.sealed-guardian'],
+                payloadRef: {
+                    kind: 'shop',
+                    ref: 'shop.wandering-peddler',
+                    contentFile: 'data/mijing/catalog-shop.json',
+                },
+            },
+            {
+                id: 'battle.ruined-courtyard',
+                type: 'battle',
+                layer: 2,
+                label: 'Catalog Second Battle',
+                outgoingNodeIds: ['boss.sealed-guardian'],
+                payloadRef: validEncounterPayloadRef,
+            },
+            {
+                id: 'extract.cliff-rope',
+                type: 'extract',
+                layer: 2,
+                label: 'Catalog Extract',
+                outgoingNodeIds: [],
+                payloadRef: {
+                    kind: 'extract',
+                    ref: 'extract.cliff-rope',
+                },
+            },
+            {
+                id: 'boss.sealed-guardian',
+                type: 'boss',
+                layer: 3,
+                label: 'Catalog Boss',
+                outgoingNodeIds: [],
+                payloadRef: validEncounterPayloadRef,
+            },
+        ],
+    };
+}
+
+const catalogExpeditionEvents = {
+    id: 'events.catalog',
+    eventsByNodeId: {
+        'event.abandoned-cache': {
+            nodeId: 'event.abandoned-cache',
+            title: 'Catalog event',
+            description: 'Minimal event fixture.',
+            pool: [],
+        },
+    },
+};
+
+const catalogExpeditionShop = {
+    id: 'shop.catalog',
+    shopsByNodeId: {
+        'shop.wandering-peddler': {
+            nodeId: 'shop.wandering-peddler',
+            title: 'Catalog shop',
+            description: 'Minimal shop fixture.',
+            offers: [],
+        },
+    },
+};
+
 describe('read-only content catalog', () => {
     it('checks in a versioned manifest covering current data resources without scene loader migration', () => {
         const catalogPath = join('public', CONTENT_CATALOG_PUBLIC_PATH);
@@ -730,6 +845,139 @@ describe('read-only content catalog', () => {
             'Story story.catalog-battle-path-mismatch nodes[0] catalog_entry onEnter[0].battle encounterResourceId references catalog resource id test_encounter_01, but catalog publicPath is data/encounters/test-enemy.json; battle encounterFile is data/encounters/other-enemy.json.',
             'Story story.catalog-battle-path-mismatch nodes[0] catalog_entry onEnter[0].battle deckResourceId references catalog resource id deck.starter, but catalog publicPath is data/decks/starter-deck.json; battle deckFile is data/decks/other-starter-deck.json.',
         ]);
+    });
+
+    it('returns actionable failures when Expedition encounter resource ids are missing, absent, wrong kind, path-mismatched, or ref-mismatched', () => {
+        const basePayloadRef = {
+            kind: 'encounter',
+            ref: 'encounter.good',
+            encounterResourceId: 'encounter.good',
+            encounterFile: 'data/encounters/good.json',
+        };
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'expedition.map.missing-id',
+                    kind: 'expeditionMap',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/catalog-expedition-missing-id.json',
+                },
+                {
+                    resourceId: 'expedition.map.absent-id',
+                    kind: 'expeditionMap',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/catalog-expedition-absent-id.json',
+                },
+                {
+                    resourceId: 'expedition.map.wrong-kind',
+                    kind: 'expeditionMap',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/catalog-expedition-wrong-kind.json',
+                },
+                {
+                    resourceId: 'expedition.map.path-mismatch',
+                    kind: 'expeditionMap',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/catalog-expedition-path-mismatch.json',
+                },
+                {
+                    resourceId: 'expedition.map.ref-mismatch',
+                    kind: 'expeditionMap',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/catalog-expedition-ref-mismatch.json',
+                },
+                {
+                    resourceId: 'events.catalog',
+                    kind: 'expeditionEvents',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/catalog-events.json',
+                },
+                {
+                    resourceId: 'shop.catalog',
+                    kind: 'expeditionShop',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/catalog-shop.json',
+                },
+                {
+                    resourceId: 'encounter.good',
+                    kind: 'encounter',
+                    schemaVersion: 1,
+                    publicPath: 'data/encounters/good.json',
+                },
+                {
+                    resourceId: 'encounter.wrong-kind',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/encounters/wrong-kind.json',
+                },
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/mijing/catalog-expedition-missing-id.json': createCatalogExpeditionMap(
+                'expedition.map.missing-id',
+                {
+                    kind: 'encounter',
+                    ref: 'encounter.good',
+                    encounterFile: 'data/encounters/good.json',
+                },
+            ),
+            'data/mijing/catalog-expedition-absent-id.json': createCatalogExpeditionMap(
+                'expedition.map.absent-id',
+                {
+                    ...basePayloadRef,
+                    encounterResourceId: 'encounter.missing',
+                },
+            ),
+            'data/mijing/catalog-expedition-wrong-kind.json': createCatalogExpeditionMap(
+                'expedition.map.wrong-kind',
+                {
+                    ...basePayloadRef,
+                    ref: 'encounter.wrong-kind',
+                    encounterResourceId: 'encounter.wrong-kind',
+                    encounterFile: 'data/encounters/wrong-kind.json',
+                },
+            ),
+            'data/mijing/catalog-expedition-path-mismatch.json': createCatalogExpeditionMap(
+                'expedition.map.path-mismatch',
+                {
+                    ...basePayloadRef,
+                    encounterFile: 'data/encounters/other.json',
+                },
+            ),
+            'data/mijing/catalog-expedition-ref-mismatch.json': createCatalogExpeditionMap(
+                'expedition.map.ref-mismatch',
+                {
+                    ...basePayloadRef,
+                    ref: 'encounter.expected',
+                },
+            ),
+            'data/mijing/catalog-events.json': catalogExpeditionEvents,
+            'data/mijing/catalog-shop.json': catalogExpeditionShop,
+            'data/encounters/good.json': {
+                id: 'encounter.good',
+                enemies: [],
+            },
+            'data/encounters/wrong-kind.json': {
+                cards: [],
+            },
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toContain(
+            'Expedition map expedition.map.missing-id node battle.catalog payloadRef.encounterResourceId must be a non-empty string so catalog encounter targets resolve by resource id.',
+        );
+        expect(result.failures.map((failure) => failure.message)).toContain(
+            'Expedition map expedition.map.absent-id node battle.catalog payloadRef encounterResourceId references catalog resource id encounter.missing, but no catalog entry exists for that resource id.',
+        );
+        expect(result.failures.map((failure) => failure.message)).toContain(
+            'Expedition map expedition.map.wrong-kind node battle.catalog payloadRef encounterResourceId references catalog resource id encounter.wrong-kind, but catalog resource has kind deck; expected encounter.',
+        );
+        expect(result.failures.map((failure) => failure.message)).toContain(
+            'Expedition map expedition.map.path-mismatch node battle.catalog payloadRef encounterResourceId references catalog resource id encounter.good, but catalog publicPath is data/encounters/good.json; payloadRef encounterFile is data/encounters/other.json.',
+        );
+        expect(result.failures.map((failure) => failure.message)).toContain(
+            'Expedition map expedition.map.ref-mismatch node battle.catalog payloadRef.encounterResourceId expects encounterId encounter.expected, but data/encounters/good.json declares encounter.good.',
+        );
     });
 
 

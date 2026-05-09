@@ -51,6 +51,14 @@ function expectString(value: unknown, label: string): string {
     return value;
 }
 
+function expectOptionalString(value: unknown, label: string): string | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    return expectString(value, label);
+}
+
 function expectNumber(value: unknown, label: string): number {
     if (typeof value !== 'number' || Number.isNaN(value)) {
         throw new Error(`${label} must be a number.`);
@@ -150,15 +158,23 @@ function parseMapNode(value: unknown, label: string): ExpeditionMapNode {
             };
         case 'battle':
         case 'boss':
-            return {
-                ...baseNode,
-                type,
-                payloadRef: {
-                    kind: expectLiteral(payloadRef.kind, 'encounter', `${label}.payloadRef.kind`),
-                    ref: expectString(payloadRef.ref, `${label}.payloadRef.ref`),
-                    encounterFile: expectString(payloadRef.encounterFile, `${label}.payloadRef.encounterFile`),
-                },
-            };
+            {
+                const encounterResourceId = expectOptionalString(
+                    payloadRef.encounterResourceId,
+                    `${label}.payloadRef.encounterResourceId`,
+                );
+
+                return {
+                    ...baseNode,
+                    type,
+                    payloadRef: {
+                        kind: expectLiteral(payloadRef.kind, 'encounter', `${label}.payloadRef.kind`),
+                        ref: expectString(payloadRef.ref, `${label}.payloadRef.ref`),
+                        ...(encounterResourceId ? { encounterResourceId } : {}),
+                        encounterFile: expectString(payloadRef.encounterFile, `${label}.payloadRef.encounterFile`),
+                    },
+                };
+            }
         case 'event':
             return {
                 ...baseNode,

@@ -48,6 +48,7 @@ function isBattleLaunchPayload(value: unknown): value is BattleLaunchPayload {
         && typeof candidate.nodeId === 'string'
         && (candidate.nodeType === 'battle' || candidate.nodeType === 'boss')
         && typeof candidate.encounterId === 'string'
+        && (candidate.encounterResourceId === undefined || typeof candidate.encounterResourceId === 'string')
         && typeof candidate.encounterFile === 'string'
         && isRunDeck(candidate.runDeck);
 }
@@ -206,9 +207,10 @@ export function normalizeBattleLaunchPayload(data: unknown): BattleLaunchPayload
         nodeId: data.nodeId,
         nodeType: data.nodeType,
         encounterId: data.encounterId,
+        ...(data.encounterResourceId ? { encounterResourceId: data.encounterResourceId } : {}),
         encounterFile: data.encounterFile,
         runDeck: data.runDeck.map((stack) => ({ ...stack })),
-        rewardPreview: data.rewardPreview,
+        ...(data.rewardPreview ? { rewardPreview: data.rewardPreview } : {}),
         ...(targetConfig ? { targetConfig } : {}),
     };
 }

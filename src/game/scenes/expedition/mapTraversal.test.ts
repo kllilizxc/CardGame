@@ -87,6 +87,7 @@ describe('mapTraversal', () => {
             nodeId: 'battle.mist-foxes',
             nodeType: 'battle',
             encounterId: 'test_encounter_01',
+            encounterResourceId: 'test_encounter_01',
             encounterFile: 'data/encounters/test-enemy.json',
             runDeck: battleRun?.carriedDeck,
         });
@@ -101,6 +102,7 @@ describe('mapTraversal', () => {
             nodeId: 'boss.sealed-guardian',
             nodeType: 'boss',
             encounterId: 'mijing_boss_01',
+            encounterResourceId: 'mijing_boss_01',
             encounterFile: 'data/encounters/mijing-boss.json',
         });
     });

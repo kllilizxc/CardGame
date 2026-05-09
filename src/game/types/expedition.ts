@@ -89,6 +89,7 @@ export interface BattleLaunchPayload {
     nodeId: string;
     nodeType: ExpeditionEncounterNodeType;
     encounterId: string;
+    encounterResourceId?: string;
     encounterFile: string;
     carriedDeck?: ExpeditionCardStack[];
     runDeck: ExpeditionCardStack[];
@@ -103,6 +104,7 @@ export interface ExpeditionBattleCompleteEvent {
     nodeId: string;
     nodeType: ExpeditionEncounterNodeType;
     encounterId: string;
+    encounterResourceId?: string;
     encounterFile: string;
     victory: boolean;
     outcome: ExpeditionBattleOutcome;
@@ -127,6 +129,7 @@ export interface EntrancePayloadRef {
 export interface EncounterPayloadRef {
     kind: 'encounter';
     ref: string;
+    encounterResourceId?: string;
     encounterFile: string;
 }
 

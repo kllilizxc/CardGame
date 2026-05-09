@@ -18,6 +18,7 @@ const payload: BattleLaunchPayload = {
     nodeId: 'battle.mist-foxes',
     nodeType: 'battle',
     encounterId: 'test_encounter_01',
+    encounterResourceId: 'test_encounter_01',
     encounterFile: 'data/encounters/test-enemy.json',
     runDeck: [{ id: 'SX_YJZ_001', count: 1 }],
 };
@@ -43,6 +44,13 @@ describe('battleSceneLaunch', () => {
         expect(deck).not.toBe(payload.runDeck);
         expect(getEncounterCacheKey(payload)).toBe('expeditionEncounter:run-test-001:battle.mist-foxes');
         expect(getEncounterFile(payload)).toBe('data/encounters/test-enemy.json');
+    });
+
+    it('keeps encounterResourceId optional for legacy expedition launch payloads', () => {
+        const { encounterResourceId: _omitted, ...legacyPayload } = payload;
+
+        expect(normalizeBattleLaunchPayload(legacyPayload)).toEqual(legacyPayload);
+        expect(getEncounterFile(legacyPayload)).toBe('data/encounters/test-enemy.json');
     });
 
     it('accepts existing enemies arrays and prototype boss units arrays', () => {

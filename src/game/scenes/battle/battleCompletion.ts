@@ -43,6 +43,7 @@ export function createExpeditionBattleCompleteEvent(
         nodeId: payload.nodeId,
         nodeType: payload.nodeType,
         encounterId: payload.encounterId,
+        ...(payload.encounterResourceId ? { encounterResourceId: payload.encounterResourceId } : {}),
         encounterFile: payload.encounterFile,
         victory,
         outcome: getBattleOutcome(payload, victory),

@@ -24,6 +24,7 @@
       "payloadRef": {
         "kind": "encounter",
         "ref": "test_encounter_01",
+        "encounterResourceId": "test_encounter_01",
         "encounterFile": "data/encounters/test-enemy.json"
       }
     },
@@ -60,6 +61,7 @@
       "payloadRef": {
         "kind": "encounter",
         "ref": "test_encounter_02",
+        "encounterResourceId": "test_encounter_02",
         "encounterFile": "data/encounters/medium-enemy.json"
       }
     },
@@ -83,6 +85,7 @@
       "payloadRef": {
         "kind": "encounter",
         "ref": "mijing_boss_01",
+        "encounterResourceId": "mijing_boss_01",
         "encounterFile": "data/encounters/mijing-boss.json"
       }
     }

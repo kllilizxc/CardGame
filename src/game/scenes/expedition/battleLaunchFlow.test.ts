@@ -41,6 +41,7 @@ describe('createBattleLaunchPayload', () => {
             nodeId: 'battle.mist-foxes',
             nodeType: 'battle',
             encounterId: 'test_encounter_01',
+            encounterResourceId: 'test_encounter_01',
             encounterFile: 'data/encounters/test-enemy.json',
             runDeck: [
                 { id: 'SX_YJZ_001', count: 1 },
@@ -90,7 +91,28 @@ describe('createBattleLaunchPayload', () => {
             nodeId: 'boss.sealed-guardian',
             nodeType: 'boss',
             encounterId: 'mijing_boss_01',
+            encounterResourceId: 'mijing_boss_01',
             encounterFile: 'data/encounters/mijing-boss.json',
+        });
+    });
+
+    it('keeps legacy encounter payload refs launchable when no catalog resource alias is present', () => {
+        const legacyNode = structuredClone(
+            prototypeMapJson.nodes.find((node) => node.id === 'battle.mist-foxes'),
+        ) as ExpeditionEncounterMapNode;
+
+        delete legacyNode.payloadRef.encounterResourceId;
+
+        expect(createBattleLaunchPayload(createRunSnapshot(), legacyNode)).toEqual({
+            runId: 'run-test-001',
+            nodeId: 'battle.mist-foxes',
+            nodeType: 'battle',
+            encounterId: 'test_encounter_01',
+            encounterFile: 'data/encounters/test-enemy.json',
+            runDeck: [
+                { id: 'SX_YJZ_001', count: 1 },
+                { id: 'AR_001', count: 2 },
+            ],
         });
     });
 });

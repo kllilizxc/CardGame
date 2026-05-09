@@ -923,17 +923,28 @@ function validateEncounterNodeReference(
     const payloadRef = readExpeditionPayloadRef(ownerEntry, node, context, failures);
     const encounterFile = readPayloadString(ownerEntry, payloadRef, 'encounterFile', context, failures);
     const encounterId = readPayloadString(ownerEntry, payloadRef, 'ref', context, failures);
+    const encounterResourceId = readExpeditionEncounterResourceId(ownerEntry, payloadRef, context, failures);
 
-    if (!encounterFile || !encounterId) {
+    if (!encounterFile || !encounterId || !encounterResourceId) {
         return;
     }
 
-    validateEncounterFileReference(
+    const encounterResource = resolveCatalogResourceIdReference(index, failures, ownerEntry, {
+        context,
+        resourceIdField: 'encounterResourceId',
+        resourceId: encounterResourceId,
+        publicPathField: 'encounterFile',
+        publicPath: encounterFile,
+        expectedKinds: ['encounter'],
+        publicPathOwnerLabel: 'payloadRef',
+    });
+
+    validateResolvedEncounterId(
         ownerEntry,
+        encounterResource,
         encounterFile,
         encounterId,
-        `Expedition map ${ownerEntry.resourceId} node ${node.id} payloadRef.encounterFile`,
-        index,
+        `${context}.encounterResourceId`,
         failures,
     );
 }
@@ -1055,29 +1066,28 @@ function readPayloadString(
     return value;
 }
 
-function validateEncounterFileReference(
+function readExpeditionEncounterResourceId(
     ownerEntry: ContentCatalogEntry,
-    encounterFile: string,
-    expectedEncounterId: string,
+    payloadRef: Record<string, unknown> | undefined,
     context: string,
-    index: LoadedCatalogIndex,
     failures: ContentCatalogValidationFailure[],
-): void {
-    const encounterResource = requireCatalogedResource(index, failures, ownerEntry, encounterFile, context, ['encounter']);
-
-    if (!encounterResource || !isRecord(encounterResource.json)) {
-        return;
+): string | undefined {
+    if (!payloadRef) {
+        return undefined;
     }
 
-    const declaredEncounterId = encounterResource.json.id;
+    const value = payloadRef.encounterResourceId;
 
-    if (typeof declaredEncounterId === 'string' && declaredEncounterId !== expectedEncounterId) {
+    if (typeof value !== 'string' || value.trim().length === 0) {
         addFailure(
             failures,
             ownerEntry,
-            `${context} expects encounterId ${expectedEncounterId}, but ${encounterFile} declares ${declaredEncounterId}.`,
+            `${context}.encounterResourceId must be a non-empty string so catalog encounter targets resolve by resource id.`,
         );
+        return undefined;
     }
+
+    return value;
 }
 
 function validateExpeditionMapWithRegisteredBundleValidator(

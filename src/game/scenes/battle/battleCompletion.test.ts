@@ -8,6 +8,7 @@ const battlePayload: BattleLaunchPayload = {
     nodeId: 'battle.mist-foxes',
     nodeType: 'battle',
     encounterId: 'test_encounter_01',
+    encounterResourceId: 'test_encounter_01',
     encounterFile: 'data/encounters/test-enemy.json',
     runDeck: [{ id: 'SX_YJZ_001', count: 1 }],
     targetConfig: {
@@ -37,6 +38,7 @@ describe('createExpeditionBattleCompleteEvent', () => {
             nodeId: 'battle.mist-foxes',
             nodeType: 'battle',
             encounterId: 'test_encounter_01',
+            encounterResourceId: 'test_encounter_01',
             encounterFile: 'data/encounters/test-enemy.json',
             victory: true,
             outcome: 'battle-victory',
@@ -48,5 +50,13 @@ describe('createExpeditionBattleCompleteEvent', () => {
     it('emits boss-clear for boss wins and defeat for any loss', () => {
         expect(createExpeditionBattleCompleteEvent(bossPayload, true, '2026-05-08T01:00:00.000Z').outcome).toBe('boss-clear');
         expect(createExpeditionBattleCompleteEvent(bossPayload, false, '2026-05-08T01:00:00.000Z').outcome).toBe('defeat');
+    });
+
+    it('leaves encounterResourceId absent in completion events for legacy payloads', () => {
+        const { encounterResourceId: _omitted, ...legacyPayload } = battlePayload;
+
+        expect(createExpeditionBattleCompleteEvent(legacyPayload, true, '2026-05-08T01:00:00.000Z')).not.toHaveProperty(
+            'encounterResourceId',
+        );
     });
 });

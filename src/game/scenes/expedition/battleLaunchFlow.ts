@@ -68,6 +68,7 @@ export function createBattleLaunchPayload(
         nodeId: node.id,
         nodeType: node.type,
         encounterId: node.payloadRef.ref,
+        ...(node.payloadRef.encounterResourceId ? { encounterResourceId: node.payloadRef.encounterResourceId } : {}),
         encounterFile: node.payloadRef.encounterFile,
         runDeck,
         ...(clonedTargetConfig ? { targetConfig: clonedTargetConfig } : {}),
