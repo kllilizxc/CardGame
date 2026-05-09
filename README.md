@@ -203,6 +203,7 @@ npm run build      # 或 npm run build-nolog
 - `docs/ARTIFACT_SYSTEM.md`：法器流程、动画时序、交互细节。
 - `docs/CARD_LIST_VIEW.md`：卡牌列表 UI 规划。
 - `docs/REFACTORING_CARD_SPRITES.md`：卡牌精灵演进记录。
+- `public/data/docs/story-content-contracts.md`：剧情内容合同，定义 `public/data/story/story-graph.executable.json` 的 condition/effect JSON 操作。
 - Phaser 官方资源： [API 文档](https://newdocs.phaser.io)、[示例仓库](https://labs.phaser.io)。
 
 如需讨论或提交 Issue，欢迎附上：

@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "id": "mainline.qingyun-entry.executable",
+  "title": "第一章·青云宗入门（可执行示例）",
+  "entryNodeId": "sect_entry_001",
+  "nodes": [
+    {
+      "id": "sect_entry_001",
+      "type": "story",
+      "title": "初到青云宗山门",
+      "summary": "玩家随凡人队伍抵达青云宗山门，准备参加入宗试炼。",
+      "body": "远山云雾缥缈，青云宗山门高立云间。凡人少年握紧古旧卡匣，混在长长的试炼队伍里，等待决定命运的第一道问心。",
+      "tags": ["门派", "入门试炼", "主线"],
+      "chapter": "第一章·入宗",
+      "location": "青云宗山门之外",
+      "timeHint": "白日",
+      "onEnter": [
+        {
+          "op": "setLocation",
+          "location": "青云宗山门之外"
+        },
+        {
+          "op": "setFlag",
+          "flag": "story.sect_entry.arrived_at_gate"
+        }
+      ],
+      "aiHints": {
+        "tone": "仙气缥缈，带一点庄严",
+        "theme": ["初入仙门", "凡人对仙道的向往"],
+        "forbid": ["直接给予过强的实力", "无缘由的金手指掉落"]
+      }
+    },
+    {
+      "id": "sect_entry_002_wait_in_line",
+      "type": "story",
+      "title": "队列中的试探",
+      "summary": "玩家按规矩排队，观察青云宗外门执事如何筛选凡人。",
+      "body": "队伍缓慢前移。青袍执事以灵盘照过每一个少年的掌心，或皱眉，或点头。你没有灵根，只能把卡匣藏得更稳，等待一个不暴露秘密的机会。",
+      "tags": ["门派", "正道倾向", "谨慎"],
+      "chapter": "第一章·入宗",
+      "location": "青云宗山门之外",
+      "timeHint": "白日",
+      "onEnter": [
+        {
+          "op": "setFlag",
+          "flag": "story.sect_entry.waited_patiently"
+        }
+      ],
+      "aiHints": {
+        "tone": "克制、观察感强",
+        "theme": ["谨慎入局", "凡人与仙门的距离"],
+        "forbid": ["让玩家突然暴露全部底牌"]
+      }
+    },
+    {
+      "id": "sect_entry_003_help_girl",
+      "type": "story",
+      "title": "体弱少女",
+      "summary": "玩家注意到队伍中体弱的少女，选择主动帮她稳住队列位置。",
+      "body": "少女脸色苍白，几乎被后方人流挤倒。你伸手扶住她，又替她挡开拥挤的人群。她低声道谢，袖中一枚青玉铃轻轻一响，似乎并非寻常凡物。",
+      "tags": ["支线", "善良倾向", "潜在机缘"],
+      "chapter": "第一章·入宗",
+      "location": "青云宗山门之外",
+      "timeHint": "白日",
+      "onEnter": [
+        {
+          "op": "setFlag",
+          "flag": "story.sect_entry.met_frail_girl"
+        }
+      ],
+      "aiHints": {
+        "tone": "温和、埋伏笔",
+        "theme": ["善意", "隐秘身份"],
+        "forbid": ["立刻揭示少女全部背景"]
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "sect_entry_001_choice_wait_in_line",
+      "from": "sect_entry_001",
+      "to": "sect_entry_002_wait_in_line",
+      "text": "老老实实排队等待入宗考核",
+      "description": "稳妥路线，符合谨慎性格。",
+      "visibleWhen": {
+        "op": "always"
+      },
+      "enabledWhen": {
+        "op": "missingFlag",
+        "flag": "story.sect_entry.disrupted_line"
+      },
+      "effects": [
+        {
+          "op": "setFlag",
+          "flag": "story.sect_entry.chose_patient_line"
+        },
+        {
+          "op": "adjustAttribute",
+          "path": "player.attributes.心性",
+          "amount": 1
+        },
+        {
+          "op": "adjustRelation",
+          "npcId": "npc_qingyun_elder_1",
+          "amount": 1
+        }
+      ],
+      "flags": ["主线", "正道倾向"]
+    },
+    {
+      "id": "sect_entry_001_choice_help_girl",
+      "from": "sect_entry_001",
+      "to": "sect_entry_003_help_girl",
+      "text": "注意到队伍中有一名体弱少女，主动上前搭话。",
+      "description": "倾向善良/细心的选择。心性较高时可见。",
+      "visibleWhen": {
+        "op": "attributeAtLeast",
+        "path": "player.attributes.心性",
+        "value": 50
+      },
+      "enabledWhen": {
+        "op": "missingFlag",
+        "flag": "story.sect_entry.helped_frail_girl"
+      },
+      "effects": [
+        {
+          "op": "setFlag",
+          "flag": "story.sect_entry.helped_frail_girl"
+        },
+        {
+          "op": "adjustRelation",
+          "npcId": "npc_frail_girl",
+          "amount": 5
+        },
+        {
+          "op": "addTag",
+          "path": "player.tags",
+          "tag": "善意初显"
+        }
+      ],
+      "flags": ["支线", "善良倾向", "潜在机缘"]
+    }
+  ]
+}
