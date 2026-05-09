@@ -45,6 +45,7 @@ const validWorldMapFixture = {
                 regionLabel: '测试山脚',
             },
             hubId: 'hub.test-town',
+            hubResourceId: 'hub.test-town',
             hubFile: 'data/hub/test-town.json',
             statusText: '从大地图进入测试城镇。',
         },
@@ -63,10 +64,15 @@ const validWorldMapFixture = {
             },
             expeditionId: 'expedition.test',
             mapId: 'map.test',
+            worldStateResourceId: 'world.seed.test-initial-state',
             worldStateFile: 'data/world/test-initial-state.json',
+            starterDeckResourceId: 'deck.test-starter',
             starterDeckFile: 'data/decks/test-starter-deck.json',
+            mapResourceId: 'map.test',
             mapFile: 'data/mijing/test-map.json',
+            eventsResourceId: 'events.test',
             eventsFile: 'data/mijing/test-events.json',
+            shopResourceId: 'shop.test',
             shopFile: 'data/mijing/test-shop.json',
             statusText: '从大地图进入测试秘境。',
         },
@@ -100,15 +106,17 @@ describe('world map content contract', () => {
             kind: destination.kind,
             label: destination.label,
             presentation: destination.presentation,
-            target: destination.kind === 'hub'
-                ? {
-                    hubId: destination.hubId,
-                    hubFile: destination.hubFile,
-                    targetLocationId: destination.targetLocationId,
-                }
-                : {
-                    mapFile: destination.mapFile,
-                },
+                target: destination.kind === 'hub'
+                    ? {
+                        hubId: destination.hubId,
+                        hubResourceId: destination.hubResourceId,
+                        hubFile: destination.hubFile,
+                        targetLocationId: destination.targetLocationId,
+                    }
+                    : {
+                        mapResourceId: destination.mapResourceId,
+                        mapFile: destination.mapFile,
+                    },
         }))).toEqual([
             {
                 id: 'destination.qingyun-town',
@@ -124,6 +132,7 @@ describe('world map content contract', () => {
                 },
                 target: {
                     hubId: 'hub.qingyun-town',
+                    hubResourceId: 'hub.qingyun-town',
                     hubFile: 'data/hub/town-shell.json',
                     targetLocationId: undefined,
                 },
@@ -142,6 +151,7 @@ describe('world map content contract', () => {
                 },
                 target: {
                     hubId: 'hub.qingyun-sect-gate',
+                    hubResourceId: 'hub.qingyun-sect-gate',
                     hubFile: 'data/hub/qingyun-sect-gate.json',
                     targetLocationId: undefined,
                 },
@@ -160,6 +170,7 @@ describe('world map content contract', () => {
                 },
                 target: {
                     hubId: 'hub.qingyun-town',
+                    hubResourceId: 'hub.qingyun-town',
                     hubFile: 'data/hub/town-shell.json',
                     targetLocationId: 'location.qingyun-town.teahouse',
                 },
@@ -177,6 +188,7 @@ describe('world map content contract', () => {
                     regionLabel: '外山秘境',
                 },
                 target: {
+                    mapResourceId: 'phase01-prototype-map',
                     mapFile: 'data/mijing/prototype-map.json',
                 },
             },
@@ -193,6 +205,7 @@ describe('world map content contract', () => {
                     regionLabel: '青玉洞支脉',
                 },
                 target: {
+                    mapResourceId: 'phase01-jade-cave-map',
                     mapFile: 'data/mijing/jade-cave-map.json',
                 },
             },
@@ -207,30 +220,45 @@ describe('world map content contract', () => {
             destinationId: destination.id,
             expeditionId: destination.expeditionId,
             mapId: destination.mapId,
+            worldStateResourceId: destination.worldStateResourceId,
             worldStateFile: destination.worldStateFile,
+            starterDeckResourceId: destination.starterDeckResourceId,
             starterDeckFile: destination.starterDeckFile,
+            mapResourceId: destination.mapResourceId,
             mapFile: destination.mapFile,
+            eventsResourceId: destination.eventsResourceId,
             eventsFile: destination.eventsFile,
+            shopResourceId: destination.shopResourceId,
             shopFile: destination.shopFile,
         }))).toEqual([
             {
                 destinationId: 'destination.qingyun-outer-mountain-trial',
                 expeditionId: 'phase01-first-playable-expedition',
                 mapId: 'phase01-prototype-map',
+                worldStateResourceId: 'world.seed.initial-state',
                 worldStateFile: 'data/world/initial-state.json',
+                starterDeckResourceId: 'deck.starter',
                 starterDeckFile: 'data/decks/starter-deck.json',
+                mapResourceId: 'phase01-prototype-map',
                 mapFile: 'data/mijing/prototype-map.json',
+                eventsResourceId: 'phase01-prototype-events',
                 eventsFile: 'data/mijing/prototype-events.json',
+                shopResourceId: 'phase01-prototype-shop',
                 shopFile: 'data/mijing/prototype-shop.json',
             },
             {
                 destinationId: 'destination.qingyun-jade-cave-trial',
                 expeditionId: 'phase01-jade-cave-expedition',
                 mapId: 'phase01-jade-cave-map',
+                worldStateResourceId: 'world.seed.initial-state',
                 worldStateFile: 'data/world/initial-state.json',
+                starterDeckResourceId: 'deck.starter',
                 starterDeckFile: 'data/decks/starter-deck.json',
+                mapResourceId: 'phase01-jade-cave-map',
                 mapFile: 'data/mijing/jade-cave-map.json',
+                eventsResourceId: 'phase01-prototype-events',
                 eventsFile: 'data/mijing/prototype-events.json',
+                shopResourceId: 'phase01-prototype-shop',
                 shopFile: 'data/mijing/prototype-shop.json',
             },
         ]);
@@ -255,16 +283,19 @@ describe('world map content contract', () => {
         expect(fullHubRoutes.map((destination) => ({
             destinationId: destination.id,
             hubId: destination.hubId,
+            hubResourceId: destination.hubResourceId,
             hubFile: destination.hubFile,
         }))).toEqual([
             {
                 destinationId: 'destination.qingyun-town',
                 hubId: 'hub.qingyun-town',
+                hubResourceId: 'hub.qingyun-town',
                 hubFile: 'data/hub/town-shell.json',
             },
             {
                 destinationId: 'destination.qingyun-sect-gate',
                 hubId: 'hub.qingyun-sect-gate',
+                hubResourceId: 'hub.qingyun-sect-gate',
                 hubFile: 'data/hub/qingyun-sect-gate.json',
             },
         ]);
@@ -273,12 +304,14 @@ describe('world map content contract', () => {
         expect(directLocationRoutes.map((destination) => ({
             destinationId: destination.id,
             hubId: destination.hubId,
+            hubResourceId: destination.hubResourceId,
             hubFile: destination.hubFile,
             targetLocationId: destination.targetLocationId,
         }))).toEqual([
             {
                 destinationId: 'destination.qingyun-town-teahouse',
                 hubId: 'hub.qingyun-town',
+                hubResourceId: 'hub.qingyun-town',
                 hubFile: 'data/hub/town-shell.json',
                 targetLocationId: 'location.qingyun-town.teahouse',
             },
@@ -328,6 +361,7 @@ describe('world map content contract', () => {
                 source: 'worldMap',
                 destinationId: 'destination.qingyun-town',
                 hubId: 'hub.qingyun-town',
+                hubResourceId: 'hub.qingyun-town',
                 hubFile: 'data/hub/town-shell.json',
                 statusText: '从大地图进入青云镇。',
             },
@@ -339,6 +373,7 @@ describe('world map content contract', () => {
                 source: 'worldMap',
                 destinationId: 'destination.qingyun-sect-gate',
                 hubId: 'hub.qingyun-sect-gate',
+                hubResourceId: 'hub.qingyun-sect-gate',
                 hubFile: 'data/hub/qingyun-sect-gate.json',
                 statusText: '从大地图抵达青云宗山门。',
             },
@@ -350,6 +385,7 @@ describe('world map content contract', () => {
                 source: 'worldMap',
                 destinationId: 'destination.qingyun-town-teahouse',
                 hubId: 'hub.qingyun-town',
+                hubResourceId: 'hub.qingyun-town',
                 hubFile: 'data/hub/town-shell.json',
                 targetLocationId: 'location.qingyun-town.teahouse',
                 statusText: '从大地图直接前往青云镇集市茶棚。',
@@ -363,10 +399,15 @@ describe('world map content contract', () => {
                 destinationId: 'destination.qingyun-outer-mountain-trial',
                 expeditionId: 'phase01-first-playable-expedition',
                 mapId: 'phase01-prototype-map',
+                worldStateResourceId: 'world.seed.initial-state',
                 worldStateFile: 'data/world/initial-state.json',
+                starterDeckResourceId: 'deck.starter',
                 starterDeckFile: 'data/decks/starter-deck.json',
+                mapResourceId: 'phase01-prototype-map',
                 mapFile: 'data/mijing/prototype-map.json',
+                eventsResourceId: 'phase01-prototype-events',
                 eventsFile: 'data/mijing/prototype-events.json',
+                shopResourceId: 'phase01-prototype-shop',
                 shopFile: 'data/mijing/prototype-shop.json',
                 statusText: '从大地图进入青云外山试炼。',
             },
@@ -379,10 +420,15 @@ describe('world map content contract', () => {
                 destinationId: 'destination.qingyun-jade-cave-trial',
                 expeditionId: 'phase01-jade-cave-expedition',
                 mapId: 'phase01-jade-cave-map',
+                worldStateResourceId: 'world.seed.initial-state',
                 worldStateFile: 'data/world/initial-state.json',
+                starterDeckResourceId: 'deck.starter',
                 starterDeckFile: 'data/decks/starter-deck.json',
+                mapResourceId: 'phase01-jade-cave-map',
                 mapFile: 'data/mijing/jade-cave-map.json',
+                eventsResourceId: 'phase01-prototype-events',
                 eventsFile: 'data/mijing/prototype-events.json',
+                shopResourceId: 'phase01-prototype-shop',
                 shopFile: 'data/mijing/prototype-shop.json',
                 statusText: '从大地图进入青玉洞试炼。',
             },
@@ -424,6 +470,32 @@ describe('world map content contract', () => {
 
         expect(() => validateWorldMapDefinition(expeditionWithoutMapFile)).toThrow(
             'World map destination destination.test-expedition mapFile must be a non-empty string.',
+        );
+    });
+
+    it('rejects destinations that omit required catalog resource ids for target files', () => {
+        const hubWithoutResourceId = {
+            ...validWorldMapFixture,
+            destinations: [{
+                ...validWorldMapFixture.destinations[0],
+                hubResourceId: '',
+            }],
+        };
+
+        expect(() => validateWorldMapDefinition(hubWithoutResourceId)).toThrow(
+            'World map destination destination.test-hub hubResourceId must be a non-empty string.',
+        );
+
+        const expeditionWithoutMapResourceId = {
+            ...validWorldMapFixture,
+            destinations: [{
+                ...validWorldMapFixture.destinations[1],
+                mapResourceId: '',
+            }],
+        };
+
+        expect(() => validateWorldMapDefinition(expeditionWithoutMapResourceId)).toThrow(
+            'World map destination destination.test-expedition mapResourceId must be a non-empty string.',
         );
     });
 

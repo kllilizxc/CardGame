@@ -404,6 +404,53 @@ function requireCatalogedResource(
     return resource;
 }
 
+function resolveCatalogResourceIdReference(
+    index: LoadedCatalogIndex,
+    failures: ContentCatalogValidationFailure[],
+    ownerEntry: ContentCatalogEntry,
+    reference: {
+        context: string;
+        resourceIdField: string;
+        resourceId: string;
+        publicPathField: string;
+        publicPath: string;
+        expectedKinds: ContentResourceKind[];
+    },
+): LoadedCatalogResource | undefined {
+    const resource = index.byResourceId.get(reference.resourceId);
+
+    if (!resource) {
+        addFailure(
+            failures,
+            ownerEntry,
+            `${reference.context} ${reference.resourceIdField} references catalog resource id ${reference.resourceId}, but no catalog entry exists for that resource id.`,
+        );
+        return undefined;
+    }
+
+    let failed = false;
+
+    if (!reference.expectedKinds.includes(resource.entry.kind)) {
+        addFailure(
+            failures,
+            ownerEntry,
+            `${reference.context} ${reference.resourceIdField} references catalog resource id ${reference.resourceId}, but catalog resource has kind ${resource.entry.kind}; expected ${reference.expectedKinds.join(' or ')}.`,
+        );
+        failed = true;
+    }
+
+    if (resource.entry.publicPath !== reference.publicPath) {
+        addFailure(
+            failures,
+            ownerEntry,
+            `${reference.context} ${reference.resourceIdField} references catalog resource id ${reference.resourceId}, but catalog publicPath is ${resource.entry.publicPath}; destination ${reference.publicPathField} is ${reference.publicPath}.`,
+        );
+        failed = true;
+    }
+
+    return failed ? undefined : resource;
+}
+
 function isWorldMapDefinition(value: unknown): value is WorldMapDefinition {
     return isRecord(value) && Array.isArray(value.destinations) && typeof value.id === 'string';
 }
@@ -453,8 +500,15 @@ function validateWorldMapHubDestinationReferences(
     index: LoadedCatalogIndex,
     failures: ContentCatalogValidationFailure[],
 ): void {
-    const context = `WorldMap ${ownerEntry.resourceId} destination ${destination.id} hubFile`;
-    const hubResource = requireCatalogedResource(index, failures, ownerEntry, destination.hubFile, context, ['hub']);
+    const context = `WorldMap ${ownerEntry.resourceId} destination ${destination.id}`;
+    const hubResource = resolveCatalogResourceIdReference(index, failures, ownerEntry, {
+        context,
+        resourceIdField: 'hubResourceId',
+        resourceId: destination.hubResourceId,
+        publicPathField: 'hubFile',
+        publicPath: destination.hubFile,
+        expectedKinds: ['hub'],
+    });
 
     if (!hubResource || !isHubTownDefinition(hubResource.validated)) {
         return;
@@ -483,46 +537,48 @@ function validateWorldMapExpeditionDestinationReferences(
     index: LoadedCatalogIndex,
     failures: ContentCatalogValidationFailure[],
 ): void {
-    requireCatalogedResource(
-        index,
-        failures,
-        ownerEntry,
-        destination.worldStateFile,
-        `WorldMap ${ownerEntry.resourceId} destination ${destination.id} worldStateFile`,
-        ['worldSeed'],
-    );
-    requireCatalogedResource(
-        index,
-        failures,
-        ownerEntry,
-        destination.starterDeckFile,
-        `WorldMap ${ownerEntry.resourceId} destination ${destination.id} starterDeckFile`,
-        ['deck'],
-    );
-    const mapResource = requireCatalogedResource(
-        index,
-        failures,
-        ownerEntry,
-        destination.mapFile,
-        `WorldMap ${ownerEntry.resourceId} destination ${destination.id} mapFile`,
-        ['expeditionMap'],
-    );
-    requireCatalogedResource(
-        index,
-        failures,
-        ownerEntry,
-        destination.eventsFile,
-        `WorldMap ${ownerEntry.resourceId} destination ${destination.id} eventsFile`,
-        ['expeditionEvents'],
-    );
-    requireCatalogedResource(
-        index,
-        failures,
-        ownerEntry,
-        destination.shopFile,
-        `WorldMap ${ownerEntry.resourceId} destination ${destination.id} shopFile`,
-        ['expeditionShop'],
-    );
+    const context = `WorldMap ${ownerEntry.resourceId} destination ${destination.id}`;
+
+    resolveCatalogResourceIdReference(index, failures, ownerEntry, {
+        context,
+        resourceIdField: 'worldStateResourceId',
+        resourceId: destination.worldStateResourceId,
+        publicPathField: 'worldStateFile',
+        publicPath: destination.worldStateFile,
+        expectedKinds: ['worldSeed'],
+    });
+    resolveCatalogResourceIdReference(index, failures, ownerEntry, {
+        context,
+        resourceIdField: 'starterDeckResourceId',
+        resourceId: destination.starterDeckResourceId,
+        publicPathField: 'starterDeckFile',
+        publicPath: destination.starterDeckFile,
+        expectedKinds: ['deck'],
+    });
+    const mapResource = resolveCatalogResourceIdReference(index, failures, ownerEntry, {
+        context,
+        resourceIdField: 'mapResourceId',
+        resourceId: destination.mapResourceId,
+        publicPathField: 'mapFile',
+        publicPath: destination.mapFile,
+        expectedKinds: ['expeditionMap'],
+    });
+    resolveCatalogResourceIdReference(index, failures, ownerEntry, {
+        context,
+        resourceIdField: 'eventsResourceId',
+        resourceId: destination.eventsResourceId,
+        publicPathField: 'eventsFile',
+        publicPath: destination.eventsFile,
+        expectedKinds: ['expeditionEvents'],
+    });
+    resolveCatalogResourceIdReference(index, failures, ownerEntry, {
+        context,
+        resourceIdField: 'shopResourceId',
+        resourceId: destination.shopResourceId,
+        publicPathField: 'shopFile',
+        publicPath: destination.shopFile,
+        expectedKinds: ['expeditionShop'],
+    });
 
     if (!mapResource || !isExpeditionMapDefinition(mapResource.json)) {
         return;

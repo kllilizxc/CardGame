@@ -48,10 +48,15 @@ function cloneTargetConfig(config: ExpeditionTargetConfig): ExpeditionTargetConf
         routeKey: config.routeKey,
         expeditionId: config.expeditionId,
         mapId: config.mapId,
+        ...(config.worldStateResourceId ? { worldStateResourceId: config.worldStateResourceId } : {}),
         worldStateFile: config.worldStateFile,
+        ...(config.starterDeckResourceId ? { starterDeckResourceId: config.starterDeckResourceId } : {}),
         starterDeckFile: config.starterDeckFile,
+        ...(config.mapResourceId ? { mapResourceId: config.mapResourceId } : {}),
         mapFile: config.mapFile,
+        ...(config.eventsResourceId ? { eventsResourceId: config.eventsResourceId } : {}),
         eventsFile: config.eventsFile,
+        ...(config.shopResourceId ? { shopResourceId: config.shopResourceId } : {}),
         shopFile: config.shopFile,
     };
 }
@@ -81,14 +86,24 @@ export function normalizeExpeditionSceneLaunchData(
     const targetOwner = (data?.battleResult?.targetConfig ?? data ?? {}) as Partial<ExpeditionTargetConfig>;
     const source = data?.source === 'worldMap' ? data.source : undefined;
     const destinationId = normalizeString(data?.destinationId, '');
+    const worldStateResourceId = normalizeString(targetOwner.worldStateResourceId, '');
+    const starterDeckResourceId = normalizeString(targetOwner.starterDeckResourceId, '');
+    const mapResourceId = normalizeString(targetOwner.mapResourceId, '');
+    const eventsResourceId = normalizeString(targetOwner.eventsResourceId, '');
+    const shopResourceId = normalizeString(targetOwner.shopResourceId, '');
     const targetConfig: ExpeditionTargetConfig = {
         routeKey: '',
         expeditionId: normalizeString(targetOwner.expeditionId, DEFAULT_EXPEDITION_ID),
         mapId: normalizeString(targetOwner.mapId, DEFAULT_EXPEDITION_MAP_ID),
+        ...(worldStateResourceId ? { worldStateResourceId } : {}),
         worldStateFile: normalizeString(targetOwner.worldStateFile, DEFAULT_EXPEDITION_TARGET_FILES.worldStateFile),
+        ...(starterDeckResourceId ? { starterDeckResourceId } : {}),
         starterDeckFile: normalizeString(targetOwner.starterDeckFile, DEFAULT_EXPEDITION_TARGET_FILES.starterDeckFile),
+        ...(mapResourceId ? { mapResourceId } : {}),
         mapFile: normalizeString(targetOwner.mapFile, DEFAULT_EXPEDITION_TARGET_FILES.mapFile),
+        ...(eventsResourceId ? { eventsResourceId } : {}),
         eventsFile: normalizeString(targetOwner.eventsFile, DEFAULT_EXPEDITION_TARGET_FILES.eventsFile),
+        ...(shopResourceId ? { shopResourceId } : {}),
         shopFile: normalizeString(targetOwner.shopFile, DEFAULT_EXPEDITION_TARGET_FILES.shopFile),
     };
     targetConfig.routeKey = createActiveRunRouteKey(targetConfig);

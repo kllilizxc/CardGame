@@ -27,6 +27,7 @@
         "regionLabel": "山麓城镇"
       },
       "hubId": "hub.qingyun-town",
+      "hubResourceId": "hub.qingyun-town",
       "hubFile": "data/hub/town-shell.json",
       "statusText": "从大地图进入青云镇。"
     },
@@ -44,6 +45,7 @@
         "regionLabel": "青云山门"
       },
       "hubId": "hub.qingyun-sect-gate",
+      "hubResourceId": "hub.qingyun-sect-gate",
       "hubFile": "data/hub/qingyun-sect-gate.json",
       "statusText": "从大地图抵达青云宗山门。"
     },
@@ -61,6 +63,7 @@
         "regionLabel": "青云镇集市"
       },
       "hubId": "hub.qingyun-town",
+      "hubResourceId": "hub.qingyun-town",
       "hubFile": "data/hub/town-shell.json",
       "targetLocationId": "location.qingyun-town.teahouse",
       "statusText": "从大地图直接前往青云镇集市茶棚。"
@@ -80,10 +83,15 @@
       },
       "expeditionId": "phase01-first-playable-expedition",
       "mapId": "phase01-prototype-map",
+      "worldStateResourceId": "world.seed.initial-state",
       "worldStateFile": "data/world/initial-state.json",
+      "starterDeckResourceId": "deck.starter",
       "starterDeckFile": "data/decks/starter-deck.json",
+      "mapResourceId": "phase01-prototype-map",
       "mapFile": "data/mijing/prototype-map.json",
+      "eventsResourceId": "phase01-prototype-events",
       "eventsFile": "data/mijing/prototype-events.json",
+      "shopResourceId": "phase01-prototype-shop",
       "shopFile": "data/mijing/prototype-shop.json",
       "statusText": "从大地图进入青云外山试炼。"
     },
@@ -102,10 +110,15 @@
       },
       "expeditionId": "phase01-jade-cave-expedition",
       "mapId": "phase01-jade-cave-map",
+      "worldStateResourceId": "world.seed.initial-state",
       "worldStateFile": "data/world/initial-state.json",
+      "starterDeckResourceId": "deck.starter",
       "starterDeckFile": "data/decks/starter-deck.json",
+      "mapResourceId": "phase01-jade-cave-map",
       "mapFile": "data/mijing/jade-cave-map.json",
+      "eventsResourceId": "phase01-prototype-events",
       "eventsFile": "data/mijing/prototype-events.json",
+      "shopResourceId": "phase01-prototype-shop",
       "shopFile": "data/mijing/prototype-shop.json",
       "statusText": "从大地图进入青玉洞试炼。"
     }

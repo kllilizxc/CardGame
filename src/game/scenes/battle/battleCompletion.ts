@@ -18,10 +18,15 @@ function cloneTargetConfig(targetConfig: ExpeditionTargetConfig): ExpeditionTarg
         routeKey: targetConfig.routeKey,
         expeditionId: targetConfig.expeditionId,
         mapId: targetConfig.mapId,
+        ...(targetConfig.worldStateResourceId ? { worldStateResourceId: targetConfig.worldStateResourceId } : {}),
         worldStateFile: targetConfig.worldStateFile,
+        ...(targetConfig.starterDeckResourceId ? { starterDeckResourceId: targetConfig.starterDeckResourceId } : {}),
         starterDeckFile: targetConfig.starterDeckFile,
+        ...(targetConfig.mapResourceId ? { mapResourceId: targetConfig.mapResourceId } : {}),
         mapFile: targetConfig.mapFile,
+        ...(targetConfig.eventsResourceId ? { eventsResourceId: targetConfig.eventsResourceId } : {}),
         eventsFile: targetConfig.eventsFile,
+        ...(targetConfig.shopResourceId ? { shopResourceId: targetConfig.shopResourceId } : {}),
         shopFile: targetConfig.shopFile,
     };
 }

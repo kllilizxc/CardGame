@@ -62,10 +62,15 @@ function isExpeditionTargetConfig(value: unknown): value is ExpeditionTargetConf
     return typeof candidate.expeditionId === 'string'
         && typeof candidate.mapId === 'string'
         && (candidate.routeKey === undefined || typeof candidate.routeKey === 'string')
+        && (candidate.worldStateResourceId === undefined || typeof candidate.worldStateResourceId === 'string')
         && typeof candidate.worldStateFile === 'string'
+        && (candidate.starterDeckResourceId === undefined || typeof candidate.starterDeckResourceId === 'string')
         && typeof candidate.starterDeckFile === 'string'
+        && (candidate.mapResourceId === undefined || typeof candidate.mapResourceId === 'string')
         && typeof candidate.mapFile === 'string'
+        && (candidate.eventsResourceId === undefined || typeof candidate.eventsResourceId === 'string')
         && typeof candidate.eventsFile === 'string'
+        && (candidate.shopResourceId === undefined || typeof candidate.shopResourceId === 'string')
         && typeof candidate.shopFile === 'string';
 }
 
@@ -78,10 +83,15 @@ function cloneExpeditionTargetConfig(targetConfig: ExpeditionTargetConfig): Expe
         routeKey: getExpeditionTargetRouteKey(targetConfig),
         expeditionId: targetConfig.expeditionId,
         mapId: targetConfig.mapId,
+        ...(targetConfig.worldStateResourceId ? { worldStateResourceId: targetConfig.worldStateResourceId } : {}),
         worldStateFile: targetConfig.worldStateFile,
+        ...(targetConfig.starterDeckResourceId ? { starterDeckResourceId: targetConfig.starterDeckResourceId } : {}),
         starterDeckFile: targetConfig.starterDeckFile,
+        ...(targetConfig.mapResourceId ? { mapResourceId: targetConfig.mapResourceId } : {}),
         mapFile: targetConfig.mapFile,
+        ...(targetConfig.eventsResourceId ? { eventsResourceId: targetConfig.eventsResourceId } : {}),
         eventsFile: targetConfig.eventsFile,
+        ...(targetConfig.shopResourceId ? { shopResourceId: targetConfig.shopResourceId } : {}),
         shopFile: targetConfig.shopFile,
     };
 }

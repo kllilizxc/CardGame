@@ -73,6 +73,88 @@ function createPublicFileSourceWithOverrides(overrides: Record<string, unknown>)
     };
 }
 
+function createCatalogWorldMapWithDestination(destination: Record<string, unknown>): unknown {
+    return {
+        id: 'worldmap.catalog-route',
+        title: 'Catalog route fixture',
+        subtitle: 'WorldMap catalog resolver tests',
+        description: 'Synthetic WorldMap fixture for catalog-backed target resolution.',
+        defaultDestinationId: destination.id,
+        presentation: {
+            mapWidth: 1000,
+            mapHeight: 600,
+            initialCenter: {
+                x: 0.5,
+                y: 0.5,
+            },
+        },
+        destinations: [destination],
+    };
+}
+
+const catalogHubDefinition = {
+    hubId: 'hub.catalog',
+    title: 'Catalog Hub',
+    subtitle: 'Catalog-backed Hub',
+    description: 'Hub fixture used by content catalog validation tests.',
+    defaultLocationId: 'location.catalog',
+    presentation: {
+        mapWidth: 800,
+        mapHeight: 500,
+        initialCenter: {
+            x: 0.5,
+            y: 0.5,
+        },
+    },
+    locations: [
+        {
+            id: 'location.catalog',
+            title: 'Catalog Location',
+            summary: 'Catalog test location.',
+            detail: 'A minimal valid Hub location.',
+            presentation: {
+                position: {
+                    x: 0.5,
+                    y: 0.5,
+                },
+                icon: 'town',
+                regionLabel: 'Catalog',
+            },
+            actions: [
+                {
+                    id: 'action.catalog',
+                    label: 'Stay here',
+                    description: 'Exercise the Hub action contract without adding story catalog fixtures.',
+                    kind: 'navigate',
+                    targetLocationId: 'location.catalog',
+                    statusText: 'Staying in the catalog location.',
+                },
+            ],
+        },
+    ],
+};
+
+function createCatalogHubDestination(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+        id: 'destination.catalog-hub',
+        kind: 'hub',
+        label: 'Catalog Hub',
+        description: 'Catalog-backed Hub destination.',
+        presentation: {
+            position: {
+                x: 0.5,
+                y: 0.5,
+            },
+            icon: 'town',
+            regionLabel: 'Catalog',
+        },
+        hubId: 'hub.catalog',
+        hubResourceId: 'hub.catalog',
+        hubFile: 'data/hub/catalog-hub.json',
+        ...overrides,
+    };
+}
+
 describe('read-only content catalog', () => {
     it('checks in a versioned manifest covering current data resources without scene loader migration', () => {
         const catalogPath = join('public', CONTENT_CATALOG_PUBLIC_PATH);
@@ -117,7 +199,200 @@ describe('read-only content catalog', () => {
         const result = validateContentCatalog(incompleteCatalog, createPublicFileSource());
 
         expect(result.failures.map((failure) => failure.message)).toContain(
-            'WorldMap worldmap.qingyun-region destination destination.qingyun-town hubFile references data/hub/town-shell.json, but no catalog entry exists for that public path.',
+            'WorldMap worldmap.qingyun-region destination destination.qingyun-town hubResourceId references catalog resource id hub.qingyun-town, but no catalog entry exists for that resource id.',
+        );
+    });
+
+    it('returns actionable failures when a WorldMap Hub target resource id is missing from the catalog', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'worldmap.catalog-route',
+                    kind: 'worldMap',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/catalog-route.json',
+                },
+                {
+                    resourceId: 'hub.catalog',
+                    kind: 'hub',
+                    schemaVersion: 1,
+                    publicPath: 'data/hub/catalog-hub.json',
+                },
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/world/catalog-route.json': createCatalogWorldMapWithDestination(createCatalogHubDestination({
+                hubResourceId: 'hub.missing',
+            })),
+            'data/hub/catalog-hub.json': catalogHubDefinition,
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toContain(
+            'WorldMap worldmap.catalog-route destination destination.catalog-hub hubResourceId references catalog resource id hub.missing, but no catalog entry exists for that resource id.',
+        );
+    });
+
+    it('returns actionable failures when a WorldMap target resource id has the wrong catalog kind', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'worldmap.catalog-route',
+                    kind: 'worldMap',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/catalog-route.json',
+                },
+                {
+                    resourceId: 'hub.catalog',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/hub/catalog-hub.json',
+                },
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/world/catalog-route.json': createCatalogWorldMapWithDestination(createCatalogHubDestination()),
+            'data/hub/catalog-hub.json': catalogHubDefinition,
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toContain(
+            'WorldMap worldmap.catalog-route destination destination.catalog-hub hubResourceId references catalog resource id hub.catalog, but catalog resource has kind deck; expected hub.',
+        );
+    });
+
+    it('returns actionable failures when a WorldMap target resource id resolves to a different public path', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'worldmap.catalog-route',
+                    kind: 'worldMap',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/catalog-route.json',
+                },
+                {
+                    resourceId: 'hub.catalog',
+                    kind: 'hub',
+                    schemaVersion: 1,
+                    publicPath: 'data/hub/catalog-hub.json',
+                },
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/world/catalog-route.json': createCatalogWorldMapWithDestination(createCatalogHubDestination({
+                hubFile: 'data/hub/other-hub.json',
+            })),
+            'data/hub/catalog-hub.json': catalogHubDefinition,
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toContain(
+            'WorldMap worldmap.catalog-route destination destination.catalog-hub hubResourceId references catalog resource id hub.catalog, but catalog publicPath is data/hub/catalog-hub.json; destination hubFile is data/hub/other-hub.json.',
+        );
+    });
+
+    it('returns actionable failures when a WorldMap Expedition resource id has the wrong kind or path', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'worldmap.catalog-route',
+                    kind: 'worldMap',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/catalog-route.json',
+                },
+                {
+                    resourceId: 'world.seed.initial-state',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/initial-state.json',
+                },
+                {
+                    resourceId: 'deck.starter',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/starter-deck.json',
+                },
+                {
+                    resourceId: 'map.wrong-kind',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/catalog-map.json',
+                },
+                {
+                    resourceId: 'events.catalog',
+                    kind: 'expeditionEvents',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/catalog-events.json',
+                },
+                {
+                    resourceId: 'phase01-prototype-shop',
+                    kind: 'expeditionShop',
+                    schemaVersion: 1,
+                    publicPath: 'data/mijing/prototype-shop.json',
+                },
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/world/catalog-route.json': createCatalogWorldMapWithDestination({
+                id: 'destination.catalog-expedition',
+                kind: 'expedition',
+                label: 'Catalog Expedition',
+                description: 'Catalog-backed Expedition destination.',
+                presentation: {
+                    position: {
+                        x: 0.5,
+                        y: 0.5,
+                    },
+                    icon: 'trial',
+                    regionLabel: 'Catalog',
+                },
+                expeditionId: 'expedition.catalog',
+                mapId: 'catalog-map',
+                worldStateResourceId: 'world.seed.initial-state',
+                worldStateFile: 'data/world/initial-state.json',
+                starterDeckResourceId: 'deck.starter',
+                starterDeckFile: 'data/decks/starter-deck.json',
+                mapResourceId: 'map.wrong-kind',
+                mapFile: 'data/mijing/catalog-map.json',
+                eventsResourceId: 'events.catalog',
+                eventsFile: 'data/mijing/other-events.json',
+                shopResourceId: 'shop.missing',
+                shopFile: 'data/mijing/prototype-shop.json',
+            }),
+            'data/mijing/catalog-map.json': {
+                id: 'catalog-map',
+                name: 'Catalog Map',
+                description: 'Map fixture.',
+                entryNodeId: 'entrance.catalog',
+                nodes: [
+                    {
+                        id: 'entrance.catalog',
+                        type: 'entrance',
+                        layer: 0,
+                        label: 'Entrance',
+                        outgoingNodeIds: [],
+                        payloadRef: {
+                            kind: 'entrance',
+                            ref: 'starter',
+                        },
+                    },
+                ],
+            },
+            'data/mijing/catalog-events.json': {
+                id: 'events.catalog',
+                eventsByNodeId: {},
+            },
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toContain(
+            'WorldMap worldmap.catalog-route destination destination.catalog-expedition mapResourceId references catalog resource id map.wrong-kind, but catalog resource has kind deck; expected expeditionMap.',
+        );
+        expect(result.failures.map((failure) => failure.message)).toContain(
+            'WorldMap worldmap.catalog-route destination destination.catalog-expedition eventsResourceId references catalog resource id events.catalog, but catalog publicPath is data/mijing/catalog-events.json; destination eventsFile is data/mijing/other-events.json.',
+        );
+        expect(result.failures.map((failure) => failure.message)).toContain(
+            'WorldMap worldmap.catalog-route destination destination.catalog-expedition shopResourceId references catalog resource id shop.missing, but no catalog entry exists for that resource id.',
         );
     });
 
@@ -456,10 +731,15 @@ describe('read-only content catalog', () => {
                     },
                     expeditionId: 'expedition.malformed',
                     mapId: 'expedition.map.worldmap-malformed',
+                    worldStateResourceId: 'world.initial-state',
                     worldStateFile: 'data/world/initial-state.json',
+                    starterDeckResourceId: 'starter-deck',
                     starterDeckFile: 'data/decks/starter-deck.json',
+                    mapResourceId: 'expedition.map.worldmap-malformed',
                     mapFile: 'data/mijing/worldmap-malformed-map.json',
+                    eventsResourceId: 'phase01-prototype-events',
                     eventsFile: 'data/mijing/prototype-events.json',
+                    shopResourceId: 'phase01-prototype-shop',
                     shopFile: 'data/mijing/prototype-shop.json',
                 },
             ],

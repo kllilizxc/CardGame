@@ -30,10 +30,15 @@ export interface ExpeditionRouteIdentity {
 
 export interface ExpeditionTargetConfig extends ExpeditionRouteIdentity {
     routeKey: string;
+    worldStateResourceId?: string;
     worldStateFile: string;
+    starterDeckResourceId?: string;
     starterDeckFile: string;
+    mapResourceId?: string;
     mapFile: string;
+    eventsResourceId?: string;
     eventsFile: string;
+    shopResourceId?: string;
     shopFile: string;
 }
 
