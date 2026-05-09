@@ -2,11 +2,14 @@ import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
 import {
-    createHubActionLaunchIntent,
+    applyHubNavigationIntent,
+    createHubActionIntent,
+    createInitialHubNavigationState,
+    resolveHubLocation,
     validateHubTownDefinition,
+    type HubNavigationState,
     type HubTownAction,
     type HubTownDefinition,
-    type HubTownLocation,
 } from './hubTown';
 
 const HUB_TOWN_CACHE_KEY = 'hubTownShell';
@@ -14,7 +17,7 @@ const HUB_TOWN_FILE = 'data/hub/town-shell.json';
 
 export class HubScene extends Scene {
     private town!: HubTownDefinition;
-    private currentLocation!: HubTownLocation;
+    private navigationState!: HubNavigationState;
     private shellContainer?: Phaser.GameObjects.Container;
 
     constructor() {
@@ -27,25 +30,16 @@ export class HubScene extends Scene {
 
     create(): void {
         this.town = validateHubTownDefinition(this.cache.json.get(HUB_TOWN_CACHE_KEY));
-        this.currentLocation = this.findLocation(this.town.defaultLocationId);
+        this.navigationState = createInitialHubNavigationState(this.town);
 
         this.renderShell();
         EventBus.emit('current-scene-ready', this);
     }
 
-    private findLocation(locationId: string): HubTownLocation {
-        const location = this.town.locations.find((candidate) => candidate.id === locationId);
-
-        if (!location) {
-            throw new Error(`Hub location is missing from town data: ${locationId}`);
-        }
-
-        return location;
-    }
-
     private renderShell(): void {
         this.shellContainer?.destroy();
 
+        const currentLocation = resolveHubLocation(this.town, this.navigationState.currentLocationId);
         const { width, height } = this.scale;
         const container = this.add.container(0, 0);
 
@@ -80,14 +74,14 @@ export class HubScene extends Scene {
         panel.setStrokeStyle(3, 0x38bdf8, 0.82);
         container.add(panel);
 
-        container.add(this.add.text(contentX, panelTop + 48, this.currentLocation.title, {
+        container.add(this.add.text(contentX, panelTop + 48, currentLocation.title, {
             fontFamily: 'Arial',
             fontSize: '36px',
             color: '#fef3c7',
             fontStyle: 'bold',
         }));
 
-        container.add(this.add.text(contentX, panelTop + 102, this.currentLocation.summary, {
+        container.add(this.add.text(contentX, panelTop + 102, currentLocation.summary, {
             fontFamily: 'Arial',
             fontSize: '24px',
             color: '#e0f2fe',
@@ -95,7 +89,7 @@ export class HubScene extends Scene {
             wordWrap: { width: panelWidth - 116 },
         }));
 
-        container.add(this.add.text(contentX, panelTop + 162, this.currentLocation.detail, {
+        container.add(this.add.text(contentX, panelTop + 162, currentLocation.detail, {
             fontFamily: 'Arial',
             fontSize: '21px',
             color: '#dbeafe',
@@ -110,7 +104,15 @@ export class HubScene extends Scene {
             wordWrap: { width: panelWidth - 116 },
         }));
 
-        this.currentLocation.actions.forEach((action, index) => {
+        const statusLine = this.navigationState.statusText ?? '当前导航状态仅保存在本次 HubScene 内存中。';
+        container.add(this.add.text(contentX, panelTop + 322, statusLine, {
+            fontFamily: 'Arial',
+            fontSize: '17px',
+            color: '#fef3c7',
+            wordWrap: { width: panelWidth - 116 },
+        }));
+
+        currentLocation.actions.forEach((action, index) => {
             container.add(this.createActionButton(action, panelX, panelTop + 390 + index * 92, panelWidth - 220));
         });
 
@@ -144,7 +146,13 @@ export class HubScene extends Scene {
     }
 
     private handleAction(action: HubTownAction): void {
-        const intent = createHubActionLaunchIntent(action);
+        const intent = createHubActionIntent(action);
+
+        if (intent.kind === 'navigateLocation') {
+            this.navigationState = applyHubNavigationIntent(this.town, this.navigationState, intent);
+            this.renderShell();
+            return;
+        }
 
         this.scene.start(intent.sceneKey, intent.payload);
     }

@@ -1,6 +1,6 @@
 # StoryState-backed Story Content Contracts
 
-`public/data/story/story-graph.json` is the checked-in playable example for StoryScene content. `public/data/hub/town-shell.json` is the minimal Hub entry that points its `startStory.storyGraphFile` action at that graph. `StoryScene` loads the graph file provided by its launch payload, defaulting to `data/story/story-graph.json`, `src/game/scenes/story/storyFlow.ts` strictly validates that the example is playable, and `src/game/scenes/story/storyFlowViewModel.ts` owns render / transition view models and runtime traversal using `StoryState`, `StoryCondition`, and `StoryEffect` from `src/game/types/story.ts` / `src/game/state/StoryState.ts`. `public/data/docs/story-authoring-guide.md` is the author-facing workflow guide, and `public/data/story/story-graph.compact.example.json` is the smallest checked-in StoryState schema example. `public/data/story/story-graph.executable.json` remains a standalone contract fixture validated by `src/game/types/storyContent.ts`.
+`public/data/story/story-graph.json` is the checked-in playable example for StoryScene content. `public/data/hub/town-shell.json` is the minimal multi-location Hub entry: its `navigate.targetLocationId` actions move between Hub locations in memory, and its `startStory.storyGraphFile` action points at the playable story graph. `StoryScene` loads the graph file provided by its launch payload, defaulting to `data/story/story-graph.json`, `src/game/scenes/story/storyFlow.ts` strictly validates that the example is playable, and `src/game/scenes/story/storyFlowViewModel.ts` owns render / transition view models and runtime traversal using `StoryState`, `StoryCondition`, and `StoryEffect` from `src/game/types/story.ts` / `src/game/state/StoryState.ts`. `public/data/docs/story-authoring-guide.md` is the author-facing workflow guide, and `public/data/story/story-graph.compact.example.json` is the smallest checked-in StoryState schema example. `public/data/story/story-graph.executable.json` remains a standalone contract fixture validated by `src/game/types/storyContent.ts`.
 
 ## Graph shape
 
@@ -51,7 +51,16 @@ Nodes use `onEnter`, and choices use `effects`. Both fields use `StoryEffect` ar
 
 ## Hub launch contract
 
-The minimal Hub shell lives in `public/data/hub/town-shell.json`. Its supported action kind is `startStory`, and that action must provide a `storyGraphFile` such as `data/story/story-graph.json`. `HubScene` validates this data and passes the file path to `StoryScene`; `StoryScene` then keeps that path through story-triggered BattleScene round trips so battle results resume against the same graph file.
+The minimal Hub shell lives in `public/data/hub/town-shell.json`. A Hub definition has a stable `hubId`, display copy, `defaultLocationId`, and `locations[]`. Each location has an `id`, display copy, and at least one action.
+
+Supported Hub action kinds:
+
+| Kind | Required fields | Meaning |
+| --- | --- | --- |
+| `navigate` | `targetLocationId` | Switch the current Hub location to another `locations[].id` in the same file. The target is validated at load time, and the current location is only kept in `HubScene` memory for this slice. |
+| `startStory` | `storyGraphFile` | Start `StoryScene` with the declared story graph file. |
+
+`HubScene` validates this data, applies `navigate` actions without hard-coding target ids in scene code, and passes `startStory.storyGraphFile` to `StoryScene`; `StoryScene` then keeps that path through story-triggered BattleScene round trips so battle results resume against the same graph file. This Hub contract does not yet include persistent Hub/world state, shops, inventory, rewards, or Expedition exits.
 
 ## Authoring loop
 

@@ -4,14 +4,14 @@
 
 ## 当前 source of truth
 
-- **Hub 入口文件**：`public/data/hub/town-shell.json`（`startStory.storyGraphFile` 指向要启动的剧情图）
+- **Hub 入口文件**：`public/data/hub/town-shell.json`（`navigate.targetLocationId` 在城镇小地点间切换；`startStory.storyGraphFile` 指向要启动的剧情图）
 - **可游玩主线文件**：`public/data/story/story-graph.json`
 - **紧凑 schema 示例**：`public/data/story/story-graph.compact.example.json`
 - **运行时状态类型**：`src/game/types/story.ts`
 - **严格内容校验**：`src/game/scenes/story/storyFlow.ts`
 - **渲染与跳转视图模型**：`src/game/scenes/story/storyFlowViewModel.ts`
 
-新增真实剧情时优先编辑 `story-graph.json`。如果需要从城镇入口切换到另一份剧情图，更新 `public/data/hub/town-shell.json` 中对应行动的 `storyGraphFile`，不要在 `HubScene` 或 `StoryScene` 里硬编码新路径。不要把只存在于 prose 的状态变化当作剧情事实：后续分支需要读取的内容必须写进 `visibleWhen`、`enabledWhen`、`effects` 或 `onEnter`。
+新增真实剧情时优先编辑 `story-graph.json`。如果需要从城镇入口切换到另一份剧情图，更新 `public/data/hub/town-shell.json` 中对应行动的 `storyGraphFile`；如果需要在城镇小地点之间移动，新增或修改 `navigate.targetLocationId`，不要在 `HubScene` 或 `StoryScene` 里硬编码新路径或地点 id。不要把只存在于 prose 的状态变化当作剧情事实：后续分支需要读取的内容必须写进 `visibleWhen`、`enabledWhen`、`effects` 或 `onEnter`。
 
 ## 推荐写作流程
 
@@ -81,6 +81,36 @@
 ```
 
 `onVictoryNodeId` 和 `onDefeatNodeId` 必须指向同一剧情图中已经存在的节点。`StoryScene` 会把 `battleLaunch` 元数据连同当前 `StoryState` 包装为 source-aware payload，启动 `BattleScene`，并在战斗结束后分别回到胜利或失败续接节点。
+
+### Hub town actions
+
+`public/data/hub/town-shell.json` 的每个 `locations[].actions[]` 目前只支持两种数据驱动行动：
+
+```json
+{
+  "id": "action.visit-town-teahouse",
+  "kind": "navigate",
+  "label": "去茶棚打听消息",
+  "description": "在同一个 HubScene 内切换到集市旁的茶棚；该导航状态暂不持久化。",
+  "targetLocationId": "location.qingyun-town.teahouse",
+  "statusText": "你穿过集市，来到茶棚边听散修议论今日试炼。"
+}
+```
+
+`navigate.targetLocationId` 必须引用同一个 Hub 文件中已经声明的 `locations[].id`。这类导航只保存在当前 `HubScene` 内存里；离开 Hub 或刷新页面后不会保存位置。
+
+```json
+{
+  "id": "action.start-qingyun-entry-story",
+  "kind": "startStory",
+  "label": "前往青云宗山门",
+  "description": "启动 public/data/story/story-graph.json 中的青云宗入门主线。",
+  "storyGraphFile": "data/story/story-graph.json",
+  "statusText": "从青云镇出发，主线故事已开启。"
+}
+```
+
+`startStory.storyGraphFile` 由 `HubScene` 传给 `StoryScene`，并会在 StoryScene 触发 BattleScene 往返时继续保留。不要把商店、背包、奖励、秘境出口或持久化 Hub 状态塞进当前 Hub action；这些需要先定义新的数据合同。
 
 ## Compact schema example
 
