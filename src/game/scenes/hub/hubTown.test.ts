@@ -6,6 +6,7 @@ import townShellJson from '../../../../public/data/hub/town-shell.json';
 import type { StoryRuntimeSessionSnapshot } from '../../services/StoryHubSessionPersistence';
 import type { StoryState } from '../../types/story';
 import { validatePlayableStoryGraph } from '../story/storyFlow';
+import * as hubTown from './hubTown';
 import {
     applyHubNavigationIntent,
     createHubActionIntent,
@@ -67,6 +68,71 @@ function createStoryState(params: {
 }
 
 describe('hub town shell content', () => {
+    it('validates checked-in Hub sub-map presentation metadata for Qingyun town and the one-location sect gate', () => {
+        const town = validateHubTownDefinition(townShellJson);
+        const sectGate = readHubTownDefinition('data/hub/qingyun-sect-gate.json');
+
+        expect(town.presentation).toEqual({
+            mapWidth: 1000,
+            mapHeight: 620,
+            initialCenter: {
+                x: 0.5,
+                y: 0.57,
+            },
+        });
+        expect(town.locations.map((location) => ({
+            id: location.id,
+            presentation: location.presentation,
+        }))).toEqual([
+            {
+                id: 'location.qingyun-town.gate-market',
+                presentation: {
+                    position: {
+                        x: 0.36,
+                        y: 0.64,
+                    },
+                    icon: 'gate-market',
+                    regionLabel: '山门集市',
+                },
+            },
+            {
+                id: 'location.qingyun-town.teahouse',
+                presentation: {
+                    position: {
+                        x: 0.66,
+                        y: 0.5,
+                    },
+                    icon: 'teahouse',
+                    regionLabel: '镇口茶棚',
+                },
+            },
+        ]);
+        expect(sectGate.presentation).toEqual({
+            mapWidth: 820,
+            mapHeight: 520,
+            initialCenter: {
+                x: 0.5,
+                y: 0.52,
+            },
+        });
+        expect(sectGate.locations.map((location) => ({
+            id: location.id,
+            presentation: location.presentation,
+        }))).toEqual([
+            {
+                id: 'location.qingyun-sect-gate.archway',
+                presentation: {
+                    position: {
+                        x: 0.5,
+                        y: 0.52,
+                    },
+                    icon: 'sect-gate',
+                    regionLabel: '青云宗山门',
+                },
+            },
+        ]);
+    });
+
     it('validates the checked-in town shell with multiple data-declared locations and navigation actions', () => {
         const town = validateHubTownDefinition(townShellJson);
 
@@ -450,6 +516,117 @@ describe('hub town shell content', () => {
                 statusText: '已恢复青云宗山门故事进度。',
             },
         });
+    });
+
+    it('converts normalized Hub marker coordinates and clamps the draggable sub-map surface', () => {
+        const town = validateHubTownDefinition(townShellJson);
+        const helpers = hubTown as typeof hubTown & {
+            getHubLocationSurfacePosition?: (hub: HubTownDefinition, location: HubTownDefinition['locations'][number]) => { x: number; y: number };
+            createHubMapInitialSurfacePosition?: (presentation: HubTownDefinition['presentation'], viewport: { left: number; top: number; width: number; height: number }) => { x: number; y: number };
+            clampHubMapSurfacePosition?: (presentation: HubTownDefinition['presentation'], viewport: { left: number; top: number; width: number; height: number }, position: { x: number; y: number }) => { x: number; y: number };
+            shouldActivateHubMarker?: (pointerDown: { x: number; y: number }, pointerUp: { x: number; y: number }, dragDistanceThreshold: number) => boolean;
+        };
+
+        expect(typeof helpers.getHubLocationSurfacePosition).toBe('function');
+        expect(typeof helpers.createHubMapInitialSurfacePosition).toBe('function');
+        expect(typeof helpers.clampHubMapSurfacePosition).toBe('function');
+        expect(typeof helpers.shouldActivateHubMarker).toBe('function');
+        if (!helpers.getHubLocationSurfacePosition
+            || !helpers.createHubMapInitialSurfacePosition
+            || !helpers.clampHubMapSurfacePosition
+            || !helpers.shouldActivateHubMarker) {
+            throw new Error('Expected Hub map helpers to be exported.');
+        }
+
+        expect(helpers.getHubLocationSurfacePosition(town, town.locations[1])).toEqual({
+            x: 660,
+            y: 310,
+        });
+
+        const viewport = {
+            left: 120,
+            top: 180,
+            width: 500,
+            height: 360,
+        };
+        const initialSurfacePosition = helpers.createHubMapInitialSurfacePosition(town.presentation, viewport);
+        expect(initialSurfacePosition.x).toBe(-130);
+        expect(initialSurfacePosition.y).toBeCloseTo(6.6);
+        expect(helpers.clampHubMapSurfacePosition(town.presentation, viewport, {
+            x: 240,
+            y: 260,
+        })).toEqual({
+            x: 120,
+            y: 180,
+        });
+        expect(helpers.clampHubMapSurfacePosition(town.presentation, viewport, {
+            x: -600,
+            y: -200,
+        })).toEqual({
+            x: -380,
+            y: -80,
+        });
+        expect(helpers.shouldActivateHubMarker({ x: 200, y: 300 }, { x: 206, y: 304 }, 8)).toBe(true);
+        expect(helpers.shouldActivateHubMarker({ x: 200, y: 300 }, { x: 214, y: 304 }, 8)).toBe(false);
+    });
+
+    it('applies Hub marker selection through the same persisted navigation state boundary', () => {
+        const town = validateHubTownDefinition(townShellJson);
+        const helpers = hubTown as typeof hubTown & {
+            createHubLocationSelectionIntent?: (targetLocationId: string, statusText?: string) => ReturnType<typeof createHubActionIntent>;
+        };
+
+        expect(typeof helpers.createHubLocationSelectionIntent).toBe('function');
+        if (!helpers.createHubLocationSelectionIntent) {
+            throw new Error('Expected createHubLocationSelectionIntent to be exported.');
+        }
+
+        const markerIntent = helpers.createHubLocationSelectionIntent(
+            'location.qingyun-town.teahouse',
+            '已在 Hub 子地图选择集市茶棚。',
+        );
+
+        expect(markerIntent).toEqual({
+            kind: 'selectLocation',
+            targetLocationId: 'location.qingyun-town.teahouse',
+            statusText: '已在 Hub 子地图选择集市茶棚。',
+        });
+        expect(applyHubNavigationIntent(town, {
+            currentLocationId: 'location.qingyun-town.gate-market',
+        }, markerIntent)).toEqual({
+            currentLocationId: 'location.qingyun-town.teahouse',
+            statusText: '已在 Hub 子地图选择集市茶棚。',
+        });
+    });
+
+    it('rejects invalid Hub sub-map presentation metadata before rendering markers', () => {
+        const missingTownPresentation = structuredClone(townShellJson) as Record<string, unknown>;
+        delete missingTownPresentation.presentation;
+
+        expect(() => validateHubTownDefinition(missingTownPresentation)).toThrow(
+            'Hub town presentation must be an object.',
+        );
+
+        const invalidTownSize = structuredClone(townShellJson) as typeof townShellJson;
+        invalidTownSize.presentation.mapWidth = 0;
+
+        expect(() => validateHubTownDefinition(invalidTownSize)).toThrow(
+            'Hub town presentation.mapWidth must be a positive number.',
+        );
+
+        const invalidLocationPosition = structuredClone(townShellJson) as typeof townShellJson;
+        invalidLocationPosition.locations[0].presentation.position.x = 1.2;
+
+        expect(() => validateHubTownDefinition(invalidLocationPosition)).toThrow(
+            'Hub location location.qingyun-town.gate-market presentation.position.x must be between 0 and 1.',
+        );
+
+        const invalidLocationIcon = structuredClone(townShellJson) as typeof townShellJson;
+        invalidLocationIcon.locations[0].presentation.icon = '';
+
+        expect(() => validateHubTownDefinition(invalidLocationIcon)).toThrow(
+            'Hub location location.qingyun-town.gate-market presentation.icon must be a non-empty string.',
+        );
     });
 
     it('rejects navigation actions that point to missing town locations', () => {

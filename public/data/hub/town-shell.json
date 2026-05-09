@@ -27,7 +27,15 @@
           "targetLocationId": "location.qingyun-town.teahouse",
           "statusText": "你穿过集市，来到茶棚边听散修议论今日试炼。"
         }
-      ]
+      ],
+      "presentation": {
+        "position": {
+          "x": 0.36,
+          "y": 0.64
+        },
+        "icon": "gate-market",
+        "regionLabel": "山门集市"
+      }
     },
     {
       "id": "location.qingyun-town.teahouse",
@@ -51,7 +59,23 @@
           "storyGraphFile": "data/story/qingyun-teahouse-rumors.json",
           "statusText": "茶棚里传来新的试炼传闻。"
         }
-      ]
+      ],
+      "presentation": {
+        "position": {
+          "x": 0.66,
+          "y": 0.5
+        },
+        "icon": "teahouse",
+        "regionLabel": "镇口茶棚"
+      }
     }
-  ]
+  ],
+  "presentation": {
+    "mapWidth": 1000,
+    "mapHeight": 620,
+    "initialCenter": {
+      "x": 0.5,
+      "y": 0.57
+    }
+  }
 }

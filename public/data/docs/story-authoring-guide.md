@@ -4,8 +4,8 @@
 
 ## 当前 source of truth
 
-- **青云镇 Hub 入口文件**：`public/data/hub/town-shell.json`（`navigate.targetLocationId` 在城镇小地点间切换；`startStory.storyGraphFile` 指向要启动的剧情图）
-- **青云宗山门 Hub 入口文件**：`public/data/hub/qingyun-sect-gate.json`（第二个大地图 Hub 目的地，使用独立 `hubId` / actionId 指向既有主线图）
+- **青云镇 Hub 入口文件**：`public/data/hub/town-shell.json`（顶层 Hub 子地图 `presentation` 与每地点 marker presentation；`navigate.targetLocationId` 在城镇小地点间切换；`startStory.storyGraphFile` 指向要启动的剧情图）
+- **青云宗山门 Hub 入口文件**：`public/data/hub/qingyun-sect-gate.json`（第二个大地图 Hub 目的地；单地点 Hub 也必须声明子地图尺寸、初始中心和地点 marker presentation，使用独立 `hubId` / actionId 指向既有主线图）
 - **World map 入口文件**：`public/data/world/world-map.json`（Hub 目的地可用可选 `targetLocationId` 直接落到某个已声明的 Hub 小地点，例如集市茶棚；也可指向不同 Hub 文件，例如青云宗山门；Expedition 目的地的 active-run route key 由 `expeditionId + mapId` 规范化生成；每个目的地还要提供 normalized `presentation.position`、`icon`、`regionLabel`，供 `WorldMapScene` 在可拖拽大地图上渲染点击标记；当前 checked-in 秘境入口包括青云外山试炼与青玉洞试炼）
 - **第二个秘境地图文件**：`public/data/mijing/jade-cave-map.json`（独立 `phase01-jade-cave-map`，复用原型 events/shop/encounter 文件来验证多秘境 active-run 隔离）
 - **可游玩主线文件**：`public/data/story/story-graph.json`
@@ -15,7 +15,7 @@
 - **严格内容校验**：`src/game/scenes/story/storyFlow.ts`
 - **渲染与跳转视图模型**：`src/game/scenes/story/storyFlowViewModel.ts`
 
-扩展主线时优先编辑 `story-graph.json`；新增短支线或章节时可以像 `qingyun-teahouse-rumors.json` 一样新增独立 StoryState 图，并在对应 Hub 文件（例如 `public/data/hub/town-shell.json` 或 `public/data/hub/qingyun-sect-gate.json`）中添加唯一 `startStory` action 指向它。每个 Hub 的 `hubId`、action `id` 与 `storyGraphFile` 都是本地 Story/Hub session key 的一部分，改名会让旧进度不再匹配。如果需要在 Hub 小地点之间移动，新增或修改 `navigate.targetLocationId`；如果需要大地图直接进入某个 Hub 小地点，在 `public/data/world/world-map.json` 添加新的 Hub destination，设置 `targetLocationId`，并给它一个不与既有标记重叠的 `presentation.position`。如果新增 Expedition/秘境目的地，也要维护稳定的 `expeditionId + mapId` 组合；active run 会以规范化的 `expedition:<expeditionId>:<mapId>` route key 隔离，而 `destinationId` 只负责大地图 route 身份；`mapFile` 内的 `id` 必须等于目的地的 `mapId`，复用 events/shop 文件时地图节点的 `payloadRef.ref` 必须仍能匹配那些内容文件。不要在 `HubScene`、`StoryScene` 或 `ExpeditionScene` 里硬编码新路径或地点 id。不要把只存在于 prose 的状态变化当作剧情事实：后续分支需要读取的内容必须写进 `visibleWhen`、`enabledWhen`、`effects` 或 `onEnter`。
+扩展主线时优先编辑 `story-graph.json`；新增短支线或章节时可以像 `qingyun-teahouse-rumors.json` 一样新增独立 StoryState 图，并在对应 Hub 文件（例如 `public/data/hub/town-shell.json` 或 `public/data/hub/qingyun-sect-gate.json`）中添加唯一 `startStory` action 指向它。每个 Hub 的 `hubId`、action `id` 与 `storyGraphFile` 都是本地 Story/Hub session key 的一部分，改名会让旧进度不再匹配。如果需要在 Hub 小地点之间移动，新增或修改 `navigate.targetLocationId`，同时给新增地点补 `locations[].presentation.position` / `icon` / `regionLabel`，让 HubScene 能在子地图上选中它；如果需要大地图直接进入某个 Hub 小地点，在 `public/data/world/world-map.json` 添加新的 Hub destination，设置 `targetLocationId`，并给它一个不与既有大地图标记重叠的 `presentation.position`。如果新增 Expedition/秘境目的地，也要维护稳定的 `expeditionId + mapId` 组合；active run 会以规范化的 `expedition:<expeditionId>:<mapId>` route key 隔离，而 `destinationId` 只负责大地图 route 身份；`mapFile` 内的 `id` 必须等于目的地的 `mapId`，复用 events/shop 文件时地图节点的 `payloadRef.ref` 必须仍能匹配那些内容文件。不要在 `HubScene`、`StoryScene` 或 `ExpeditionScene` 里硬编码新路径或地点 id。不要把只存在于 prose 的状态变化当作剧情事实：后续分支需要读取的内容必须写进 `visibleWhen`、`enabledWhen`、`effects` 或 `onEnter`。
 
 ## 推荐写作流程
 
@@ -85,6 +85,30 @@
 ```
 
 `onVictoryNodeId` 和 `onDefeatNodeId` 必须指向同一剧情图中已经存在的节点。`StoryScene` 会把 `battleLaunch` 元数据连同当前 `StoryState` 包装为 source-aware payload，启动 `BattleScene`，并在战斗结束后分别回到胜利或失败续接节点。
+
+### Hub sub-map presentation
+
+每个 Hub JSON 顶层必须声明子地图展示元数据：
+
+```json
+"presentation": {
+  "mapWidth": 1000,
+  "mapHeight": 620,
+  "initialCenter": { "x": 0.5, "y": 0.57 }
+}
+```
+
+每个 `locations[]` 也必须声明 marker 展示元数据：
+
+```json
+"presentation": {
+  "position": { "x": 0.66, "y": 0.5 },
+  "icon": "teahouse",
+  "regionLabel": "镇口茶棚"
+}
+```
+
+`position` 与 `initialCenter` 都是 `0..1` normalized 坐标；运行时会乘以 `mapWidth` / `mapHeight` 得到子地图 surface 坐标，并在视窗内 clamp 拖拽范围。即使只有一个地点（例如 `qingyun-sect-gate.json`），也要声明这些字段，避免 HubScene 特判。点击 Hub 子地图 marker 只会更新并保存 `currentLocationId`，随后显示该地点现有 `actions[]`；它不会新增商店、修炼、奖励或世界状态操作。
 
 ### Hub town actions
 

@@ -19,7 +19,23 @@
           "storyGraphFile": "data/story/story-graph.json",
           "statusText": "山门云阶前，青云宗入门故事已开启。"
         }
-      ]
+      ],
+      "presentation": {
+        "position": {
+          "x": 0.5,
+          "y": 0.52
+        },
+        "icon": "sect-gate",
+        "regionLabel": "青云宗山门"
+      }
     }
-  ]
+  ],
+  "presentation": {
+    "mapWidth": 820,
+    "mapHeight": 520,
+    "initialCenter": {
+      "x": 0.5,
+      "y": 0.52
+    }
+  }
 }

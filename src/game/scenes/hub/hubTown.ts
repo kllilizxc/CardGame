@@ -28,11 +28,41 @@ export interface HubTownNavigateAction extends HubTownActionBase {
 
 export type HubTownAction = HubTownStartStoryAction | HubTownNavigateAction;
 
+export interface HubTownNormalizedPosition {
+    x: number;
+    y: number;
+}
+
+export interface HubTownPresentation {
+    mapWidth: number;
+    mapHeight: number;
+    initialCenter: HubTownNormalizedPosition;
+}
+
+export interface HubTownLocationPresentation {
+    position: HubTownNormalizedPosition;
+    icon: string;
+    regionLabel: string;
+}
+
+export interface HubTownViewport {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+}
+
+export interface HubTownSurfacePosition {
+    x: number;
+    y: number;
+}
+
 export interface HubTownLocation {
     id: string;
     title: string;
     summary: string;
     detail: string;
+    presentation: HubTownLocationPresentation;
     actions: HubTownAction[];
 }
 
@@ -42,6 +72,7 @@ export interface HubTownDefinition {
     subtitle: string;
     description: string;
     defaultLocationId: string;
+    presentation: HubTownPresentation;
     locations: HubTownLocation[];
 }
 
@@ -67,7 +98,16 @@ export interface HubSceneNavigationIntent {
     statusText?: string;
 }
 
-export type HubSceneActionIntent = HubSceneStoryLaunchIntent | HubSceneNavigationIntent;
+export interface HubSceneLocationSelectionIntent {
+    kind: 'selectLocation';
+    targetLocationId: string;
+    statusText?: string;
+}
+
+export type HubTownActionIntent = HubSceneStoryLaunchIntent | HubSceneNavigationIntent;
+export type HubSceneActionIntent =
+    | HubTownActionIntent
+    | HubSceneLocationSelectionIntent;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -79,6 +119,73 @@ function requireString(value: unknown, field: string): string {
     }
 
     return value;
+}
+
+function requireLocationString(value: unknown, field: string): string {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+        throw new Error(`Hub location ${field} must be a non-empty string.`);
+    }
+
+    return value;
+}
+
+function requirePositiveNumber(value: unknown, field: string): number {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+        throw new Error(`Hub town ${field} must be a positive number.`);
+    }
+
+    return value;
+}
+
+function validateNormalizedPosition(
+    value: unknown,
+    field: string,
+    ownerLabel = 'Hub town',
+): HubTownNormalizedPosition {
+    if (!isRecord(value)) {
+        throw new Error(`${ownerLabel} ${field} must be an object.`);
+    }
+
+    return {
+        x: requireNormalizedNumberForOwner(value.x, `${field}.x`, ownerLabel),
+        y: requireNormalizedNumberForOwner(value.y, `${field}.y`, ownerLabel),
+    };
+}
+
+function requireNormalizedNumberForOwner(value: unknown, field: string, ownerLabel: string): number {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+        throw new Error(`${ownerLabel} ${field} must be between 0 and 1.`);
+    }
+
+    return value;
+}
+
+function validateHubTownPresentation(value: unknown): HubTownPresentation {
+    if (!isRecord(value)) {
+        throw new Error('Hub town presentation must be an object.');
+    }
+
+    return {
+        mapWidth: requirePositiveNumber(value.mapWidth, 'presentation.mapWidth'),
+        mapHeight: requirePositiveNumber(value.mapHeight, 'presentation.mapHeight'),
+        initialCenter: validateNormalizedPosition(value.initialCenter, 'presentation.initialCenter'),
+    };
+}
+
+function validateHubLocationPresentation(value: unknown, locationId: string): HubTownLocationPresentation {
+    if (!isRecord(value)) {
+        throw new Error(`Hub location ${locationId} presentation must be an object.`);
+    }
+
+    return {
+        position: validateNormalizedPosition(
+            value.position,
+            `${locationId} presentation.position`,
+            'Hub location',
+        ),
+        icon: requireLocationString(value.icon, `${locationId} presentation.icon`),
+        regionLabel: requireLocationString(value.regionLabel, `${locationId} presentation.regionLabel`),
+    };
 }
 
 function validateHubAction(value: unknown, hubId: string, locationId: string, index: number): HubTownAction {
@@ -136,6 +243,7 @@ function validateHubLocation(value: unknown, hubId: string, index: number): HubT
         title: requireString(value.title, `locations.${id}.title`),
         summary: requireString(value.summary, `locations.${id}.summary`),
         detail: requireString(value.detail, `locations.${id}.detail`),
+        presentation: validateHubLocationPresentation(value.presentation, id),
         actions,
     };
 }
@@ -192,6 +300,7 @@ export function validateHubTownDefinition(value: unknown): HubTownDefinition {
         subtitle: requireString(value.subtitle, 'subtitle'),
         description: requireString(value.description, 'description'),
         defaultLocationId,
+        presentation: validateHubTownPresentation(value.presentation),
         locations,
     };
 }
@@ -279,7 +388,7 @@ function createResumedStoryLaunchPayload(
 export function createHubActionIntent(
     action: HubTownAction,
     savedStorySession?: StoryRuntimeSessionSnapshot | null,
-): HubSceneActionIntent {
+): HubTownActionIntent {
     if (action.kind === 'navigate') {
         return {
             kind: 'navigateLocation',
@@ -295,12 +404,23 @@ export function createHubActionIntent(
     };
 }
 
+export function createHubLocationSelectionIntent(
+    targetLocationId: string,
+    statusText?: string,
+): HubSceneLocationSelectionIntent {
+    return {
+        kind: 'selectLocation',
+        targetLocationId,
+        ...(statusText ? { statusText } : {}),
+    };
+}
+
 export function applyHubNavigationIntent(
     town: HubTownDefinition,
     state: HubNavigationState,
     intent: HubSceneActionIntent,
 ): HubNavigationState {
-    if (intent.kind !== 'navigateLocation') {
+    if (intent.kind !== 'navigateLocation' && intent.kind !== 'selectLocation') {
         return state;
     }
 
@@ -310,4 +430,62 @@ export function applyHubNavigationIntent(
         currentLocationId: targetLocation.id,
         ...(intent.statusText ? { statusText: intent.statusText } : {}),
     };
+}
+
+export function getHubLocationSurfacePosition(
+    town: HubTownDefinition,
+    location: HubTownLocation,
+): HubTownSurfacePosition {
+    return {
+        x: location.presentation.position.x * town.presentation.mapWidth,
+        y: location.presentation.position.y * town.presentation.mapHeight,
+    };
+}
+
+function clampSurfaceAxis(
+    surfaceSize: number,
+    viewportStart: number,
+    viewportSize: number,
+    value: number,
+): number {
+    if (surfaceSize <= viewportSize) {
+        return viewportStart + (viewportSize - surfaceSize) / 2;
+    }
+
+    const min = viewportStart + viewportSize - surfaceSize;
+    const max = viewportStart;
+
+    return Math.min(max, Math.max(min, value));
+}
+
+export function clampHubMapSurfacePosition(
+    presentation: HubTownPresentation,
+    viewport: HubTownViewport,
+    position: HubTownSurfacePosition,
+): HubTownSurfacePosition {
+    return {
+        x: clampSurfaceAxis(presentation.mapWidth, viewport.left, viewport.width, position.x),
+        y: clampSurfaceAxis(presentation.mapHeight, viewport.top, viewport.height, position.y),
+    };
+}
+
+export function createHubMapInitialSurfacePosition(
+    presentation: HubTownPresentation,
+    viewport: HubTownViewport,
+): HubTownSurfacePosition {
+    return clampHubMapSurfacePosition(presentation, viewport, {
+        x: viewport.left + viewport.width / 2 - presentation.initialCenter.x * presentation.mapWidth,
+        y: viewport.top + viewport.height / 2 - presentation.initialCenter.y * presentation.mapHeight,
+    });
+}
+
+export function shouldActivateHubMarker(
+    pointerDown: HubTownSurfacePosition,
+    pointerUp: HubTownSurfacePosition,
+    dragDistanceThreshold: number,
+): boolean {
+    const deltaX = pointerUp.x - pointerDown.x;
+    const deltaY = pointerUp.y - pointerDown.y;
+
+    return deltaX * deltaX + deltaY * deltaY <= dragDistanceThreshold * dragDistanceThreshold;
 }

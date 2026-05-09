@@ -59,6 +59,10 @@ describe('startup scene flow', () => {
         expect(hubScene).toContain('返回大地图');
         expect(hubScene).toContain('createWorldMapReturnIntent');
         expect(hubScene).toContain('this.scene.start(intent.sceneKey, intent.payload)');
+        expect(hubScene).toContain('createHubMapInitialSurfacePosition');
+        expect(hubScene).toContain('createHubLocationMarker');
+        expect(hubScene).toContain('handleHubMapPointerMove');
+        expect(hubScene).toContain('createHubLocationSelectionIntent');
 
         expect(expeditionScene).toContain('normalizeExpeditionSceneLaunchData');
         expect(expeditionScene).toContain('this.launchData.mapFile');

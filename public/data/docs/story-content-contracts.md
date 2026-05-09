@@ -66,7 +66,19 @@ Hub / Expedition return-to-map actions use `createWorldMapReturnIntent({ source,
 
 ## Hub launch contract
 
-The default Hub shell lives in `public/data/hub/town-shell.json`, but `HubScene` loads the `hubFile` provided by the world-map launch payload when routed from `WorldMapScene`; for example, the 青云宗山门 route loads `public/data/hub/qingyun-sect-gate.json`. A Hub definition has a stable `hubId`, display copy, `defaultLocationId`, and `locations[]`; the loaded file's `hubId` must match the launch payload's `hubId`. If the world-map launch payload includes `targetLocationId`, that location must exist in the loaded Hub file and takes precedence over the previously saved Hub location. Each location has an `id`, display copy, and at least one action.
+The default Hub shell lives in `public/data/hub/town-shell.json`, but `HubScene` loads the `hubFile` provided by the world-map launch payload when routed from `WorldMapScene`; for example, the 青云宗山门 route loads `public/data/hub/qingyun-sect-gate.json`. A Hub definition has a stable `hubId`, display copy, `defaultLocationId`, top-level sub-map `presentation`, and `locations[]`; the loaded file's `hubId` must match the launch payload's `hubId`. If the world-map launch payload includes `targetLocationId`, that location must exist in the loaded Hub file and takes precedence over the previously saved Hub location. Each location has an `id`, display copy, per-location `presentation`, and at least one action.
+
+Hub sub-map presentation fields:
+
+| Field | Meaning |
+| --- | --- |
+| `presentation.mapWidth`, `presentation.mapHeight` | Positive pixel dimensions for the pannable Hub sub-map surface. |
+| `presentation.initialCenter` | Normalized `{ x, y }` point (`0..1`) centered in the viewport on first render, then clamped if the map is smaller than the viewport. |
+| `locations[].presentation.position` | Normalized marker coordinate (`0..1`) converted to surface pixels by `HubScene`; this is required even for a one-location Hub. |
+| `locations[].presentation.icon` | Lightweight semantic icon key used for marker glyph/palette selection. |
+| `locations[].presentation.regionLabel` | Short region copy shown near the marker and in marker previews. |
+
+Selecting a marker is a location-selection intent, not a new action kind. It updates and persists `currentLocationId` through `StoryHubSessionPersistence`, then shows that location's existing actions. `navigate` actions continue to use the same reducer/session path, and `startStory` payloads keep the same `hubId + actionId + storyGraphFile` session key.
 
 Supported Hub action kinds:
 
@@ -75,9 +87,9 @@ Supported Hub action kinds:
 | `navigate` | `targetLocationId` | Switch the current Hub location to another `locations[].id` in the same file. The target is validated at load time, and the current location is saved under the Hub `hubId` in local session storage. |
 | `startStory` | `storyGraphFile` | Start `StoryScene` with the declared story graph file. Multiple actions may point at different checked-in graph files. |
 
-`HubScene` validates this data, applies `navigate` actions without hard-coding target ids in scene code, and passes `startStory.storyGraphFile` to `StoryScene`; `StoryScene` then keeps that path through story-triggered BattleScene round trips so battle results resume against the same graph file.
+`HubScene` validates this data, renders the presentation metadata as a draggable marker map, applies marker selection and `navigate` actions without hard-coding target ids in scene code, and passes `startStory.storyGraphFile` to `StoryScene`; `StoryScene` then keeps that path through story-triggered BattleScene round trips so battle results resume against the same graph file.
 
-The current town shell intentionally has two `startStory` examples: `action.start-qingyun-entry-story` launches `data/story/story-graph.json` from the gate market, while `action.start-teahouse-rumors-story` launches `data/story/qingyun-teahouse-rumors.json` from the tea-house location. The 青云宗山门 Hub adds `action.start-sect-gate-entry-story`, which also launches `data/story/story-graph.json` but is separated by `hub.qingyun-sect-gate` and its own action id. Hub ids, action ids, and graph files are stable persisted identifiers; add a new action id for a new story entry instead of repurposing an existing one.
+The current town shell intentionally has two spatial locations and two `startStory` examples: `action.start-qingyun-entry-story` launches `data/story/story-graph.json` from the gate-market marker, while `action.start-teahouse-rumors-story` launches `data/story/qingyun-teahouse-rumors.json` from the tea-house marker. The 青云宗山门 Hub adds a one-location sub-map with `action.start-sect-gate-entry-story`, which also launches `data/story/story-graph.json` but is separated by `hub.qingyun-sect-gate` and its own action id. Hub ids, location ids, action ids, graph files, and marker positions are stable persisted/content identifiers; add a new action id for a new story entry instead of repurposing an existing one.
 
 ## Story / Hub session persistence
 
