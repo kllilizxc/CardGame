@@ -3,6 +3,10 @@ import type {
     ExpeditionCardStack,
     ExpeditionTargetConfig,
 } from '../../types/expedition';
+import {
+    CONTENT_CATALOG_PUBLIC_PATH,
+    createContentCatalogResolver,
+} from '../../content/contentCatalog';
 import type {
     StoryBattleLaunchMetadata,
     StoryBattleSceneLaunchPayload,
@@ -23,6 +27,13 @@ export interface EncounterUnitConfig {
 interface EncounterData {
     enemies?: EncounterUnitConfig[];
     units?: EncounterUnitConfig[];
+}
+
+export interface StoryBattleRuntimeResources {
+    encounterResourceId: string;
+    encounterFile: string;
+    deckResourceId: string;
+    deckFile: string;
 }
 
 function isRunDeck(value: unknown): value is ExpeditionCardStack[] {
@@ -257,9 +268,10 @@ export function getEncounterCacheKey(
 export function getEncounterFile(
     payload: BattleLaunchPayload | null,
     storyPayload: StoryBattleSceneLaunchPayload | null = null,
+    storyRuntimeResources: StoryBattleRuntimeResources | null = null,
 ): string {
     if (storyPayload) {
-        return storyPayload.battleLaunch.encounterFile;
+        return storyRuntimeResources?.encounterFile ?? storyPayload.battleLaunch.encounterFile;
     }
 
     return payload?.encounterFile ?? 'data/encounters/medium-enemy.json';
@@ -273,10 +285,101 @@ export function getBattleDeckCacheKey(storyPayload: StoryBattleSceneLaunchPayloa
     return 'starterDeck';
 }
 
-export function getBattleDeckFile(storyPayload: StoryBattleSceneLaunchPayload | null = null): string {
-    return storyPayload?.battleLaunch.deckFile ?? 'data/decks/starter-deck.json';
+export function getBattleDeckFile(
+    storyPayload: StoryBattleSceneLaunchPayload | null = null,
+    storyRuntimeResources: StoryBattleRuntimeResources | null = null,
+): string {
+    return storyRuntimeResources?.deckFile ?? storyPayload?.battleLaunch.deckFile ?? 'data/decks/starter-deck.json';
 }
 
 export function getEncounterUnits(encounterData: EncounterData | null | undefined): EncounterUnitConfig[] {
     return encounterData?.enemies ?? encounterData?.units ?? [];
+}
+
+function requireStoryBattleResourceId(
+    value: string | undefined,
+    fieldName: 'encounterResourceId' | 'deckResourceId',
+    battleId: string,
+): string {
+    if (!value || value.trim().length === 0) {
+        throw new Error(
+            `BattleScene Story battle ${battleId} requires battleLaunch.${fieldName} so runtime JSON loads resolve through the content catalog; the file field remains only a compatibility alias.`,
+        );
+    }
+
+    return value;
+}
+
+function assertCatalogPathMatchesCompatibilityAlias(
+    battleId: string,
+    resourceFieldName: 'encounterResourceId' | 'deckResourceId',
+    resourceId: string,
+    catalogPublicPath: string,
+    fileFieldName: 'encounterFile' | 'deckFile',
+    compatibilityFile: string,
+): void {
+    if (catalogPublicPath === compatibilityFile) {
+        return;
+    }
+
+    throw new Error(
+        `BattleScene Story battle ${battleId} ${resourceFieldName} ${resourceId} resolved to catalog publicPath ${catalogPublicPath}, but battleLaunch.${fileFieldName} is ${compatibilityFile}.`,
+    );
+}
+
+export function resolveStoryBattleRuntimeResources(
+    rawCatalog: unknown,
+    storyPayload: StoryBattleSceneLaunchPayload | null,
+): StoryBattleRuntimeResources | null {
+    if (!storyPayload) {
+        return null;
+    }
+
+    const { battleLaunch } = storyPayload;
+    const encounterResourceId = requireStoryBattleResourceId(
+        battleLaunch.encounterResourceId,
+        'encounterResourceId',
+        battleLaunch.battleId,
+    );
+    const deckResourceId = requireStoryBattleResourceId(
+        battleLaunch.deckResourceId,
+        'deckResourceId',
+        battleLaunch.battleId,
+    );
+    const catalogResolver = createContentCatalogResolver(rawCatalog, {
+        context: 'BattleScene',
+        sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+    });
+    const encounterResource = catalogResolver.resolveJsonResource({
+        resourceId: encounterResourceId,
+        expectedKind: 'encounter',
+    });
+    const deckResource = catalogResolver.resolveJsonResource({
+        resourceId: deckResourceId,
+        expectedKind: 'deck',
+    });
+
+    assertCatalogPathMatchesCompatibilityAlias(
+        battleLaunch.battleId,
+        'encounterResourceId',
+        encounterResourceId,
+        encounterResource.publicPath,
+        'encounterFile',
+        battleLaunch.encounterFile,
+    );
+    assertCatalogPathMatchesCompatibilityAlias(
+        battleLaunch.battleId,
+        'deckResourceId',
+        deckResourceId,
+        deckResource.publicPath,
+        'deckFile',
+        battleLaunch.deckFile,
+    );
+
+    return {
+        encounterResourceId,
+        encounterFile: encounterResource.publicPath,
+        deckResourceId,
+        deckFile: deckResource.publicPath,
+    };
 }

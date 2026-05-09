@@ -86,7 +86,7 @@
 }
 ```
 
-`encounterResourceId` / `deckResourceId` 必须能在 `public/data/content-catalog.json` 中解析到对应的 `encounter` / `deck` 资源，并且 catalog `publicPath` 必须分别等于 `encounterFile` / `deckFile`；`BattleScene` 运行时仍读取这两个文件路径。`onVictoryNodeId` 和 `onDefeatNodeId` 必须指向同一剧情图中已经存在的节点。`StoryScene` 会把 `battleLaunch` 元数据连同当前 `StoryState` 包装为 source-aware payload，启动 `BattleScene`，并在战斗结束后分别回到胜利或失败续接节点。
+`encounterResourceId` / `deckResourceId` 必须能在 `public/data/content-catalog.json` 中解析到对应的 `encounter` / `deck` 资源，并且 catalog `publicPath` 必须分别等于兼容别名 `encounterFile` / `deckFile`；Story-sourced `BattleScene` 运行时会通过这些 resource id 加载 catalog `publicPath`，但仍把 `encounterFile` / `deckFile` 保留在 payload 和结果中。`onVictoryNodeId` 和 `onDefeatNodeId` 必须指向同一剧情图中已经存在的节点。`StoryScene` 会把 `battleLaunch` 元数据连同当前 `StoryState` 包装为 source-aware payload，启动 `BattleScene`，并在战斗结束后分别回到胜利或失败续接节点。
 
 ### Hub sub-map presentation
 

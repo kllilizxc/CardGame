@@ -36,6 +36,7 @@ import { UsageManager } from '../../managers/battle/UsageManager';
 import { BattleContext } from '../../context/BattleContext';
 import type { PillCard } from '../../../../public/data/types/cards/pill';
 import type { SkillCard } from '../../../../public/data/types/cards/skill';
+import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import { BattleState } from '../../state/BattleState';
 import { BattleUIManager } from '../../ui/battle/BattleUIManager';
 import { CardPreviewManager } from '../../managers/common/CardPreviewManager';
@@ -53,6 +54,8 @@ import {
     getEncounterUnits,
     normalizeBattleLaunchPayload,
     normalizeStoryBattleLaunchPayload,
+    resolveStoryBattleRuntimeResources,
+    type StoryBattleRuntimeResources,
 } from './battleSceneLaunch';
 
 export class BattleScene extends Scene {
@@ -106,6 +109,7 @@ export class BattleScene extends Scene {
     private layout!: BattleLayoutConfig;
     private launchPayload: BattleLaunchPayload | null = null;
     private storyLaunchPayload: StoryBattleSceneLaunchPayload | null = null;
+    private storyRuntimeResources: StoryBattleRuntimeResources | null = null;
     private encounterCacheKey = 'currentEncounter';
     private deckCacheKey = 'starterDeck';
     private battleEndHandled = false;
@@ -117,6 +121,7 @@ export class BattleScene extends Scene {
     init(data?: unknown): void {
         this.launchPayload = normalizeBattleLaunchPayload(data);
         this.storyLaunchPayload = this.launchPayload ? null : normalizeStoryBattleLaunchPayload(data);
+        this.storyRuntimeResources = null;
         this.encounterCacheKey = getEncounterCacheKey(this.launchPayload, this.storyLaunchPayload);
         this.deckCacheKey = getBattleDeckCacheKey(this.storyLaunchPayload);
         this.battleEndHandled = false;
@@ -167,8 +172,12 @@ export class BattleScene extends Scene {
         this.load.json('pillCards', 'data/cards/pills.json');
         this.load.json('fieldCards', 'data/cards/fields.json');
         this.load.json('skillCards', 'data/cards/skills.json');
-        this.load.json(this.deckCacheKey, getBattleDeckFile(this.storyLaunchPayload));
-        this.load.json(this.encounterCacheKey, getEncounterFile(this.launchPayload, this.storyLaunchPayload));
+        this.storyRuntimeResources = resolveStoryBattleRuntimeResources(
+            this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+            this.storyLaunchPayload,
+        );
+        this.load.json(this.deckCacheKey, getBattleDeckFile(this.storyLaunchPayload, this.storyRuntimeResources));
+        this.load.json(this.encounterCacheKey, getEncounterFile(this.launchPayload, this.storyLaunchPayload, this.storyRuntimeResources));
         this.load.json('gongfaList', 'data/gongfa/gongfa-list.json');
     }
 

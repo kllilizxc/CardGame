@@ -11,6 +11,7 @@ import {
     getEncounterUnits,
     normalizeBattleLaunchPayload,
     normalizeStoryBattleLaunchPayload,
+    resolveStoryBattleRuntimeResources,
 } from './battleSceneLaunch';
 
 const payload: BattleLaunchPayload = {
@@ -21,6 +22,59 @@ const payload: BattleLaunchPayload = {
     encounterResourceId: 'test_encounter_01',
     encounterFile: 'data/encounters/test-enemy.json',
     runDeck: [{ id: 'SX_YJZ_001', count: 1 }],
+};
+
+function createStoryPayload(): StoryBattleSceneLaunchPayload {
+    return {
+        source: 'story',
+        storyResourceId: 'story.test-battle',
+        battleLaunch: {
+            sceneKey: 'BattleScene',
+            storyId: 'story.test-battle',
+            sourceNodeId: 'start',
+            sourceChoiceId: 'start_to_duel',
+            targetNodeId: 'duel_pending',
+            battleId: 'story.test-battle.first-duel',
+            encounterResourceId: 'test_encounter_01',
+            encounterId: 'test_encounter_01',
+            encounterFile: 'data/encounters/test-enemy.json',
+            deckResourceId: 'deck.starter',
+            deckFile: 'data/decks/starter-deck.json',
+            onVictoryNodeId: 'duel_victory',
+            onDefeatNodeId: 'duel_defeat',
+            launchText: '执事示意你以卡匣应战。',
+        },
+        storyState: {
+            storyId: 'story.test-battle',
+            currentLocationId: 'location.test',
+            currentSublocationId: 'sublocation.test.duel',
+            currentNodeId: 'duel_pending',
+            visitedNodeIds: ['start', 'duel_pending'],
+            triggeredDialogueIds: [],
+            flags: { 'story.test.started': true },
+            attributes: { 心性: 55 },
+            relations: {},
+        },
+        selectedChoiceIds: ['start_to_duel'],
+    };
+}
+
+const storyBattleCatalog = {
+    schemaVersion: 1,
+    resources: [
+        {
+            resourceId: 'test_encounter_01',
+            kind: 'encounter',
+            schemaVersion: 1,
+            publicPath: 'data/encounters/test-enemy.json',
+        },
+        {
+            resourceId: 'deck.starter',
+            kind: 'deck',
+            schemaVersion: 1,
+            publicPath: 'data/decks/starter-deck.json',
+        },
+    ],
 };
 
 describe('battleSceneLaunch', () => {
@@ -59,38 +113,7 @@ describe('battleSceneLaunch', () => {
     });
 
     it('normalizes a source-aware story battle launch payload with encounter and deck files', () => {
-        const storyPayload: StoryBattleSceneLaunchPayload = {
-            source: 'story',
-            storyResourceId: 'story.test-battle',
-            battleLaunch: {
-                sceneKey: 'BattleScene',
-                storyId: 'story.test-battle',
-                sourceNodeId: 'start',
-                sourceChoiceId: 'start_to_duel',
-                targetNodeId: 'duel_pending',
-                battleId: 'story.test-battle.first-duel',
-                encounterResourceId: 'test_encounter_01',
-                encounterId: 'test_encounter_01',
-                encounterFile: 'data/encounters/test-enemy.json',
-                deckResourceId: 'deck.starter',
-                deckFile: 'data/decks/starter-deck.json',
-                onVictoryNodeId: 'duel_victory',
-                onDefeatNodeId: 'duel_defeat',
-                launchText: '执事示意你以卡匣应战。',
-            },
-            storyState: {
-                storyId: 'story.test-battle',
-                currentLocationId: 'location.test',
-                currentSublocationId: 'sublocation.test.duel',
-                currentNodeId: 'duel_pending',
-                visitedNodeIds: ['start', 'duel_pending'],
-                triggeredDialogueIds: [],
-                flags: { 'story.test.started': true },
-                attributes: { 心性: 55 },
-                relations: {},
-            },
-            selectedChoiceIds: ['start_to_duel'],
-        };
+        const storyPayload = createStoryPayload();
 
         const normalized = normalizeStoryBattleLaunchPayload(storyPayload);
 
@@ -104,5 +127,29 @@ describe('battleSceneLaunch', () => {
         expect(getEncounterCacheKey(null, normalized)).toBe('storyEncounter:story.test-battle:story.test-battle.first-duel');
         expect(getBattleDeckFile(normalized)).toBe('data/decks/starter-deck.json');
         expect(getBattleDeckCacheKey(normalized)).toBe('storyDeck:story.test-battle:story.test-battle.first-duel');
+    });
+
+    it('resolves Story-sourced battle encounter and deck files through catalog resource ids while keeping cache keys and file aliases stable', () => {
+        const storyPayload = createStoryPayload();
+        const normalized = normalizeStoryBattleLaunchPayload(storyPayload);
+
+        if (!normalized) {
+            throw new Error('Expected story payload to normalize.');
+        }
+
+        const runtimeResources = resolveStoryBattleRuntimeResources(storyBattleCatalog, normalized);
+
+        expect(runtimeResources).toEqual({
+            encounterResourceId: 'test_encounter_01',
+            encounterFile: 'data/encounters/test-enemy.json',
+            deckResourceId: 'deck.starter',
+            deckFile: 'data/decks/starter-deck.json',
+        });
+        expect(getEncounterFile(null, normalized, runtimeResources)).toBe('data/encounters/test-enemy.json');
+        expect(getBattleDeckFile(normalized, runtimeResources)).toBe('data/decks/starter-deck.json');
+        expect(getEncounterCacheKey(null, normalized)).toBe('storyEncounter:story.test-battle:story.test-battle.first-duel');
+        expect(getBattleDeckCacheKey(normalized)).toBe('storyDeck:story.test-battle:story.test-battle.first-duel');
+        expect(normalized.battleLaunch.encounterFile).toBe('data/encounters/test-enemy.json');
+        expect(normalized.battleLaunch.deckFile).toBe('data/decks/starter-deck.json');
     });
 });
