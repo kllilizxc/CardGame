@@ -1,6 +1,10 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
+import {
+    clearStoryRuntimeSession,
+    saveStoryRuntimeSession,
+} from '../../services/StoryHubSessionPersistence';
 import type { StoryState } from '../../types/story';
 import {
     createInitialStoryRuntime,
@@ -47,6 +51,7 @@ export class StoryScene extends Scene {
     create(): void {
         this.storyGraph = validatePlayableStoryGraph(this.cache.json.get(this.launchData.storyGraphCacheKey));
         const initialStatusText = this.applyLaunchData();
+        this.persistStorySession(initialStatusText);
 
         this.renderSceneFrame();
         this.renderCurrentNode(initialStatusText);
@@ -192,6 +197,8 @@ export class StoryScene extends Scene {
                 onClick: () => {
                     this.storyState = createInitialStoryRuntime(this.storyGraph);
                     this.selectedChoiceIds = [];
+                    this.resetStorySession();
+                    this.persistStorySession('故事已重新开始。');
                     this.renderCurrentNode('故事已重新开始。');
                 },
             });
@@ -295,6 +302,7 @@ export class StoryScene extends Scene {
             result,
             selectedChoice?.text ?? choiceId,
             this.launchData.storyGraphFile,
+            this.launchData.hubSession,
         );
 
         if (intent.kind === 'startBattleScene') {
@@ -303,6 +311,29 @@ export class StoryScene extends Scene {
             return;
         }
 
+        this.persistStorySession(intent.statusText);
         this.renderCurrentNode(intent.statusText);
+    }
+
+    private persistStorySession(statusText: string): void {
+        if (!this.launchData.hubSession) {
+            return;
+        }
+
+        saveStoryRuntimeSession({
+            ...this.launchData.hubSession,
+            storyState: cloneStoryState(this.storyState),
+            selectedChoiceIds: [...this.selectedChoiceIds],
+            statusText,
+            updatedAt: new Date().toISOString(),
+        });
+    }
+
+    private resetStorySession(): void {
+        if (!this.launchData.hubSession) {
+            return;
+        }
+
+        clearStoryRuntimeSession(this.launchData.hubSession);
     }
 }

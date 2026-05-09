@@ -1,6 +1,6 @@
 # StoryState-backed Story Content Contracts
 
-`public/data/story/story-graph.json` is the checked-in playable example for StoryScene content. `public/data/hub/town-shell.json` is the minimal multi-location Hub entry: its `navigate.targetLocationId` actions move between Hub locations in memory, and its `startStory.storyGraphFile` action points at the playable story graph. `StoryScene` loads the graph file provided by its launch payload, defaulting to `data/story/story-graph.json`, `src/game/scenes/story/storyFlow.ts` strictly validates that the example is playable, and `src/game/scenes/story/storyFlowViewModel.ts` owns render / transition view models and runtime traversal using `StoryState`, `StoryCondition`, and `StoryEffect` from `src/game/types/story.ts` / `src/game/state/StoryState.ts`. `public/data/docs/story-authoring-guide.md` is the author-facing workflow guide, and `public/data/story/story-graph.compact.example.json` is the smallest checked-in StoryState schema example. `public/data/story/story-graph.executable.json` remains a standalone contract fixture validated by `src/game/types/storyContent.ts`.
+`public/data/story/story-graph.json` is the checked-in playable example for StoryScene content. `public/data/hub/town-shell.json` is the minimal multi-location Hub entry: its `navigate.targetLocationId` actions move between Hub locations and save the current Hub location to local Story/Hub session storage, and its `startStory.storyGraphFile` action points at the playable story graph. `StoryScene` loads the graph file provided by its launch payload, defaulting to `data/story/story-graph.json`, `src/game/scenes/story/storyFlow.ts` strictly validates that the example is playable, and `src/game/scenes/story/storyFlowViewModel.ts` owns render / transition view models and runtime traversal using `StoryState`, `StoryCondition`, and `StoryEffect` from `src/game/types/story.ts` / `src/game/state/StoryState.ts`. `src/game/services/StoryHubSessionPersistence.ts` is the versioned local session boundary for Hub location and per-Hub-action Story runtime snapshots. `public/data/docs/story-authoring-guide.md` is the author-facing workflow guide, and `public/data/story/story-graph.compact.example.json` is the smallest checked-in StoryState schema example. `public/data/story/story-graph.executable.json` remains a standalone contract fixture validated by `src/game/types/storyContent.ts`.
 
 ## Graph shape
 
@@ -57,16 +57,25 @@ Supported Hub action kinds:
 
 | Kind | Required fields | Meaning |
 | --- | --- | --- |
-| `navigate` | `targetLocationId` | Switch the current Hub location to another `locations[].id` in the same file. The target is validated at load time, and the current location is only kept in `HubScene` memory for this slice. |
+| `navigate` | `targetLocationId` | Switch the current Hub location to another `locations[].id` in the same file. The target is validated at load time, and the current location is saved under the Hub `hubId` in local session storage. |
 | `startStory` | `storyGraphFile` | Start `StoryScene` with the declared story graph file. |
 
-`HubScene` validates this data, applies `navigate` actions without hard-coding target ids in scene code, and passes `startStory.storyGraphFile` to `StoryScene`; `StoryScene` then keeps that path through story-triggered BattleScene round trips so battle results resume against the same graph file. This Hub contract does not yet include persistent Hub/world state, shops, inventory, rewards, or Expedition exits.
+`HubScene` validates this data, applies `navigate` actions without hard-coding target ids in scene code, and passes `startStory.storyGraphFile` to `StoryScene`; `StoryScene` then keeps that path through story-triggered BattleScene round trips so battle results resume against the same graph file.
+
+## Story / Hub session persistence
+
+The first durable persistence boundary is local and versioned at `cardgame.story-hub-session.v1`. It stores:
+
+- Hub snapshots by `hubId`: `currentLocationId`, optional `statusText`, and `updatedAt`. When loading, `createInitialHubNavigationState` only restores a saved location if it still exists in the current Hub definition; stale or corrupt data falls back to `defaultLocationId`.
+- Story snapshots by `hubId + actionId + storyGraphFile`: `StoryState`, `selectedChoiceIds`, optional `statusText`, and `updatedAt`. `HubScene` passes a matching saved snapshot into the `StoryScene` launch payload so selecting the same Hub `startStory` action resumes progress. `StoryScene` saves after normal story choices and after story battle-result resume; story battle launch payloads carry the same Hub session key through `BattleScene`.
+
+This boundary does not own broad world state and is intentionally separate from Expedition `RunSnapshot`. Do not add shops, inventory, rewards, training, Expedition exits, backend/cloud saves, or `mijing` migration data to the Hub action schema until those contracts are designed separately.
 
 ## Authoring loop
 
 1. Edit `public/data/story/story-graph.json` for playable StoryScene content, or `public/data/hub/town-shell.json` when changing the town entry copy or target graph.
 2. Use `public/data/story/story-graph.compact.example.json` as the minimal copyable template for new chapters or tooling fixtures.
 3. Follow `public/data/docs/story-authoring-guide.md` for ID naming, node / choice authoring, and when to use `visibleWhen`, `enabledWhen`, `effects`, or `onEnter`.
-4. Run `bun test src/game/scenes/hub/hubTown.test.ts src/game/scenes/story/*.test.ts src/game/state/StoryState.test.ts` to validate the Hub launch contract plus graph structure, conditions, effects, disabled choices, and state transitions.
+4. Run `bun test src/game/services/StoryHubSessionPersistence.test.ts src/game/scenes/hub/hubTown.test.ts src/game/scenes/story/*.test.ts src/game/state/StoryState.test.ts` to validate the Hub launch/session contract plus graph structure, conditions, effects, disabled choices, and state transitions.
 5. Run `bun test src/game/types/storyContent.test.ts` when changing the standalone `story-graph.executable.json` contract fixture.
 6. Run `npm run build-nolog` before handing off UI/runtime changes.

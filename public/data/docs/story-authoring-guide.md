@@ -91,13 +91,13 @@
   "id": "action.visit-town-teahouse",
   "kind": "navigate",
   "label": "去茶棚打听消息",
-  "description": "在同一个 HubScene 内切换到集市旁的茶棚；该导航状态暂不持久化。",
+  "description": "在同一个 HubScene 内切换到集市旁的茶棚；当前位置会保存到本地 Story/Hub session。",
   "targetLocationId": "location.qingyun-town.teahouse",
   "statusText": "你穿过集市，来到茶棚边听散修议论今日试炼。"
 }
 ```
 
-`navigate.targetLocationId` 必须引用同一个 Hub 文件中已经声明的 `locations[].id`。这类导航只保存在当前 `HubScene` 内存里；离开 Hub 或刷新页面后不会保存位置。
+`navigate.targetLocationId` 必须引用同一个 Hub 文件中已经声明的 `locations[].id`。Hub 会按 `hubId` 保存当前地点；如果后续内容删除了已保存地点，运行时会安全回退到 `defaultLocationId`，所以修改地点 id 时要把它视为会影响玩家本地 session 的持久 ID。
 
 ```json
 {
@@ -110,7 +110,7 @@
 }
 ```
 
-`startStory.storyGraphFile` 由 `HubScene` 传给 `StoryScene`，并会在 StoryScene 触发 BattleScene 往返时继续保留。不要把商店、背包、奖励、秘境出口或持久化 Hub 状态塞进当前 Hub action；这些需要先定义新的数据合同。
+`startStory.storyGraphFile` 由 `HubScene` 传给 `StoryScene`，并会在 StoryScene 触发 BattleScene 往返时继续保留。Hub 启动故事时会用 `hubId + actionId + storyGraphFile` 查找本地 Story runtime snapshot；同一个 action 再次启动会恢复已保存的 `StoryState` 和 `selectedChoiceIds`，终点页的“重新开始故事”会把该 action 的进度重置到入口。不要把商店、背包、奖励、秘境出口、完整 world-state 或云存档塞进当前 Hub action；这些需要先定义新的数据合同。
 
 ## Compact schema example
 
@@ -136,7 +136,7 @@
 ## 验证命令
 
 ```bash
-bun test src/game/scenes/hub/hubTown.test.ts src/game/scenes/story/*.test.ts src/game/state/StoryState.test.ts
+bun test src/game/services/StoryHubSessionPersistence.test.ts src/game/scenes/hub/hubTown.test.ts src/game/scenes/story/*.test.ts src/game/state/StoryState.test.ts
 bun test src/game/types/storyContent.test.ts
 npm run build-nolog
 ```

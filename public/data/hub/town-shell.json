@@ -2,7 +2,7 @@
   "hubId": "hub.qingyun-town",
   "title": "青云镇",
   "subtitle": "山门脚下的临时落脚点",
-  "description": "一座依附青云宗山门而生的小镇。当前版本用内存中的地点导航证明 Hub 可以由数据声明多个小地点，并继续承接数据驱动的主线入口。",
+  "description": "一座依附青云宗山门而生的小镇。当前版本证明 Hub 可以由数据声明多个小地点，将当前位置保存到本地 Story/Hub session，并继续承接数据驱动的主线入口。",
   "defaultLocationId": "location.qingyun-town.gate-market",
   "locations": [
     {
@@ -23,7 +23,7 @@
           "id": "action.visit-town-teahouse",
           "kind": "navigate",
           "label": "去茶棚打听消息",
-          "description": "在同一个 HubScene 内切换到集市旁的茶棚；该导航状态暂不持久化。",
+          "description": "在同一个 HubScene 内切换到集市旁的茶棚；当前位置会保存到本地 Story/Hub session。",
           "targetLocationId": "location.qingyun-town.teahouse",
           "statusText": "你穿过集市，来到茶棚边听散修议论今日试炼。"
         }

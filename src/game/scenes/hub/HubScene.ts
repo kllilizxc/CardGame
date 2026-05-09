@@ -2,13 +2,20 @@ import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
 import {
+    loadHubSessionSnapshot,
+    loadStoryRuntimeSession,
+    saveHubSessionSnapshot,
+} from '../../services/StoryHubSessionPersistence';
+import {
     applyHubNavigationIntent,
     createHubActionIntent,
     createInitialHubNavigationState,
+    createStoryHubSessionKeyFromAction,
     resolveHubLocation,
     validateHubTownDefinition,
     type HubNavigationState,
     type HubTownAction,
+    type HubTownStartStoryAction,
     type HubTownDefinition,
 } from './hubTown';
 
@@ -30,7 +37,11 @@ export class HubScene extends Scene {
 
     create(): void {
         this.town = validateHubTownDefinition(this.cache.json.get(HUB_TOWN_CACHE_KEY));
-        this.navigationState = createInitialHubNavigationState(this.town);
+        this.navigationState = createInitialHubNavigationState(
+            this.town,
+            loadHubSessionSnapshot(this.town.hubId),
+        );
+        this.persistHubNavigationState();
 
         this.renderShell();
         EventBus.emit('current-scene-ready', this);
@@ -104,7 +115,7 @@ export class HubScene extends Scene {
             wordWrap: { width: panelWidth - 116 },
         }));
 
-        const statusLine = this.navigationState.statusText ?? '当前导航状态仅保存在本次 HubScene 内存中。';
+        const statusLine = this.navigationState.statusText ?? '当前 Hub 位置会保存到本地 Story/Hub session。';
         container.add(this.add.text(contentX, panelTop + 322, statusLine, {
             fontFamily: 'Arial',
             fontSize: '17px',
@@ -146,14 +157,36 @@ export class HubScene extends Scene {
     }
 
     private handleAction(action: HubTownAction): void {
-        const intent = createHubActionIntent(action);
+        const intent = this.createActionIntent(action);
 
         if (intent.kind === 'navigateLocation') {
             this.navigationState = applyHubNavigationIntent(this.town, this.navigationState, intent);
+            this.persistHubNavigationState();
             this.renderShell();
             return;
         }
 
         this.scene.start(intent.sceneKey, intent.payload);
+    }
+
+    private createActionIntent(action: HubTownAction) {
+        if (action.kind !== 'startStory') {
+            return createHubActionIntent(action);
+        }
+
+        return createHubActionIntent(action, this.loadStorySession(action));
+    }
+
+    private loadStorySession(action: HubTownStartStoryAction) {
+        return loadStoryRuntimeSession(createStoryHubSessionKeyFromAction(action));
+    }
+
+    private persistHubNavigationState(): void {
+        saveHubSessionSnapshot({
+            hubId: this.town.hubId,
+            currentLocationId: this.navigationState.currentLocationId,
+            ...(this.navigationState.statusText ? { statusText: this.navigationState.statusText } : {}),
+            updatedAt: new Date().toISOString(),
+        });
     }
 }

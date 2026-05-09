@@ -3,6 +3,7 @@ import type {
     StoryBattleCompleteEvent,
     StoryBattleLaunchMetadata,
     StoryBattleSceneLaunchPayload,
+    StoryHubSessionKey,
     StoryState,
 } from '../../types/story';
 import type { StoryChoiceTransition, StoryGraphDefinition } from './storyFlowViewModel';
@@ -59,6 +60,7 @@ export function createStoryBattleSceneStartPayload(
     storyState: StoryState,
     selectedChoiceIds: string[],
     storyGraphFile?: string,
+    hubSession?: StoryHubSessionKey | null,
 ): StoryBattleSceneLaunchPayload {
     return {
         source: 'story',
@@ -66,6 +68,7 @@ export function createStoryBattleSceneStartPayload(
         storyState: cloneStoryState(storyState),
         selectedChoiceIds: cloneStringArray(selectedChoiceIds),
         ...(storyGraphFile ? { storyGraphFile } : {}),
+        ...(hubSession ? { hubSession: { ...hubSession } } : {}),
     };
 }
 
@@ -94,6 +97,7 @@ export function createStoryBattleCompleteEvent(
         onVictoryNodeId: payload.battleLaunch.onVictoryNodeId,
         onDefeatNodeId: payload.battleLaunch.onDefeatNodeId,
         resultNodeId,
+        ...(payload.hubSession ? { hubSession: { ...payload.hubSession } } : {}),
         storyState: cloneStoryState(payload.storyState),
         selectedChoiceIds: cloneStringArray(payload.selectedChoiceIds),
         completedAt,
@@ -134,6 +138,7 @@ export function createStorySceneTransitionIntent(
     transition: Extract<StoryChoiceTransition, { status: 'selected' }>,
     selectedChoiceText: string,
     storyGraphFile?: string,
+    hubSession?: StoryHubSessionKey | null,
 ): StorySceneTransitionIntent {
     if (!transition.battleLaunch) {
         return {
@@ -151,6 +156,7 @@ export function createStorySceneTransitionIntent(
             transition.nextStoryState,
             transition.nextSelectedChoiceIds,
             storyGraphFile,
+            hubSession,
         ),
     };
 }

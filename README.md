@@ -11,7 +11,7 @@
 - **统一布局系统**：`BattleLayoutConfig` 统一描述所有 UI 面板和场地区域，可按分辨率或模式动态生成。
 - **多管理器架构**：卡牌、法器、技能、丹药、战斗事件、功法效果均由独立 Manager 负责，降低耦合。
 - **数据驱动内容**：卡牌、功法、遭遇均来自 `public/data` JSON，可无代码迭代内容。
-- **数据驱动 Hub / 城镇壳层**：`HubScene` 读取 `public/data/hub/town-shell.json` 渲染青云镇多地点入口，支持内存中的 `navigate` 小地点切换，并由数据中的 `startStory.storyGraphFile` 启动现有 StoryScene 主线。
+- **数据驱动 Hub / 城镇壳层**：`HubScene` 读取 `public/data/hub/town-shell.json` 渲染青云镇多地点入口，支持 `navigate` 小地点切换并通过本地 Story/Hub session 恢复位置；数据中的 `startStory.storyGraphFile` 会启动或恢复现有 StoryScene 主线。
 - **StoryState 驱动剧情流**：`storyFlow` 严格校验 `story-graph.json` 的 StoryState 内容合同，`storyFlowViewModel` 将节点、结构化条件、效果应用、推荐理由与缺失节点警告转换为 Phaser 可渲染状态。
 - **功法/Usage 机制**：`UsageManager` 记录武器使用情况，`UnitEffectManager` 解析 `gongfa-list.json` 并在回合事件中执行效果（如“引剑者”回收剑类法器）。
 - **React ↔ Phaser 桥梁**：`EventBus` 使 React UI 与 Phaser 场景交互（如调试工具或面板控制）。
@@ -79,6 +79,7 @@ npm run dev-nolog # 关闭 log.js 匿名统计
 | `src/game/scenes/MainMenu.ts` | 标准启动菜单：由 `Boot -> Preloader -> MainMenu` 进入，并提供“进入青云镇”按钮启动 `HubScene`。 |
 | `src/game/scenes/hub/HubScene.ts` | 最小 Hub / 城镇壳层：读取 `public/data/hub/town-shell.json`，渲染地点说明与行动按钮，按数据在城镇小地点间导航或启动 `StoryScene`。 |
 | `src/game/scenes/story/StoryScene.ts` | 示例主线故事场景：按启动 payload 的 `storyGraphFile` 读取剧情图，维护 `StoryState`，渲染剧情节点、元数据、条件化选项和终点重开按钮。 |
+| `src/game/services/StoryHubSessionPersistence.ts` | Story / Hub 本地 session 边界：用 `cardgame.story-hub-session.v1` 保存 Hub 当前位置和按 `hubId + actionId + storyGraphFile` 分区的 StoryState 快照。 |
 | `src/game/scenes/battle/BattleScene.ts` | 核心战场场景：加载数据、初始化 Manager、创建 UI、驱动回合逻辑与功法触发。 |
 | `src/game/managers/*.ts` | 各子系统管理器：`CardManager`、`UnitEffectManager`、`UsageManager`、`SkillManager`、`PillManager` 等。 |
 | `src/game/ui/*.ts` | UI 组件（战斗日志、卡牌预览、丹药槽、技能栏等），通过布局配置定位。 |
@@ -94,18 +95,27 @@ npm run dev-nolog # 关闭 log.js 匿名统计
 `src/main.tsx` → `App.tsx` / `GameApp.tsx` → `PhaserGame.tsx`。React 仅提供挂载容器及潜在的调试/外部 UI，核心游戏逻辑都在 Phaser。
 
 ### Phaser 游戏实例
-`src/game/main.ts` 配置 Phaser（画布尺寸、渲染、场景）。标准启动链路为 `Boot -> Preloader -> MainMenu -> HubScene`：`Boot` 只加载预加载器所需的最小背景资源，`Preloader` 加载菜单资源后进入 `MainMenu`。玩家在 `MainMenu` 点击“进入青云镇”后进入 `HubScene`；`HubScene` 读取 `public/data/hub/town-shell.json`，可先按 `navigate.targetLocationId` 在城镇小地点间切换，再由 `startStory.storyGraphFile` 启动 `StoryScene`，游玩 `public/data/story/story-graph.json` 中的示例主线。`BattleScene` 会被 StoryScene 的 `battleLaunch` 往返复用，`ExpeditionScene` 也仍保留在场景列表中供秘境流程切换复用。
+`src/game/main.ts` 配置 Phaser（画布尺寸、渲染、场景）。标准启动链路为 `Boot -> Preloader -> MainMenu -> HubScene`：`Boot` 只加载预加载器所需的最小背景资源，`Preloader` 加载菜单资源后进入 `MainMenu`。玩家在 `MainMenu` 点击“进入青云镇”后进入 `HubScene`；`HubScene` 读取 `public/data/hub/town-shell.json`，可先按 `navigate.targetLocationId` 在城镇小地点间切换并保存当前位置，再由 `startStory.storyGraphFile` 启动或恢复 `StoryScene`，游玩 `public/data/story/story-graph.json` 中的示例主线。`BattleScene` 会被 StoryScene 的 `battleLaunch` 往返复用，`ExpeditionScene` 也仍保留在场景列表中供秘境流程切换复用。
 
 ### HubScene 生命周期
 1. `preload`：载入 `data/hub/town-shell.json`。
-2. `create`：校验 Hub / 城镇定义，创建仅保存在当前 `HubScene` 内存中的导航状态，渲染默认地点、说明和行动按钮，并发出 `EventBus.emit('current-scene-ready', this)`。
-3. 玩家点击 `navigate` 行动：`HubScene` 根据该行动的 `targetLocationId` 切换当前地点并重新渲染；目标地点必须存在于同一个 Hub JSON 中，场景代码不硬编码目标 id。
-4. 玩家点击 `startStory` 行动：`HubScene` 根据该行动的 `storyGraphFile` 启动 `StoryScene`，不会在场景代码中硬编码具体剧情图。当前切片不持久化 Hub 位置，也不包含商店、背包、奖励或秘境出口操作。
+2. `create`：校验 Hub / 城镇定义，从 `StoryHubSessionPersistence` 读取该 `hubId` 的已保存位置；若地点仍存在就恢复，否则回退到 `defaultLocationId`，随后渲染地点、说明和行动按钮，并发出 `EventBus.emit('current-scene-ready', this)`。
+3. 玩家点击 `navigate` 行动：`HubScene` 根据该行动的 `targetLocationId` 切换当前地点、写入本地 session 并重新渲染；目标地点必须存在于同一个 Hub JSON 中，场景代码不硬编码目标 id。
+4. 玩家点击 `startStory` 行动：`HubScene` 根据 `hubId + actionId + storyGraphFile` 查找已保存的 Story runtime snapshot；存在时将 `StoryState` 与 `selectedChoiceIds` 放入 launch payload 恢复进度，否则按该行动的 `storyGraphFile` 启动新故事。当前切片仍不包含商店、背包、奖励或秘境出口操作。
 
 ### StoryScene 生命周期
 1. `preload`：载入启动 payload 指定的 `storyGraphFile`；未指定时默认使用 `data/story/story-graph.json`。
-2. `create`：校验示例故事图、进入 `entryNodeId`，并发出 `EventBus.emit('current-scene-ready', this)`。
-3. 玩家点击选项：`storyFlowViewModel` 使用当前 `StoryState` 检查 `StoryCondition`，阻止不可见 / 不可选或缺失目标的选项；通过 `StoryEffect` 应用选择效果、目标节点跳转和目标节点 `onEnter` 效果。若转移产出 `battleLaunch`，`StoryScene` 会以 source-aware story payload 启动 `BattleScene`，并在战斗胜负后按 `onVictoryNodeId` / `onDefeatNodeId` 回到剧情节点；否则继续渲染当前剧情。如果抵达无可见选项的节点，场景显示终点提示和“重新开始故事”按钮。`storyFlow` 在加载时只负责拒绝缺失节点、坏跳转等不可游玩的示例图。
+2. `create`：校验示例故事图；若 launch payload 携带保存的 `storyState`，则恢复该快照，否则进入 `entryNodeId`。来自 Hub 的启动会立即保存当前 Story runtime snapshot，并发出 `EventBus.emit('current-scene-ready', this)`。
+3. 玩家点击选项：`storyFlowViewModel` 使用当前 `StoryState` 检查 `StoryCondition`，阻止不可见 / 不可选或缺失目标的选项；通过 `StoryEffect` 应用选择效果、目标节点跳转和目标节点 `onEnter` 效果。普通剧情推进后会按 `hubId + actionId + storyGraphFile` 保存 `StoryState` 与 `selectedChoiceIds`。若转移产出 `battleLaunch`，`StoryScene` 会以 source-aware story payload 启动 `BattleScene`，并在战斗胜负后按 `onVictoryNodeId` / `onDefeatNodeId` 回到剧情节点，再保存战斗结果后的快照；否则继续渲染当前剧情。如果抵达无可见选项的节点，场景显示终点提示和“重新开始故事”按钮，该按钮会把当前 Hub action 的故事进度重置到入口。`storyFlow` 在加载时只负责拒绝缺失节点、坏跳转等不可游玩的示例图。
+
+### Story / Hub session persistence
+
+`src/game/services/StoryHubSessionPersistence.ts` 是当前唯一允许直接读写 Story / Hub 本地 session 的边界。它使用版本化 key `cardgame.story-hub-session.v1`，存储两类快照：
+
+- `hubs[hubId]`：当前 Hub location id、可选 status text 和更新时间。恢复时如果 location 已从当前 Hub JSON 删除，会安全回退到 `defaultLocationId`。
+- `stories[hubId + actionId + storyGraphFile]`：由 Hub action 启动的 `StoryState`、`selectedChoiceIds`、可选 status text 和更新时间。该 key 会随 StoryScene → BattleScene → StoryScene 往返传递，确保战斗结果也写回同一个故事会话。
+
+这只是本地单机 session 边界，不是云存档、完整 world-state ownership、背包 / 商店 / 奖励系统，也不复用 Expedition `RunSnapshot`。
 
 ### BattleScene 生命周期
 1. `preload`：载入图片 / JSON（卡牌、功法等）。

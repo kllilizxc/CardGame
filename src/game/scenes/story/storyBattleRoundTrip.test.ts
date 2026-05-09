@@ -165,4 +165,36 @@ describe('storyBattleRoundTrip', () => {
         expect(defeatResume.storyState.currentNodeId).toBe('duel_defeat');
         expect(defeatResume.storyState.flags['story.test-battle.lost_duel']).toBe(true);
     });
+
+    it('preserves the Hub story session key through battle launch and completion so resume can save the result snapshot', () => {
+        const { transition } = createBattleTransition();
+        const hubSession = {
+            hubId: 'hub.qingyun-town',
+            actionId: 'action.start-qingyun-entry-story',
+            storyGraphFile: 'data/story/story-graph.json',
+        };
+
+        const startPayload = createStoryBattleSceneStartPayload(
+            transition.battleLaunch,
+            transition.nextStoryState,
+            transition.nextSelectedChoiceIds,
+            hubSession.storyGraphFile,
+            hubSession,
+        );
+        const result = createStoryBattleCompleteEvent(startPayload, true, '2026-05-09T06:03:00.000Z');
+        const intent = createStorySceneTransitionIntent(
+            transition,
+            '以卡匣应战',
+            hubSession.storyGraphFile,
+            hubSession,
+        );
+
+        expect(startPayload.hubSession).toEqual(hubSession);
+        expect(result.hubSession).toEqual(hubSession);
+        expect(intent.kind).toBe('startBattleScene');
+        if (intent.kind !== 'startBattleScene') {
+            throw new Error('Expected battle scene start intent.');
+        }
+        expect(intent.payload.hubSession).toEqual(hubSession);
+    });
 });

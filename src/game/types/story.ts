@@ -148,12 +148,19 @@ export interface StoryBattleLaunchMetadata extends StoryBattleTrigger {
     targetNodeId: string;
 }
 
+export interface StoryHubSessionKey {
+    hubId: string;
+    actionId: string;
+    storyGraphFile: string;
+}
+
 export interface StoryBattleSceneLaunchPayload {
     source: 'story';
     battleLaunch: StoryBattleLaunchMetadata;
     storyState: StoryState;
     selectedChoiceIds: string[];
     storyGraphFile?: string;
+    hubSession?: StoryHubSessionKey;
 }
 
 export type StoryBattleOutcome = 'victory' | 'defeat';
@@ -174,6 +181,7 @@ export interface StoryBattleCompleteEvent {
     onVictoryNodeId: string;
     onDefeatNodeId: string;
     resultNodeId: string;
+    hubSession?: StoryHubSessionKey;
     storyState: StoryState;
     selectedChoiceIds: string[];
     completedAt: string;

@@ -2,6 +2,7 @@ import type { BattleLaunchPayload, ExpeditionCardStack } from '../../types/exped
 import type {
     StoryBattleLaunchMetadata,
     StoryBattleSceneLaunchPayload,
+    StoryHubSessionKey,
     StoryState,
 } from '../../types/story';
 
@@ -103,6 +104,18 @@ function isStoryBattleLaunchMetadata(value: unknown): value is StoryBattleLaunch
         && (candidate.launchText === undefined || typeof candidate.launchText === 'string');
 }
 
+function isStoryHubSessionKey(value: unknown): value is StoryHubSessionKey {
+    if (typeof value !== 'object' || value === null) {
+        return false;
+    }
+
+    const candidate = value as Partial<StoryHubSessionKey>;
+
+    return typeof candidate.hubId === 'string'
+        && typeof candidate.actionId === 'string'
+        && typeof candidate.storyGraphFile === 'string';
+}
+
 function isStoryBattleSceneLaunchPayload(value: unknown): value is StoryBattleSceneLaunchPayload {
     if (typeof value !== 'object' || value === null) {
         return false;
@@ -114,7 +127,8 @@ function isStoryBattleSceneLaunchPayload(value: unknown): value is StoryBattleSc
         && isStoryBattleLaunchMetadata(candidate.battleLaunch)
         && isStoryState(candidate.storyState)
         && isStringArray(candidate.selectedChoiceIds)
-        && (candidate.storyGraphFile === undefined || typeof candidate.storyGraphFile === 'string');
+        && (candidate.storyGraphFile === undefined || typeof candidate.storyGraphFile === 'string')
+        && (candidate.hubSession === undefined || isStoryHubSessionKey(candidate.hubSession));
 }
 
 function cloneStoryState(state: StoryState): StoryState {
@@ -155,6 +169,7 @@ export function normalizeStoryBattleLaunchPayload(data: unknown): StoryBattleSce
         storyState: cloneStoryState(data.storyState),
         selectedChoiceIds: [...data.selectedChoiceIds],
         ...(data.storyGraphFile ? { storyGraphFile: data.storyGraphFile } : {}),
+        ...(data.hubSession ? { hubSession: { ...data.hubSession } } : {}),
     };
 }
 

@@ -1,3 +1,8 @@
+import type {
+    HubSessionSnapshot,
+    StoryRuntimeSessionSnapshot,
+} from '../../services/StoryHubSessionPersistence';
+import type { StoryHubSessionKey } from '../../types/story';
 import type { StorySceneHubLaunchData } from '../story/storySceneLaunch';
 
 export type HubTownActionKind = 'startStory' | 'navigate';
@@ -196,13 +201,70 @@ export function resolveHubLocation(town: HubTownDefinition, locationId: string):
     return location;
 }
 
-export function createInitialHubNavigationState(town: HubTownDefinition): HubNavigationState {
+export function createInitialHubNavigationState(
+    town: HubTownDefinition,
+    savedSession?: HubSessionSnapshot | null,
+): HubNavigationState {
+    if (savedSession?.hubId === town.hubId && town.locations.some((location) => location.id === savedSession.currentLocationId)) {
+        return {
+            currentLocationId: savedSession.currentLocationId,
+            ...(savedSession.statusText ? { statusText: savedSession.statusText } : {}),
+        };
+    }
+
     return {
         currentLocationId: resolveHubLocation(town, town.defaultLocationId).id,
     };
 }
 
-export function createHubActionIntent(action: HubTownAction): HubSceneActionIntent {
+export function createStoryHubSessionKeyFromAction(action: HubTownStartStoryAction): StoryHubSessionKey {
+    return {
+        hubId: action.hubId,
+        actionId: action.id,
+        storyGraphFile: action.storyGraphFile,
+    };
+}
+
+function createResumedStoryLaunchPayload(
+    action: HubTownStartStoryAction,
+    savedStorySession?: StoryRuntimeSessionSnapshot | null,
+): StorySceneHubLaunchData {
+    const basePayload: StorySceneHubLaunchData = {
+        source: 'hub',
+        hubId: action.hubId,
+        actionId: action.id,
+        storyGraphFile: action.storyGraphFile,
+        ...(action.statusText ? { statusText: action.statusText } : {}),
+    };
+
+    if (
+        !savedStorySession
+        || savedStorySession.hubId !== action.hubId
+        || savedStorySession.actionId !== action.id
+        || savedStorySession.storyGraphFile !== action.storyGraphFile
+    ) {
+        return basePayload;
+    }
+
+    return {
+        ...basePayload,
+        storyState: {
+            ...savedStorySession.storyState,
+            visitedNodeIds: [...savedStorySession.storyState.visitedNodeIds],
+            triggeredDialogueIds: [...savedStorySession.storyState.triggeredDialogueIds],
+            flags: { ...savedStorySession.storyState.flags },
+            attributes: { ...savedStorySession.storyState.attributes },
+            relations: { ...savedStorySession.storyState.relations },
+        },
+        selectedChoiceIds: [...savedStorySession.selectedChoiceIds],
+        statusText: savedStorySession.statusText ?? '已恢复保存的故事进度。',
+    };
+}
+
+export function createHubActionIntent(
+    action: HubTownAction,
+    savedStorySession?: StoryRuntimeSessionSnapshot | null,
+): HubSceneActionIntent {
     if (action.kind === 'navigate') {
         return {
             kind: 'navigateLocation',
@@ -214,13 +276,7 @@ export function createHubActionIntent(action: HubTownAction): HubSceneActionInte
     return {
         kind: 'startScene',
         sceneKey: 'StoryScene',
-        payload: {
-            source: 'hub',
-            hubId: action.hubId,
-            actionId: action.id,
-            storyGraphFile: action.storyGraphFile,
-            ...(action.statusText ? { statusText: action.statusText } : {}),
-        },
+        payload: createResumedStoryLaunchPayload(action, savedStorySession),
     };
 }
 
