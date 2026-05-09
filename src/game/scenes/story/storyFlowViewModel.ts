@@ -1,3 +1,18 @@
+import {
+    applyStoryChoice,
+    applyStoryEffects,
+    createInitialStoryState,
+    evaluateStoryCondition,
+    goToStoryNode,
+} from '../../state/StoryState';
+import type {
+    StoryCondition,
+    StoryEffect,
+    StoryEffectKind,
+    StoryInitialStateSeed,
+    StoryState,
+} from '../../types/story';
+
 export interface StoryAiHints {
     tone?: string;
     theme?: string[];
@@ -14,6 +29,10 @@ export interface StoryNodeDefinition {
     chapter?: string;
     location?: string;
     timeHint?: string;
+    sublocation?: string;
+    locationId?: string;
+    sublocationId?: string;
+    onEnter?: StoryEffect[];
     worldPrecondition?: string;
     worldEffectHint?: string;
     aiHints?: StoryAiHints;
@@ -36,12 +55,17 @@ export interface StoryChoiceDefinition {
     text: string;
     description?: string;
     condition?: StoryChoiceCondition;
-    effects?: StoryChoiceEffects;
+    visibleWhen?: StoryCondition;
+    enabledWhen?: StoryCondition;
+    effects?: StoryChoiceEffects | StoryEffect[];
     flags?: string[];
 }
 
 export interface StoryGraphDefinition {
+    storyId?: string;
+    title?: string;
     entryNodeId: string;
+    initialState?: StoryInitialStateSeed;
     nodes: StoryNodeDefinition[];
     choices: StoryChoiceDefinition[];
 }
@@ -57,6 +81,7 @@ export interface StoryFlowRuntimeState {
     currentNodeId?: string;
     visitedNodeIds?: string[];
     selectedChoiceIds?: string[];
+    storyState?: StoryState;
     worldState?: StoryWorldState;
 }
 
@@ -71,6 +96,10 @@ export interface StoryNodeView {
     chapter?: string;
     location?: string;
     timeHint?: string;
+    sublocation?: string;
+    locationId?: string;
+    sublocationId?: string;
+    onEnter?: StoryEffect[];
     worldPrecondition?: string;
     worldEffectHint?: string;
     aiHints?: StoryAiHints;
@@ -92,6 +121,10 @@ export interface StoryChoiceView {
     conditionSummary: string;
     worldStateHint: string | null;
     effectSummary: string;
+    visibleWhen?: StoryCondition;
+    enabledWhen?: StoryCondition;
+    effects: StoryEffect[];
+    targetNodeOnEnter: StoryEffect[];
 }
 
 export interface StoryFlowViewModel {
@@ -102,6 +135,8 @@ export interface StoryFlowViewModel {
     warnings: string[];
     visitedNodeIds: string[];
     selectedChoiceIds: string[];
+    storyState: StoryState;
+    stateLine: string;
 }
 
 export type StoryChoiceTransition =
@@ -112,6 +147,8 @@ export type StoryChoiceTransition =
         toNodeId: string;
         nextVisitedNodeIds: string[];
         nextSelectedChoiceIds: string[];
+        nextStoryState: StoryState;
+        appliedEffectKinds: StoryEffectKind[];
     }
     | {
         status: 'blocked';
@@ -125,8 +162,16 @@ interface AttributeRecommendation {
     threshold: number;
 }
 
+function appendUnique(items: string[], item: string): string[] {
+    return items.includes(item) ? [...items] : [...items, item];
+}
+
 function createNodeIndex(graph: StoryGraphDefinition): Map<string, StoryNodeDefinition> {
     return new Map(graph.nodes.map((node) => [node.id, node]));
+}
+
+function findNode(graph: StoryGraphDefinition, nodeId: string): StoryNodeDefinition | undefined {
+    return graph.nodes.find((node) => node.id === nodeId);
 }
 
 function createStoryNodeView(node: StoryNodeDefinition): StoryNodeView {
@@ -141,6 +186,10 @@ function createStoryNodeView(node: StoryNodeDefinition): StoryNodeView {
         ...(node.chapter ? { chapter: node.chapter } : {}),
         ...(node.location ? { location: node.location } : {}),
         ...(node.timeHint ? { timeHint: node.timeHint } : {}),
+        ...(node.sublocation ? { sublocation: node.sublocation } : {}),
+        ...(node.locationId ? { locationId: node.locationId } : {}),
+        ...(node.sublocationId ? { sublocationId: node.sublocationId } : {}),
+        ...(node.onEnter ? { onEnter: [...node.onEnter] } : {}),
         ...(node.worldPrecondition ? { worldPrecondition: node.worldPrecondition } : {}),
         ...(node.worldEffectHint ? { worldEffectHint: node.worldEffectHint } : {}),
         ...(node.aiHints ? { aiHints: cloneAiHints(node.aiHints) } : {}),
@@ -156,18 +205,31 @@ function cloneAiHints(aiHints: StoryAiHints): StoryAiHints {
 }
 
 function createNodeSubtitle(node: StoryNodeDefinition): string {
-    const parts = [node.chapter, node.location, node.timeHint].filter((part): part is string => Boolean(part));
+    const parts = [node.chapter, node.location, node.sublocation, node.timeHint].filter((part): part is string => Boolean(part));
 
     return parts.length > 0 ? parts.join(' · ') : '未标注章节 / 地点';
 }
 
+function getChoiceStoryEffects(choice: StoryChoiceDefinition): StoryEffect[] {
+    return Array.isArray(choice.effects) ? [...choice.effects] : [];
+}
+
 function createChoiceView(
     choice: StoryChoiceDefinition,
-    targetExists: boolean,
-    worldState: StoryWorldState | undefined,
+    targetNode: StoryNodeDefinition | undefined,
+    storyState: StoryState,
 ): StoryChoiceView {
-    const recommendation = evaluateRecommendation(choice.condition?.expression, worldState);
-    const disabledReason = targetExists ? null : `后续剧情节点未配置：${choice.to}`;
+    const targetExists = Boolean(targetNode);
+    const visible = choice.visibleWhen ? evaluateStoryCondition(storyState, choice.visibleWhen) : true;
+    const enabled = choice.enabledWhen ? evaluateStoryCondition(storyState, choice.enabledWhen) : true;
+    const recommendation = evaluateRecommendation(choice.enabledWhen ?? choice.visibleWhen, choice.condition?.expression, storyState);
+    const disabledReason = createDisabledReason({
+        targetExists,
+        visible,
+        enabled,
+        choice,
+        storyState,
+    });
 
     return {
         id: choice.id,
@@ -176,28 +238,173 @@ function createChoiceView(
         text: choice.text,
         description: choice.description ?? null,
         flags: choice.flags ? [...choice.flags] : [],
-        visible: true,
+        visible,
         recommended: recommendation.recommended,
         recommendationReason: recommendation.reason,
         targetExists,
-        selectable: targetExists,
+        selectable: targetExists && visible && enabled,
         disabledReason,
-        conditionSummary: choice.condition?.expression ?? '无特殊条件。',
+        conditionSummary: createConditionSummary(choice, storyState),
         worldStateHint: choice.condition?.worldStateHint ?? null,
         effectSummary: createEffectSummary(choice.effects),
+        ...(choice.visibleWhen ? { visibleWhen: choice.visibleWhen } : {}),
+        ...(choice.enabledWhen ? { enabledWhen: choice.enabledWhen } : {}),
+        effects: getChoiceStoryEffects(choice),
+        targetNodeOnEnter: targetNode?.onEnter ? [...targetNode.onEnter] : [],
     };
 }
 
-function createEffectSummary(effects: StoryChoiceEffects | undefined): string {
+function createEffectSummary(effects: StoryChoiceEffects | StoryEffect[] | undefined): string {
+    if (Array.isArray(effects)) {
+        return effects.length > 0
+            ? effects.map((effect) => effect.kind).join(' / ')
+            : '无状态变化。';
+    }
+
     const parts = [effects?.worldChangeHint, effects?.relationChangeHint].filter((part): part is string => Boolean(part));
 
     return parts.length > 0 ? parts.join(' · ') : '无明确后果提示。';
 }
 
-function evaluateRecommendation(
-    expression: string | undefined,
+function createFallbackInitialStateSeed(
+    graph: StoryGraphDefinition,
+    nodeId: string,
+): StoryInitialStateSeed {
+    const node = findNode(graph, nodeId) ?? findNode(graph, graph.entryNodeId);
+
+    return {
+        storyId: graph.initialState?.storyId ?? graph.storyId ?? 'story-flow-view-model',
+        locationId: node?.locationId ?? graph.initialState?.locationId ?? 'location.preview',
+        sublocationId: node?.sublocationId ?? graph.initialState?.sublocationId ?? 'sublocation.preview',
+        nodeId,
+        visitedNodeIds: graph.initialState?.visitedNodeIds,
+        triggeredDialogueIds: graph.initialState?.triggeredDialogueIds,
+        flags: graph.initialState?.flags,
+        attributes: graph.initialState?.attributes,
+        relations: graph.initialState?.relations,
+    };
+}
+
+function storyStateFromWorldState(
+    storyState: StoryState,
     worldState: StoryWorldState | undefined,
+): StoryState {
+    if (!worldState) {
+        return storyState;
+    }
+
+    return {
+        ...storyState,
+        flags: {
+            ...storyState.flags,
+            ...Object.fromEntries((worldState.flags ?? []).map((flag) => [flag, true])),
+        },
+        attributes: {
+            ...storyState.attributes,
+            ...(worldState.player?.attributes ?? {}),
+        },
+    };
+}
+
+function createRuntimeStoryState(
+    graph: StoryGraphDefinition,
+    state: StoryFlowRuntimeState,
+    requestedNodeId: string,
+): StoryState {
+    if (state.storyState) {
+        return state.storyState;
+    }
+
+    const initialState = createInitialStoryState(createFallbackInitialStateSeed(graph, requestedNodeId));
+    const withRuntimeOverrides = {
+        ...initialState,
+        visitedNodeIds: state.visitedNodeIds
+            ? appendUnique([...state.visitedNodeIds], requestedNodeId)
+            : initialState.visitedNodeIds,
+    };
+
+    return storyStateFromWorldState(withRuntimeOverrides, state.worldState);
+}
+
+function createInitialStoryStateForGraph(graph: StoryGraphDefinition): StoryState {
+    return createInitialStoryState(createFallbackInitialStateSeed(graph, graph.entryNodeId));
+}
+
+export function createInitialStoryRuntime(graph: StoryGraphDefinition): StoryState {
+    const initialState = createInitialStoryStateForGraph(graph);
+    const entryNode = findNode(graph, graph.entryNodeId);
+
+    return applyStoryEffects(initialState, entryNode?.onEnter ?? []).state;
+}
+
+function createDisabledReason(params: {
+    targetExists: boolean;
+    visible: boolean;
+    enabled: boolean;
+    choice: StoryChoiceDefinition;
+    storyState: StoryState;
+}): string | null {
+    if (!params.targetExists) {
+        return `后续剧情节点未配置：${params.choice.to}`;
+    }
+
+    if (!params.visible && params.choice.visibleWhen) {
+        return `条件未满足：${describeStructuredCondition(params.choice.visibleWhen, params.storyState)}`;
+    }
+
+    if (!params.enabled && params.choice.enabledWhen) {
+        return `条件未满足：${describeStructuredCondition(params.choice.enabledWhen, params.storyState)}`;
+    }
+
+    return null;
+}
+
+function createConditionSummary(choice: StoryChoiceDefinition, storyState: StoryState): string {
+    const structuredCondition = choice.enabledWhen ?? choice.visibleWhen;
+
+    if (structuredCondition) {
+        return describeStructuredCondition(structuredCondition, storyState);
+    }
+
+    return choice.condition?.expression ?? '无特殊条件。';
+}
+
+function describeStructuredCondition(condition: StoryCondition, storyState: StoryState): string {
+    switch (condition.kind) {
+        case 'attribute':
+            return `${condition.attribute} ${storyState.attributes[condition.attribute] ?? 0} ${condition.operator} ${condition.value}`;
+        case 'flag':
+            return condition.expected === false
+                ? `未设置标记 ${condition.flag}`
+                : `需要标记 ${condition.flag}`;
+        case 'visitedNode':
+            return condition.expected === false
+                ? `未访问节点 ${condition.nodeId}`
+                : `需要访问节点 ${condition.nodeId}`;
+        case 'triggeredDialogue':
+            return condition.expected === false
+                ? `未触发对话 ${condition.dialogueId}`
+                : `需要触发对话 ${condition.dialogueId}`;
+        case 'all':
+            return '需要所有条件满足';
+        case 'any':
+            return '需要任一条件满足';
+        case 'not':
+            return `不能满足：${describeStructuredCondition(condition.condition, storyState)}`;
+    }
+}
+
+function evaluateRecommendation(
+    condition: StoryCondition | undefined,
+    expression: string | undefined,
+    storyState: StoryState,
 ): { recommended: boolean; reason: string | null } {
+    const structuredRecommendation = condition ? getAttributeRecommendationFromCondition(condition) : null;
+
+    if (structuredRecommendation) {
+        return evaluateAttributeRecommendation(structuredRecommendation, storyState);
+    }
+
     if (!expression?.includes('推荐')) {
         return { recommended: false, reason: null };
     }
@@ -208,7 +415,26 @@ function evaluateRecommendation(
         return { recommended: false, reason: `无法解析推荐条件：${expression}` };
     }
 
-    const actualValue = worldState?.player?.attributes?.[recommendation.attribute];
+    return evaluateAttributeRecommendation(recommendation, storyState);
+}
+
+function getAttributeRecommendationFromCondition(condition: StoryCondition): AttributeRecommendation | null {
+    if (condition.kind === 'attribute') {
+        return {
+            attribute: condition.attribute,
+            operator: condition.operator,
+            threshold: condition.value,
+        };
+    }
+
+    return null;
+}
+
+function evaluateAttributeRecommendation(
+    recommendation: AttributeRecommendation,
+    storyState: StoryState,
+): { recommended: boolean; reason: string | null } {
+    const actualValue = storyState.attributes[recommendation.attribute];
 
     if (typeof actualValue !== 'number') {
         return {
@@ -290,8 +516,8 @@ function createStatusText(currentNode: StoryNodeView, choices: StoryChoiceView[]
     return `当前剧情：${currentNode.title}（${currentNode.subtitle}）。可见选项 ${visibleChoiceCount} 个，推荐 ${recommendedChoiceCount} 个。`;
 }
 
-function appendUnique(items: string[], item: string): string[] {
-    return items.includes(item) ? [...items] : [...items, item];
+function createStateLine(storyState: StoryState): string {
+    return `当前位置：${storyState.currentLocationId} / ${storyState.currentSublocationId}`;
 }
 
 export function createStoryFlowViewModel(
@@ -299,7 +525,7 @@ export function createStoryFlowViewModel(
     state: StoryFlowRuntimeState = {},
 ): StoryFlowViewModel {
     const nodesById = createNodeIndex(graph);
-    const requestedNodeId = state.currentNodeId ?? graph.entryNodeId;
+    const requestedNodeId = state.currentNodeId ?? state.storyState?.currentNodeId ?? graph.entryNodeId;
     const entryNode = nodesById.get(graph.entryNodeId);
     const requestedNode = nodesById.get(requestedNodeId);
     const currentNode = requestedNode ?? entryNode;
@@ -311,16 +537,20 @@ export function createStoryFlowViewModel(
     const warnings = requestedNode
         ? []
         : [`当前剧情节点未配置：${requestedNodeId}，已回退到入口节点 ${currentNode.id}。`];
+    const storyState = createRuntimeStoryState(graph, state, requestedNodeId);
+    const currentStoryState = storyState.currentNodeId === currentNode.id
+        ? storyState
+        : goToStoryNode(storyState, currentNode.id);
     const choices = graph.choices
         .filter((choice) => choice.from === currentNode.id)
         .map((choice) => {
-            const targetExists = nodesById.has(choice.to);
+            const targetNode = nodesById.get(choice.to);
 
-            if (!targetExists) {
+            if (!targetNode) {
                 warnings.push(`选项 ${choice.id} 指向未配置节点 ${choice.to}。`);
             }
 
-            return createChoiceView(choice, targetExists, state.worldState);
+            return createChoiceView(choice, targetNode, currentStoryState);
         });
     const currentNodeView = createStoryNodeView(currentNode);
 
@@ -330,8 +560,10 @@ export function createStoryFlowViewModel(
         choices,
         statusText: createStatusText(currentNodeView, choices),
         warnings,
-        visitedNodeIds: state.visitedNodeIds ? [...state.visitedNodeIds] : [currentNode.id],
+        visitedNodeIds: currentStoryState.visitedNodeIds,
         selectedChoiceIds: state.selectedChoiceIds ? [...state.selectedChoiceIds] : [],
+        storyState: currentStoryState,
+        stateLine: createStateLine(currentStoryState),
     };
 }
 
@@ -365,12 +597,37 @@ export function createStoryChoiceTransition(
         };
     }
 
+    const choiceResult = applyStoryChoice(viewModel.storyState, {
+        id: choice.id,
+        condition: choice.enabledWhen,
+        effects: choice.effects,
+        nextNodeId: choice.to,
+    });
+
+    if (choiceResult.status === 'blocked') {
+        return {
+            status: 'blocked',
+            choiceId,
+            reason: choice.enabledWhen
+                ? `条件未满足：${describeStructuredCondition(choice.enabledWhen, viewModel.storyState)}`
+                : `选项当前不可选择：${choiceId}`,
+        };
+    }
+
+    const enterResult = applyStoryEffects(choiceResult.state, choice.targetNodeOnEnter);
+    const nextStoryState = enterResult.state;
+
     return {
         status: 'selected',
         choiceId,
         fromNodeId: choice.from,
-        toNodeId: choice.to,
-        nextVisitedNodeIds: appendUnique(viewModel.visitedNodeIds, choice.to),
+        toNodeId: nextStoryState.currentNodeId,
+        nextVisitedNodeIds: nextStoryState.visitedNodeIds,
         nextSelectedChoiceIds: appendUnique(viewModel.selectedChoiceIds, choiceId),
+        nextStoryState,
+        appliedEffectKinds: [
+            ...choiceResult.appliedEffectKinds,
+            ...enterResult.appliedEffectKinds,
+        ],
     };
 }

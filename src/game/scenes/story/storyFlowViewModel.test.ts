@@ -3,68 +3,80 @@ import { describe, expect, it } from 'bun:test';
 import storyGraphJson from '../../../../public/data/story/story-graph.json';
 import initialWorldState from '../../../../public/data/world/initial-state.json';
 
+import { goToStoryNode, setStoryAttribute } from '../../state/StoryState';
+import { validatePlayableStoryGraph } from './storyFlow';
 import {
+    createInitialStoryRuntime,
     createStoryChoiceTransition,
     createStoryFlowViewModel,
     type StoryGraphDefinition,
 } from './storyFlowViewModel';
 
 describe('storyFlowViewModel', () => {
-    it('creates an entry-node view with readable story context and outgoing choices', () => {
-        const view = createStoryFlowViewModel(storyGraphJson, {
-            worldState: structuredClone(initialWorldState),
+    it('creates an entry-node view with readable StoryState-backed story context and outgoing choices', () => {
+        const graph = validatePlayableStoryGraph(storyGraphJson);
+        const view = createStoryFlowViewModel(graph, {
+            storyState: createInitialStoryRuntime(graph),
         });
 
-        expect(view.currentNode).toEqual({
+        expect(view.currentNode).toMatchObject({
             id: 'sect_entry_001',
             type: 'story',
             title: '初到青云宗山门',
             summary: '玩家随凡人队伍抵达青云宗山门，准备参加入宗试炼。',
-            detail: '远山云雾缥缈，青云宗山门高立云间……（此处省略具体描写，可供 AI 扩写）',
-            subtitle: '第一章·入宗 · 青云宗山门 · 白日',
+            subtitle: '第一章·入宗 · 青云宗山门 · 山门广场 · 白日',
             tags: ['门派', '入门试炼', '主线'],
             chapter: '第一章·入宗',
             location: '青云宗山门',
+            sublocation: '山门广场',
+            locationId: 'location.qingyun-gate',
+            sublocationId: 'sublocation.qingyun.gate-plaza',
             timeHint: '白日',
-            worldPrecondition: '玩家尚未进入任一宗门，未通过任何入宗考核。',
-            worldEffectHint: '若完成本节点后，将正式开始入宗试炼线路。',
             aiHints: {
-                tone: '仙气缥缈, 带一点庄严',
+                tone: '仙气缥缈，带一点庄严',
                 theme: ['初入仙门', '凡人对仙道的向往'],
                 forbid: ['直接给予过强的实力', '无缘由的金手指掉落'],
             },
         });
-        expect(view.statusText).toBe('当前剧情：初到青云宗山门（第一章·入宗 · 青云宗山门 · 白日）。可见选项 2 个，推荐 1 个。');
+        expect(view.statusText).toBe('当前剧情：初到青云宗山门（第一章·入宗 · 青云宗山门 · 山门广场 · 白日）。可见选项 2 个，推荐 1 个。');
+        expect(view.stateLine).toBe('当前位置：location.qingyun-gate / sublocation.qingyun.gate-plaza');
+        expect(view.warnings).toEqual([]);
         expect(view.choices.map((choice) => choice.text)).toEqual([
             '老老实实排队等待入宗考核',
             '注意到队伍中有一名体弱少女，主动上前搭话。',
         ]);
-        expect(view.choices.every((choice) => choice.selectable)).toBe(true);
-        expect(view.warnings).toEqual([]);
-        expect(view.choices[0].conditionSummary).toBe('无特殊条件，所有玩家可见。');
-        expect(view.choices[0].effectSummary).toBe('玩家在凡人弟子中名声平平，但留下稳重印象。 · 可能与同队凡人建立普通同伴关系。');
+        expect(view.choices[0].conditionSummary).toBe('未设置标记 story.sect_entry.disrupted_line');
+        expect(view.choices[0].effectSummary).toBe('setFlag / adjustAttribute / adjustRelation');
     });
 
-    it('marks attribute-matching choices as recommended without hiding other visible choices', () => {
-        const recommendedView = createStoryFlowViewModel(storyGraphJson, {
+    it('marks structured attribute-gated choices as recommended and disables them when unmet', () => {
+        const graph = validatePlayableStoryGraph(storyGraphJson);
+        const recommendedView = createStoryFlowViewModel(graph, {
             worldState: structuredClone(initialWorldState),
         });
-        const helpGirlChoice = recommendedView.choices.find((choice) => choice.id === 'sect_entry_001_choice_2');
+        const helpGirlChoice = recommendedView.choices.find((choice) => choice.id === 'sect_entry_001_choice_help_girl');
 
         expect(helpGirlChoice?.visible).toBe(true);
+        expect(helpGirlChoice?.selectable).toBe(true);
         expect(helpGirlChoice?.recommended).toBe(true);
         expect(helpGirlChoice?.recommendationReason).toBe('满足推荐条件：心性 55 ≥ 50。');
 
-        const cautiousWorldState = structuredClone(initialWorldState);
-        cautiousWorldState.player.attributes['心性'] = 40;
-        const notRecommendedView = createStoryFlowViewModel(storyGraphJson, {
-            worldState: cautiousWorldState,
+        const lowCompassionState = setStoryAttribute(createInitialStoryRuntime(graph), '心性', 40);
+        const notRecommendedView = createStoryFlowViewModel(graph, {
+            storyState: lowCompassionState,
         });
-        const notRecommendedChoice = notRecommendedView.choices.find((choice) => choice.id === 'sect_entry_001_choice_2');
+        const notRecommendedChoice = notRecommendedView.choices.find((choice) => choice.id === 'sect_entry_001_choice_help_girl');
 
         expect(notRecommendedChoice?.visible).toBe(true);
+        expect(notRecommendedChoice?.selectable).toBe(false);
         expect(notRecommendedChoice?.recommended).toBe(false);
         expect(notRecommendedChoice?.recommendationReason).toBe('未满足推荐条件：心性 40 ≥ 50。');
+        expect(notRecommendedChoice?.disabledReason).toBe('条件未满足：心性 40 >= 50');
+        expect(createStoryChoiceTransition(notRecommendedView, 'sect_entry_001_choice_help_girl')).toEqual({
+            status: 'blocked',
+            choiceId: 'sect_entry_001_choice_help_girl',
+            reason: '条件未满足：心性 40 >= 50',
+        });
     });
 
     it('surfaces synthetic missing target nodes as disabled choices and warnings instead of relying on the playable example graph being broken', () => {
@@ -170,13 +182,109 @@ describe('storyFlowViewModel', () => {
             selectable: true,
             disabledReason: null,
         });
-        expect(createStoryChoiceTransition(view, 'start_to_trial')).toEqual({
+        expect(createStoryChoiceTransition(view, 'start_to_trial')).toMatchObject({
             status: 'selected',
             choiceId: 'start_to_trial',
             fromNodeId: 'start',
             toNodeId: 'trial',
             nextVisitedNodeIds: ['start', 'trial'],
             nextSelectedChoiceIds: ['start_to_trial'],
+            appliedEffectKinds: ['goToNode'],
         });
+    });
+
+    it('applies choice effects and target node enter effects while moving between sublocations deterministically', () => {
+        const graph = validatePlayableStoryGraph(storyGraphJson);
+        const initialView = createStoryFlowViewModel(graph, {
+            storyState: createInitialStoryRuntime(graph),
+        });
+        const waitResult = createStoryChoiceTransition(initialView, 'sect_entry_001_choice_wait_in_line');
+
+        expect(waitResult.status).toBe('selected');
+
+        if (waitResult.status !== 'selected') {
+            throw new Error('Expected the wait-in-line choice to advance.');
+        }
+
+        expect(waitResult.nextStoryState.currentNodeId).toBe('sect_entry_002_wait_in_line');
+        expect(waitResult.nextStoryState.currentSublocationId).toBe('sublocation.qingyun.outer-steps');
+        expect(waitResult.nextStoryState.flags['story.sect_entry.chose_patient_line']).toBe(true);
+        expect(waitResult.nextStoryState.flags['story.sect_entry.waited_patiently']).toBe(true);
+        expect(waitResult.nextStoryState.attributes['心性']).toBe(56);
+        expect(waitResult.nextStoryState.visitedNodeIds).toEqual([
+            'sect_entry_001',
+            'sect_entry_002_wait_in_line',
+        ]);
+        expect(waitResult.appliedEffectKinds).toEqual([
+            'setFlag',
+            'adjustAttribute',
+            'adjustRelation',
+            'goToNode',
+            'moveTo',
+            'setFlag',
+        ]);
+
+        const waitView = createStoryFlowViewModel(graph, {
+            storyState: waitResult.nextStoryState,
+            selectedChoiceIds: waitResult.nextSelectedChoiceIds,
+        });
+        const trialResult = createStoryChoiceTransition(waitView, 'sect_entry_002_choice_trial_bell');
+
+        expect(trialResult.status).toBe('selected');
+
+        if (trialResult.status !== 'selected') {
+            throw new Error('Expected the trial-bell choice to advance.');
+        }
+
+        expect(trialResult.nextStoryState.currentNodeId).toBe('sect_entry_004_trial_bell');
+        expect(trialResult.nextStoryState.currentSublocationId).toBe('sublocation.qingyun.trial-bell');
+        expect(createStoryFlowViewModel(graph, { storyState: trialResult.nextStoryState }).choices.filter((choice) => choice.visible)).toEqual([]);
+    });
+
+    it('unlocks a later choice after a prior dialogue or flag effect', () => {
+        const graph = validatePlayableStoryGraph(storyGraphJson);
+        const initialState = createInitialStoryRuntime(graph);
+        const jumpedStateWithoutPriorDialogue = goToStoryNode(initialState, 'sect_entry_003_help_girl');
+        const lockedView = createStoryFlowViewModel(graph, {
+            storyState: jumpedStateWithoutPriorDialogue,
+        });
+        const lockedBellChoice = lockedView.choices.find((choice) => choice.id === 'sect_entry_003_choice_ask_bell');
+
+        expect(lockedBellChoice?.selectable).toBe(false);
+        expect(lockedBellChoice?.disabledReason).toBe('条件未满足：需要任一条件满足');
+
+        const initialView = createStoryFlowViewModel(graph, {
+            storyState: initialState,
+        });
+        const helpResult = createStoryChoiceTransition(initialView, 'sect_entry_001_choice_help_girl');
+
+        expect(helpResult.status).toBe('selected');
+
+        if (helpResult.status !== 'selected') {
+            throw new Error('Expected the help-girl choice to advance.');
+        }
+
+        expect(helpResult.nextStoryState.flags['story.sect_entry.helped_frail_girl']).toBe(true);
+        expect(helpResult.nextStoryState.triggeredDialogueIds).toContain('dialogue.frail_girl.intro');
+
+        const unlockedView = createStoryFlowViewModel(graph, {
+            storyState: helpResult.nextStoryState,
+            selectedChoiceIds: helpResult.nextSelectedChoiceIds,
+        });
+        const unlockedBellChoice = unlockedView.choices.find((choice) => choice.id === 'sect_entry_003_choice_ask_bell');
+
+        expect(unlockedBellChoice?.selectable).toBe(true);
+        expect(unlockedBellChoice?.disabledReason).toBeNull();
+
+        const bellResult = createStoryChoiceTransition(unlockedView, 'sect_entry_003_choice_ask_bell');
+
+        expect(bellResult.status).toBe('selected');
+
+        if (bellResult.status !== 'selected') {
+            throw new Error('Expected the unlocked bell choice to advance.');
+        }
+
+        expect(bellResult.nextStoryState.currentNodeId).toBe('sect_entry_003_bell_secret');
+        expect(bellResult.nextStoryState.flags['story.sect_entry.bell_secret_learned']).toBe(true);
     });
 });

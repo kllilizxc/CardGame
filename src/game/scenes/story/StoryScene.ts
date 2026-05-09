@@ -1,7 +1,9 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
+import type { StoryState } from '../../types/story';
 import {
+    createInitialStoryRuntime,
     createStoryChoiceTransition,
     createStoryFlowViewModel,
     type StoryChoiceView,
@@ -14,8 +16,7 @@ import {
 
 export class StoryScene extends Scene {
     private storyGraph!: StoryGraph;
-    private currentNodeId = '';
-    private visitedNodeIds: string[] = [];
+    private storyState!: StoryState;
     private selectedChoiceIds: string[] = [];
     private storyContainer?: Phaser.GameObjects.Container;
     private statusText?: Phaser.GameObjects.Text;
@@ -30,8 +31,7 @@ export class StoryScene extends Scene {
 
     create(): void {
         this.storyGraph = validatePlayableStoryGraph(this.cache.json.get('exampleStoryGraph'));
-        this.currentNodeId = this.storyGraph.entryNodeId;
-        this.visitedNodeIds = [this.currentNodeId];
+        this.storyState = createInitialStoryRuntime(this.storyGraph);
         this.selectedChoiceIds = [];
 
         this.renderSceneFrame();
@@ -55,7 +55,7 @@ export class StoryScene extends Scene {
             fontStyle: 'bold',
         }).setOrigin(0.5);
 
-        this.add.text(width / 2, 120, '点击选项推进 public/data/story/story-graph.json 中的示例故事', {
+        this.add.text(width / 2, 120, '点击选项推进 StoryState 驱动的 public/data/story/story-graph.json 示例故事', {
             fontFamily: 'Arial',
             fontSize: '20px',
             color: '#93c5fd',
@@ -72,13 +72,11 @@ export class StoryScene extends Scene {
 
     private renderCurrentNode(statusText: string): void {
         const viewModel = createStoryFlowViewModel(this.storyGraph, {
-            currentNodeId: this.currentNodeId,
-            visitedNodeIds: this.visitedNodeIds,
+            storyState: this.storyState,
             selectedChoiceIds: this.selectedChoiceIds,
         });
 
-        this.currentNodeId = viewModel.currentNodeId;
-        this.visitedNodeIds = viewModel.visitedNodeIds;
+        this.storyState = viewModel.storyState;
         this.selectedChoiceIds = viewModel.selectedChoiceIds;
         this.renderStoryNode(viewModel, statusText);
     }
@@ -134,10 +132,7 @@ export class StoryScene extends Scene {
             wordWrap: { width: panelWidth - 112 },
         });
 
-        const hintText = view.currentNode.worldEffectHint
-            ? `世界变化提示：${view.currentNode.worldEffectHint}`
-            : '世界变化提示：暂无。';
-        const hint = this.add.text(contentX, panelY + panelHeight / 2 - 72, hintText, {
+        const hint = this.add.text(contentX, panelY + panelHeight / 2 - 72, `运行状态：${view.stateLine}`, {
             fontFamily: 'Arial',
             fontSize: '17px',
             color: '#c4b5fd',
@@ -163,8 +158,7 @@ export class StoryScene extends Scene {
                 label: '重新开始故事',
                 fillColor: 0x2563eb,
                 onClick: () => {
-                    this.currentNodeId = this.storyGraph.entryNodeId;
-                    this.visitedNodeIds = [this.currentNodeId];
+                    this.storyState = createInitialStoryRuntime(this.storyGraph);
                     this.selectedChoiceIds = [];
                     this.renderCurrentNode('故事已重新开始。');
                 },
@@ -186,31 +180,41 @@ export class StoryScene extends Scene {
         const buttonHeight = 82;
         const x = width / 2;
         const y = height - 265 + index * 108;
-        const buttonFill = choice.selectable ? 0x1d4ed8 : 0x475569;
-        const button = this.add.rectangle(x, y, buttonWidth, buttonHeight, buttonFill, 0.94);
-        button.setStrokeStyle(2, 0xffffff, 0.78);
-        button.setInteractive({ useHandCursor: true });
-        button.on('pointerover', () => button.setFillStyle(choice.selectable ? 0x2563eb : 0x475569, 1));
-        button.on('pointerout', () => button.setFillStyle(buttonFill, 0.94));
+        const fillColor = choice.selectable ? 0x1d4ed8 : 0x475569;
+        const hoverColor = choice.selectable ? 0x2563eb : 0x64748b;
+        const button = this.add.rectangle(x, y, buttonWidth, buttonHeight, fillColor, 0.94);
+        button.setStrokeStyle(2, choice.selectable ? 0xffffff : 0x94a3b8, 0.78);
+        button.setInteractive({ useHandCursor: choice.selectable });
+        button.on('pointerover', () => button.setFillStyle(hoverColor, 1));
+        button.on('pointerout', () => button.setFillStyle(fillColor, 0.94));
         button.on('pointerdown', () => this.handleChoice(choice.id));
 
         const textX = x - buttonWidth / 2 + 28;
         const label = this.add.text(textX, y - 24, choice.text, {
             fontFamily: 'Arial',
             fontSize: '21px',
-            color: '#f8fafc',
+            color: choice.selectable ? '#f8fafc' : '#cbd5e1',
             fontStyle: 'bold',
             wordWrap: { width: buttonWidth - 56 },
         });
-        const descriptionText = choice.disabledReason ?? choice.description ?? '无补充说明。';
-        const description = this.add.text(textX, y + 10, descriptionText, {
+        const description = this.add.text(textX, y + 10, this.createChoiceDescription(choice), {
             fontFamily: 'Arial',
             fontSize: '17px',
-            color: choice.selectable ? '#dbeafe' : '#fecaca',
+            color: choice.selectable ? '#dbeafe' : '#cbd5e1',
             wordWrap: { width: buttonWidth - 56 },
         });
 
         return [button, label, description];
+    }
+
+    private createChoiceDescription(choice: StoryChoiceView): string {
+        const description = choice.description ?? '无补充说明。';
+
+        if (!choice.selectable) {
+            return `${description}｜${choice.disabledReason ?? '当前不可选择'}`;
+        }
+
+        return `${description}｜效果：${choice.effectSummary}`;
     }
 
     private createButton(config: {
@@ -241,8 +245,7 @@ export class StoryScene extends Scene {
 
     private handleChoice(choiceId: string): void {
         const currentView = createStoryFlowViewModel(this.storyGraph, {
-            currentNodeId: this.currentNodeId,
-            visitedNodeIds: this.visitedNodeIds,
+            storyState: this.storyState,
             selectedChoiceIds: this.selectedChoiceIds,
         });
         const result = createStoryChoiceTransition(currentView, choiceId);
@@ -252,8 +255,7 @@ export class StoryScene extends Scene {
             return;
         }
 
-        this.currentNodeId = result.toNodeId;
-        this.visitedNodeIds = result.nextVisitedNodeIds;
+        this.storyState = result.nextStoryState;
         this.selectedChoiceIds = result.nextSelectedChoiceIds;
 
         const selectedChoice = currentView.choices.find((choice) => choice.id === choiceId);

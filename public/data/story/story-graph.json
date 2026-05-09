@@ -1,24 +1,43 @@
 {
+  "storyId": "story.qingyun-entry",
+  "title": "第一章·青云宗入门（StoryState 可执行示例）",
   "entryNodeId": "sect_entry_001",
-
+  "initialState": {
+    "locationId": "location.qingyun-gate",
+    "sublocationId": "sublocation.qingyun.gate-plaza",
+    "attributes": {
+      "悟性": 60,
+      "心性": 55,
+      "机缘": 50
+    },
+    "relations": {
+      "npc.qingyun-outer-elder": 0,
+      "npc.frail-girl": 0
+    },
+    "flags": {}
+  },
   "nodes": [
     {
       "id": "sect_entry_001",
       "type": "story",
       "title": "初到青云宗山门",
       "summary": "玩家随凡人队伍抵达青云宗山门，准备参加入宗试炼。",
-      "detail": "远山云雾缥缈，青云宗山门高立云间……（此处省略具体描写，可供 AI 扩写）",
-
+      "detail": "远山云雾缥缈，青云宗山门高立云间。凡人少年握紧古旧卡匣，混在长长的试炼队伍里，等待决定命运的第一道问心。",
       "tags": ["门派", "入门试炼", "主线"],
       "chapter": "第一章·入宗",
       "location": "青云宗山门",
+      "sublocation": "山门广场",
+      "locationId": "location.qingyun-gate",
+      "sublocationId": "sublocation.qingyun.gate-plaza",
       "timeHint": "白日",
-
-      "worldPrecondition": "玩家尚未进入任一宗门，未通过任何入宗考核。",
-      "worldEffectHint": "若完成本节点后，将正式开始入宗试炼线路。",
-
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "story.sect_entry.arrived_at_gate"
+        }
+      ],
       "aiHints": {
-        "tone": "仙气缥缈, 带一点庄严",
+        "tone": "仙气缥缈，带一点庄严",
         "theme": ["初入仙门", "凡人对仙道的向往"],
         "forbid": ["直接给予过强的实力", "无缘由的金手指掉落"]
       }
@@ -29,17 +48,26 @@
       "title": "山门石阶前的队伍",
       "summary": "玩家按规矩排在凡人队伍中，听外门执事宣读入宗试炼规矩。",
       "detail": "山风掠过石阶，前方弟子逐一核验名册。你没有灵根凭证，也没有世家推荐，只能把那枚沉甸甸的古旧卡匣贴身收好，随着队伍一步步向山门挪去。",
-
       "tags": ["门派", "入门试炼", "稳重"],
       "chapter": "第一章·入宗",
-      "location": "青云宗山门石阶",
+      "location": "青云宗山门",
+      "sublocation": "试炼石阶",
+      "locationId": "location.qingyun-gate",
+      "sublocationId": "sublocation.qingyun.outer-steps",
       "timeHint": "白日偏午",
-
-      "worldPrecondition": "玩家选择按规矩排队，没有主动引发额外支线。",
-      "worldEffectHint": "玩家在凡人队伍中保持低调，正式等待入宗试炼开启。",
-
+      "onEnter": [
+        {
+          "kind": "moveTo",
+          "locationId": "location.qingyun-gate",
+          "sublocationId": "sublocation.qingyun.outer-steps"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "story.sect_entry.waited_patiently"
+        }
+      ],
       "aiHints": {
-        "tone": "克制, 庄严, 略带紧张",
+        "tone": "克制、庄严、略带紧张",
         "theme": ["凡人求道", "规则与秩序"],
         "forbid": ["突然获得宗门长老青睐", "跳过入宗试炼"]
       }
@@ -49,20 +77,58 @@
       "type": "story",
       "title": "体弱少女的轻声道谢",
       "summary": "玩家主动与体弱少女搭话，帮她在拥挤队伍中稳住身形。",
-      "detail": "少女脸色苍白，却仍紧紧攥着一枚木牌。你低声提醒她山路湿滑，又替她挡住身后推搡的人群。她抬头道谢，眼中有一瞬惊讶，似乎没想到在山门前还能遇到愿意停步的人。",
-
+      "detail": "少女脸色苍白，却仍紧紧攥着一枚木牌。你低声提醒她山路湿滑，又替她挡住身后推搡的人群。她抬头道谢，袖中一枚青玉铃轻轻一响，似乎并非寻常凡物。",
       "tags": ["门派", "入门试炼", "善良倾向"],
       "chapter": "第一章·入宗",
-      "location": "青云宗山门队伍",
+      "location": "青云宗山门",
+      "sublocation": "队伍边缘",
+      "locationId": "location.qingyun-gate",
+      "sublocationId": "sublocation.qingyun.queue-edge",
       "timeHint": "白日偏午",
-
-      "worldPrecondition": "玩家选择主动关照体弱少女。",
-      "worldEffectHint": "少女记住了玩家的善意，未来可继续展开相关支线。",
-
+      "onEnter": [
+        {
+          "kind": "moveTo",
+          "locationId": "location.qingyun-gate",
+          "sublocationId": "sublocation.qingyun.queue-edge"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "story.sect_entry.met_frail_girl"
+        }
+      ],
       "aiHints": {
-        "tone": "温和, 细腻, 保持仙门试炼的压迫感",
+        "tone": "温和、细腻、保持仙门试炼的压迫感",
         "theme": ["善意", "潜在支线", "凡人互助"],
         "forbid": ["立刻揭露少女的全部身世", "直接奖励高阶法宝"]
+      }
+    },
+    {
+      "id": "sect_entry_003_bell_secret",
+      "type": "story",
+      "title": "青玉铃的秘密",
+      "summary": "少女确认你方才的善意后，低声解释青玉铃是入宗试炼的旧物。",
+      "detail": "她迟疑片刻，还是把青玉铃藏回袖中：‘这是家母留下的旧物，据说能在问心阶上护住一缕清明。若你也要上阶，千万别被钟声里的幻象拖住。’",
+      "tags": ["支线", "善良倾向", "线索"],
+      "chapter": "第一章·入宗",
+      "location": "青云宗山门",
+      "sublocation": "队伍边缘",
+      "locationId": "location.qingyun-gate",
+      "sublocationId": "sublocation.qingyun.queue-edge",
+      "timeHint": "白日偏午",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "story.sect_entry.bell_secret_learned"
+        },
+        {
+          "kind": "recordDialogue",
+          "dialogueId": "dialogue.frail_girl.bell_secret"
+        }
+      ],
+      "aiHints": {
+        "tone": "低声、信任、埋伏笔",
+        "theme": ["善意回报", "问心试炼线索"],
+        "forbid": ["直接让少女成为长期同伴", "提前判定试炼胜负"]
       }
     },
     {
@@ -71,103 +137,164 @@
       "title": "试炼钟鸣",
       "summary": "青云宗山门钟声响起，外门执事宣布入宗试炼即将开始。",
       "detail": "一声清越钟鸣自云端落下，喧闹的凡人队伍瞬间安静。青袍执事踏云而至，目光扫过石阶上的众人：‘入宗试炼，问心、登阶、验资质。能走到最后者，方可入我青云外门。’",
-
       "tags": ["门派", "入门试炼", "阶段终点"],
       "chapter": "第一章·入宗",
       "location": "青云宗山门",
+      "sublocation": "试炼钟台",
+      "locationId": "location.qingyun-gate",
+      "sublocationId": "sublocation.qingyun.trial-bell",
       "timeHint": "钟鸣时分",
-
-      "worldPrecondition": "玩家已经在山门前完成一个入门选择。",
-      "worldEffectHint": "示例故事到达第一段终点，后续可接入问心或登阶玩法。",
-
+      "onEnter": [
+        {
+          "kind": "moveTo",
+          "locationId": "location.qingyun-gate",
+          "sublocationId": "sublocation.qingyun.trial-bell"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "story.sect_entry.trial_bell_rang"
+        }
+      ],
       "aiHints": {
-        "tone": "庄严, 紧张, 预告挑战",
+        "tone": "庄严、紧张、预告挑战",
         "theme": ["试炼开启", "凡人求仙"],
         "forbid": ["直接判定玩家通过试炼", "展开尚未实现的战斗系统"]
       }
     }
   ],
-
   "choices": [
     {
-      "id": "sect_entry_001_choice_1",
+      "id": "sect_entry_001_choice_wait_in_line",
       "from": "sect_entry_001",
       "to": "sect_entry_002_wait_in_line",
-
       "text": "老老实实排队等待入宗考核",
       "description": "稳妥路线，符合谨慎性格。",
-
-      "condition": {
-        "expression": "无特殊条件，所有玩家可见。",
-        "worldStateHint": "玩家当前为凡人，未有特殊推荐或陪同。"
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "story.sect_entry.disrupted_line",
+        "expected": false
       },
-
-      "effects": {
-        "worldChangeHint": "玩家在凡人弟子中名声平平，但留下稳重印象。",
-        "relationChangeHint": "可能与同队凡人建立普通同伴关系。"
-      },
-
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "story.sect_entry.chose_patient_line"
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "心性",
+          "delta": 1
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.qingyun-outer-elder",
+          "delta": 1
+        }
+      ],
       "flags": ["主线", "正道倾向"]
     },
     {
-      "id": "sect_entry_001_choice_2",
+      "id": "sect_entry_001_choice_help_girl",
       "from": "sect_entry_001",
       "to": "sect_entry_003_help_girl",
-
       "text": "注意到队伍中有一名体弱少女，主动上前搭话。",
-      "description": "倾向善良/细心的选择。",
-
-      "condition": {
-        "expression": "若玩家心性 ≥ 50，则该选项更容易被 AI 推荐，但仍可展示。",
-        "worldStateHint": "玩家尚无明显冷漠或极端恶劣行为记录。"
+      "description": "倾向善良/细心的选择；心性不足时会保留但不可选择。",
+      "enabledWhen": {
+        "kind": "attribute",
+        "attribute": "心性",
+        "operator": ">=",
+        "value": 50
       },
-
-      "effects": {
-        "worldChangeHint": "未来有可能引出与该少女相关的支线或机缘。",
-        "relationChangeHint": "与少女和她背后势力的好感可能提升。"
-      },
-
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "story.sect_entry.helped_frail_girl"
+        },
+        {
+          "kind": "recordDialogue",
+          "dialogueId": "dialogue.frail_girl.intro"
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.frail-girl",
+          "delta": 5
+        }
+      ],
       "flags": ["支线", "善良倾向", "潜在机缘"]
     },
     {
-      "id": "sect_entry_002_choice_1",
+      "id": "sect_entry_002_choice_trial_bell",
       "from": "sect_entry_002_wait_in_line",
       "to": "sect_entry_004_trial_bell",
-
       "text": "跟随队伍踏上试炼石阶",
       "description": "保持低调，准备进入正式试炼。",
-
-      "condition": {
-        "expression": "无特殊条件，所有玩家可见。",
-        "worldStateHint": "玩家仍在凡人队伍中等待入宗试炼。"
-      },
-
-      "effects": {
-        "worldChangeHint": "玩家以稳妥姿态进入入宗试炼。",
-        "relationChangeHint": "与其他凡人弟子保持普通关系。"
-      },
-
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "story.sect_entry.entered_trial_from_queue"
+        }
+      ],
       "flags": ["主线", "稳重倾向"]
     },
     {
-      "id": "sect_entry_003_choice_1",
+      "id": "sect_entry_003_choice_ask_bell",
+      "from": "sect_entry_003_help_girl",
+      "to": "sect_entry_003_bell_secret",
+      "text": "低声询问她袖中的青玉铃",
+      "description": "只有在之前帮助过她或触发过初遇对话后，少女才愿意解释。",
+      "enabledWhen": {
+        "kind": "any",
+        "conditions": [
+          {
+            "kind": "flag",
+            "flag": "story.sect_entry.helped_frail_girl"
+          },
+          {
+            "kind": "triggeredDialogue",
+            "dialogueId": "dialogue.frail_girl.intro"
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.frail-girl",
+          "delta": 2
+        }
+      ],
+      "flags": ["支线", "线索", "善良倾向"]
+    },
+    {
+      "id": "sect_entry_003_choice_trial_bell",
       "from": "sect_entry_003_help_girl",
       "to": "sect_entry_004_trial_bell",
-
       "text": "扶她一起回到队伍，等待试炼钟声",
       "description": "不耽误考核，同时保留这份善缘。",
-
-      "condition": {
-        "expression": "玩家已主动关照体弱少女。",
-        "worldStateHint": "少女仍能自行参加试炼，只需要短暂帮助。"
-      },
-
-      "effects": {
-        "worldChangeHint": "玩家带着一段潜在善缘进入入宗试炼。",
-        "relationChangeHint": "少女对玩家的初始好感提升。"
-      },
-
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "story.sect_entry.returned_with_frail_girl"
+        }
+      ],
       "flags": ["主线", "善良倾向", "潜在支线"]
+    },
+    {
+      "id": "sect_entry_003_bell_secret_choice_trial_bell",
+      "from": "sect_entry_003_bell_secret",
+      "to": "sect_entry_004_trial_bell",
+      "text": "记下提醒，带她回到试炼队伍",
+      "description": "带着问心阶线索进入正式试炼。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "story.sect_entry.bell_secret_learned"
+      },
+      "effects": [
+        {
+          "kind": "adjustAttribute",
+          "attribute": "悟性",
+          "delta": 1
+        }
+      ],
+      "flags": ["主线", "线索"]
     }
   ]
 }

@@ -38,3 +38,7 @@ Missing numeric attributes default to `0`. Missing flags/history entries count a
 - `goToNode` for node transitions
 
 `applyStoryChoice` checks a choice condition before applying its effects. If blocked, it returns the original state with status `blocked`; if applied, it returns the updated state plus the selected `nextNodeId` when a transition effect or choice `nextNodeId` is present.
+
+## Playable graph integration
+
+`src/game/scenes/story/storyFlow.ts` now uses this runtime directly for the playable `public/data/story/story-graph.json` sample. The graph seeds `StoryState.initialState`, stores choice gates in `visibleWhen` / `enabledWhen`, stores deterministic state changes in `effects`, and stores node-entry movement or dialogue history in `onEnter`. `StoryScene` renders disabled choices with their failed condition reason and only advances after `chooseStoryChoice` returns an updated `StoryState`.
