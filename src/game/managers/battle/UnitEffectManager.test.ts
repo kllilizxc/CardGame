@@ -494,3 +494,67 @@ describe('UnitEffectManager ImmediateAttack runtime adapter delegation', () => {
     expect(harness.gongfaLogNames).toEqual(['控剑术·委托']);
   });
 });
+
+describe('UnitEffectManager unsupported gongfa action dispatch', () => {
+  it('keeps unsupported actions unexecuted so gongfa logs are not emitted', () => {
+    const unitCard = {
+      id: 'unit.test_unsupported_owner',
+      name: '未实现功法修士',
+      kind: 'unit',
+      realmId: 'realm_qi_1',
+      gongfaIds: ['gongfa.test_unsupported_actions'],
+      attack: 4,
+      health: 20,
+    } as UnitCard;
+    const unitSprite = createCardSprite(unitCard);
+    const addLogMessages: string[] = [];
+    const gongfaLogNames: string[] = [];
+    const battleContext = {
+      battleLog: {
+        addLog: (message: string) => addLogMessages.push(message),
+        addGongfaLog: (_unitName: string, gongfaName: string) => gongfaLogNames.push(gongfaName),
+      },
+    } as unknown as BattleContext;
+    const manager = new UnitEffectManager(battleContext, [
+      {
+        id: 'gongfa.test_unsupported_actions',
+        name: '未实现动作',
+        description: '不应触发功法日志。',
+        schema: {
+          event: { type: EffectEventType.OnSummon, side: EffectEventSide.Ally },
+          actions: [
+            { type: EffectActionType.DrawCards, value: 2 },
+            { type: EffectActionType.ModifyStats, attackDelta: 1 },
+            { type: EffectActionType.DealDamage, value: 3, target: 'singleEnemy' },
+            { type: EffectActionType.ApplyStatus, statusId: 'armor', target: 'self' },
+            { type: EffectActionType.AddLog, message: 'unsupported log' },
+            { type: EffectActionType.Custom, scriptId: 'script.unsupported' },
+          ],
+        },
+      },
+    ]);
+    const context = {
+      playerField: [unitSprite],
+      discardPile: [],
+      hand: [],
+      cardScale: 1,
+      artifactUsage: {},
+    } as GongfaRuntimeContext;
+
+    const consoleOutput = collectConsole(() => {
+      manager.applyOnSummonEffects(unitSprite, context);
+    });
+
+    expect(addLogMessages).toEqual([]);
+    expect(gongfaLogNames).toEqual([]);
+    expect(consoleOutput.errors).toEqual([]);
+    expect(consoleOutput.warnings).toEqual([
+      'DrawCards 动作暂未实现',
+      '功法动作尚未实现：ModifyStats',
+      '功法动作尚未实现：DealDamage',
+      '功法动作尚未实现：ApplyStatus',
+      '功法动作尚未实现：AddLog',
+      '自定义功法动作暂未实现：script.unsupported',
+    ]);
+  });
+});

@@ -9,21 +9,16 @@ import type {
     EffectSchema,
     ArtifactEquippedCondition,
 } from '@data/types/gongfa';
-import { EffectEventType, EffectEventSide, EffectConditionType, EffectActionType } from '@data/types/gongfa';
+import { EffectEventType, EffectEventSide, EffectConditionType } from '@data/types/gongfa';
 import type { UnitCard } from '@data/types/cards/unit';
 import type { ArtifactCard, ArtifactWeaponType } from '@data/types/cards/artifact';
 import { evaluateGongfaNumberExpression, type GongfaExpressionContext } from './gongfaExpression';
 import { extractGongfaWeaponTypeFromLabels } from './gongfaCardFilter';
+import type { GongfaCardOperationCard } from './gongfaCardOperations';
 import {
-    executeGongfaCardOperation,
-    type GongfaCardOperationCard,
-    type GongfaCardOperationContext
-} from './gongfaCardOperations';
-import { executeGongfaArmorOperation, type GongfaArmorOperationContext } from './gongfaArmorOperations';
-import {
-    executeGongfaImmediateAttackOperation,
-    type GongfaImmediateAttackOperationContext
-} from './gongfaAttackOperations';
+    executeGongfaActions,
+    type GongfaOperationDispatchContext
+} from './gongfaOperationDispatch';
 
 type AnyHandSprite = CardSprite | import('../../objects/ArtifactSprite').ArtifactSprite | import('../../objects/TalismanSprite').TalismanSprite | import('../../objects/FieldSprite').FieldSprite;
 
@@ -221,85 +216,36 @@ export class UnitEffectManager {
     }
 
     private executeActions(actions: GongfaAction[], context: GongfaRuntimeContext): boolean {
-        let executed = false;
-        for (const action of actions) {
-            switch (action.type) {
-                case EffectActionType.RecoverCardFromDiscard:
-                case EffectActionType.SearchCardFromDeck:
-                case EffectActionType.DrawAndFilter: {
-                    const moved = executeGongfaCardOperation(
-                        action,
-                        this.createCardOperationContext(context)
-                    );
-                    executed = executed || moved;
-                    break;
-                }
-                case EffectActionType.ImmediateAttack: {
-                    const attacked = executeGongfaImmediateAttackOperation(
-                        action,
-                        this.createImmediateAttackOperationContext(context)
-                    );
-                    executed = executed || attacked;
-                    break;
-                }
-                case EffectActionType.GainArmor: {
-                    const gained = executeGongfaArmorOperation(
-                        action,
-                        this.createArmorOperationContext(context)
-                    );
-                    executed = executed || gained;
-                    break;
-                }
-                case EffectActionType.DrawCards: {
-                    console.warn('DrawCards 动作暂未实现');
-                    break;
-                }
-                case EffectActionType.ModifyStats:
-                case EffectActionType.DealDamage:
-                case EffectActionType.ApplyStatus:
-                case EffectActionType.AddLog: {
-                    console.warn(`功法动作尚未实现：${action.type}`);
-                    break;
-                }
-                case EffectActionType.Custom: {
-                    console.warn(`自定义功法动作暂未实现：${action.scriptId}`);
-                    break;
-                }
-                default:
-                    break;
+        return executeGongfaActions(
+            actions,
+            this.createOperationDispatchContext(context)
+        );
+    }
+
+    private createOperationDispatchContext(context: GongfaRuntimeContext): GongfaOperationDispatchContext {
+        return {
+            card: {
+                discardPile: context.discardPile,
+                deck: context.deck,
+                hand: context.hand,
+                cardScale: context.cardScale,
+                gameActionHandler: context.gameActionHandler,
+                battleLog: this.battleContext.battleLog,
+                expressionContext: this.buildExpressionContext(context) ?? {}
+            },
+            immediateAttack: {
+                triggerUnit: context.triggerUnit,
+                enemyField: context.enemyField,
+                equippedArtifact: context.equippedArtifact,
+                combatManager: context.combatManager,
+                battleLog: this.battleContext.battleLog
+            },
+            armor: {
+                triggerUnit: context.triggerUnit,
+                battleStatusController: context.battleStatusController,
+                battleLog: this.battleContext.battleLog,
+                evaluateExpression: (expression: string) => this.evaluateExpression(expression, context)
             }
-        }
-        return executed;
-    }
-
-    private createCardOperationContext(context: GongfaRuntimeContext): GongfaCardOperationContext {
-        return {
-            discardPile: context.discardPile,
-            deck: context.deck,
-            hand: context.hand,
-            cardScale: context.cardScale,
-            gameActionHandler: context.gameActionHandler,
-            battleLog: this.battleContext.battleLog,
-            expressionContext: this.buildExpressionContext(context) ?? {}
-        };
-    }
-
-    private createImmediateAttackOperationContext(context: GongfaRuntimeContext): GongfaImmediateAttackOperationContext {
-        return {
-            triggerUnit: context.triggerUnit,
-            enemyField: context.enemyField,
-            equippedArtifact: context.equippedArtifact,
-            combatManager: context.combatManager,
-            battleLog: this.battleContext.battleLog
-        };
-    }
-
-    private createArmorOperationContext(context: GongfaRuntimeContext): GongfaArmorOperationContext {
-        return {
-            triggerUnit: context.triggerUnit,
-            battleStatusController: context.battleStatusController,
-            battleLog: this.battleContext.battleLog,
-            evaluateExpression: (expression: string) => this.evaluateExpression(expression, context)
         };
     }
 
