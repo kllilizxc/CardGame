@@ -285,6 +285,100 @@ function createCardFilterHarness() {
   };
 }
 
+function createImmediateAttackDelegationHarness() {
+  const unitCard = {
+    id: 'unit.test_attack_owner',
+    name: '控剑修士',
+    kind: 'unit',
+    realmId: 'realm_qi_1',
+    gongfaIds: ['gongfa.test_immediate_attack'],
+    attack: 4,
+    health: 20,
+  } as UnitCard;
+  const unitSprite = createCardSprite(unitCard);
+  const enemySprite = createCardSprite({
+    id: 'enemy.test_target',
+    name: '活傀儡',
+    kind: 'unit',
+    realmId: 'realm_qi_1',
+    attack: 1,
+    health: 8,
+  } as UnitCard);
+  const addLogMessages: string[] = [];
+  const gongfaLogNames: string[] = [];
+  const attackCalls: Array<{
+    attacker: CardSprite;
+    target: CardSprite | CardSprite[];
+    damage: number;
+    delay: number;
+    isAOE: boolean;
+  }> = [];
+  const battleContext = {
+    battleLog: {
+      addLog: (message: string) => addLogMessages.push(message),
+      addGongfaLog: (_unitName: string, gongfaName: string) => gongfaLogNames.push(gongfaName),
+    },
+  } as unknown as BattleContext;
+  const context = {
+    playerField: [unitSprite],
+    enemyField: [enemySprite],
+    discardPile: [],
+    hand: [],
+    cardScale: 1,
+    artifactUsage: {},
+    combatManager: {
+      performSingleAttack: (
+        attacker: CardSprite,
+        target: CardSprite | CardSprite[],
+        damage: number,
+        delay: number,
+        isAOE: boolean,
+      ) => {
+        attackCalls.push({ attacker, target, damage, delay, isAOE });
+      },
+    },
+  } as GongfaRuntimeContext;
+  const artifact = {
+    id: 'artifact.test_sword',
+    name: '测试飞剑',
+    kind: 'artifact',
+    gradeId: 'grade_earth_lower',
+    equipTarget: 'unit',
+    weaponType: '剑',
+    elements: ['金'],
+    attackBonus: 2,
+  } as ArtifactCard;
+  const gongfaList: Gongfa[] = [
+    {
+      id: 'gongfa.test_immediate_attack',
+      name: '控剑术·委托',
+      description: '测试立即攻击运行时边界。',
+      schema: {
+        event: { type: EffectEventType.OnEquipArtifact, side: EffectEventSide.Ally },
+        actions: [
+          {
+            type: EffectActionType.ImmediateAttack,
+            target: 'singleEnemy',
+            damageMultiplier: 0.5,
+          },
+        ],
+      },
+    },
+  ];
+  const manager = new UnitEffectManager(battleContext, gongfaList);
+
+  return {
+    manager,
+    unitSprite,
+    enemySprite,
+    context,
+    artifact,
+    addLogMessages,
+    gongfaLogNames,
+    attackCalls,
+  };
+}
+
 describe('UnitEffectManager artifact grade lookup consumer contract', () => {
   it('uses artifact grade stars for equip conditions and artifact.star expressions without changing behavior', () => {
     const harness = createHarness('grade_earth_lower');
@@ -378,5 +472,25 @@ describe('UnitEffectManager CardFilter runtime adapters', () => {
     expect(harness.context.deck).toEqual([]);
     expect(harness.addLogMessages).toEqual(['抽取2张卡牌，其中1张符合条件']);
     expect(harness.gongfaLogNames).toEqual(['筛选边界']);
+  });
+});
+
+describe('UnitEffectManager ImmediateAttack runtime adapter delegation', () => {
+  it('preserves ImmediateAttack orchestration logs and performSingleAttack args through the typed adapter', () => {
+    const harness = createImmediateAttackDelegationHarness();
+
+    harness.manager.applyOnEquipArtifactEffects(harness.unitSprite, harness.artifact, harness.context);
+
+    expect(harness.attackCalls).toEqual([
+      {
+        attacker: harness.unitSprite,
+        target: harness.enemySprite,
+        damage: 3,
+        delay: 0,
+        isAOE: false,
+      },
+    ]);
+    expect(harness.addLogMessages).toEqual(['【控剑修士】触发控剑术，立即发动攻击（3点伤害）']);
+    expect(harness.gongfaLogNames).toEqual(['控剑术·委托']);
   });
 });

@@ -7,7 +7,6 @@ import type {
     GongfaAction,
     EffectCondition,
     EffectSchema,
-    ImmediateAttackAction,
     ArtifactEquippedCondition,
 } from '@data/types/gongfa';
 import { EffectEventType, EffectEventSide, EffectConditionType, EffectActionType } from '@data/types/gongfa';
@@ -21,6 +20,10 @@ import {
     type GongfaCardOperationContext
 } from './gongfaCardOperations';
 import { executeGongfaArmorOperation, type GongfaArmorOperationContext } from './gongfaArmorOperations';
+import {
+    executeGongfaImmediateAttackOperation,
+    type GongfaImmediateAttackOperationContext
+} from './gongfaAttackOperations';
 
 type AnyHandSprite = CardSprite | import('../../objects/ArtifactSprite').ArtifactSprite | import('../../objects/TalismanSprite').TalismanSprite | import('../../objects/FieldSprite').FieldSprite;
 
@@ -232,8 +235,10 @@ export class UnitEffectManager {
                     break;
                 }
                 case EffectActionType.ImmediateAttack: {
-                    const attackAction = action as ImmediateAttackAction;
-                    const attacked = this.executeImmediateAttack(attackAction, context);
+                    const attacked = executeGongfaImmediateAttackOperation(
+                        action,
+                        this.createImmediateAttackOperationContext(context)
+                    );
                     executed = executed || attacked;
                     break;
                 }
@@ -267,80 +272,6 @@ export class UnitEffectManager {
         return executed;
     }
 
-    private executeImmediateAttack(
-        action: ImmediateAttackAction,
-        context: GongfaRuntimeContext
-    ): boolean {
-        if (!context.triggerUnit) {
-            console.warn('立即攻击需要触发单位信息');
-            return false;
-        }
-
-        if (!context.enemyField || context.enemyField.length === 0) {
-            console.warn('没有敌方单位可以攻击');
-            return false;
-        }
-
-        if (!context.combatManager) {
-            console.warn('CombatManager 未提供，无法执行立即攻击');
-            return false;
-        }
-
-        // 获取攻击者的攻击力
-        const attackerData = context.triggerUnit.getCardData() as UnitCard;
-        let attackPower = attackerData.attack || 0;
-
-        // 如果装备了法器，加上法器的攻击加成
-        if (context.equippedArtifact && context.equippedArtifact.attackBonus) {
-            attackPower += context.equippedArtifact.attackBonus;
-        }
-
-        // 应用伤害倍率
-        const damageMultiplier = action.damageMultiplier ?? 1.0;
-        const finalDamage = Math.floor(attackPower * damageMultiplier);
-
-        // 记录日志
-        this.battleContext.battleLog.addLog(`【${attackerData.name}】触发控剑术，立即发动攻击（${finalDamage}点伤害）`);
-
-        // 根据目标类型执行攻击
-        if (action.target === 'singleEnemy') {
-            // 单体攻击：攻击第一个存活的敌人
-            const target = context.enemyField.find(enemy => {
-                const enemyData = enemy.getCardData();
-                return enemyData.health > 0;
-            });
-
-            if (target) {
-                // 使用 CombatManager 的攻击逻辑
-                context.combatManager.performSingleAttack(
-                    context.triggerUnit,
-                    target,
-                    finalDamage,
-                    0, // 立即执行，无延迟
-                    false // 单体攻击
-                );
-            }
-        } else if (action.target === 'allEnemies') {
-            // AOE攻击：攻击所有敌人
-            const aliveEnemies = context.enemyField.filter(enemy => {
-                return enemy.getCardData().health > 0;
-            });
-            
-            if (aliveEnemies.length > 0) {
-                context.combatManager.performSingleAttack(
-                    context.triggerUnit,
-                    aliveEnemies,
-                    finalDamage,
-                    0, // 立即执行，无延迟
-                    true // AOE攻击
-                );
-                // tick 由 BattleAnimationManager 自动调用
-            }
-        }
-
-        return true;
-    }
-
     private createCardOperationContext(context: GongfaRuntimeContext): GongfaCardOperationContext {
         return {
             discardPile: context.discardPile,
@@ -350,6 +281,16 @@ export class UnitEffectManager {
             gameActionHandler: context.gameActionHandler,
             battleLog: this.battleContext.battleLog,
             expressionContext: this.buildExpressionContext(context) ?? {}
+        };
+    }
+
+    private createImmediateAttackOperationContext(context: GongfaRuntimeContext): GongfaImmediateAttackOperationContext {
+        return {
+            triggerUnit: context.triggerUnit,
+            enemyField: context.enemyField,
+            equippedArtifact: context.equippedArtifact,
+            combatManager: context.combatManager,
+            battleLog: this.battleContext.battleLog
         };
     }
 
