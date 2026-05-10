@@ -3,9 +3,13 @@ import type {
     ContentCatalogValidationFailure,
 } from './contentCatalog';
 
-type CatalogIdRegistryName = 'card' | 'gongfa' | 'status' | 'world item';
+type CatalogIdRegistryName = 'card' | 'gongfa' | 'status' | 'world item' | 'realm' | 'grade';
 
 const CANONICAL_STATUS_DEFINITIONS_PUBLIC_PATH = 'data/config/status-definitions.json';
+const CANONICAL_REALM_REGISTRY_RESOURCE_ID = 'config.combat-baseline';
+const CANONICAL_REALM_REGISTRY_PUBLIC_PATH = 'data/config/combat-baseline.json';
+const CANONICAL_GRADE_REGISTRY_RESOURCE_ID = 'config.artifact-grade';
+const CANONICAL_GRADE_REGISTRY_PUBLIC_PATH = 'data/config/artifact-grade.json';
 
 interface CatalogIdResource {
     entry: ContentCatalogEntry;
@@ -22,10 +26,24 @@ interface ContentIdRegistries {
     cards: Map<string, CatalogIdLocation>;
     gongfa: Map<string, CatalogIdLocation>;
     statuses: Map<string, CatalogIdLocation>;
+    realms: CanonicalContentIdRegistry;
+    grades: CanonicalContentIdRegistry;
     worldItems: Map<string, CatalogIdLocation>;
 }
 
 const WORLD_ITEM_COLLECTION_NAMES = ['artifacts', 'tools', 'consumables', 'quests', 'questItems'] as const;
+
+interface CanonicalContentIdRegistry {
+    ids: Map<string, CatalogIdLocation>;
+    resourceId: string;
+    publicPath: string;
+    collectionName: string;
+    registryName: 'realm' | 'grade';
+    cardKindName: 'unit' | 'artifact';
+    referenceField: 'realmId' | 'gradeId';
+    isPresent: boolean;
+    missingReported: boolean;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -45,6 +63,27 @@ function addFailure(
 
 function formatCatalogIdLocation(location: CatalogIdLocation): string {
     return `${location.resourceId} ${location.context} in ${location.publicPath}`;
+}
+
+function createCanonicalContentIdRegistry(
+    resourceId: string,
+    publicPath: string,
+    collectionName: string,
+    registryName: 'realm' | 'grade',
+    cardKindName: 'unit' | 'artifact',
+    referenceField: 'realmId' | 'gradeId',
+): CanonicalContentIdRegistry {
+    return {
+        ids: new Map(),
+        resourceId,
+        publicPath,
+        collectionName,
+        registryName,
+        cardKindName,
+        referenceField,
+        isPresent: false,
+        missingReported: false,
+    };
 }
 
 function registerCatalogId(
@@ -119,10 +158,34 @@ function buildContentIdRegistries(
         cards: new Map(),
         gongfa: new Map(),
         statuses: new Map(),
+        realms: createCanonicalContentIdRegistry(
+            CANONICAL_REALM_REGISTRY_RESOURCE_ID,
+            CANONICAL_REALM_REGISTRY_PUBLIC_PATH,
+            'realms',
+            'realm',
+            'unit',
+            'realmId',
+        ),
+        grades: createCanonicalContentIdRegistry(
+            CANONICAL_GRADE_REGISTRY_RESOURCE_ID,
+            CANONICAL_GRADE_REGISTRY_PUBLIC_PATH,
+            'grades',
+            'grade',
+            'artifact',
+            'gradeId',
+        ),
         worldItems: new Map(),
     };
 
     for (const resource of resources) {
+        if (resource.entry.resourceId === CANONICAL_REALM_REGISTRY_RESOURCE_ID) {
+            registerCanonicalContentIds(resource, registries.realms, failures);
+        }
+
+        if (resource.entry.resourceId === CANONICAL_GRADE_REGISTRY_RESOURCE_ID) {
+            registerCanonicalContentIds(resource, registries.grades, failures);
+        }
+
         if (!resource.json || !isRecord(resource.json)) {
             continue;
         }
@@ -148,6 +211,55 @@ function buildContentIdRegistries(
     }
 
     return registries;
+}
+
+function registerCanonicalContentIds(
+    resource: CatalogIdResource,
+    registry: CanonicalContentIdRegistry,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    registry.isPresent = true;
+
+    if (!isRecord(resource.json)) {
+        addFailure(
+            failures,
+            resource.entry,
+            `Catalog ${registry.registryName} registry ${resource.entry.resourceId} in ${resource.entry.publicPath} must be an object.`,
+        );
+        return;
+    }
+
+    const collection = resource.json[registry.collectionName];
+
+    if (!Array.isArray(collection)) {
+        addFailure(
+            failures,
+            resource.entry,
+            `Catalog ${registry.registryName} registry ${resource.entry.resourceId} in ${resource.entry.publicPath} must declare a top-level ${registry.collectionName} array.`,
+        );
+        return;
+    }
+
+    collection.forEach((value, index) => {
+        const context = `${registry.collectionName}[${index}]`;
+
+        if (!isRecord(value)) {
+            addFailure(
+                failures,
+                resource.entry,
+                `Catalog ${registry.registryName} entry ${resource.entry.resourceId} ${context} in ${resource.entry.publicPath} must be an object.`,
+            );
+            return;
+        }
+
+        const id = readRegistryStringId(resource, value, context, registry.registryName, failures);
+
+        if (!id) {
+            return;
+        }
+
+        registerCatalogId(registry.ids, registry.registryName, resource, id, context, failures);
+    });
 }
 
 function registerCardIds(
@@ -319,6 +431,7 @@ function validateContentIdReferences(
         if (resource.entry.kind === 'card') {
             validateCardGongfaReferences(resource, registries, failures);
             validateCardLegacyApplyStatusReferences(resource, registries, failures);
+            validateCardRealmAndGradeReferences(resource, registries, failures);
         }
 
         if (resource.entry.kind === 'deck') {
@@ -414,6 +527,51 @@ function validateRegisteredIdReference(
     return location;
 }
 
+function reportMissingCanonicalRegistry(
+    registry: CanonicalContentIdRegistry,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (registry.missingReported) {
+        return;
+    }
+
+    registry.missingReported = true;
+    addFailure(
+        failures,
+        {
+            resourceId: registry.resourceId,
+            publicPath: registry.publicPath,
+        },
+        `Catalog ${registry.registryName} registry ${registry.resourceId} (${registry.publicPath}) is missing; add it to the content catalog so ${registry.cardKindName} card ${registry.referenceField} references can be verified.`,
+    );
+}
+
+function validateCanonicalIdReference(
+    registry: CanonicalContentIdRegistry,
+    ownerEntry: ContentCatalogEntry,
+    context: string,
+    id: string,
+    failures: ContentCatalogValidationFailure[],
+): CatalogIdLocation | undefined {
+    if (!registry.isPresent) {
+        reportMissingCanonicalRegistry(registry, failures);
+        return undefined;
+    }
+
+    const location = registry.ids.get(id);
+
+    if (!location) {
+        addFailure(
+            failures,
+            ownerEntry,
+            `${context} references ${registry.registryName} id ${id}, but canonical ${registry.publicPath} does not declare that id.`,
+        );
+        return undefined;
+    }
+
+    return location;
+}
+
 function readReferenceId(
     ownerEntry: ContentCatalogEntry,
     record: Record<string, unknown>,
@@ -433,6 +591,95 @@ function readReferenceId(
         `${context}.${field} must be a non-empty string so the catalog can verify the content ID reference.`,
     );
     return undefined;
+}
+
+function readCardMetadataReferenceId(
+    ownerEntry: ContentCatalogEntry,
+    record: Record<string, unknown>,
+    field: 'realmId' | 'gradeId',
+    context: string,
+    referenceName: 'realm' | 'grade',
+    failures: ContentCatalogValidationFailure[],
+): string | undefined {
+    const value = record[field];
+
+    if (typeof value === 'string' && value.trim().length > 0) {
+        return value;
+    }
+
+    addFailure(
+        failures,
+        ownerEntry,
+        `${context}.${field} must be a non-empty string so the catalog can verify the ${referenceName} reference.`,
+    );
+    return undefined;
+}
+
+function validateCardRealmAndGradeReferences(
+    resource: CatalogIdResource,
+    registries: ContentIdRegistries,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (!isRecord(resource.json)) {
+        return;
+    }
+
+    for (const [collectionName, collection] of Object.entries(resource.json)) {
+        if (!Array.isArray(collection)) {
+            continue;
+        }
+
+        collection.forEach((value, index) => {
+            if (!isRecord(value)) {
+                return;
+            }
+
+            const cardId = typeof value.id === 'string' && value.id.trim().length > 0 ? value.id : undefined;
+            const cardContext = `Card ${resource.entry.resourceId} ${collectionName}[${index}]${cardId ? ` ${cardId}` : ''}`;
+
+            if (value.kind === 'unit' || collectionName === 'units') {
+                const realmId = readCardMetadataReferenceId(
+                    resource.entry,
+                    value,
+                    'realmId',
+                    cardContext,
+                    'realm',
+                    failures,
+                );
+
+                if (realmId) {
+                    validateCanonicalIdReference(
+                        registries.realms,
+                        resource.entry,
+                        `${cardContext} realmId`,
+                        realmId,
+                        failures,
+                    );
+                }
+            }
+
+            if (value.kind === 'artifact' || collectionName === 'artifacts') {
+                const gradeId = readCardMetadataReferenceId(
+                    resource.entry,
+                    value,
+                    'gradeId',
+                    cardContext,
+                    'grade',
+                    failures,
+                );
+
+                if (gradeId) {
+                    validateCanonicalIdReference(
+                        registries.grades,
+                        resource.entry,
+                        `${cardContext} gradeId`,
+                        gradeId,
+                        failures,
+                    );
+                }
+            }
+        });
+    }
 }
 
 function validateCardGongfaReferences(

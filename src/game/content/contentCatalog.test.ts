@@ -48,6 +48,35 @@ const expectedCheckedInResources = [
     ['worldSeed', 'data/world/skills.techniques.json'],
 ] as const;
 
+const canonicalCombatBaselineCatalogEntry = {
+    resourceId: 'config.combat-baseline',
+    kind: 'config',
+    schemaVersion: 1,
+    publicPath: 'data/config/combat-baseline.json',
+} as const;
+
+const canonicalArtifactGradeCatalogEntry = {
+    resourceId: 'config.artifact-grade',
+    kind: 'config',
+    schemaVersion: 1,
+    publicPath: 'data/config/artifact-grade.json',
+} as const;
+
+const validCombatBaselineRegistry = {
+    realms: [{ id: 'realm.valid' }],
+};
+
+const validArtifactGradeRegistry = {
+    grades: [{ id: 'grade.valid' }],
+};
+
+function createCanonicalRealmAndGradeOverrides(): Record<string, unknown> {
+    return {
+        [canonicalCombatBaselineCatalogEntry.publicPath]: validCombatBaselineRegistry,
+        [canonicalArtifactGradeCatalogEntry.publicPath]: validArtifactGradeRegistry,
+    };
+}
+
 function readCatalogJson(): unknown {
     return JSON.parse(readFileSync(join('public', CONTENT_CATALOG_PUBLIC_PATH), 'utf8'));
 }
@@ -1262,7 +1291,7 @@ describe('content catalog', () => {
     });
 
 
-    it('returns actionable failures for duplicate catalog-backed card, gongfa, status, and world item IDs', () => {
+    it('returns actionable failures for duplicate catalog-backed card, gongfa, status, realm, grade, and world item IDs', () => {
         const catalog = {
             schemaVersion: 1,
             resources: [
@@ -1290,6 +1319,8 @@ describe('content catalog', () => {
                     schemaVersion: 1,
                     publicPath: 'data/config/status-definitions.json',
                 },
+                canonicalCombatBaselineCatalogEntry,
+                canonicalArtifactGradeCatalogEntry,
                 {
                     resourceId: 'world.seed.items-artifacts',
                     kind: 'worldSeed',
@@ -1300,10 +1331,10 @@ describe('content catalog', () => {
         };
         const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
             'data/cards/units.json': {
-                units: [{ id: 'DUPLICATE_CARD', kind: 'unit' }],
+                units: [{ id: 'DUPLICATE_CARD', kind: 'unit', realmId: 'realm.valid' }],
             },
             'data/cards/artifacts.json': {
-                artifacts: [{ id: 'DUPLICATE_CARD', kind: 'artifact' }],
+                artifacts: [{ id: 'DUPLICATE_CARD', kind: 'artifact', gradeId: 'grade.valid' }],
             },
             'data/gongfa/gongfa-list.json': {
                 gongfa: [
@@ -1319,6 +1350,22 @@ describe('content catalog', () => {
                     { id: 42 },
                 ],
             },
+            'data/config/combat-baseline.json': {
+                realms: [
+                    { id: 'realm.valid' },
+                    { id: 'realm.valid' },
+                    { id: '' },
+                    42,
+                ],
+            },
+            'data/config/artifact-grade.json': {
+                grades: [
+                    { id: 'grade.valid' },
+                    { id: 'grade.valid' },
+                    { id: '' },
+                    42,
+                ],
+            },
             'data/world/items.artifacts.json': {
                 artifacts: [{ id: 'duplicate_item' }],
                 tools: [{ id: 'duplicate_item' }],
@@ -1331,7 +1378,134 @@ describe('content catalog', () => {
             'Catalog status id duplicate_status is declared more than once: status.definitions statuses[0] in data/config/status-definitions.json; duplicate status.definitions statuses[1] in data/config/status-definitions.json.',
             'Catalog status entry status.definitions statuses[2] in data/config/status-definitions.json must declare a non-empty string id.',
             'Catalog status entry status.definitions statuses[3] in data/config/status-definitions.json must declare a non-empty string id.',
+            'Catalog realm id realm.valid is declared more than once: config.combat-baseline realms[0] in data/config/combat-baseline.json; duplicate config.combat-baseline realms[1] in data/config/combat-baseline.json.',
+            'Catalog realm entry config.combat-baseline realms[2] in data/config/combat-baseline.json must declare a non-empty string id.',
+            'Catalog realm entry config.combat-baseline realms[3] in data/config/combat-baseline.json must be an object.',
+            'Catalog grade id grade.valid is declared more than once: config.artifact-grade grades[0] in data/config/artifact-grade.json; duplicate config.artifact-grade grades[1] in data/config/artifact-grade.json.',
+            'Catalog grade entry config.artifact-grade grades[2] in data/config/artifact-grade.json must declare a non-empty string id.',
+            'Catalog grade entry config.artifact-grade grades[3] in data/config/artifact-grade.json must be an object.',
             'Catalog world item id duplicate_item is declared more than once: world.seed.items-artifacts artifacts[0] in data/world/items.artifacts.json; duplicate world.seed.items-artifacts tools[0] in data/world/items.artifacts.json.',
+        ]);
+    });
+
+    it('returns actionable failures for missing or malformed canonical realm and grade registries', () => {
+        const missingRegistryCatalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'cards.units',
+                    kind: 'card',
+                    schemaVersion: 1,
+                    publicPath: 'data/cards/units.json',
+                },
+                {
+                    resourceId: 'cards.artifacts',
+                    kind: 'card',
+                    schemaVersion: 1,
+                    publicPath: 'data/cards/artifacts.json',
+                },
+            ],
+        };
+        const missingRegistryResult = validateContentCatalog(missingRegistryCatalog, createPublicFileSourceWithOverrides({
+            'data/cards/units.json': {
+                units: [{ id: 'CARD_REALM_NEEDS_REGISTRY', kind: 'unit', realmId: 'realm.valid' }],
+            },
+            'data/cards/artifacts.json': {
+                artifacts: [{ id: 'CARD_GRADE_NEEDS_REGISTRY', kind: 'artifact', gradeId: 'grade.valid' }],
+            },
+        }));
+
+        expect(missingRegistryResult.failures.map((failure) => failure.message)).toEqual([
+            'Catalog realm registry config.combat-baseline (data/config/combat-baseline.json) is missing; add it to the content catalog so unit card realmId references can be verified.',
+            'Catalog grade registry config.artifact-grade (data/config/artifact-grade.json) is missing; add it to the content catalog so artifact card gradeId references can be verified.',
+        ]);
+
+        const malformedRegistryCatalog = {
+            schemaVersion: 1,
+            resources: [
+                canonicalCombatBaselineCatalogEntry,
+                canonicalArtifactGradeCatalogEntry,
+            ],
+        };
+        const malformedRegistryResult = validateContentCatalog(
+            malformedRegistryCatalog,
+            createPublicFileSourceWithOverrides({
+                'data/config/combat-baseline.json': { realmsById: {} },
+                'data/config/artifact-grade.json': { gradesById: {} },
+            }),
+        );
+
+        expect(malformedRegistryResult.failures.map((failure) => failure.message)).toEqual([
+            'Catalog realm registry config.combat-baseline in data/config/combat-baseline.json must declare a top-level realms array.',
+            'Catalog grade registry config.artifact-grade in data/config/artifact-grade.json must declare a top-level grades array.',
+        ]);
+    });
+
+    it('returns actionable failures for non-string or unknown unit realmId and artifact gradeId references', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'cards.units',
+                    kind: 'card',
+                    schemaVersion: 1,
+                    publicPath: 'data/cards/units.json',
+                },
+                {
+                    resourceId: 'cards.artifacts',
+                    kind: 'card',
+                    schemaVersion: 1,
+                    publicPath: 'data/cards/artifacts.json',
+                },
+                canonicalCombatBaselineCatalogEntry,
+                canonicalArtifactGradeCatalogEntry,
+                {
+                    resourceId: 'config.combat-baseline.extra',
+                    kind: 'config',
+                    schemaVersion: 1,
+                    publicPath: 'data/config/extra-combat-baseline.json',
+                },
+                {
+                    resourceId: 'config.artifact-grade.extra',
+                    kind: 'config',
+                    schemaVersion: 1,
+                    publicPath: 'data/config/extra-artifact-grade.json',
+                },
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/cards/units.json': {
+                units: [
+                    { id: 'CARD_REALM_OK', kind: 'unit', realmId: 'realm.valid' },
+                    { id: 'CARD_REALM_UNKNOWN', kind: 'unit', realmId: 'realm.only_in_extra_registry' },
+                    { id: 'CARD_REALM_MISSING', kind: 'unit' },
+                    { id: 'CARD_REALM_MALFORMED', kind: 'unit', realmId: 42 },
+                ],
+            },
+            'data/cards/artifacts.json': {
+                artifacts: [
+                    { id: 'CARD_GRADE_OK', kind: 'artifact', gradeId: 'grade.valid' },
+                    { id: 'CARD_GRADE_UNKNOWN', kind: 'artifact', gradeId: 'grade.only_in_extra_registry' },
+                    { id: 'CARD_GRADE_MISSING', kind: 'artifact' },
+                    { id: 'CARD_GRADE_MALFORMED', kind: 'artifact', gradeId: 42 },
+                ],
+            },
+            ...createCanonicalRealmAndGradeOverrides(),
+            'data/config/extra-combat-baseline.json': {
+                realms: [{ id: 'realm.only_in_extra_registry' }],
+            },
+            'data/config/extra-artifact-grade.json': {
+                grades: [{ id: 'grade.only_in_extra_registry' }],
+            },
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toEqual([
+            'Card cards.units units[1] CARD_REALM_UNKNOWN realmId references realm id realm.only_in_extra_registry, but canonical data/config/combat-baseline.json does not declare that id.',
+            'Card cards.units units[2] CARD_REALM_MISSING.realmId must be a non-empty string so the catalog can verify the realm reference.',
+            'Card cards.units units[3] CARD_REALM_MALFORMED.realmId must be a non-empty string so the catalog can verify the realm reference.',
+            'Card cards.artifacts artifacts[1] CARD_GRADE_UNKNOWN gradeId references grade id grade.only_in_extra_registry, but canonical data/config/artifact-grade.json does not declare that id.',
+            'Card cards.artifacts artifacts[2] CARD_GRADE_MISSING.gradeId must be a non-empty string so the catalog can verify the grade reference.',
+            'Card cards.artifacts artifacts[3] CARD_GRADE_MALFORMED.gradeId must be a non-empty string so the catalog can verify the grade reference.',
         ]);
     });
 
@@ -1357,6 +1531,7 @@ describe('content catalog', () => {
                     schemaVersion: 1,
                     publicPath: 'data/config/status-definitions.json',
                 },
+                canonicalCombatBaselineCatalogEntry,
                 {
                     resourceId: 'world.seed.items-artifacts',
                     kind: 'worldSeed',
@@ -1392,11 +1567,12 @@ describe('content catalog', () => {
         const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
             'data/cards/units.json': {
                 units: [
-                    { id: 'CARD_VALID', kind: 'unit', gongfaIds: ['gongfa.valid'] },
-                    { id: 'CARD_BAD_GONGFA', kind: 'unit', gongfaIds: ['gongfa.missing'] },
+                    { id: 'CARD_VALID', kind: 'unit', realmId: 'realm.valid', gongfaIds: ['gongfa.valid'] },
+                    { id: 'CARD_BAD_GONGFA', kind: 'unit', realmId: 'realm.valid', gongfaIds: ['gongfa.missing'] },
                     {
                         id: 'CARD_BAD_STATUS',
                         kind: 'unit',
+                        realmId: 'realm.valid',
                         effects: [
                             {
                                 actions: [
@@ -1411,6 +1587,7 @@ describe('content catalog', () => {
                     {
                         id: 'CARD_MISSING_STATUS_FIELD',
                         kind: 'unit',
+                        realmId: 'realm.valid',
                         effects: [
                             {
                                 actions: [
@@ -1424,6 +1601,7 @@ describe('content catalog', () => {
                     {
                         id: 'CARD_MALFORMED_STATUS_FIELD',
                         kind: 'unit',
+                        realmId: 'realm.valid',
                         effects: [
                             {
                                 actions: [
@@ -1443,6 +1621,7 @@ describe('content catalog', () => {
             'data/config/status-definitions.json': {
                 statuses: [{ id: 'status.valid' }],
             },
+            'data/config/combat-baseline.json': validCombatBaselineRegistry,
             'data/world/items.artifacts.json': {
                 artifacts: [{ id: 'item.valid' }],
             },
@@ -1521,6 +1700,7 @@ describe('content catalog', () => {
                     schemaVersion: 1,
                     publicPath: 'data/config/status-definitions.json',
                 },
+                canonicalCombatBaselineCatalogEntry,
                 {
                     resourceId: 'status.extra',
                     kind: 'status',
@@ -1536,6 +1716,7 @@ describe('content catalog', () => {
                     {
                         id: 'CARD_STATUS_FROM_EXTRA_REGISTRY',
                         kind: 'unit',
+                        realmId: 'realm.valid',
                         effects: [
                             {
                                 actions: [
@@ -1552,6 +1733,7 @@ describe('content catalog', () => {
             'data/config/status-definitions.json': {
                 statuses: [{ id: 'armor' }],
             },
+            'data/config/combat-baseline.json': validCombatBaselineRegistry,
             'data/config/extra-status-definitions.json': {
                 statuses: [{ id: 'status.only_in_extra_file' }],
             },
