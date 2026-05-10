@@ -15,9 +15,11 @@ import {
     type ExpeditionWorldStateSeed,
     type StarterDeckSeed,
 } from './GameWorldStateSeed';
+import {
+    addRewardBundleToCarriedBundle,
+    createStartingLoadoutFromStash,
+} from './GameWorldStateStashOperations';
 import type {
-    ExpeditionCardStack,
-    ExpeditionItemStack,
     ExpeditionMapDefinition,
     ExpeditionRouteIdentity,
     ExpeditionTargetConfig,
@@ -61,59 +63,6 @@ export type ExtractIntentResult =
     | { status: 'alreadyRecorded'; activeRun: RunSnapshot }
     | { status: 'noActiveRun'; activeRun: null };
 
-function cloneCardStacks(stacks: ExpeditionCardStack[]): ExpeditionCardStack[] {
-    return stacks.map((stack) => ({ ...stack }));
-}
-
-function cloneItemStacks(stacks: ExpeditionItemStack[]): ExpeditionItemStack[] {
-    return stacks.map((stack) => ({ ...stack }));
-}
-
-function mergeCardStacks(existing: ExpeditionCardStack[], incoming: ExpeditionCardStack[]): ExpeditionCardStack[] {
-    const merged = new Map<string, ExpeditionCardStack>();
-
-    for (const stack of existing) {
-        merged.set(stack.id, { ...stack });
-    }
-
-    for (const stack of incoming) {
-        const current = merged.get(stack.id);
-        merged.set(stack.id, {
-            id: stack.id,
-            count: (current?.count ?? 0) + stack.count,
-        });
-    }
-
-    return [...merged.values()];
-}
-
-function mergeItemStacks(existing: ExpeditionItemStack[], incoming: ExpeditionItemStack[]): ExpeditionItemStack[] {
-    const merged = new Map<string, ExpeditionItemStack>();
-
-    for (const stack of existing) {
-        merged.set(`${stack.itemType}:${stack.id}`, { ...stack });
-    }
-
-    for (const stack of incoming) {
-        const key = `${stack.itemType}:${stack.id}`;
-        const current = merged.get(key);
-        merged.set(key, {
-            ...stack,
-            count: (current?.count ?? 0) + stack.count,
-        });
-    }
-
-    return [...merged.values()];
-}
-
-function createStartingLoadout(stash: PersistentStash): RunRewardBundle {
-    return {
-        cards: cloneCardStacks(stash.deck),
-        items: cloneItemStacks(stash.items),
-        spiritStones: stash.spiritStones,
-    };
-}
-
 function createRunId(): string {
     return `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -136,6 +85,26 @@ function createVisitedNodeState(
         visited: true,
         rewardClaimed: options.rewardClaimed ?? existing?.rewardClaimed ?? false,
         purchasedOfferIds: options.purchasedOfferIds ?? existing?.purchasedOfferIds ?? [],
+    };
+}
+
+function addRewardsToCarriedRun(
+    run: RunSnapshot,
+    rewards: RunRewardBundle,
+): Pick<RunSnapshot, 'carriedDeck' | 'carriedItems' | 'spiritStones'> {
+    const carried = addRewardBundleToCarriedBundle(
+        {
+            cards: run.carriedDeck,
+            items: run.carriedItems,
+            spiritStones: run.spiritStones,
+        },
+        rewards,
+    );
+
+    return {
+        carriedDeck: carried.cards,
+        carriedItems: carried.items,
+        spiritStones: carried.spiritStones,
     };
 }
 
@@ -191,6 +160,8 @@ export class ExpeditionState {
         this.assertRunIdentityMatchesState({ expeditionId, mapId });
 
         const startedAt = new Date().toISOString();
+        const startingLoadout = createStartingLoadoutFromStash(this.persistentStash);
+        const initialCarriedBundle = createStartingLoadoutFromStash(this.persistentStash);
         const activeRun: RunSnapshot = {
             runId: createRunId(),
             routeKey: this.activeRunRouteKey,
@@ -198,10 +169,10 @@ export class ExpeditionState {
             mapId,
             status: 'inProgress',
             currentNodeId: entryNodeId,
-            startingLoadout: createStartingLoadout(this.persistentStash),
-            carriedDeck: cloneCardStacks(this.persistentStash.deck),
-            carriedItems: cloneItemStacks(this.persistentStash.items),
-            spiritStones: this.persistentStash.spiritStones,
+            startingLoadout,
+            carriedDeck: initialCarriedBundle.cards,
+            carriedItems: initialCarriedBundle.items,
+            spiritStones: initialCarriedBundle.spiritStones,
             visitedNodeIds: [entryNodeId],
             nodeStates: {
                 [entryNodeId]: {
@@ -226,9 +197,7 @@ export class ExpeditionState {
 
         const updatedRun: RunSnapshot = {
             ...this.activeRun,
-            carriedDeck: mergeCardStacks(this.activeRun.carriedDeck, rewards.cards),
-            carriedItems: mergeItemStacks(this.activeRun.carriedItems, rewards.items),
-            spiritStones: this.activeRun.spiritStones + rewards.spiritStones,
+            ...addRewardsToCarriedRun(this.activeRun, rewards),
         };
 
         this.persistActiveRun(updatedRun);
@@ -250,9 +219,7 @@ export class ExpeditionState {
         const updatedRun: RunSnapshot = {
             ...this.activeRun,
             currentNodeId: nodeId,
-            carriedDeck: mergeCardStacks(this.activeRun.carriedDeck, rewards.cards),
-            carriedItems: mergeItemStacks(this.activeRun.carriedItems, rewards.items),
-            spiritStones: this.activeRun.spiritStones + rewards.spiritStones,
+            ...addRewardsToCarriedRun(this.activeRun, rewards),
             visitedNodeIds: appendUniqueNodeId(this.activeRun.visitedNodeIds, nodeId),
             nodeStates: {
                 ...this.activeRun.nodeStates,
@@ -290,9 +257,13 @@ export class ExpeditionState {
         const updatedRun: RunSnapshot = {
             ...this.activeRun,
             currentNodeId: nodeId,
-            carriedDeck: mergeCardStacks(this.activeRun.carriedDeck, rewards.cards),
-            carriedItems: mergeItemStacks(this.activeRun.carriedItems, rewards.items),
-            spiritStones: this.activeRun.spiritStones - cost.spiritStones + rewards.spiritStones,
+            ...addRewardsToCarriedRun(
+                {
+                    ...this.activeRun,
+                    spiritStones: this.activeRun.spiritStones - cost.spiritStones,
+                },
+                rewards,
+            ),
             visitedNodeIds: appendUniqueNodeId(this.activeRun.visitedNodeIds, nodeId),
             nodeStates: {
                 ...this.activeRun.nodeStates,
