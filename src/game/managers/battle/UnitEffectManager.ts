@@ -1,8 +1,7 @@
 import type { BattleContext } from '../../context/BattleContext';
 import { getUnitStar } from '../../utils/RealmHelper';
+import { getStarFromGradeId } from '../../utils/ArtifactHelper';
 import type { CardSprite } from '../../objects/CardSprite';
-import type { ArtifactGradeConfig } from '@data/types/artifact-grade';
-import artifactGradeConfig from '@data/config/artifact-grade.json';
 import type {
     Gongfa,
     EffectAction,
@@ -194,7 +193,7 @@ export class UnitEffectManager {
                     
                     // 检查星级限制
                     if (artifactCondition.maxStar !== undefined) {
-                        const artifactStar = this.getArtifactStarFromGrade(context.equippedArtifact.gradeId);
+                        const artifactStar = getStarFromGradeId(context.equippedArtifact.gradeId);
                         let maxStarValue: number;
                         
                         if (typeof artifactCondition.maxStar === 'string') {
@@ -593,25 +592,6 @@ export class UnitEffectManager {
     }
 
     /**
-     * 从 gradeId 获取法器星级
-     * 从配置文件中读取品阶对应的 star 值
-     * 同阶（tier）的所有品质星级相同，value 用于品质排序
-     */
-    private getArtifactStarFromGrade(gradeId: string): number {
-        const config = artifactGradeConfig as ArtifactGradeConfig;
-        const grade = config.grades.find(g => g.id === gradeId);
-        
-        if (grade) {
-            // 直接返回 star 字段（黄阶=1星，地阶=2星...）
-            return grade.star;
-        }
-        
-        // 默认返回1星
-        console.warn(`未知的 gradeId: ${gradeId}, 默认为1星`);
-        return 1;
-    }
-
-    /**
      * 计算表达式的值
      * 支持的表达式：
      * - "card.star + 1" - 单位星级 + 1
@@ -633,7 +613,7 @@ export class UnitEffectManager {
             },
             artifact: {
                 star: context.equippedArtifact 
-                    ? this.getArtifactStarFromGrade(context.equippedArtifact.gradeId)
+                    ? getStarFromGradeId(context.equippedArtifact.gradeId)
                     : 0
             }
         };

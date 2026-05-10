@@ -7,42 +7,62 @@ import type { ArtifactCard, ArtifactElement } from '../../../public/data/types/c
 import artifactGradeDataRaw from '../../../public/data/config/artifact-grade.json';
 import type { ArtifactGradeConfig } from '../../../public/data/types/artifact-grade';
 
+export interface ArtifactGradeDisplayConfig {
+  value: number;
+  tier: string;
+  quality: string;
+}
+
+export interface ArtifactGradeLookupEntry extends ArtifactGradeDisplayConfig {
+  star: number;
+}
+
+export type ArtifactGradeLookup = Record<string, ArtifactGradeLookupEntry>;
+
 // 类型断言确保数据符合预期格式
 const artifactGradeData = artifactGradeDataRaw as ArtifactGradeConfig;
 
-// 从 artifact-grade.json 构建品级配置映射表
-const GRADE_CONFIG: Record<string, { value: number; tier: string; quality: string }> = {};
+/**
+ * 从 artifact-grade 配置构建按 grade id 查询的纯 lookup。
+ */
+export function buildArtifactGradeLookup(config: ArtifactGradeConfig): ArtifactGradeLookup {
+  const lookup: ArtifactGradeLookup = {};
 
-// 初始化品级配置映射
-artifactGradeData.grades.forEach(grade => {
-  GRADE_CONFIG[grade.id] = {
+  config.grades.forEach(grade => {
+    lookup[grade.id] = {
+      value: grade.value,
+      tier: grade.tier,
+      quality: grade.quality,
+      star: grade.star
+    };
+  });
+
+  return lookup;
+}
+
+// 从 canonical artifact-grade.json 构建品级配置映射表
+const GRADE_LOOKUP = buildArtifactGradeLookup(artifactGradeData);
+const GRADE_CONFIG: Record<string, ArtifactGradeDisplayConfig> = {};
+
+Object.entries(GRADE_LOOKUP).forEach(([gradeId, grade]) => {
+  GRADE_CONFIG[gradeId] = {
     value: grade.value,
     tier: grade.tier,
     quality: grade.quality
   };
 });
 
-// 品阶到星级的映射
-const TIER_TO_STAR: Record<string, number> = {
-  '黄阶': 1,
-  '地阶': 2,
-  '玄阶': 3,
-  '天阶': 4,
-  '仙阶': 5,
-  '神阶': 6
-};
-
 /**
  * 根据品级ID获取星级（1-6星，按品阶计算）
  * 星级由品阶决定，品质不影响星级
  */
 export function getStarFromGradeId(gradeId: string): number {
-  const config = GRADE_CONFIG[gradeId];
+  const config = GRADE_LOOKUP[gradeId];
   if (!config) {
     console.warn(`Unknown gradeId: ${gradeId}, defaulting to 1 star`);
     return 1;
   }
-  return TIER_TO_STAR[config.tier] || 1;
+  return config.star;
 }
 
 /**
@@ -55,7 +75,7 @@ export function getArtifactStar(artifact: ArtifactCard): number {
 /**
  * 根据品级ID获取品级配置
  */
-export function getGradeConfig(gradeId: string) {
+export function getGradeConfig(gradeId: string): ArtifactGradeDisplayConfig | undefined {
   return GRADE_CONFIG[gradeId];
 }
 
