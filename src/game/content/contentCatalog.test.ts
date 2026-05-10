@@ -32,6 +32,12 @@ import {
     CANONICAL_REALM_REGISTRY_PUBLIC_PATH,
     CANONICAL_REALM_REGISTRY_RESOURCE_ID,
 } from './contentCatalogCanonicalConfig';
+import {
+    CANONICAL_INITIAL_STATE_PUBLIC_PATH,
+    CANONICAL_INITIAL_STATE_RESOURCE_ID,
+    CANONICAL_WORLD_ITEM_REGISTRY_PUBLIC_PATH,
+    CANONICAL_WORLD_ITEM_REGISTRY_RESOURCE_ID,
+} from './contentCatalogWorldSeed';
 
 const expectedCheckedInResources = [
     ['worldMap', 'data/world/world-map.json'],
@@ -61,8 +67,8 @@ const expectedCheckedInResources = [
     ['config', 'data/config/combat-baseline.json'],
     ['config', 'data/config/realm-presets.json'],
     ['worldSeed', 'data/world/factions.json'],
-    ['worldSeed', 'data/world/initial-state.json'],
-    ['worldSeed', 'data/world/items.artifacts.json'],
+    ['worldSeed', CANONICAL_INITIAL_STATE_PUBLIC_PATH],
+    ['worldSeed', CANONICAL_WORLD_ITEM_REGISTRY_PUBLIC_PATH],
     ['worldSeed', 'data/world/meta.json'],
     ['worldSeed', 'data/world/npcs.json'],
     ['worldSeed', 'data/world/protagonist.json'],
@@ -88,6 +94,20 @@ const canonicalRealmPresetsCatalogEntry = {
     kind: 'config',
     schemaVersion: 1,
     publicPath: CANONICAL_REALM_PRESETS_PUBLIC_PATH,
+} as const;
+
+const canonicalInitialStateCatalogEntry = {
+    resourceId: CANONICAL_INITIAL_STATE_RESOURCE_ID,
+    kind: 'worldSeed',
+    schemaVersion: 1,
+    publicPath: CANONICAL_INITIAL_STATE_PUBLIC_PATH,
+} as const;
+
+const canonicalWorldItemRegistryCatalogEntry = {
+    resourceId: CANONICAL_WORLD_ITEM_REGISTRY_RESOURCE_ID,
+    kind: 'worldSeed',
+    schemaVersion: 1,
+    publicPath: CANONICAL_WORLD_ITEM_REGISTRY_PUBLIC_PATH,
 } as const;
 
 const validRealmPresetsRegistry = {
@@ -704,7 +724,7 @@ describe('content catalog', () => {
 
         expect([
             resolver.resolveJsonResource({
-                resourceId: 'world.seed.initial-state',
+                resourceId: CANONICAL_INITIAL_STATE_RESOURCE_ID,
                 expectedKind: 'worldSeed',
             }),
             resolver.resolveJsonResource({
@@ -724,12 +744,7 @@ describe('content catalog', () => {
                 expectedKind: 'expeditionShop',
             }),
         ]).toEqual([
-            {
-                resourceId: 'world.seed.initial-state',
-                kind: 'worldSeed',
-                schemaVersion: 1,
-                publicPath: 'data/world/initial-state.json',
-            },
+            canonicalInitialStateCatalogEntry,
             {
                 resourceId: 'deck.starter',
                 kind: 'deck',
@@ -1145,12 +1160,7 @@ describe('content catalog', () => {
                     schemaVersion: 1,
                     publicPath: 'data/world/catalog-route.json',
                 },
-                {
-                    resourceId: 'world.seed.initial-state',
-                    kind: 'worldSeed',
-                    schemaVersion: 1,
-                    publicPath: 'data/world/initial-state.json',
-                },
+                canonicalInitialStateCatalogEntry,
                 {
                     resourceId: 'deck.starter',
                     kind: 'deck',
@@ -1607,12 +1617,7 @@ describe('content catalog', () => {
                 },
                 canonicalCombatBaselineCatalogEntry,
                 canonicalArtifactGradeCatalogEntry,
-                {
-                    resourceId: 'world.seed.items-artifacts',
-                    kind: 'worldSeed',
-                    schemaVersion: 1,
-                    publicPath: 'data/world/items.artifacts.json',
-                },
+                canonicalWorldItemRegistryCatalogEntry,
             ],
         };
         const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
@@ -2059,6 +2064,45 @@ describe('content catalog', () => {
         ]);
     });
 
+    it('returns actionable failures when canonical world seed catalog kind or publicPath drifts', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    ...canonicalInitialStateCatalogEntry,
+                    kind: 'config',
+                    publicPath: 'data/world/initial-state-v2.json',
+                },
+                {
+                    ...canonicalWorldItemRegistryCatalogEntry,
+                    kind: 'deck',
+                    publicPath: 'data/world/items.artifacts-v2.json',
+                },
+            ],
+        };
+
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/world/initial-state-v2.json': {
+                stash: {
+                    stashId: 'phase01.starter-stash',
+                    deckRef: 'starter-deck',
+                    items: [],
+                    spiritStones: 0,
+                },
+            },
+            'data/world/items.artifacts-v2.json': {
+                artifacts: [],
+            },
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toEqual([
+            'Catalog canonical world seed world.seed.initial-state must have kind worldSeed; found config.',
+            'Catalog canonical world seed world.seed.initial-state must use publicPath data/world/initial-state.json; found data/world/initial-state-v2.json.',
+            'Catalog canonical world seed world.seed.items-artifacts must have kind worldSeed; found deck.',
+            'Catalog canonical world seed world.seed.items-artifacts must use publicPath data/world/items.artifacts.json; found data/world/items.artifacts-v2.json.',
+        ]);
+    });
+
     it('returns actionable failures for non-string or unknown unit realmId and artifact gradeId references', () => {
         const catalog = {
             schemaVersion: 1,
@@ -2150,12 +2194,7 @@ describe('content catalog', () => {
                     publicPath: 'data/config/status-definitions.json',
                 },
                 canonicalCombatBaselineCatalogEntry,
-                {
-                    resourceId: 'world.seed.items-artifacts',
-                    kind: 'worldSeed',
-                    schemaVersion: 1,
-                    publicPath: 'data/world/items.artifacts.json',
-                },
+                canonicalWorldItemRegistryCatalogEntry,
                 {
                     resourceId: 'deck.test',
                     kind: 'deck',
@@ -2312,18 +2351,8 @@ describe('content catalog', () => {
                     schemaVersion: 1,
                     publicPath: 'data/decks/starter-deck.json',
                 },
-                {
-                    resourceId: 'world.seed.initial-state',
-                    kind: 'worldSeed',
-                    schemaVersion: 1,
-                    publicPath: 'data/world/initial-state.json',
-                },
-                {
-                    resourceId: 'world.seed.items-artifacts',
-                    kind: 'worldSeed',
-                    schemaVersion: 1,
-                    publicPath: 'data/world/items.artifacts.json',
-                },
+                canonicalInitialStateCatalogEntry,
+                canonicalWorldItemRegistryCatalogEntry,
             ],
         };
         const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
@@ -2334,6 +2363,8 @@ describe('content catalog', () => {
                 artifacts: [{ id: 'artifact.valid' }],
                 tools: [{ id: 'tool.valid' }],
                 consumables: [{ id: 'consumable.valid' }],
+                quests: [{ id: '' }],
+                questItems: 'not-an-array',
             },
             'data/world/initial-state.json': {
                 stash: {
@@ -2380,6 +2411,12 @@ describe('content catalog', () => {
         expect(messages).toContain(
             'World seed world.seed.initial-state stash.spiritStones must be a non-negative integer.',
         );
+        expect(messages).toContain(
+            'Catalog world item entry world.seed.items-artifacts quests[0] in data/world/items.artifacts.json must declare a non-empty string id.',
+        );
+        expect(messages).toContain(
+            'World item seed world.seed.items-artifacts questItems in data/world/items.artifacts.json must be an array when present.',
+        );
     });
 
     it('allows the checked-in starter stash deckRef alias while still resolving through the catalog deck resource', () => {
@@ -2392,18 +2429,8 @@ describe('content catalog', () => {
                     schemaVersion: 1,
                     publicPath: 'data/decks/starter-deck.json',
                 },
-                {
-                    resourceId: 'world.seed.initial-state',
-                    kind: 'worldSeed',
-                    schemaVersion: 1,
-                    publicPath: 'data/world/initial-state.json',
-                },
-                {
-                    resourceId: 'world.seed.items-artifacts',
-                    kind: 'worldSeed',
-                    schemaVersion: 1,
-                    publicPath: 'data/world/items.artifacts.json',
-                },
+                canonicalInitialStateCatalogEntry,
+                canonicalWorldItemRegistryCatalogEntry,
             ],
         };
         const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
@@ -2413,6 +2440,7 @@ describe('content catalog', () => {
             'data/world/items.artifacts.json': {
                 tools: [{ id: 'tool.return-rope' }],
                 consumables: [{ id: 'consumable.spirit-salve' }],
+                questItems: [{ id: 'quest.jade-token' }],
             },
             'data/world/initial-state.json': {
                 stash: {
@@ -2421,6 +2449,7 @@ describe('content catalog', () => {
                     items: [
                         { id: 'tool.return-rope', itemType: 'tool', count: 1 },
                         { id: 'consumable.spirit-salve', itemType: 'consumable', count: 2 },
+                        { id: 'quest.jade-token', itemType: 'quest', count: 1 },
                     ],
                     spiritStones: 36,
                 },
