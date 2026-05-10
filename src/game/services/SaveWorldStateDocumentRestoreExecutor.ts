@@ -4,6 +4,13 @@ import {
 } from './SaveCompatibility';
 import { parseActiveRunRouteKey } from './RunPersistence';
 import {
+    applyGameWorldStateWritePlan,
+    planGameWorldStateWriteFromDocuments,
+    type GameWorldStateWriteStorageAdapter,
+} from '../state/GameWorldStateWrite';
+import type { PersistentStash, RunSnapshot } from '../types/expedition';
+import type { StoryHubSessionDocument } from './StoryHubSessionPersistence';
+import {
     SAVE_WORLD_STATE_DOCUMENT_CONTENT_TYPE,
     SAVE_WORLD_STATE_DOCUMENT_SCHEMA_VERSION,
 } from './SaveWorldStateDocument';
@@ -15,7 +22,7 @@ import type {
     SaveWorldStateDocumentRestoreSetItemOperation,
 } from './SaveWorldStateDocumentRestorePlan';
 
-export type SaveWorldStateDocumentRestoreStorageAdapter = Pick<Storage, 'setItem' | 'removeItem'>;
+export type SaveWorldStateDocumentRestoreStorageAdapter = GameWorldStateWriteStorageAdapter;
 
 export interface SaveWorldStateDocumentRestoreExecutionResult {
     readonly status: 'success';
@@ -256,29 +263,131 @@ export class SaveWorldStateDocumentRestoreExecutionError extends Error {
     }
 }
 
-export function executeSaveWorldStateDocumentRestorePlan(
+interface RestorePlanDocuments {
+    readonly storyHubSession: StoryHubSessionDocument;
+    readonly persistentStash: PersistentStash | null;
+    readonly activeRun: RunSnapshot | null;
+    readonly activeRunIdentity: NonNullable<ReturnType<typeof parseActiveRunRouteKey>>;
+}
+
+class RestorePlanStorageOperationError extends Error {
+    readonly planOperationIndex: number;
+    readonly failedOperation: SaveWorldStateDocumentRestoreOperation;
+    readonly appliedOperations: readonly SaveWorldStateDocumentRestoreOperation[];
+    override readonly cause: unknown;
+
+    constructor(
+        planOperationIndex: number,
+        failedOperation: SaveWorldStateDocumentRestoreOperation,
+        appliedOperations: readonly SaveWorldStateDocumentRestoreOperation[],
+        cause: unknown,
+    ) {
+        super('Restore plan storage operation failed.');
+        this.planOperationIndex = planOperationIndex;
+        this.failedOperation = failedOperation;
+        this.appliedOperations = [...appliedOperations];
+        this.cause = cause;
+    }
+}
+
+function parseOperationJson<TDocument>(
+    operation: SaveWorldStateDocumentRestoreSetItemOperation,
+): TDocument {
+    try {
+        return JSON.parse(operation.value) as TDocument;
+    } catch {
+        failPlan(`${operation.owner} setItem value must be valid JSON.`);
+    }
+}
+
+function findOperation(
+    plan: SaveWorldStateDocumentRestorePlan,
+    owner: SaveWorldStateDocumentRestoreOperation['owner'],
+): SaveWorldStateDocumentRestoreOperation {
+    const operation = plan.operations.find((candidate) => candidate.owner === owner);
+
+    if (!operation) {
+        failPlan(`${owner} operation is required.`);
+    }
+
+    return operation;
+}
+
+function restorePlanDocumentsFromOperations(
+    plan: SaveWorldStateDocumentRestorePlan,
+): RestorePlanDocuments {
+    const storyHubSession = findOperation(plan, 'storyHubSession');
+    const persistentStash = findOperation(plan, 'persistentStash');
+    const activeRun = findOperation(plan, 'activeRun');
+
+    if (storyHubSession.operation !== 'setItem') {
+        failPlan('storyHubSession operation must set the current document.');
+    }
+
+    if (persistentStash.operation === 'no-op') {
+        failPlan('persistentStash operation must set or remove the current document.');
+    }
+
+    if (activeRun.operation === 'no-op') {
+        failPlan('activeRun operation must set or remove the route-keyed document.');
+    }
+
+    const activeRunIdentity = parseActiveRunRouteKey(activeRun.routeKey);
+
+    if (!activeRunIdentity) {
+        failPlan('activeRun operation must include a valid route identity.');
+    }
+
+    return {
+        storyHubSession: parseOperationJson<StoryHubSessionDocument>(storyHubSession),
+        persistentStash: persistentStash.operation === 'setItem'
+            ? parseOperationJson<PersistentStash>(persistentStash)
+            : null,
+        activeRun: activeRun.operation === 'setItem'
+            ? parseOperationJson<RunSnapshot>(activeRun)
+            : null,
+        activeRunIdentity,
+    };
+}
+
+function createPlanOperationRecorder(
     plan: SaveWorldStateDocumentRestorePlan,
     storage: SaveWorldStateDocumentRestoreStorageAdapter,
-): SaveWorldStateDocumentRestoreExecutionResult {
-    const validatedPlan = validateSaveWorldStateDocumentRestorePlan(plan);
-    validateStorageAdapter(storage);
-
+): SaveWorldStateDocumentRestoreStorageAdapter {
     const appliedOperations: SaveWorldStateDocumentRestoreOperation[] = [];
 
-    for (let index = 0; index < validatedPlan.operations.length; index += 1) {
-        const operation = validatedPlan.operations[index];
-
-        try {
-            if (operation.operation === 'setItem') {
-                storage.setItem(operation.storageKey, operation.value);
-            } else if (operation.operation === 'removeItem') {
-                storage.removeItem(operation.storageKey);
+    function matchOperation(method: 'setItem' | 'removeItem', key: string): SaveWorldStateDocumentRestoreOperation | null {
+        return plan.operations.find((operation) => {
+            if (operation.operation !== method) {
+                return false;
             }
 
-            appliedOperations.push(operation);
+            return operation.storageKey === key;
+        }) ?? null;
+    }
+
+    function recordOperation<TValue>(
+        method: 'setItem' | 'removeItem',
+        key: string,
+        action: () => TValue,
+    ): TValue {
+        const operation = matchOperation(method, key);
+
+        try {
+            const result = action();
+
+            if (operation) {
+                appliedOperations.push(operation);
+            }
+
+            return result;
         } catch (error) {
-            throw new SaveWorldStateDocumentRestoreExecutionError(
-                index,
+            if (!operation) {
+                throw error;
+            }
+
+            throw new RestorePlanStorageOperationError(
+                plan.operations.indexOf(operation),
                 operation,
                 appliedOperations,
                 error,
@@ -287,7 +396,87 @@ export function executeSaveWorldStateDocumentRestorePlan(
     }
 
     return {
+        getItem: (key: string) => {
+            if (key === SAVE_COMPATIBILITY_REGISTRY.activeRun.legacyUnscopedStorageKey) {
+                return JSON.stringify({
+                    runId: 'restore-legacy-active-run-no-op-sentinel',
+                    routeKey: 'expedition:restore-legacy-active-run-no-op:sentinel',
+                    expeditionId: 'restore-legacy-active-run-no-op',
+                    mapId: 'sentinel',
+                    status: 'inProgress',
+                    currentNodeId: 'restore-legacy-active-run-no-op',
+                    startingLoadout: {
+                        cards: [],
+                        items: [],
+                        spiritStones: 0,
+                    },
+                    carriedDeck: [],
+                    carriedItems: [],
+                    spiritStones: 0,
+                    visitedNodeIds: [],
+                    nodeStates: {},
+                    startedAt: '1970-01-01T00:00:00.000Z',
+                } satisfies RunSnapshot);
+            }
+
+            return storage.getItem(key);
+        },
+        setItem: (key: string, value: string) => {
+            const operation = matchOperation('setItem', key);
+            const restoreValue = operation?.operation === 'setItem' ? operation.value : value;
+
+            return recordOperation(
+                'setItem',
+                key,
+                () => storage.setItem(key, restoreValue),
+            );
+        },
+        removeItem: (key: string) => {
+            if (key === SAVE_COMPATIBILITY_REGISTRY.activeRun.legacyUnscopedStorageKey) {
+                return;
+            }
+
+            return recordOperation(
+                'removeItem',
+                key,
+                () => storage.removeItem(key),
+            );
+        },
+    };
+}
+
+export function executeSaveWorldStateDocumentRestorePlan(
+    plan: SaveWorldStateDocumentRestorePlan,
+    storage: SaveWorldStateDocumentRestoreStorageAdapter,
+): SaveWorldStateDocumentRestoreExecutionResult {
+    const validatedPlan = validateSaveWorldStateDocumentRestorePlan(plan);
+    validateStorageAdapter(storage);
+    const documents = restorePlanDocumentsFromOperations(validatedPlan);
+    const aggregatePlan = planGameWorldStateWriteFromDocuments({
+        storyHubSession: documents.storyHubSession,
+        persistentStash: documents.persistentStash,
+        activeRun: documents.activeRun,
+        activeRunIdentity: documents.activeRunIdentity,
+    });
+    const recordingStorage = createPlanOperationRecorder(validatedPlan, storage);
+
+    try {
+        applyGameWorldStateWritePlan(aggregatePlan, recordingStorage);
+    } catch (error) {
+        if (error instanceof RestorePlanStorageOperationError) {
+            throw new SaveWorldStateDocumentRestoreExecutionError(
+                error.planOperationIndex,
+                error.failedOperation,
+                error.appliedOperations,
+                error.cause,
+            );
+        }
+
+        throw error;
+    }
+
+    return {
         status: 'success',
-        appliedOperations,
+        appliedOperations: validatedPlan.operations,
     };
 }
