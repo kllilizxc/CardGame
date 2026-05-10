@@ -88,6 +88,22 @@ function createValidStatusDefinition(id: string, overrides: Record<string, unkno
     };
 }
 
+function createValidGongfaSchema(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+        event: {
+            type: 'OnSummon',
+            side: 'Ally',
+        },
+        actions: [
+            {
+                type: 'AddLog',
+                message: 'Catalog validation fixture.',
+            },
+        ],
+        ...overrides,
+    };
+}
+
 function createCanonicalRealmAndGradeOverrides(): Record<string, unknown> {
     return {
         [canonicalCombatBaselineCatalogEntry.publicPath]: validCombatBaselineRegistry,
@@ -1356,8 +1372,8 @@ describe('content catalog', () => {
             },
             'data/gongfa/gongfa-list.json': {
                 gongfa: [
-                    { id: 'gongfa.duplicate', schema: {} },
-                    { id: 'gongfa.duplicate', schema: {} },
+                    { id: 'gongfa.duplicate', schema: createValidGongfaSchema() },
+                    { id: 'gongfa.duplicate', schema: createValidGongfaSchema() },
                 ],
             },
             'data/config/status-definitions.json': {
@@ -1403,6 +1419,129 @@ describe('content catalog', () => {
             'Catalog grade entry config.artifact-grade grades[2] in data/config/artifact-grade.json must declare a non-empty string id.',
             'Catalog grade entry config.artifact-grade grades[3] in data/config/artifact-grade.json must be an object.',
             'Catalog world item id duplicate_item is declared more than once: world.seed.items-artifacts artifacts[0] in data/world/items.artifacts.json; duplicate world.seed.items-artifacts tools[0] in data/world/items.artifacts.json.',
+        ]);
+    });
+
+    it('returns actionable failures for malformed canonical gongfa schema vocabulary and parameter shapes', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'gongfa.list',
+                    kind: 'gongfa',
+                    schemaVersion: 1,
+                    publicPath: 'data/gongfa/gongfa-list.json',
+                },
+                {
+                    resourceId: 'status.definitions',
+                    kind: 'status',
+                    schemaVersion: 1,
+                    publicPath: 'data/config/status-definitions.json',
+                },
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/gongfa/gongfa-list.json': {
+                gongfa: [
+                    {
+                        id: 'gongfa.bad_schema',
+                        schema: 'not an object',
+                    },
+                    {
+                        id: 'gongfa.bad_shapes',
+                        schema: {
+                            event: {
+                                type: 'BeforeAnything',
+                                side: 'SomeoneElse',
+                            },
+                            conditions: [
+                                {
+                                    type: 'UnknownCondition',
+                                },
+                                {
+                                    type: 'ArtifactUsedThisTurn',
+                                    minimum: 'one',
+                                },
+                                {
+                                    type: 'Custom',
+                                    scriptId: 'gongfa.condition.not_canonical',
+                                },
+                            ],
+                            actions: [
+                                {
+                                    type: 'RecoverCardFromDiscard',
+                                    filter: {
+                                        kind: ['artifact', 'beast'],
+                                        weaponTypesAnyOf: ['剑', 42],
+                                        maxStar: {},
+                                        amount: 0,
+                                        typo: true,
+                                    },
+                                    destination: 'Graveyard',
+                                    amount: 'one',
+                                },
+                                {
+                                    type: 'DealDamage',
+                                    value: 'high',
+                                    target: 'closestEnemy',
+                                },
+                                {
+                                    type: 'ApplyStatus',
+                                    statusId: 'status.missing',
+                                    duration: 'later',
+                                    target: 'allies',
+                                },
+                                {
+                                    type: 'Custom',
+                                    scriptId: 'gongfa.action.not_canonical',
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        id: 'gongfa.bad_custom_event',
+                        schema: {
+                            event: {
+                                type: 'Custom',
+                                side: 'Ally',
+                                scriptId: 'gongfa.event.not_canonical',
+                            },
+                            actions: [
+                                {
+                                    type: 'AddLog',
+                                },
+                            ],
+                        },
+                    },
+                ],
+            },
+            'data/config/status-definitions.json': {
+                statuses: [createValidStatusDefinition('status.valid')],
+            },
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toEqual([
+            'Catalog gongfa definition gongfa.list gongfa[0] gongfa.bad_schema in data/gongfa/gongfa-list.json schema must be an object.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.event.type must be one of: TurnStart, TurnEnd, OnSummon, OnDeath, OnAttack, OnKill, OnEquipArtifact, Custom.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.event.side must be one of: Ally, Enemy, Any when present.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.conditions[0].type must be one of: ArtifactUsedThisTurn, UnitOnField, CardInHand, ArtifactEquipped, Custom.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.conditions[1].minimum must be a positive integer when present.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.conditions[2].scriptId references non-canonical gongfa Custom script id gongfa.condition.not_canonical; add an explicit catalog validator allowlist entry before using runtime custom semantics.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.actions[0].filter.kind[1] must be one of: unit, artifact, talisman, field.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.actions[0].filter.weaponTypesAnyOf[1] must be a non-empty string.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.actions[0].filter.maxStar must be a finite number or non-empty string.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.actions[0].filter.amount must be a positive integer when present.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.actions[0].filter.typo is not supported; allowed filter fields: kind, labelsAnyOf, maxStar, amount, weaponTypesAnyOf.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.actions[0].destination must be one of: Hand, Field, DeckTop, DiscardPile.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.actions[0].amount must be a positive integer when present.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.actions[1].value must be a finite number.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.actions[1].target must be one of: singleEnemy, allEnemies, randomEnemy.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.actions[2].statusId references status id status.missing, but canonical data/config/status-definitions.json does not declare that id.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.actions[2].duration must be a non-negative integer when present.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.actions[2].target must be one of: self, singleAlly, singleEnemy, allEnemies.',
+            'Catalog gongfa definition gongfa.list gongfa[1] gongfa.bad_shapes in data/gongfa/gongfa-list.json schema.actions[3].scriptId references non-canonical gongfa Custom script id gongfa.action.not_canonical; add an explicit catalog validator allowlist entry before using runtime custom semantics.',
+            'Catalog gongfa definition gongfa.list gongfa[2] gongfa.bad_custom_event in data/gongfa/gongfa-list.json schema.event.scriptId references non-canonical gongfa Custom script id gongfa.event.not_canonical; add an explicit catalog validator allowlist entry before using runtime custom semantics.',
+            'Catalog gongfa definition gongfa.list gongfa[2] gongfa.bad_custom_event in data/gongfa/gongfa-list.json schema.actions[0].message must be a non-empty string.',
         ]);
     });
 
@@ -1688,7 +1827,7 @@ describe('content catalog', () => {
                 ],
             },
             'data/gongfa/gongfa-list.json': {
-                gongfa: [{ id: 'gongfa.valid', schema: {} }],
+                gongfa: [{ id: 'gongfa.valid', schema: createValidGongfaSchema() }],
             },
             'data/config/status-definitions.json': {
                 statuses: [createValidStatusDefinition('status.valid')],
