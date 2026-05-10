@@ -2108,6 +2108,134 @@ describe('content catalog', () => {
         ]);
     });
 
+    it('returns actionable failures for malformed canonical starter stash deck/item references and numeric shape', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'deck.starter',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/starter-deck.json',
+                },
+                {
+                    resourceId: 'world.seed.initial-state',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/initial-state.json',
+                },
+                {
+                    resourceId: 'world.seed.items-artifacts',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/items.artifacts.json',
+                },
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/decks/starter-deck.json': {
+                cards: [],
+            },
+            'data/world/items.artifacts.json': {
+                artifacts: [{ id: 'artifact.valid' }],
+                tools: [{ id: 'tool.valid' }],
+                consumables: [{ id: 'consumable.valid' }],
+            },
+            'data/world/initial-state.json': {
+                stash: {
+                    stashId: '',
+                    deckRef: 'deck.missing',
+                    items: [
+                        { id: 'tool.valid', itemType: 'tool', count: 0 },
+                        { id: 'item.missing', itemType: 'consumable', count: 1 },
+                        { id: 'tool.valid', itemType: 'consumable', count: 1 },
+                        { id: 42, itemType: 'tool', count: 1 },
+                        { id: 'artifact.valid', itemType: 'trinket', count: 1 },
+                        'not-an-item-stack',
+                    ],
+                    spiritStones: -1,
+                },
+            },
+        }));
+        const messages = result.failures.map((failure) => failure.message);
+
+        expect(messages).toContain(
+            'World seed world.seed.initial-state stash.stashId must be a non-empty string so the catalog can verify the starter stash identity.',
+        );
+        expect(messages).toContain(
+            'World seed world.seed.initial-state stash.deckRef references deck id deck.missing, but no catalog deck resource declares that id.',
+        );
+        expect(messages).toContain(
+            'World seed world.seed.initial-state stash.items[0].count must be a positive integer.',
+        );
+        expect(messages).toContain(
+            'World seed world.seed.initial-state stash.items[1].id references world item id item.missing, but no catalog world item resource declares that id.',
+        );
+        expect(messages).toContain(
+            'World seed world.seed.initial-state stash.items[2].itemType is consumable, but item tool.valid is declared as tool in world.seed.items-artifacts tools[0] in data/world/items.artifacts.json.',
+        );
+        expect(messages).toContain(
+            'World seed world.seed.initial-state stash.items[3].id must be a non-empty string so the catalog can verify the content ID reference.',
+        );
+        expect(messages).toContain(
+            'World seed world.seed.initial-state stash.items[4].itemType must be one of: artifact, tool, consumable, quest.',
+        );
+        expect(messages).toContain(
+            'World seed world.seed.initial-state stash.items[5] must be an object so the catalog can verify its starter stash item ID.',
+        );
+        expect(messages).toContain(
+            'World seed world.seed.initial-state stash.spiritStones must be a non-negative integer.',
+        );
+    });
+
+    it('allows the checked-in starter stash deckRef alias while still resolving through the catalog deck resource', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'deck.starter',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/starter-deck.json',
+                },
+                {
+                    resourceId: 'world.seed.initial-state',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/initial-state.json',
+                },
+                {
+                    resourceId: 'world.seed.items-artifacts',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/items.artifacts.json',
+                },
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/decks/starter-deck.json': {
+                cards: [],
+            },
+            'data/world/items.artifacts.json': {
+                tools: [{ id: 'tool.return-rope' }],
+                consumables: [{ id: 'consumable.spirit-salve' }],
+            },
+            'data/world/initial-state.json': {
+                stash: {
+                    stashId: 'phase01.starter-stash',
+                    deckRef: 'starter-deck',
+                    items: [
+                        { id: 'tool.return-rope', itemType: 'tool', count: 1 },
+                        { id: 'consumable.spirit-salve', itemType: 'consumable', count: 2 },
+                    ],
+                    spiritStones: 36,
+                },
+            },
+        }));
+
+        expect(result.failures).toEqual([]);
+    });
+
     it('uses status-definitions.json as the canonical registry for legacy applyStatus status IDs', () => {
         const catalog = {
             schemaVersion: 1,

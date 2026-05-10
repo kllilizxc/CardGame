@@ -16,6 +16,22 @@
       "grade": "下品法器",
       "type": "符箓",
       "description": "一次性消耗品，用于简单防御或攻击。"
+    },
+    {
+      "id": "tool.return-rope",
+      "name": "归返绳",
+      "grade": "凡阶工具",
+      "type": "撤离工具",
+      "description": "秘境入门弟子随身携带的安全绳，用于标记归路。"
+    }
+  ],
+  "consumables": [
+    {
+      "id": "consumable.spirit-salve",
+      "name": "凝气膏",
+      "grade": "凡阶消耗品",
+      "type": "疗愈药膏",
+      "description": "外门常备的简易药膏，用于秘境准备阶段的基础补给。"
     }
   ]
 }

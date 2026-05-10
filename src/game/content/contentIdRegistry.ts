@@ -10,9 +10,13 @@ import type {
 } from '@data/types/status';
 import type { ArtifactWeaponType } from '@data/types/cards/artifact';
 
-type CatalogIdRegistryName = 'card' | 'gongfa' | 'status' | 'world item' | 'realm' | 'grade';
+type CatalogIdRegistryName = 'card' | 'deck' | 'gongfa' | 'status' | 'world item' | 'realm' | 'grade';
 
 const CANONICAL_STATUS_DEFINITIONS_PUBLIC_PATH = 'data/config/status-definitions.json';
+const CANONICAL_INITIAL_STATE_RESOURCE_ID = 'world.seed.initial-state';
+const CANONICAL_INITIAL_STATE_PUBLIC_PATH = 'data/world/initial-state.json';
+const CANONICAL_WORLD_ITEM_REGISTRY_RESOURCE_ID = 'world.seed.items-artifacts';
+const CANONICAL_WORLD_ITEM_REGISTRY_PUBLIC_PATH = 'data/world/items.artifacts.json';
 const CANONICAL_REALM_PRESETS_RESOURCE_ID = 'config.realm-presets';
 const CANONICAL_REALM_PRESETS_PUBLIC_PATH = 'data/config/realm-presets.json';
 const CANONICAL_REALM_REGISTRY_RESOURCE_ID = 'config.combat-baseline';
@@ -20,6 +24,14 @@ const CANONICAL_REALM_REGISTRY_PUBLIC_PATH = 'data/config/combat-baseline.json';
 const CANONICAL_GRADE_REGISTRY_RESOURCE_ID = 'config.artifact-grade';
 const CANONICAL_GRADE_REGISTRY_PUBLIC_PATH = 'data/config/artifact-grade.json';
 const MAX_ARTIFACT_STAR = 12;
+const STASH_ITEM_TYPE_VALUES = ['artifact', 'tool', 'consumable', 'quest'] as const;
+const WORLD_ITEM_COLLECTIONS = [
+    { collectionName: 'artifacts', itemType: 'artifact' },
+    { collectionName: 'tools', itemType: 'tool' },
+    { collectionName: 'consumables', itemType: 'consumable' },
+    { collectionName: 'quests', itemType: 'quest' },
+    { collectionName: 'questItems', itemType: 'quest' },
+] as const;
 
 const STATUS_CATEGORY_VALUES = ['buff', 'debuff', 'special'] as const satisfies readonly StatusCategory[];
 const STATUS_TIMING_VALUES = [
@@ -90,6 +102,8 @@ const GONGFA_IMMEDIATE_ATTACK_TARGET_VALUES = ['singleEnemy', 'allEnemies'] as c
 const GONGFA_GAIN_ARMOR_TARGET_VALUES = ['self', 'singleAlly', 'allAllies'] as const;
 const CANONICAL_GONGFA_CUSTOM_SCRIPT_IDS = [] as const;
 
+type StashItemType = typeof STASH_ITEM_TYPE_VALUES[number];
+
 interface CatalogIdResource {
     entry: ContentCatalogEntry;
     json?: unknown;
@@ -99,10 +113,12 @@ interface CatalogIdLocation {
     resourceId: string;
     publicPath: string;
     context: string;
+    itemType?: StashItemType;
 }
 
 interface ContentIdRegistries {
     cards: Map<string, CatalogIdLocation>;
+    decks: Map<string, CatalogIdLocation>;
     gongfa: Map<string, CatalogIdLocation>;
     statuses: Map<string, CatalogIdLocation>;
     realmPresetValues: CanonicalNumericValueRegistry;
@@ -110,9 +126,8 @@ interface ContentIdRegistries {
     grades: CanonicalContentIdRegistry;
     worldItems: Map<string, CatalogIdLocation>;
     invalidCanonicalConfigResourceIds: Set<string>;
+    invalidCanonicalWorldSeedResourceIds: Set<string>;
 }
-
-const WORLD_ITEM_COLLECTION_NAMES = ['artifacts', 'tools', 'consumables', 'quests', 'questItems'] as const;
 
 interface CanonicalContentIdRegistry {
     ids: Map<string, CatalogIdLocation>;
@@ -207,6 +222,34 @@ function validateCanonicalConfigCatalogEntry(
             failures,
             resource.entry,
             `Catalog canonical config ${resource.entry.resourceId} must use publicPath ${expectedPublicPath}; found ${resource.entry.publicPath}.`,
+        );
+        isValid = false;
+    }
+
+    return isValid;
+}
+
+function validateCanonicalWorldSeedCatalogEntry(
+    resource: CatalogIdResource,
+    expectedPublicPath: string,
+    failures: ContentCatalogValidationFailure[],
+): boolean {
+    let isValid = true;
+
+    if (resource.entry.kind !== 'worldSeed') {
+        addFailure(
+            failures,
+            resource.entry,
+            `Catalog canonical world seed ${resource.entry.resourceId} must have kind worldSeed; found ${resource.entry.kind}.`,
+        );
+        isValid = false;
+    }
+
+    if (resource.entry.publicPath !== expectedPublicPath) {
+        addFailure(
+            failures,
+            resource.entry,
+            `Catalog canonical world seed ${resource.entry.resourceId} must use publicPath ${expectedPublicPath}; found ${resource.entry.publicPath}.`,
         );
         isValid = false;
     }
@@ -1207,6 +1250,7 @@ function buildContentIdRegistries(
     const resourceList = [...resources];
     const registries: ContentIdRegistries = {
         cards: new Map(),
+        decks: new Map(),
         gongfa: new Map(),
         statuses: new Map(),
         realmPresetValues: createCanonicalNumericValueRegistry(
@@ -1231,6 +1275,7 @@ function buildContentIdRegistries(
         ),
         worldItems: new Map(),
         invalidCanonicalConfigResourceIds: new Set(),
+        invalidCanonicalWorldSeedResourceIds: new Set(),
     };
 
     for (const resource of resourceList) {
@@ -1270,7 +1315,26 @@ function buildContentIdRegistries(
     }
 
     for (const resource of resourceList) {
-        if (registries.invalidCanonicalConfigResourceIds.has(resource.entry.resourceId)) {
+        if (
+            resource.entry.resourceId === CANONICAL_INITIAL_STATE_RESOURCE_ID
+            && !validateCanonicalWorldSeedCatalogEntry(resource, CANONICAL_INITIAL_STATE_PUBLIC_PATH, failures)
+        ) {
+            registries.invalidCanonicalWorldSeedResourceIds.add(resource.entry.resourceId);
+        }
+
+        if (
+            resource.entry.resourceId === CANONICAL_WORLD_ITEM_REGISTRY_RESOURCE_ID
+            && !validateCanonicalWorldSeedCatalogEntry(resource, CANONICAL_WORLD_ITEM_REGISTRY_PUBLIC_PATH, failures)
+        ) {
+            registries.invalidCanonicalWorldSeedResourceIds.add(resource.entry.resourceId);
+        }
+    }
+
+    for (const resource of resourceList) {
+        if (
+            registries.invalidCanonicalConfigResourceIds.has(resource.entry.resourceId)
+            || registries.invalidCanonicalWorldSeedResourceIds.has(resource.entry.resourceId)
+        ) {
             continue;
         }
 
@@ -1280,6 +1344,10 @@ function buildContentIdRegistries(
 
         if (resource.entry.kind === 'card') {
             registerCardIds(resource, registries, failures);
+        }
+
+        if (resource.entry.kind === 'deck') {
+            registerDeckIds(resource, registries, failures);
         }
 
         if (resource.entry.kind === 'gongfa') {
@@ -1666,6 +1734,38 @@ function registerCardIds(
     }
 }
 
+function registerDeckIds(
+    resource: CatalogIdResource,
+    registries: ContentIdRegistries,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    registerCatalogId(
+        registries.decks,
+        'deck',
+        resource,
+        resource.entry.resourceId,
+        'catalog resourceId',
+        failures,
+    );
+
+    const publicPathSegments = resource.entry.publicPath.split('/');
+    const publicPathFileName = publicPathSegments[publicPathSegments.length - 1];
+    const legacyDeckRef = publicPathFileName?.replace(/\.json$/, '');
+
+    if (!legacyDeckRef || legacyDeckRef === resource.entry.resourceId) {
+        return;
+    }
+
+    registerCatalogId(
+        registries.decks,
+        'deck',
+        resource,
+        legacyDeckRef,
+        'publicPath basename alias',
+        failures,
+    );
+}
+
 function registerGongfaIds(
     resource: CatalogIdResource,
     registries: ContentIdRegistries,
@@ -1756,7 +1856,7 @@ function registerWorldItemIds(
         return;
     }
 
-    for (const collectionName of WORLD_ITEM_COLLECTION_NAMES) {
+    for (const { collectionName, itemType } of WORLD_ITEM_COLLECTIONS) {
         const collection = resource.json[collectionName];
 
         if (!Array.isArray(collection)) {
@@ -1781,9 +1881,37 @@ function registerWorldItemIds(
                 return;
             }
 
-            registerCatalogId(registries.worldItems, 'world item', resource, id, context, failures);
+            registerWorldItemId(resource, registries, id, itemType, context, failures);
         });
     }
+}
+
+function registerWorldItemId(
+    resource: CatalogIdResource,
+    registries: ContentIdRegistries,
+    id: string,
+    itemType: StashItemType,
+    context: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    const location: CatalogIdLocation = {
+        resourceId: resource.entry.resourceId,
+        publicPath: resource.entry.publicPath,
+        context,
+        itemType,
+    };
+    const existing = registries.worldItems.get(id);
+
+    if (existing) {
+        addFailure(
+            failures,
+            resource.entry,
+            `Catalog world item id ${id} is declared more than once: ${formatCatalogIdLocation(existing)}; duplicate ${formatCatalogIdLocation(location)}.`,
+        );
+        return;
+    }
+
+    registries.worldItems.set(id, location);
 }
 
 function validateContentIdReferences(
@@ -1792,7 +1920,10 @@ function validateContentIdReferences(
     failures: ContentCatalogValidationFailure[],
 ): void {
     for (const resource of resources) {
-        if (registries.invalidCanonicalConfigResourceIds.has(resource.entry.resourceId)) {
+        if (
+            registries.invalidCanonicalConfigResourceIds.has(resource.entry.resourceId)
+            || registries.invalidCanonicalWorldSeedResourceIds.has(resource.entry.resourceId)
+        ) {
             continue;
         }
 
@@ -1825,6 +1956,258 @@ function validateContentIdReferences(
         if (resource.entry.kind === 'expeditionShop') {
             validateExpeditionShopRewardReferences(resource, registries, failures);
         }
+
+        if (resource.entry.kind === 'worldSeed') {
+            validateCanonicalWorldSeedReferences(resource, registries, failures);
+        }
+    }
+}
+
+function validateCanonicalWorldSeedReferences(
+    resource: CatalogIdResource,
+    registries: ContentIdRegistries,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (resource.entry.resourceId === CANONICAL_INITIAL_STATE_RESOURCE_ID) {
+        validateCanonicalInitialStateStarterStash(resource, registries, failures);
+    }
+
+    if (resource.entry.resourceId === CANONICAL_WORLD_ITEM_REGISTRY_RESOURCE_ID) {
+        validateCanonicalWorldItemRegistryShape(resource, failures);
+    }
+}
+
+function validateCanonicalInitialStateStarterStash(
+    resource: CatalogIdResource,
+    registries: ContentIdRegistries,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (!isRecord(resource.json)) {
+        addFailure(
+            failures,
+            resource.entry,
+            `World seed ${resource.entry.resourceId} in ${resource.entry.publicPath} must be an object before starter stash references can be validated.`,
+        );
+        return;
+    }
+
+    const stash = resource.json.stash;
+    const stashContext = `World seed ${resource.entry.resourceId} stash`;
+
+    if (!isRecord(stash)) {
+        addFailure(
+            failures,
+            resource.entry,
+            `${stashContext} must be an object so the catalog can verify starter stash deck and item references.`,
+        );
+        return;
+    }
+
+    validateRequiredStarterStashStringField(
+        resource.entry,
+        stash,
+        'stashId',
+        stashContext,
+        'the starter stash identity',
+        failures,
+    );
+
+    const deckRef = readReferenceId(resource.entry, stash, 'deckRef', stashContext, failures);
+
+    if (deckRef) {
+        validateRegisteredIdReference(
+            registries.decks,
+            resource.entry,
+            `${stashContext}.deckRef`,
+            'deck',
+            deckRef,
+            failures,
+        );
+    }
+
+    validateStarterStashItems(resource, stash.items, stashContext, registries, failures);
+    validateNonNegativeIntegerValue(
+        resource.entry,
+        stash.spiritStones,
+        `${stashContext}.spiritStones`,
+        failures,
+    );
+}
+
+function validateRequiredStarterStashStringField(
+    ownerEntry: ContentCatalogEntry,
+    record: Record<string, unknown>,
+    field: string,
+    context: string,
+    purpose: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    const value = record[field];
+
+    if (typeof value === 'string' && value.trim().length > 0) {
+        return;
+    }
+
+    addFailure(
+        failures,
+        ownerEntry,
+        `${context}.${field} must be a non-empty string so the catalog can verify ${purpose}.`,
+    );
+}
+
+function validateStarterStashItems(
+    resource: CatalogIdResource,
+    value: unknown,
+    stashContext: string,
+    registries: ContentIdRegistries,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (!Array.isArray(value)) {
+        addFailure(
+            failures,
+            resource.entry,
+            `${stashContext}.items must be an array so the catalog can verify starter stash item references.`,
+        );
+        return;
+    }
+
+    value.forEach((stack, index) => {
+        const stackContext = `${stashContext}.items[${index}]`;
+
+        if (!isRecord(stack)) {
+            addFailure(
+                failures,
+                resource.entry,
+                `${stackContext} must be an object so the catalog can verify its starter stash item ID.`,
+            );
+            return;
+        }
+
+        const itemId = readReferenceId(resource.entry, stack, 'id', stackContext, failures);
+        const itemType = readStarterStashItemType(resource.entry, stack, stackContext, failures);
+        validatePositiveIntegerValue(resource.entry, stack.count, `${stackContext}.count`, failures);
+
+        if (!itemId) {
+            return;
+        }
+
+        const itemLocation = validateRegisteredIdReference(
+            registries.worldItems,
+            resource.entry,
+            `${stackContext}.id`,
+            'world item',
+            itemId,
+            failures,
+        );
+
+        if (!itemLocation) {
+            return;
+        }
+
+        validateCanonicalStarterStashItemLocation(resource.entry, stackContext, itemId, itemLocation, failures);
+
+        if (itemType && itemLocation.itemType && itemLocation.itemType !== itemType) {
+            addFailure(
+                failures,
+                resource.entry,
+                `${stackContext}.itemType is ${itemType}, but item ${itemId} is declared as ${itemLocation.itemType} in ${formatCatalogIdLocation(itemLocation)}.`,
+            );
+        }
+    });
+}
+
+function readStarterStashItemType(
+    ownerEntry: ContentCatalogEntry,
+    record: Record<string, unknown>,
+    context: string,
+    failures: ContentCatalogValidationFailure[],
+): StashItemType | undefined {
+    const value = record.itemType;
+
+    if (typeof value === 'string' && (STASH_ITEM_TYPE_VALUES as readonly string[]).includes(value)) {
+        return value as StashItemType;
+    }
+
+    addFailure(
+        failures,
+        ownerEntry,
+        `${context}.itemType must be one of: ${formatAllowedValues(STASH_ITEM_TYPE_VALUES)}.`,
+    );
+    return undefined;
+}
+
+function validateCanonicalStarterStashItemLocation(
+    ownerEntry: ContentCatalogEntry,
+    context: string,
+    itemId: string,
+    itemLocation: CatalogIdLocation,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (
+        itemLocation.resourceId === CANONICAL_WORLD_ITEM_REGISTRY_RESOURCE_ID
+        && itemLocation.publicPath === CANONICAL_WORLD_ITEM_REGISTRY_PUBLIC_PATH
+    ) {
+        return;
+    }
+
+    addFailure(
+        failures,
+        ownerEntry,
+        `${context}.id references world item id ${itemId}, but starter stash items must be declared by canonical ${CANONICAL_WORLD_ITEM_REGISTRY_PUBLIC_PATH}; found ${formatCatalogIdLocation(itemLocation)}.`,
+    );
+}
+
+function validatePositiveIntegerValue(
+    ownerEntry: ContentCatalogEntry,
+    value: unknown,
+    context: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+        return;
+    }
+
+    addFailure(failures, ownerEntry, `${context} must be a positive integer.`);
+}
+
+function validateNonNegativeIntegerValue(
+    ownerEntry: ContentCatalogEntry,
+    value: unknown,
+    context: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (typeof value === 'number' && Number.isInteger(value) && value >= 0) {
+        return;
+    }
+
+    addFailure(failures, ownerEntry, `${context} must be a non-negative integer.`);
+}
+
+function validateCanonicalWorldItemRegistryShape(
+    resource: CatalogIdResource,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (!isRecord(resource.json)) {
+        addFailure(
+            failures,
+            resource.entry,
+            `World item seed ${resource.entry.resourceId} in ${resource.entry.publicPath} must be an object.`,
+        );
+        return;
+    }
+
+    for (const { collectionName } of WORLD_ITEM_COLLECTIONS) {
+        const collection = resource.json[collectionName];
+
+        if (collection === undefined || Array.isArray(collection)) {
+            continue;
+        }
+
+        addFailure(
+            failures,
+            resource.entry,
+            `World item seed ${resource.entry.resourceId} ${collectionName} in ${resource.entry.publicPath} must be an array when present.`,
+        );
     }
 }
 
