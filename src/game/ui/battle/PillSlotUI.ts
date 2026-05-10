@@ -1,6 +1,6 @@
 import { GameObjects, Scene } from 'phaser';
 import type { PillSlot } from '../../managers/battle/PillManager';
-import type { PillCard } from '../../../data/types/cards/pill';
+import type { PillCard } from '@data/types/cards/pill';
 
 /**
  * 丹药槽位UI组件
@@ -12,8 +12,6 @@ export class PillSlotUI extends GameObjects.Container {
     private pillIcons: GameObjects.Text[] = [];
     private pillNames: GameObjects.Text[] = [];
     private emptyTexts: GameObjects.Text[] = [];
-    
-    private slots: PillSlot[] = [];
     private onSlotClick: ((slotIndex: number) => void) | null = null;
 
     constructor(
@@ -36,8 +34,6 @@ export class PillSlotUI extends GameObjects.Container {
      * 创建槽位UI
      */
     public createSlots(slots: PillSlot[]): void {
-        this.slots = slots;
-
         // 清空现有UI
         this.clearSlots();
 
@@ -141,8 +137,6 @@ export class PillSlotUI extends GameObjects.Container {
      * 更新槽位显示
      */
     public updateSlots(slots: PillSlot[]): void {
-        this.slots = slots;
-        
         // 重新创建所有槽位
         this.createSlots(slots);
     }

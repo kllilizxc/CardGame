@@ -2,6 +2,7 @@ import type { Scene } from 'phaser';
 import type { BattleContext } from '../../context/BattleContext';
 import { FieldSprite } from '../../objects/FieldSprite';
 import type { FieldCard } from '@data/types/cards/field';
+import type { CardEffect, LegacyEffectAction } from '@data/types/cards/effects';
 import type { CardSprite } from '../../objects/CardSprite';
 
 /**
@@ -103,7 +104,7 @@ export class FieldManager {
         if (!this.currentField) return;
 
         const fieldData = this.currentField.getCardData();
-        const permanentEffects = fieldData.effects?.filter(e => e.timing === 'permanent') || [];
+        const permanentEffects = fieldData.effects?.filter((e: CardEffect) => e.timing === 'permanent') || [];
 
         if (permanentEffects.length > 0) {
             console.log(`应用场地【${fieldData.name}】的永续效果`);
@@ -138,9 +139,9 @@ export class FieldManager {
         if (!this.currentField) return;
 
         const fieldData = this.currentField.getCardData();
-        const turnStartEffects = fieldData.effects?.filter(e => e.timing === 'turnStart') || [];
+        const turnStartEffects = fieldData.effects?.filter((e: CardEffect) => e.timing === 'turnStart') || [];
 
-        turnStartEffects.forEach(effect => {
+        turnStartEffects.forEach((effect: CardEffect) => {
             this.applyFieldEffect(effect, isPlayerTurn, playerUnits, enemyUnits);
         });
     }
@@ -159,9 +160,9 @@ export class FieldManager {
         if (!this.currentField) return;
 
         const fieldData = this.currentField.getCardData();
-        const turnEndEffects = fieldData.effects?.filter(e => e.timing === 'turnEnd') || [];
+        const turnEndEffects = fieldData.effects?.filter((e: CardEffect) => e.timing === 'turnEnd') || [];
 
-        turnEndEffects.forEach(effect => {
+        turnEndEffects.forEach((effect: CardEffect) => {
             this.applyFieldEffect(effect, isPlayerTurn, playerUnits, enemyUnits);
         });
     }
@@ -171,7 +172,7 @@ export class FieldManager {
      * @private
      */
     private applyFieldEffect(
-        effect: any,
+        effect: CardEffect,
         isPlayerTurn: boolean,
         playerUnits: CardSprite[],
         enemyUnits: CardSprite[]
@@ -197,7 +198,7 @@ export class FieldManager {
         }
 
         // 应用效果动作
-        effect.actions?.forEach((action: any) => {
+        effect.actions?.forEach((action: LegacyEffectAction) => {
             targetUnits.forEach(unit => {
                 this.applyAction(action, unit);
             });
@@ -208,7 +209,7 @@ export class FieldManager {
      * 应用单个动作到单位
      * @private
      */
-    private applyAction(action: any, unit: CardSprite): void {
+    private applyAction(action: LegacyEffectAction, unit: CardSprite): void {
         const unitData = unit.getCardData();
 
         switch (action.type) {

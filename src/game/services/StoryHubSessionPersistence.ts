@@ -261,7 +261,7 @@ function saveDocument(
 }
 
 export function cloneStoryHubSessionDocumentSnapshot(
-    document: StoryHubSessionDocument,
+    document: unknown,
 ): StoryHubSessionDocument {
     const parsed = parseDocument(document);
 

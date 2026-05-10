@@ -244,7 +244,7 @@ describe('hub town shell content', () => {
 
     it('creates a StoryScene launch intent from data without hard-coding the story graph in the hub scene', () => {
         const town = validateHubTownDefinition(townShellJson);
-        const action = town.locations[0].actions[0];
+        const action = getStartStoryAction(town, 'action.start-qingyun-entry-story');
 
         expect(createHubActionIntent(action)).toEqual({
             kind: 'startScene',
@@ -338,7 +338,7 @@ describe('hub town shell content', () => {
 
     it('creates a StoryScene launch intent that resumes the saved runtime for the same Hub action and graph', () => {
         const town = validateHubTownDefinition(townShellJson);
-        const action = town.locations[0].actions[0];
+        const action = getStartStoryAction(town, 'action.start-qingyun-entry-story');
         const savedStoryState = {
             storyId: 'story.qingyun-entry',
             currentLocationId: 'location.qingyun-gate',

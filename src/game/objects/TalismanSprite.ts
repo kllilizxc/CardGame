@@ -1,5 +1,5 @@
 import { GameObjects } from 'phaser';
-import type { TalismanCard } from '../../../data/types/cards/talisman';
+import type { TalismanCard } from '@data/types/cards/talisman';
 import { BaseCardSprite } from './BaseCardSprite';
 
 export class TalismanSprite extends BaseCardSprite {

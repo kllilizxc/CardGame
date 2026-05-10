@@ -115,6 +115,10 @@ describe('storyBattleRoundTrip', () => {
         const { transition } = createBattleTransition();
         const intent = createStorySceneTransitionIntent(transition, '以卡匣应战');
 
+        if (intent.kind !== 'startBattleScene') {
+            throw new Error('Expected startBattleScene intent.');
+        }
+
         expect(intent).toEqual({
             kind: 'startBattleScene',
             sceneKey: 'BattleScene',

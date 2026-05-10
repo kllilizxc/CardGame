@@ -243,7 +243,7 @@ export class SaveWorldStateDocumentRestoreExecutionError extends Error {
     readonly planOperationIndex: number;
     readonly failedOperation: SaveWorldStateDocumentRestoreOperation;
     readonly appliedOperations: readonly SaveWorldStateDocumentRestoreOperation[];
-    override readonly cause: unknown;
+    readonly cause: unknown;
 
     constructor(
         planOperationIndex: number,
@@ -274,7 +274,7 @@ class RestorePlanStorageOperationError extends Error {
     readonly planOperationIndex: number;
     readonly failedOperation: SaveWorldStateDocumentRestoreOperation;
     readonly appliedOperations: readonly SaveWorldStateDocumentRestoreOperation[];
-    override readonly cause: unknown;
+    readonly cause: unknown;
 
     constructor(
         planOperationIndex: number,

@@ -4,20 +4,14 @@ import { CardSprite } from '../../objects/CardSprite';
 import { ArtifactSprite } from '../../objects/ArtifactSprite';
 import { TalismanSprite } from '../../objects/TalismanSprite';
 import { FieldSprite } from '../../objects/FieldSprite';
-import type { UnitCard } from '../../../../public/data/types/cards/unit';
-import type { ArtifactCard, ArtifactWeaponType } from '../../../../public/data/types/cards/artifact';
-import type { TalismanCard } from '../../../../public/data/types/cards/talisman';
-import type { FieldCard } from '../../../../public/data/types/cards/field';
-import type { CombatBaselineConfig } from '../../../../public/data/types/combat-baseline';
-import type { ArtifactGradeConfig } from '../../../../public/data/types/artifact-grade';
-import { BattleLog } from '../../ui/battle/BattleLog';
+import type { UnitCard } from '@data/types/cards/unit';
+import type { ArtifactCard, ArtifactWeaponType } from '@data/types/cards/artifact';
+import type { TalismanCard } from '@data/types/cards/talisman';
+import type { CombatBaselineConfig } from '@data/types/combat-baseline';
+import type { ArtifactGradeConfig } from '@data/types/artifact-grade';
 import { CardListView } from '../../ui/common/CardListView';
-import { BattleAnimationManager } from '../../managers/battle/BattleAnimationManager';
-import { CombatManager } from '../../managers/battle/CombatManager';
-import { CardManager } from '../../managers/battle/CardManager';
 import { getUnitStar, installRuntimeRealmConfig, resetRuntimeRealmConfig } from '../../utils/RealmHelper';
 import { installRuntimeArtifactGradeConfig, resetRuntimeArtifactGradeConfig } from '../../utils/ArtifactHelper';
-import { TurnManager } from '../../managers/battle/TurnManager';
 import { ArtifactManager } from '../../managers/battle/ArtifactManager';
 import { TalismanManager } from '../../managers/battle/TalismanManager';
 import { FieldManager } from '../../managers/battle/FieldManager';
@@ -37,8 +31,8 @@ import { createDefaultLayout, type BattleLayoutConfig } from '../../config/Layou
 import { ManagerFactory } from '../../managers/battle/ManagerFactory';
 import { UsageManager } from '../../managers/battle/UsageManager';
 import { BattleContext } from '../../context/BattleContext';
-import type { PillCard } from '../../../../public/data/types/cards/pill';
-import type { SkillCard } from '../../../../public/data/types/cards/skill';
+import type { PillCard } from '@data/types/cards/pill';
+import type { SkillCard } from '@data/types/cards/skill';
 import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import { BattleState } from '../../state/BattleState';
 import { BattleUIManager } from '../../ui/battle/BattleUIManager';
@@ -104,7 +98,6 @@ export class BattleScene extends Scene {
     // 其他管理器（不在 context 中的）
     private artifactManager!: ArtifactManager;
     private talismanManager!: TalismanManager;
-    private fieldManager!: FieldManager;
     private pillManager!: PillManager;
     private pillSlotUI!: PillSlotUI;
     private eventManager!: BattleEventManager;
@@ -314,7 +307,6 @@ export class BattleScene extends Scene {
         this.unitEffectManager = managers.unitEffectManager;
         this.artifactManager = managers.artifactManager;
         this.talismanManager = managers.talismanManager;
-        this.fieldManager = managers.fieldManager;
         this.pillManager = managers.pillManager;
         this.sacrificeManager = managers.sacrificeManager;
         this.eventManager = managers.eventManager;
@@ -1004,6 +996,10 @@ export class BattleScene extends Scene {
             onPlayerDamaged: (damage: number) => { this.playerHealth -= damage; },
             onRemoveUnit: (unit: CardSprite, isPlayer: boolean) => this.removeUnitFromField(unit, isPlayer),
             onDrawCard: () => this.drawCard(),
+            onArrangeField: () => {
+                this.cardManager.arrangePlayerField(this.playerField);
+                this.cardManager.arrangeEnemyField(this.enemyField);
+            },
             onEnablePlayerInteraction: () => this.enablePlayerInteraction(),
             onDisablePlayerInteraction: () => this.disablePlayerInteraction(),
             onApplyPlayerTurnEndEffects: () => this.applyPlayerTurnEndEffects(),

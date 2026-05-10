@@ -77,7 +77,7 @@ export class BattleEventManager {
      */
     private setupTalismanEvents(): void {
         // 符箓拖拽开始
-        this.scene.events.on('talismanDragStart', (talisman: TalismanSprite) => {
+        this.scene.events.on('talismanDragStart', (_talisman: TalismanSprite) => {
             this.highlightedTarget = null;
             this.highlightedTargetSide = null;
             if (this.targetHighlight) {
@@ -179,7 +179,7 @@ export class BattleEventManager {
         });
 
         // 符箓拖拽结束
-        this.scene.events.on('talismanDragEnd', (talisman: TalismanSprite) => {
+        this.scene.events.on('talismanDragEnd', (_talisman: TalismanSprite) => {
             if (this.targetHighlight) {
                 this.targetHighlight.destroy();
                 this.targetHighlight = null;

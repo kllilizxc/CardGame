@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import { BaseCardSprite } from './BaseCardSprite';
-import type { FieldCard } from '../../../data/types/cards/field';
+import type { FieldCard } from '@data/types/cards/field';
+import type { CardEffect } from '@data/types/cards/effects';
 
 /**
  * 场地卡精灵类
@@ -75,7 +76,7 @@ export class FieldSprite extends BaseCardSprite {
         }
 
         const effectTexts: string[] = [];
-        this.cardData.effects.forEach(effect => {
+        this.cardData.effects.forEach((effect: CardEffect) => {
             if (effect.text) {
                 effectTexts.push(effect.text);
             }

@@ -1,5 +1,5 @@
 import { GameObjects } from 'phaser';
-import type { PillCard } from '../../../data/types/cards/pill';
+import type { PillCard } from '@data/types/cards/pill';
 import { BaseCardSprite } from './BaseCardSprite';
 import { CardEffectFormatter } from '../utils/CardEffectFormatter';
 

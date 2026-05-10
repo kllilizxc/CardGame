@@ -3,13 +3,16 @@ import { CardSprite } from '../../objects/CardSprite';
 import { ArtifactSprite } from '../../objects/ArtifactSprite';
 import { TalismanSprite } from '../../objects/TalismanSprite';
 import { FieldSprite } from '../../objects/FieldSprite';
-import type { UnitCard } from '../../../../public/data/types/cards/unit';
-import type { ArtifactCard } from '../../../../public/data/types/cards/artifact';
-import type { TalismanCard } from '../../../../public/data/types/cards/talisman';
-import type { FieldCard } from '../../../../public/data/types/cards/field';
+import type { UnitCard } from '@data/types/cards/unit';
+import type { ArtifactCard } from '@data/types/cards/artifact';
+import type { TalismanCard } from '@data/types/cards/talisman';
+import type { FieldCard } from '@data/types/cards/field';
 import type { BattleLayoutConfig } from '../../config/LayoutConfig';
 import type { BattleLog } from '../../ui/battle/BattleLog';
 import type { BattleAnimationManager } from './BattleAnimationManager';
+
+type DrawCardData = UnitCard | ArtifactCard | TalismanCard | FieldCard;
+type CardSpriteData = CardSprite | ArtifactSprite | TalismanSprite | FieldSprite;
 
 export class CardManager {
     private scene: Scene;
@@ -37,33 +40,45 @@ export class CardManager {
 
     // 抽一张卡
     public drawCard(
-        deck: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[],
-        hand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[]
-    ): { deck: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[]; hand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[] } {
+        deck: DrawCardData[],
+        hand: CardSpriteData[]
+    ): { deck: DrawCardData[]; hand: CardSpriteData[] } {
         if (deck.length === 0) {
             console.log('牌库已空');
             this.battleLog.addLog('牌库已空，无法抽卡');
             return { deck, hand };
         }
 
-        const cardData = deck.shift() as UnitCard | ArtifactCard | TalismanCard | FieldCard;
-        let sprite: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite;
-        
-        if (cardData.kind === 'unit') {
-            sprite = new CardSprite(this.scene, 0, 0, cardData as UnitCard, this.cardScale);
-            this.battleLog.addLog(`抽取了一张【${cardData.name}】`, [sprite]);
-        } else if (cardData.kind === 'artifact') {
-            sprite = new ArtifactSprite(this.scene, 0, 0, cardData as ArtifactCard, this.cardScale);
-            this.battleLog.addLog(`抽取了【${cardData.name}】`, [sprite]);
-        } else if (cardData.kind === 'talisman') {
-            sprite = new TalismanSprite(this.scene, 0, 0, cardData as TalismanCard, this.cardScale);
-            this.battleLog.addLog(`抽取了【${cardData.name}】`, [sprite]);
-        } else if (cardData.kind === 'field') {
-            sprite = new FieldSprite(this.scene, 0, 0, cardData as FieldCard, this.cardScale);
-            this.battleLog.addLog(`抽取了场地卡【${cardData.name}】`, [sprite]);
-        } else {
-            console.warn(`不支持的卡牌类型: ${cardData.kind}`);
+        const cardData = deck.shift();
+
+        if (!cardData) {
+            console.log('牌库已空');
+            this.battleLog.addLog('牌库已空，无法抽卡');
             return { deck, hand };
+        }
+
+        let sprite: CardSpriteData;
+
+        switch (cardData.kind) {
+            case 'unit':
+                sprite = new CardSprite(this.scene, 0, 0, cardData, this.cardScale);
+                this.battleLog.addLog(`抽取了一张【${cardData.name}】`, [sprite]);
+                break;
+            case 'artifact':
+                sprite = new ArtifactSprite(this.scene, 0, 0, cardData, this.cardScale);
+                this.battleLog.addLog(`抽取了【${cardData.name}】`, [sprite]);
+                break;
+            case 'talisman':
+                sprite = new TalismanSprite(this.scene, 0, 0, cardData, this.cardScale);
+                this.battleLog.addLog(`抽取了【${cardData.name}】`, [sprite]);
+                break;
+            case 'field':
+                sprite = new FieldSprite(this.scene, 0, 0, cardData, this.cardScale);
+                this.battleLog.addLog(`抽取了场地卡【${cardData.name}】`, [sprite]);
+                break;
+            default:
+                console.warn(`不支持的卡牌类型: ${cardData.kind}`);
+                return { deck, hand };
         }
         
         hand.push(sprite);

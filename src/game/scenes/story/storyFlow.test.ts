@@ -195,7 +195,12 @@ describe('storyFlow', () => {
         ]);
 
         const brokenGraph = structuredClone(battleGraph);
-        brokenGraph.choices[0].effects[0].battle.onVictoryNodeId = 'missing_victory_node';
+        const firstBattleEffect = brokenGraph.choices[0].effects[0];
+        if (firstBattleEffect.kind !== 'startBattle') {
+            throw new Error('Expected the first compact battle choice effect to be startBattle.');
+        }
+
+        firstBattleEffect.battle.onVictoryNodeId = 'missing_victory_node';
 
         expect(() => validatePlayableStoryGraph(brokenGraph)).toThrow(
             'Story graph choices[0].effects[0].battle.onVictoryNodeId must reference an existing node: missing_victory_node',

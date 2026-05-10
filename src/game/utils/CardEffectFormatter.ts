@@ -1,4 +1,4 @@
-import type { CardEffect } from '../../../data/types/cards/effects';
+import type { CardEffect } from '@data/types/cards/effects';
 
 /**
  * 卡牌效果描述格式化工具

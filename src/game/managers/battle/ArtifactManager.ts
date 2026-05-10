@@ -263,7 +263,7 @@ export class ArtifactManager {
      * 受伤时触发法器效果
      */
     public onUnitDamaged(unit: CardSprite) {
-        this.equippedArtifacts.forEach((equipped, artifactId) => {
+        this.equippedArtifacts.forEach((equipped, _artifactId) => {
             if (equipped.target === unit) {
                 const { artifact } = equipped;
                 const artifactData = artifact.getCardData();

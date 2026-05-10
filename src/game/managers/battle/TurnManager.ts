@@ -1,6 +1,7 @@
 import type { Scene } from 'phaser';
 import type { BattleContext } from '../../context/BattleContext';
 import type { CardSprite } from '../../objects/CardSprite';
+import type { CombatManager } from './CombatManager';
 
 /**
  * 回合管理器上下文（用于回合执行时的运行时数据）
@@ -11,14 +12,18 @@ export interface TurnManagerContext {
     isPlayerTurn: boolean;
     isProcessingTurn: boolean;
     playerHealth: number;
+    turnNumber: number;
+    combatManager: CombatManager;
     onPlayerDamaged: (damage: number) => void;
     onRemoveUnit: (unit: CardSprite, isPlayer: boolean) => void;
-    onArrangeField: () => void;
     onApplyPlayerTurnEndEffects: () => void;
     onSetIsPlayerTurn: (value: boolean) => void;
     onSetTurnNumber: (value: number) => void;
     onSetIsProcessingTurn: (value: boolean) => void;
+    onEnablePlayerInteraction: () => void;
     onDisablePlayerInteraction: () => void;
+    onArrangeField: () => void;
+    onDrawCard: () => void;
 }
 
 /**

@@ -489,15 +489,22 @@ function validateActiveRunKeys(value: unknown): ActiveRunCompatibilityKeys {
 }
 
 function validateRunResolution(value: unknown): SaveWorldStateDocumentRunResolutionSlice {
-    if (!isRecord(value)
-        || value.boundaryModule !== RUN_RESOLUTION_BOUNDARY_MODULE
-        || !Array.isArray(value.terminalOutcomes)
-        || value.terminalOutcomes.length !== RUN_RESOLUTION_TERMINAL_OUTCOMES.length
-        || !RUN_RESOLUTION_TERMINAL_OUTCOMES.every((outcome, index) => value.terminalOutcomes[index] === outcome)) {
+    if (!isRecord(value) || value.boundaryModule !== RUN_RESOLUTION_BOUNDARY_MODULE) {
         fail('runResolution metadata is malformed.');
     }
 
-    return value as unknown as SaveWorldStateDocumentRunResolutionSlice;
+    const terminalOutcomes = value.terminalOutcomes;
+
+    if (!Array.isArray(terminalOutcomes)
+        || terminalOutcomes.length !== RUN_RESOLUTION_TERMINAL_OUTCOMES.length
+        || !RUN_RESOLUTION_TERMINAL_OUTCOMES.every((outcome, index) => terminalOutcomes[index] === outcome)) {
+        fail('runResolution metadata is malformed.');
+    }
+
+    return {
+        boundaryModule: RUN_RESOLUTION_BOUNDARY_MODULE,
+        terminalOutcomes: [...terminalOutcomes] as readonly TerminalRunOutcome[],
+    };
 }
 
 function validateWorldState(value: unknown): SaveWorldStateDocumentWorldState {
@@ -540,11 +547,21 @@ export function validateSaveWorldStateDocument(value: unknown): SaveWorldStateDo
         fail('content metadata is malformed.');
     }
 
-    validateOwners(value.content.owners);
-    validateMigrationBoundary(value.migrationBoundary);
-    validateWorldState(value.worldState);
+    const owners = validateOwners(value.content.owners);
+    const migrationBoundary = validateMigrationBoundary(value.migrationBoundary);
+    const worldState = validateWorldState(value.worldState);
 
-    return cloneJsonDocument(value) as SaveWorldStateDocument;
+    return {
+        schemaVersion: SAVE_WORLD_STATE_DOCUMENT_SCHEMA_VERSION,
+        contentType: SAVE_WORLD_STATE_DOCUMENT_CONTENT_TYPE,
+        content: {
+            source: SAVE_WORLD_STATE_DOCUMENT_SOURCE,
+            snapshotSchemaVersion: null,
+            owners,
+        },
+        migrationBoundary,
+        worldState,
+    };
 }
 
 export function parseSaveWorldStateDocument(rawValue: string): SaveWorldStateDocument {
@@ -560,7 +577,7 @@ export function parseSaveWorldStateDocument(rawValue: string): SaveWorldStateDoc
 }
 
 export function cloneSaveWorldStateDocument(document: SaveWorldStateDocument): SaveWorldStateDocument {
-    return validateSaveWorldStateDocument(document);
+    return cloneJsonDocument(validateSaveWorldStateDocument(document));
 }
 
 export function migrateSaveWorldStateDocument(document: SaveWorldStateDocument): SaveWorldStateDocument {

@@ -9,10 +9,12 @@ export class ArtifactSprite extends BaseCardSprite {
     private gradeText: GameObjects.Text;
     private bonusText: GameObjects.Text;
     private descriptionText: GameObjects.Text;
+    private currentDurability: number;
 
     constructor(scene: Phaser.Scene, x: number, y: number, cardData: ArtifactCard, scale: number = 0.7) {
         super(scene, x, y, scale);
         this.cardData = cardData;
+        this.currentDurability = cardData.durability ?? Infinity;
 
         // 创建背景（法器卡用金色边框）
         this.createBackground(0x3a2f2f, 0xdaa520);
@@ -109,6 +111,12 @@ export class ArtifactSprite extends BaseCardSprite {
 
     public getCardData(): ArtifactCard {
         return this.cardData;
+    }
+
+    public reduceDurability(): boolean {
+        if (this.currentDurability === Infinity) return true;
+        this.currentDurability--;
+        return this.currentDurability > 0;
     }
 
     // 重写：获取默认边框颜色

@@ -119,7 +119,7 @@ export class ManagerFactory {
         const artifactManager = new ArtifactManager(scene, battleContext);
         artifactManager.setUnitEffectManager(unitEffectManager);
 
-        const talismanManager = new TalismanManager(scene, battleContext);
+        const talismanManager = new TalismanManager(battleContext);
         const fieldManager = new FieldManager(scene, battleContext);
         const pillManager = new PillManager(scene, battleContext, 3);
         const sacrificeManager = new SacrificeManager(battleContext);
