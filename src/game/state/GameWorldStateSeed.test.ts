@@ -49,7 +49,7 @@ describe('GameWorldStateSeed', () => {
     it('does not share mutable deck or item references with inputs or other seeded stashes', () => {
         const worldState = {
             stash: {
-                items: [{ id: 'tool.test', itemType: 'tool' as const, count: 1 }],
+                items: [{ id: 'tool.test', itemType: 'tool', count: 1 }],
             },
         };
         const starterDeck = {

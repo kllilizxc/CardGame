@@ -11,7 +11,7 @@ export interface StarterDeckSeed {
 
 export interface WorldStateItemStackSeed {
     id: string;
-    itemType: string;
+    itemType: ExpeditionItemType;
     count: number;
 }
 
@@ -43,22 +43,10 @@ function cloneCardStacks(stacks: ExpeditionCardStack[]): ExpeditionCardStack[] {
     return stacks.map((stack) => ({ ...stack }));
 }
 
-function parseExpeditionItemType(itemType: string): ExpeditionItemType {
-    switch (itemType) {
-        case 'artifact':
-        case 'tool':
-        case 'consumable':
-        case 'quest':
-            return itemType;
-        default:
-            throw new Error(`World state stash itemType is unsupported: ${itemType}`);
-    }
-}
-
 function cloneItemStacks(stacks: WorldStateItemStackSeed[]): ExpeditionItemStack[] {
     return stacks.map((stack) => ({
         id: stack.id,
-        itemType: parseExpeditionItemType(stack.itemType),
+        itemType: stack.itemType,
         count: stack.count,
     }));
 }

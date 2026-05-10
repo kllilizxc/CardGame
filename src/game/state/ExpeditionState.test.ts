@@ -24,16 +24,15 @@ import type {
     RunSnapshot,
 } from '../types/expedition';
 import { ExpeditionState } from './ExpeditionState';
+import {
+    DEFAULT_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET,
+    createRunSnapshot as createRunSnapshotFixture,
+    createTestPersistentStash,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
-const DEFAULT_TARGET = {
-    expeditionId: 'phase01-first-playable-expedition',
-    mapId: 'phase01-prototype-map',
-};
-
-const SYNTHETIC_TARGET = {
-    expeditionId: 'synthetic-expedition',
-    mapId: 'synthetic-map',
-};
+const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
+const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
 const LEGACY_ROUTE_LOOKUP = 'worldMap:destination.synthetic-expedition';
 const LEGACY_ROUTE_STORAGE_KEY = `${ACTIVE_RUN_STORAGE_KEY}:${LEGACY_ROUTE_LOOKUP}`;
 const initialWorldStateStashItems = initialWorldState.stash.items as unknown as ExpeditionItemStack[];
@@ -102,7 +101,7 @@ function getCheckedInExpeditionTarget(destinationId: string): { expeditionId: st
 }
 
 function createStoredStash(): PersistentStash {
-    return {
+    return createTestPersistentStash({
         stashId: 'player-existing-stash',
         deckRef: 'player-existing-deck',
         deck: [{ id: 'EXISTING_CARD', count: 1 }],
@@ -124,7 +123,7 @@ function createStoredStash(): PersistentStash {
             },
             endedAt: '2026-05-10T00:00:00.000Z',
         },
-    };
+    });
 }
 
 function createStoredActiveRun(
@@ -132,12 +131,8 @@ function createStoredActiveRun(
     runId: string,
     currentNodeId: string,
 ): RunSnapshot {
-    return {
+    return createRunSnapshotFixture(target, {
         runId,
-        routeKey: `expedition:${target.expeditionId}:${target.mapId}`,
-        expeditionId: target.expeditionId,
-        mapId: target.mapId,
-        status: 'inProgress',
         currentNodeId,
         startingLoadout: {
             cards: [{ id: 'EXISTING_CARD', count: 1 }],
@@ -157,7 +152,7 @@ function createStoredActiveRun(
             },
         },
         startedAt: '2026-05-10T00:00:00.000Z',
-    };
+    });
 }
 
 function sortedJsonKeys(storage: Storage, key: string): string[] {
@@ -214,7 +209,7 @@ describe('ExpeditionState', () => {
             stashId: 'player-existing-stash',
             deckRef: 'player-existing-deck',
             deck: [{ id: 'EXISTING_CARD', count: 1 }],
-            items: [{ id: 'tool.existing', itemType: 'tool' as const, count: 3 }],
+            items: [{ id: 'tool.existing', itemType: 'tool', count: 3 }],
             spiritStones: 777,
         };
         savePersistentStash(existingStash);

@@ -19,16 +19,14 @@ import {
     planGameWorldStateActiveRunWriteFromView,
     writeGameWorldStateActiveRunPlan,
 } from './GameWorldStateActiveRunWrite';
+import {
+    createRunSnapshot as createRunSnapshotFixture,
+    OTHER_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
-const SYNTHETIC_TARGET = {
-    expeditionId: 'synthetic-expedition',
-    mapId: 'synthetic-map',
-};
-
-const OTHER_TARGET = {
-    expeditionId: 'other-expedition',
-    mapId: 'other-map',
-};
+const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
+const OTHER_TARGET = OTHER_EXPEDITION_TARGET;
 
 const LEGACY_ROUTE_LOOKUP = 'worldMap:destination.synthetic-trial';
 const LEGACY_ROUTE_STORAGE_KEY = `${ACTIVE_RUN_STORAGE_KEY}:${LEGACY_ROUTE_LOOKUP}`;
@@ -99,12 +97,8 @@ function createStoredActiveRun(
     runId = 'run-active',
     currentNodeId = 'event.synthetic-cache',
 ): RunSnapshot {
-    return {
+    return createRunSnapshotFixture(targetIdentity, {
         runId,
-        routeKey: createActiveRunRouteKey(targetIdentity),
-        expeditionId: targetIdentity.expeditionId,
-        mapId: targetIdentity.mapId,
-        status: 'inProgress',
         currentNodeId,
         startingLoadout: {
             cards: [{ id: 'AR_001', count: 3 }],
@@ -133,7 +127,7 @@ function createStoredActiveRun(
             },
         },
         startedAt: '2026-05-10T00:00:00.000Z',
-    };
+    });
 }
 
 function sortedJsonKeys(storage: Storage, key: string): string[] {

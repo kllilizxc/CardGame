@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 
-import type { PersistentStash } from '../types/expedition';
 import {
     loadPersistentStash,
     resetRunPersistenceForTests,
     savePersistentStash,
     STASH_STORAGE_KEY,
 } from './RunPersistence';
+import { createTestPersistentStash } from '../testing/fixtures/expeditionWorldStateFixtures';
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -36,14 +36,13 @@ class MemoryStorage implements Storage {
     }
 }
 
-const TEST_STASH: PersistentStash = {
+const TEST_STASH = createTestPersistentStash({
     stashId: 'test-stash',
     deckRef: 'test-deck',
     deck: [{ id: 'CARD_A', count: 2 }],
     items: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
     spiritStones: 9,
-    lastRunSummary: null,
-};
+});
 
 let previousLocalStorageDescriptor: PropertyDescriptor | undefined;
 

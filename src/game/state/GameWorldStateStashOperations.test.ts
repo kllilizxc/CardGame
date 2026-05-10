@@ -10,6 +10,10 @@ import {
     mergeItemStacks,
     subtractStartingLoadoutFromStash,
 } from './GameWorldStateStashOperations';
+import {
+    createRunSnapshot as createRunSnapshotFixture,
+    createTestRewardBundle,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
 function createPersistentStash(overrides: Partial<PersistentStash> = {}): PersistentStash {
     return {
@@ -30,11 +34,10 @@ function createPersistentStash(overrides: Partial<PersistentStash> = {}): Persis
 }
 
 function createRunSnapshot(overrides: Partial<RunSnapshot> = {}): RunSnapshot {
-    return {
-        runId: 'run-test',
+    return createRunSnapshotFixture({
         expeditionId: 'expedition-test',
         mapId: 'map-test',
-        status: 'inProgress',
+        runId: 'run-test',
         currentNodeId: 'entrance',
         startingLoadout: {
             cards: [{ id: 'CARD_A', count: 2 }],
@@ -50,7 +53,6 @@ function createRunSnapshot(overrides: Partial<RunSnapshot> = {}): RunSnapshot {
             { id: 'item.charm', itemType: 'artifact', count: 1 },
         ],
         spiritStones: 8,
-        visitedNodeIds: ['entrance'],
         nodeStates: {
             entrance: {
                 nodeId: 'entrance',
@@ -59,9 +61,11 @@ function createRunSnapshot(overrides: Partial<RunSnapshot> = {}): RunSnapshot {
                 rewardClaimed: true,
             },
         },
+        status: 'inProgress',
         startedAt: '2026-05-10T00:00:00.000Z',
+        visitedNodeIds: ['entrance'],
         ...overrides,
-    };
+    });
 }
 
 describe('GameWorldStateStashOperations', () => {
@@ -149,7 +153,7 @@ describe('GameWorldStateStashOperations', () => {
             ],
             spiritStones: 5,
         });
-        const startingLoadout: RunRewardBundle = {
+        const startingLoadout: RunRewardBundle = createTestRewardBundle({
             cards: [
                 { id: 'CARD_A', count: 5 },
                 { id: 'CARD_B', count: 1 },
@@ -163,7 +167,7 @@ describe('GameWorldStateStashOperations', () => {
                 { id: 'item.ignored', itemType: 'quest', count: -1 },
             ],
             spiritStones: 9,
-        };
+        });
 
         const updatedStash = subtractStartingLoadoutFromStash(stash, startingLoadout);
 
@@ -182,15 +186,15 @@ describe('GameWorldStateStashOperations', () => {
     });
 
     it('adds rewards and carried bundles by pure stash math without mutating inputs', () => {
-        const carried: RunRewardBundle = {
+        const carried: RunRewardBundle = createTestRewardBundle({
             cards: [
                 { id: 'CARD_A', count: 2 },
                 { id: 'CARD_ZERO', count: 0 },
             ],
             items: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
             spiritStones: 5,
-        };
-        const rewards: RunRewardBundle = {
+        });
+        const rewards: RunRewardBundle = createTestRewardBundle({
             cards: [
                 { id: 'CARD_A', count: 1 },
                 { id: 'CARD_B', count: 1 },
@@ -201,7 +205,7 @@ describe('GameWorldStateStashOperations', () => {
                 { id: 'item.charm', itemType: 'artifact', count: 1 },
             ],
             spiritStones: 3,
-        };
+        });
         const rewardedCarried = addRewardBundleToCarriedBundle(carried, rewards);
         const stash = createPersistentStash({
             deck: [{ id: 'CARD_A', count: 1 }],

@@ -32,16 +32,13 @@ import {
     writeRawStoryHubSessionForTests,
 } from './StoryHubSessionPersistence';
 import { createSaveWorldStateSnapshot } from './SaveWorldStateSnapshot';
+import {
+    DEFAULT_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
-const DEFAULT_TARGET = {
-    expeditionId: 'phase01-first-playable-expedition',
-    mapId: 'phase01-prototype-map',
-};
-
-const SYNTHETIC_TARGET = {
-    expeditionId: 'synthetic-expedition',
-    mapId: 'synthetic-map',
-};
+const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
+const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
 const initialWorldStateStashItems = initialWorldState.stash.items as unknown as ExpeditionItemStack[];
 
 class MemoryStorage implements Storage {

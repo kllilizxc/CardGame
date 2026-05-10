@@ -13,16 +13,18 @@ import type { ExpeditionItemStack, PersistentStash, RunSnapshot } from '../types
 import { createGameWorldState } from './GameWorldState';
 import { createPersistentStashFromWorldStateSeed } from './GameWorldStateSeed';
 import {
+    createRunSnapshot,
+    createTestPersistentStash,
+    SYNTHETIC_EXPEDITION_TARGET,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
+import {
     planGameWorldStatePersistentStashWrite,
     planGameWorldStatePersistentStashWriteFromView,
     writeGameWorldStatePersistentStash,
     writeGameWorldStatePersistentStashPlan,
 } from './GameWorldStatePersistentStashWrite';
 
-const SYNTHETIC_TARGET = {
-    expeditionId: 'synthetic-expedition',
-    mapId: 'synthetic-map',
-};
+const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
 const initialWorldStateStashItems = initialWorldState.stash.items as unknown as ExpeditionItemStack[];
 
 class MemoryStorage implements Storage {
@@ -90,7 +92,7 @@ function createSeedSources() {
 }
 
 function createStoredStash(): PersistentStash {
-    return {
+    return createTestPersistentStash({
         stashId: 'stored-stash',
         deckRef: 'stored-deck',
         deck: [
@@ -118,16 +120,12 @@ function createStoredStash(): PersistentStash {
             },
             endedAt: '2026-05-10T01:00:00.000Z',
         },
-    };
+    });
 }
 
 function createStoredActiveRun(): RunSnapshot {
-    return {
+    return createRunSnapshot(SYNTHETIC_TARGET, {
         runId: 'run-active',
-        routeKey: 'expedition:synthetic-expedition:synthetic-map',
-        expeditionId: SYNTHETIC_TARGET.expeditionId,
-        mapId: SYNTHETIC_TARGET.mapId,
-        status: 'inProgress',
         currentNodeId: 'event.synthetic-cache',
         startingLoadout: {
             cards: [{ id: 'AR_001', count: 3 }],
@@ -156,7 +154,7 @@ function createStoredActiveRun(): RunSnapshot {
             },
         },
         startedAt: '2026-05-10T00:00:00.000Z',
-    };
+    });
 }
 
 describe('GameWorldStatePersistentStashWrite', () => {

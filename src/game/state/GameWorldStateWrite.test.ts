@@ -34,16 +34,13 @@ import {
     planGameWorldStateWriteFromView,
     writeGameWorldStateFromDocuments,
 } from './GameWorldStateWrite';
+import {
+    OTHER_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
-const SYNTHETIC_TARGET = {
-    expeditionId: 'synthetic-expedition',
-    mapId: 'synthetic-map',
-};
-
-const OTHER_TARGET = {
-    expeditionId: 'other-expedition',
-    mapId: 'other-map',
-};
+const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
+const OTHER_TARGET = OTHER_EXPEDITION_TARGET;
 
 const LEGACY_ROUTE_LOOKUP = 'worldMap:destination.synthetic-trial';
 const LEGACY_ROUTE_STORAGE_KEY = `${ACTIVE_RUN_STORAGE_KEY}:${LEGACY_ROUTE_LOOKUP}`;

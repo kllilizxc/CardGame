@@ -31,16 +31,13 @@ import type { StoryState } from '../types/story';
 import { ExpeditionState } from './ExpeditionState';
 import { createGameWorldState } from './GameWorldState';
 import { createPersistentStashFromWorldStateSeed } from './GameWorldStateSeed';
+import {
+    DEFAULT_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
-const DEFAULT_TARGET = {
-    expeditionId: 'phase01-first-playable-expedition',
-    mapId: 'phase01-prototype-map',
-};
-
-const SYNTHETIC_TARGET = {
-    expeditionId: 'synthetic-expedition',
-    mapId: 'synthetic-map',
-};
+const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
+const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
