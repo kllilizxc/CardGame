@@ -12,14 +12,7 @@ import type {
     RunRewardBundle,
     RunSnapshot,
 } from '../../types/expedition';
-
-export type NullableRunId = string | null;
-
-interface WorldStateSeedItemStack {
-    id: string;
-    itemType: string;
-    count: number;
-}
+import type { WorldStateItemStackSeed } from '../../state/GameWorldStateSeed';
 
 export const DEFAULT_EXPEDITION_TARGET: ExpeditionRouteIdentity = {
     expeditionId: 'phase01-first-playable-expedition',
@@ -54,10 +47,10 @@ export function createItemStack(
     return { id, itemType, count };
 }
 
-export function createItemStacksFromSeed(stacks: readonly WorldStateSeedItemStack[]): ExpeditionItemStack[] {
+export function createItemStacksFromSeed(stacks: readonly WorldStateItemStackSeed[]): ExpeditionItemStack[] {
     return stacks.map((stack) => createItemStack(
         stack.id,
-        stack.itemType as ExpeditionItemType,
+        stack.itemType,
         stack.count,
     ));
 }
@@ -164,11 +157,11 @@ export interface RunSnapshotBuilderOptions extends Omit<Partial<RunSnapshot>, 'e
 
 export interface RunSnapshotStorageBuilderOptions
     extends Omit<Partial<RunSnapshot>, 'expeditionId' | 'mapId' | 'routeKey'> {
-    runId?: NullableRunId;
+    runId?: string;
 }
 
 export interface RunSnapshotStorageFixture extends Omit<RunSnapshot, 'runId'> {
-    runId: NullableRunId;
+    runId: string;
 }
 
 export function createRunSnapshotFixture(
@@ -216,13 +209,13 @@ export function createRunSnapshotFixture(
 
 export function createRunSnapshot(
     identity: ExpeditionRouteIdentity = DEFAULT_EXPEDITION_TARGET,
-    options: RunSnapshotBuilderOptions = {},
+    options: RunSnapshotStorageBuilderOptions = {},
 ): RunSnapshot {
-    const fixture = createRunSnapshotFixture(identity, options as RunSnapshotStorageBuilderOptions);
+    const fixture = createRunSnapshotFixture(identity, options);
 
     const snapshot = {
         ...fixture,
-        runId: fixture.runId ?? createRunId('run'),
+        runId: fixture.runId,
     } satisfies RunSnapshot;
 
     return snapshot;
