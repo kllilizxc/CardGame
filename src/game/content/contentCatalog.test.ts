@@ -12,6 +12,7 @@ import {
     parseContentCatalogDefinition,
     validateContentCatalog,
 } from './contentCatalog';
+import { validateCatalogRouteReferences } from './contentCatalogRouteReferences';
 import {
     loadContentCatalogValidationIndex,
     resolveCatalogResourceIdReference,
@@ -887,6 +888,47 @@ describe('content catalog', () => {
                 message: 'Catalog resource hub.expected (hub) domain id mismatch: data/hub/catalog-hub.json declares hubId "hub.actual".',
             },
         ]);
+    });
+
+    it('keeps route-reference validation helpers in a focused module', () => {
+        const catalog = parseContentCatalogDefinition({
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'worldmap.catalog-route',
+                    kind: 'worldMap',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/catalog-route.json',
+                },
+                {
+                    resourceId: 'hub.catalog',
+                    kind: 'hub',
+                    schemaVersion: 1,
+                    publicPath: 'data/hub/catalog-hub.json',
+                },
+            ],
+        });
+        const failures: ContentCatalogValidationFailure[] = [];
+        const { index } = loadContentCatalogValidationIndex(
+            catalog,
+            createPublicFileSourceWithOverrides({
+                'data/world/catalog-route.json': createCatalogWorldMapWithDestination(createCatalogHubDestination()),
+                'data/hub/catalog-hub.json': catalogHubDefinition,
+            }),
+            {
+                worldMap(json: unknown): unknown {
+                    return json;
+                },
+                hub(json: unknown): unknown {
+                    return json;
+                },
+            },
+            failures,
+        );
+
+        validateCatalogRouteReferences(index, failures);
+
+        expect(failures).toEqual([]);
     });
 
     it('validates checked-in resources plus route-critical and content ID references with pure validators', () => {
