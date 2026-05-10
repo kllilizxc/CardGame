@@ -1,3 +1,4 @@
+import { migrateSaveWorldStateDocumentToCurrentSchema } from './SaveWorldStateDocumentMigration';
 import {
     createActiveRunCompatibilityKeys,
     SAVE_COMPATIBILITY_REGISTRY,
@@ -28,7 +29,7 @@ const SAVE_WORLD_STATE_DOCUMENT_OWNERS: readonly SaveCompatibilityOwner[] = [
     'persistentStash',
     'activeRun',
 ];
-const SAVE_WORLD_STATE_DOCUMENT_SOURCE = 'SaveWorldStateSnapshot';
+export const SAVE_WORLD_STATE_DOCUMENT_SOURCE = 'SaveWorldStateSnapshot';
 
 export interface SaveWorldStateDocumentMigrationHookMetadata {
     readonly description: string;
@@ -563,6 +564,6 @@ export function cloneSaveWorldStateDocument(document: SaveWorldStateDocument): S
 }
 
 export function migrateSaveWorldStateDocument(document: SaveWorldStateDocument): SaveWorldStateDocument {
-    return cloneSaveWorldStateDocument(document);
+    return migrateSaveWorldStateDocumentToCurrentSchema(document).document;
 }
 
