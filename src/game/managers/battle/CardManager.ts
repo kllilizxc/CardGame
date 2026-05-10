@@ -14,6 +14,13 @@ import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 
 type DrawCardData = UnitCard | ArtifactCard | TalismanCard | FieldCard;
 type CardSpriteData = CardSprite | ArtifactSprite | TalismanSprite | FieldSprite;
+type HandSprite = CardSprite | ArtifactSprite | TalismanSprite | FieldSprite;
+
+type PlayCardToFieldResult = {
+    success: boolean;
+    hand: HandSprite[];
+    playerField: CardSprite[];
+};
 
 export class CardManager {
     private scene: Scene;
@@ -243,23 +250,27 @@ export class CardManager {
     // 打出卡牌到场地
     public playCardToField(
         card: CardSprite,
-        hand: CardSprite[],
-        playerField: CardSprite[]
-    ): { success: boolean; hand: CardSprite[]; playerField: CardSprite[] } {
-        if (playerField.length < 3 && hand.includes(card)) {
-            // 从手牌移除
-            const index = hand.indexOf(card);
-            hand.splice(index, 1);
+        hand: readonly HandSprite[],
+        playerField: readonly CardSprite[]
+    ): PlayCardToFieldResult {
+        const nextHand: HandSprite[] = [...hand];
+        const nextPlayerField = [...playerField];
 
-            // 添加到场地
-            playerField.push(card);
-
-            console.log('卡牌已打出:', card.getCardData().name);
-            this.battleLog.addLog(`召唤了【${card.getCardData().name}】`, [card]);
-            
-            return { success: true, hand, playerField };
+        const handIndex = nextHand.indexOf(card);
+        if (playerField.length >= 3 || handIndex === -1) {
+            return { success: false, hand: nextHand, playerField: nextPlayerField };
         }
-        return { success: false, hand, playerField };
+
+        // 从手牌移除
+        nextHand.splice(handIndex, 1);
+
+        // 添加到场地
+        nextPlayerField.push(card);
+
+        console.log('卡牌已打出:', card.getCardData().name);
+        this.battleLog.addLog(`召唤了【${card.getCardData().name}】`, [card]);
+
+        return { success: true, hand: nextHand, playerField: nextPlayerField };
     }
 
     private calculateSpacing(cardCount: number, availableWidth: number): number {

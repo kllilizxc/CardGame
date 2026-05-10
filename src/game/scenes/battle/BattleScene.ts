@@ -740,13 +740,9 @@ export class BattleScene extends Scene {
         }
         
         // 不需要献祭，直接召唤
-        const result = this.cardManager.playCardToField(card, this.hand.filter(c => c instanceof CardSprite) as CardSprite[], this.playerField);
+        const result = this.cardManager.playCardToField(card, this.hand, this.playerField);
         if (result.success) {
-            // 过滤并更新手牌
-            const cardIndex = this.hand.indexOf(card);
-            if (cardIndex > -1) {
-                this.hand.splice(cardIndex, 1);
-            }
+            this.hand = result.hand;
             this.playerField = result.playerField;
             this.cardManager.arrangePlayerField(this.playerField);
             this.cardManager.arrangeHand(this.hand);
@@ -794,18 +790,12 @@ export class BattleScene extends Scene {
                 // 现在召唤新单位
                 const result = this.cardManager.playCardToField(
                     card,
-                    this.hand.filter(c => c instanceof CardSprite) as CardSprite[],
+                    this.hand,
                     this.playerField
                 );
                 
                 if (result.success) {
-                    // 从手牌中移除
-                    const cardIndex = this.hand.indexOf(card);
-                    if (cardIndex > -1) {
-                        this.hand.splice(cardIndex, 1);
-                    }
-                    
-                    // 更新场上单位
+                    this.hand = result.hand;
                     this.playerField = result.playerField;
                     this.cardManager.arrangePlayerField(this.playerField);
                     this.cardManager.arrangeHand(this.hand);
