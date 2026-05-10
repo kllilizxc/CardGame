@@ -11,6 +11,7 @@ import { getStatusDisplayText, getStatusCategoryColor, getStatusFullDescription 
 type BattleSceneCardDragBridge = Phaser.Scene & {
     swapPlayerFieldCards?: (card: CardSprite, x: number, y: number) => boolean;
     isCardInPlayerField?: (x: number, y: number) => boolean;
+    playCardToField?: (card: CardSprite) => boolean;
 };
 
 export class CardSprite extends BaseCardSprite {
@@ -124,7 +125,7 @@ export class CardSprite extends BaseCardSprite {
                 // 检查是否是从手牌拖到场地
                 if (battleScene.isCardInPlayerField && battleScene.isCardInPlayerField(this.x, this.y)) {
                     // 尝试打出卡牌
-                    const success = battleScene.playCardToField(this);
+                    const success = battleScene.playCardToField ? battleScene.playCardToField(this) : false;
                     if (!success) {
                         // 如果打出失败（比如场地已满），返回原位置
                         this.returnToOriginalPosition();
