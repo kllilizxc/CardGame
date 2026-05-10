@@ -59,3 +59,7 @@ None yet.
 Last session: 2026-04-06 00:00
 Stopped at: Planned Phase 01 and created the first executable PLAN cards
 Resume file: None
+
+## Durable Save Transfer Notes
+
+- `SaveWorldStateDocumentTextTransfer` is the pure manual JSON text seam over the document codec, transfer, and verification adapters: it exports stable codec JSON text from an injected source, restores parsed/migrated JSON text into an injected target, exposes the migration report, and returns restore readback verification.
