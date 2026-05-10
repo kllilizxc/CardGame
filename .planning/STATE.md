@@ -42,6 +42,7 @@ Progress: [░░░░░░░░░░] 0%
 - `RunResolution` is the canonical terminal run-resolution service: defeat loses carried run assets, while extract and boss-clear bank carried assets into the persistent stash.
 - Expedition active-run persistence is scoped by normalized route identity (`expeditionId + mapId`); direct Expedition starts use the default `phase01-first-playable-expedition / phase01-prototype-map` identity.
 - Persistent stash is local-only and global in the first slice; it mutates on defeat, extract, or boss clear. Route-scoped stash ownership is explicitly out of scope.
+- `SaveWorldStateDocument` restore execution is descriptor-driven through an injected `Storage`-like adapter; it only applies current Story/Hub session, global persistent stash, and route-keyed active-run plan operations. The legacy unscoped active-run key remains an explicit restore no-op, and production UI / real migration wiring stays deferred.
 
 ### Pending Todos
 
