@@ -38,7 +38,7 @@ import { BattleState } from '../../state/BattleState';
 import { BattleUIManager } from '../../ui/battle/BattleUIManager';
 import { CardPreviewManager } from '../../managers/common/CardPreviewManager';
 import { PillTooltipUI } from '../../ui/common/PillTooltipUI';
-import type { AnyCard } from '@data/types/cards';
+import type { AnyCard } from '@data/types/cards/all';
 import type { BattleLaunchPayload } from '../../types/expedition';
 import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import { createExpeditionBattleCompleteEvent } from './battleCompletion';

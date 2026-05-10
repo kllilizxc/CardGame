@@ -4,7 +4,7 @@ import { ArtifactSprite } from '../../objects/ArtifactSprite';
 import { TalismanSprite } from '../../objects/TalismanSprite';
 import { FieldSprite } from '../../objects/FieldSprite';
 import { PillSprite } from '../../objects/PillSprite';
-import type { AnyCard } from '@data/types/cards';
+import type { AnyCard } from '@data/types/cards/all';
 import type { UnitCard } from '@data/types/cards/unit';
 import type { ArtifactCard } from '@data/types/cards/artifact';
 import type { TalismanCard } from '@data/types/cards/talisman';

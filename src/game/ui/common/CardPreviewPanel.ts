@@ -3,7 +3,7 @@ import { CardSpriteFactory } from '../../factories/CardSpriteFactory';
 import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 import { GongfaTooltip } from './GongfaTooltip';
 import type { PanelConfig } from '../../config/LayoutConfig';
-import type { AnyCard } from '@data/types/cards';
+import type { AnyCard } from '@data/types/cards/all';
 
 /**
  * 固定的卡牌预览面板

@@ -2,7 +2,7 @@ import { Scene } from 'phaser';
 import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 import { GongfaTooltip } from '../common/GongfaTooltip';
 import type { PanelConfig } from '../../config/LayoutConfig';
-import type { AnyCard } from '@data/types/cards';
+import type { AnyCard } from '@data/types/cards/all';
 
 interface LogEntry {
     text: string;

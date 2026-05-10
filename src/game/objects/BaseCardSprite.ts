@@ -1,5 +1,5 @@
 import { GameObjects } from 'phaser';
-import type { AnyCard } from '@data/types/cards';
+import type { AnyCard } from '@data/types/cards/all';
 
 type BattleSceneWithEffectManager = Phaser.Scene & {
     battleContext?: {
