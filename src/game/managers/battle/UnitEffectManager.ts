@@ -21,7 +21,12 @@ import type { ArtifactCard, ArtifactWeaponType } from '@data/types/cards/artifac
 import type { TalismanCard } from '@data/types/cards/talisman';
 import type { FieldCard } from '@data/types/cards/field';
 import { describeGongfa } from '../../utils/GongfaDescriptionBuilder';
-import { evaluateGongfaNumberExpression } from './gongfaExpression';
+import { evaluateGongfaNumberExpression, type GongfaExpressionContext } from './gongfaExpression';
+import {
+    extractGongfaWeaponTypeFromLabels,
+    isGongfaCardFilterMatch,
+    type GongfaFilterCard
+} from './gongfaCardFilter';
 
 type AnyHandSprite = CardSprite | import('../../objects/ArtifactSprite').ArtifactSprite | import('../../objects/TalismanSprite').TalismanSprite | import('../../objects/FieldSprite').FieldSprite;
 
@@ -41,8 +46,6 @@ export interface GongfaRuntimeContext {
     battleStatusController?: any; // BattleStatusController 实例，用于应用状态
     battleTickManager?: any; // BattleTickManager 实例，用于状态检查
 }
-
-const KNOWN_WEAPON_TYPES: ArtifactWeaponType[] = ['剑', '刀', '鞭', '枪', '锤', '弓', '尺', '印', '棍', '棒', '毒', '琴', '笛子', '拳套', '符箓', '斧头', '匕首', '飞镖', '扇子'];
 
 export class UnitEffectManager {
     private battleContext: BattleContext;
@@ -186,7 +189,7 @@ export class UnitEffectManager {
                     // 检查武器类型
                     if (artifactCondition.weaponType) {
                         const weaponType = context.equippedArtifact.weaponType || 
-                            this.extractWeaponTypeFromLabels(context.equippedArtifact.labels || []);
+                            extractGongfaWeaponTypeFromLabels(context.equippedArtifact.labels || []);
                         if (weaponType !== artifactCondition.weaponType) {
                             return false;
                         }
@@ -294,10 +297,7 @@ export class UnitEffectManager {
             return false;
         }
 
-        // 构建过滤函数
-        const filterFunc = (card: UnitCard | ArtifactCard | TalismanCard | FieldCard) => {
-            return this.isCardMatchFilter(card, action.filter);
-        };
+        const filterFunc = this.createCardFilterPredicate(action.filter, context);
 
         // 调用 GameActionHandler 的弃牌堆选择方法
         context.gameActionHandler.recoverFromDiscardPile(amount, filterFunc);
@@ -315,10 +315,7 @@ export class UnitEffectManager {
             return false;
         }
 
-        // 构建过滤函数
-        const filterFunc = (card: UnitCard | ArtifactCard | TalismanCard | FieldCard) => {
-            return this.isCardMatchFilter(card, action.filter);
-        };
+        const filterFunc = this.createCardFilterPredicate(action.filter, context);
 
         // 根据目的地调用不同的方法
         if (action.destination === EffectActionDestination.Hand) {
@@ -371,8 +368,9 @@ export class UnitEffectManager {
         const matchedCards: typeof drawnCards = [];
         const nonMatchedCards: typeof drawnCards = [];
 
+        const filterFunc = this.createCardFilterPredicate(filter, context);
         for (const card of drawnCards) {
-            if (this.isCardMatchFilter(card, filter)) {
+            if (filterFunc(card)) {
                 matchedCards.push(card);
             } else {
                 nonMatchedCards.push(card);
@@ -546,50 +544,19 @@ export class UnitEffectManager {
         return true;
     }
 
-    private isCardMatchFilter(card: UnitCard | ArtifactCard | TalismanCard | FieldCard, filter: CardFilter): boolean {
-        if (filter.kind && !filter.kind.includes(card.kind)) {
-            return false;
-        }
-
-        if (filter.labelsAnyOf && filter.labelsAnyOf.length > 0) {
-            const labels = card.labels || [];
-            if (!filter.labelsAnyOf.some(label => labels.includes(label))) {
+    private createCardFilterPredicate(
+        filter: CardFilter,
+        context: GongfaRuntimeContext
+    ): (card: GongfaFilterCard) => boolean {
+        const expressionContext = this.buildExpressionContext(context) ?? {};
+        return (card: GongfaFilterCard) => {
+            try {
+                return isGongfaCardFilterMatch(card, filter, expressionContext);
+            } catch (error) {
+                console.error(`卡牌筛选表达式计算失败: ${filter.maxStar}`, error);
                 return false;
             }
-        }
-
-        if (filter.weaponTypesAnyOf && filter.weaponTypesAnyOf.length > 0) {
-            if (card.kind !== 'artifact') {
-                return false;
-            }
-            const artifact = card as ArtifactCard;
-            const weaponType = artifact.weaponType || this.extractWeaponTypeFromLabels(artifact.labels || []);
-            if (!weaponType || !filter.weaponTypesAnyOf.includes(weaponType)) {
-                return false;
-            }
-        }
-
-        if (typeof filter.maxStar === 'number') {
-            if (card.kind === 'unit') {
-                const star = getUnitStar(card);
-                if (star > filter.maxStar) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
-    private extractWeaponTypeFromLabels(labels: string[]): ArtifactWeaponType | undefined {
-        if (!labels) {
-            return undefined;
-        }
-        const match = labels.find(label => KNOWN_WEAPON_TYPES.some(type => label.includes(type)));
-        if (!match) {
-            return undefined;
-        }
-        return KNOWN_WEAPON_TYPES.find(type => match.includes(type));
+        };
     }
 
     /**
@@ -599,24 +566,31 @@ export class UnitEffectManager {
      * - "artifact.star * 2" - 法器星级 * 2
      */
     private evaluateExpression(expression: string, context: GongfaRuntimeContext): number {
-        if (!context.triggerUnit) {
+        const expressionContext = this.buildExpressionContext(context);
+        if (!expressionContext) {
             console.warn(`表达式计算需要 triggerUnit: ${expression}`);
             return 0;
         }
 
-        const unitData = context.triggerUnit.getCardData() as UnitCard;
-        const unitStar = getUnitStar(unitData);
-
         try {
-            return evaluateGongfaNumberExpression(expression, {
-                cardStar: unitStar,
-                artifactStar: context.equippedArtifact
-                    ? getStarFromGradeId(context.equippedArtifact.gradeId)
-                    : 0
-            });
+            return evaluateGongfaNumberExpression(expression, expressionContext);
         } catch (error) {
             console.error(`表达式计算失败: ${expression}`, error);
             return 0;
         }
+    }
+
+    private buildExpressionContext(context: GongfaRuntimeContext): GongfaExpressionContext | undefined {
+        if (!context.triggerUnit) {
+            return undefined;
+        }
+
+        const unitData = context.triggerUnit.getCardData() as UnitCard;
+        return {
+            cardStar: getUnitStar(unitData),
+            artifactStar: context.equippedArtifact
+                ? getStarFromGradeId(context.equippedArtifact.gradeId)
+                : 0
+        };
     }
 }

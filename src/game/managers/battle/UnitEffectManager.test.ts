@@ -3,6 +3,7 @@ import { describe, expect, it } from 'bun:test';
 import type { ArtifactCard } from '@data/types/cards/artifact';
 import type { UnitCard } from '@data/types/cards/unit';
 import {
+  EffectActionDestination,
   EffectActionType,
   EffectConditionType,
   EffectEventSide,
@@ -166,6 +167,124 @@ function createOnSummonArmorHarness(value: string) {
   return { manager, unitSprite, context, addLogMessages, gongfaLogNames, statusApplications };
 }
 
+function createFilterArtifact(
+  id: string,
+  gradeId: string,
+  weaponType: ArtifactCard['weaponType'] = '剑',
+): ArtifactCard {
+  return {
+    id,
+    name: id,
+    kind: 'artifact',
+    gradeId,
+    equipTarget: 'unit',
+    weaponType,
+    elements: ['金'],
+  } as ArtifactCard;
+}
+
+function createCardFilterHarness() {
+  const unitCard = {
+    id: 'unit.test_filter_owner',
+    name: '筛选修士',
+    kind: 'unit',
+    realmId: 'realm_qi_1',
+    gongfaIds: ['gongfa.test_filter_adapters'],
+    attack: 4,
+    health: 20,
+  } as UnitCard;
+  const unitSprite = createCardSprite(unitCard);
+  const addLogMessages: string[] = [];
+  const gongfaLogNames: string[] = [];
+  const battleContext = {
+    battleLog: {
+      addLog: (message: string) => addLogMessages.push(message),
+      addGongfaLog: (_unitName: string, gongfaName: string) => gongfaLogNames.push(gongfaName),
+    },
+  } as unknown as BattleContext;
+  const recoverCalls: Array<{ amount: number; filterFunc: (card: ArtifactCard) => boolean }> = [];
+  const searchCalls: Array<{ amount: number; filterFunc: (card: ArtifactCard) => boolean }> = [];
+  const handAdds: Array<{ card: ArtifactCard; scale: number }> = [];
+  const mysticSword = createFilterArtifact('artifact.mystic_sword', 'grade_mystic_lower');
+  const heavenSword = createFilterArtifact('artifact.heaven_sword', 'grade_heaven_lower');
+  const context = {
+    playerField: [unitSprite],
+    discardPile: [],
+    deck: [mysticSword, heavenSword],
+    hand: [],
+    cardScale: 1.25,
+    artifactUsage: {},
+    gameActionHandler: {
+      recoverFromDiscardPile: (amount: number, filterFunc: (card: ArtifactCard) => boolean) => {
+        recoverCalls.push({ amount, filterFunc });
+      },
+      searchDeck: (amount: number, filterFunc: (card: ArtifactCard) => boolean) => {
+        searchCalls.push({ amount, filterFunc });
+      },
+      addCardToHand: (card: ArtifactCard, scale: number) => {
+        handAdds.push({ card, scale });
+      },
+    },
+  } as GongfaRuntimeContext;
+  const gongfaList: Gongfa[] = [
+    {
+      id: 'gongfa.test_filter_adapters',
+      name: '筛选边界',
+      description: '测试 UnitEffectManager 只适配运行时副作用。',
+      schema: {
+        event: { type: EffectEventType.OnSummon, side: EffectEventSide.Ally },
+        actions: [
+          {
+            type: EffectActionType.RecoverCardFromDiscard,
+            filter: {
+              kind: ['artifact'],
+              weaponTypesAnyOf: ['剑'],
+              maxStar: 'card.star + 1',
+            },
+            destination: EffectActionDestination.Hand,
+            amount: 1,
+          },
+          {
+            type: EffectActionType.SearchCardFromDeck,
+            filter: {
+              kind: ['artifact'],
+              weaponTypesAnyOf: ['剑'],
+              maxStar: 'card.star + 1',
+            },
+            destination: EffectActionDestination.Hand,
+            amount: 1,
+          },
+          {
+            type: EffectActionType.DrawAndFilter,
+            amount: 2,
+            filter: {
+              kind: ['artifact'],
+              weaponTypesAnyOf: ['剑'],
+              maxStar: 'card.star + 1',
+            },
+            matchDestination: EffectActionDestination.Hand,
+            nonMatchDestination: EffectActionDestination.DiscardPile,
+          },
+        ],
+      },
+    },
+  ];
+  const manager = new UnitEffectManager(battleContext, gongfaList);
+
+  return {
+    manager,
+    unitSprite,
+    context,
+    addLogMessages,
+    gongfaLogNames,
+    recoverCalls,
+    searchCalls,
+    handAdds,
+    mysticSword,
+    heavenSword,
+  };
+}
+
 describe('UnitEffectManager artifact grade lookup consumer contract', () => {
   it('uses artifact grade stars for equip conditions and artifact.star expressions without changing behavior', () => {
     const harness = createHarness('grade_earth_lower');
@@ -222,5 +341,27 @@ describe('UnitEffectManager gongfa expression fallback contract', () => {
     expect(harness.gongfaLogNames).toEqual([]);
     expect(consoleOutput.errors).toEqual([]);
     expect(consoleOutput.warnings).toEqual(['护甲值无效: 0']);
+  });
+});
+
+describe('UnitEffectManager CardFilter runtime adapters', () => {
+  it('reuses one pure CardFilter boundary for recover, search, and draw adapters', () => {
+    const harness = createCardFilterHarness();
+
+    harness.manager.applyOnSummonEffects(harness.unitSprite, harness.context);
+
+    expect(harness.recoverCalls).toHaveLength(1);
+    expect(harness.recoverCalls[0].amount).toBe(1);
+    expect(harness.recoverCalls[0].filterFunc(harness.mysticSword)).toBe(true);
+    expect(harness.recoverCalls[0].filterFunc(harness.heavenSword)).toBe(false);
+    expect(harness.searchCalls).toHaveLength(1);
+    expect(harness.searchCalls[0].amount).toBe(1);
+    expect(harness.searchCalls[0].filterFunc(harness.mysticSword)).toBe(true);
+    expect(harness.searchCalls[0].filterFunc(harness.heavenSword)).toBe(false);
+    expect(harness.handAdds).toEqual([{ card: harness.mysticSword, scale: 1.25 }]);
+    expect(harness.context.discardPile).toEqual([harness.heavenSword]);
+    expect(harness.context.deck).toEqual([]);
+    expect(harness.addLogMessages).toEqual(['抽取2张卡牌，其中1张符合条件']);
+    expect(harness.gongfaLogNames).toEqual(['筛选边界']);
   });
 });
