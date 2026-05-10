@@ -1,4 +1,5 @@
 import {
+    applySaveCompatibilityMigrations,
     createActiveRunCompatibilityKeys,
     SAVE_COMPATIBILITY_REGISTRY,
     type ActiveRunCompatibilityKeys,
@@ -56,21 +57,37 @@ export interface SaveWorldStateSnapshot {
     readonly runResolution: SaveWorldStateRunResolutionView;
 }
 
+function applyNullableSaveCompatibilityMigrations<TOwner extends 'persistentStash' | 'activeRun', TDocument>(
+    owner: TOwner,
+    document: TDocument | null,
+): TDocument | null {
+    return document ? applySaveCompatibilityMigrations(owner, document) : null;
+}
+
 export function createSaveWorldStateSnapshot(options: SaveWorldStateSnapshotOptions = {}): SaveWorldStateSnapshot {
     return {
         registry: SAVE_COMPATIBILITY_REGISTRY,
         storyHubSession: {
             compatibility: SAVE_COMPATIBILITY_REGISTRY.storyHubSession,
-            document: loadStoryHubSessionDocumentSnapshot(),
+            document: applySaveCompatibilityMigrations(
+                'storyHubSession',
+                loadStoryHubSessionDocumentSnapshot(),
+            ),
         },
         persistentStash: {
             compatibility: SAVE_COMPATIBILITY_REGISTRY.persistentStash,
-            document: loadPersistentStash(),
+            document: applyNullableSaveCompatibilityMigrations(
+                'persistentStash',
+                loadPersistentStash(),
+            ),
         },
         activeRun: {
             compatibility: SAVE_COMPATIBILITY_REGISTRY.activeRun,
             keys: createActiveRunCompatibilityKeys(options.activeRunLookup, options.activeRunIdentity),
-            document: loadActiveRun(options.activeRunLookup, options.activeRunIdentity),
+            document: applyNullableSaveCompatibilityMigrations(
+                'activeRun',
+                loadActiveRun(options.activeRunLookup, options.activeRunIdentity),
+            ),
         },
         runResolution: {
             boundaryModule: RUN_RESOLUTION_BOUNDARY_MODULE,

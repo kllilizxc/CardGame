@@ -151,7 +151,7 @@ npm run dev-nolog # 关闭 log.js 匿名统计
 - Active run 仍由 `RunPersistence` 拥有，canonical storage key 为 `cardgame.active-run.v1:expedition:<expeditionId>:<mapId>`；route identity 继续按运行时 persistence 的 `expeditionId + mapId` 规则 trim / fallback 到默认秘境身份。
 - 兼容性登记保留 legacy active-run inventory：未分区旧 key `cardgame.active-run.v1`，以及旧 route-key 形式 `cardgame.active-run.v1:<raw routeKey>`，供现有 migration lookup / cleanup 语义对照。
 - Migration hooks 目前是显式 no-op placeholders；只有未来任务明确改变持久化 schema 时才会加入真实迁移。
-- `src/game/services/SaveWorldStateSnapshot.ts` 在上述登记表之上提供一个只读组合视图：读取 Story/Hub session document 快照、全局 persistent stash、指定 `activeRunLookup` / `activeRunIdentity` 的 route-keyed active run，以及 `RunResolution` 当前支持的终局 outcome 标签。它只调用现有读取边界，因此会保留 Story/Hub corrupt / stale fallback、RunPersistence corrupt / stale active-run cleanup、legacy active-run lookup 兼容等既有语义；它不是 unified save writer，也不新增 storage key、schema migration、多档案或云同步。
+- `src/game/services/SaveWorldStateSnapshot.ts` 在上述登记表之上提供一个只读组合视图：读取 Story/Hub session document 快照、全局 persistent stash、指定 `activeRunLookup` / `activeRunIdentity` 的 route-keyed active run，以及 `RunResolution` 当前支持的终局 outcome 标签。读取后的 document 会经过对应 owner 的 `applySaveCompatibilityMigrations` hook chain（当前为 no-op，且不会把迁移结果写回 storage）。它只调用现有读取边界，因此会保留 Story/Hub corrupt / stale fallback、RunPersistence corrupt / stale active-run cleanup、legacy active-run lookup 兼容等既有语义；它不是 unified save writer，也不新增 storage key、schema migration、多档案或云同步。
 
 ### BattleScene 生命周期
 1. `preload`：载入图片 / JSON（卡牌、功法等）。

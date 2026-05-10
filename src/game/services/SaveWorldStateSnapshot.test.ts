@@ -7,8 +7,10 @@ import { ExpeditionState } from '../state/ExpeditionState';
 import type { RunSnapshot } from '../types/expedition';
 import type { StoryState } from '../types/story';
 import {
+    applySaveCompatibilityMigrations,
     createActiveRunCompatibilityKeys,
     SAVE_COMPATIBILITY_REGISTRY,
+    type SaveMigrationHook,
 } from './SaveCompatibility';
 import {
     createActiveRunRouteKey,
@@ -154,6 +156,22 @@ describe('SaveWorldStateSnapshot', () => {
         restoreLocalStorage();
     });
 
+    it('returns the current empty owner fallbacks without creating save keys', () => {
+        const storageKeysBeforeSnapshot = storage.keys().sort();
+
+        const snapshot = createSaveWorldStateSnapshot();
+
+        expect(snapshot.storyHubSession.document).toEqual({
+            schemaVersion: STORY_HUB_SESSION_SCHEMA_VERSION,
+            hubs: {},
+            stories: {},
+        });
+        expect(snapshot.persistentStash.document).toBeNull();
+        expect(snapshot.activeRun.keys).toEqual(createActiveRunCompatibilityKeys());
+        expect(snapshot.activeRun.document).toBeNull();
+        expect(storage.keys().sort()).toEqual(storageKeysBeforeSnapshot);
+    });
+
     it('builds one read-only compatibility view from the existing local persistence slices', () => {
         saveHubSessionSnapshot({
             hubId: 'hub.qingyun-town',
@@ -182,6 +200,12 @@ describe('SaveWorldStateSnapshot', () => {
 
         expect(snapshot.registry).toBe(SAVE_COMPATIBILITY_REGISTRY);
         expect(snapshot.storyHubSession.compatibility).toBe(SAVE_COMPATIBILITY_REGISTRY.storyHubSession);
+        expect(snapshot.storyHubSession.compatibility).toMatchObject({
+            owner: 'storyHubSession',
+            boundaryModule: 'src/game/services/StoryHubSessionPersistence.ts',
+            storageKey: STORY_HUB_SESSION_STORAGE_KEY,
+            persistedShape: 'StoryHubSessionDocument',
+        });
         expect(snapshot.storyHubSession.document.hubs['hub.qingyun-town']).toMatchObject({
             hubId: 'hub.qingyun-town',
             currentLocationId: 'location.qingyun-town.teahouse',
@@ -190,8 +214,21 @@ describe('SaveWorldStateSnapshot', () => {
             'hub.qingyun-town|action.start-qingyun-entry-story|data%2Fstory%2Fstory-graph.json',
         ]);
         expect(snapshot.persistentStash.compatibility).toBe(SAVE_COMPATIBILITY_REGISTRY.persistentStash);
+        expect(snapshot.persistentStash.compatibility).toMatchObject({
+            owner: 'persistentStash',
+            boundaryModule: 'src/game/services/RunPersistence.ts',
+            storageKey: STASH_STORAGE_KEY,
+            persistedShape: 'PersistentStash',
+        });
         expect(snapshot.persistentStash.document).toEqual(loadPersistentStash());
         expect(snapshot.activeRun.compatibility).toBe(SAVE_COMPATIBILITY_REGISTRY.activeRun);
+        expect(snapshot.activeRun.compatibility).toMatchObject({
+            owner: 'activeRun',
+            boundaryModule: 'src/game/services/RunPersistence.ts',
+            canonicalStorageKeyPrefix: 'cardgame.active-run.v1:',
+            legacyUnscopedStorageKey: 'cardgame.active-run.v1',
+            persistedShape: 'RunSnapshot',
+        });
         expect(snapshot.activeRun.keys).toEqual(createActiveRunCompatibilityKeys(undefined, DEFAULT_TARGET));
         expect(snapshot.activeRun.document?.runId).toBe(run.runId);
         expect(snapshot.activeRun.document?.carriedDeck).toContainEqual({ id: 'TL_002', count: 1 });
@@ -200,6 +237,39 @@ describe('SaveWorldStateSnapshot', () => {
         expect(loadActiveRun(DEFAULT_TARGET)?.runId).toBe(run.runId);
         expect(loadPersistentStash()?.lastRunSummary).toBeNull();
         expect(storage.keys().sort()).toEqual(storageKeysBeforeSnapshot);
+    });
+
+    it('runs the compatibility migration hook chain on loaded snapshot documents without writing storage', () => {
+        ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            targetIdentity: DEFAULT_TARGET,
+        });
+        const persistentStashBeforeSnapshot = storage.getItem(STASH_STORAGE_KEY);
+        const migrationHook: SaveMigrationHook = {
+            description: 'test-only persistent stash read facade marker',
+            migrate: <TDocument>(document: TDocument): TDocument => ({
+                ...(document as object),
+                facadeMigrationMarker: 'applied',
+            } as TDocument),
+        };
+        const persistentStashEntry = SAVE_COMPATIBILITY_REGISTRY.persistentStash as unknown as {
+            migrationHooks: readonly SaveMigrationHook[];
+        };
+        const originalMigrationHooks = persistentStashEntry.migrationHooks;
+
+        persistentStashEntry.migrationHooks = [migrationHook];
+        try {
+            const snapshot = createSaveWorldStateSnapshot();
+            const migratedStash = snapshot.persistentStash.document as typeof snapshot.persistentStash.document & {
+                facadeMigrationMarker?: string;
+            };
+
+            expect(migratedStash?.facadeMigrationMarker).toBe('applied');
+            expect(storage.getItem(STASH_STORAGE_KEY)).toBe(persistentStashBeforeSnapshot);
+        } finally {
+            persistentStashEntry.migrationHooks = originalMigrationHooks;
+        }
     });
 
     it('selects the requested route-keyed active run while keeping the persistent stash global', () => {
@@ -218,7 +288,30 @@ describe('SaveWorldStateSnapshot', () => {
         expect(defaultSnapshot.activeRun.keys.routeKey).toBe('expedition:phase01-first-playable-expedition:phase01-prototype-map');
         expect(defaultSnapshot.activeRun.document?.runId).toBe(defaultRun.runId);
         expect(syntheticSnapshot.persistentStash.document?.stashId).toBe('phase01.starter-stash');
+        expect(syntheticSnapshot.persistentStash.document?.deck).toEqual(starterDeckJson.cards);
+        expect(syntheticSnapshot.persistentStash.document?.items).toEqual(initialWorldState.stash.items);
+        expect(syntheticSnapshot.persistentStash.document?.spiritStones).toBe(initialWorldState.stash.spiritStones);
         expect(defaultSnapshot.persistentStash.document).toEqual(syntheticSnapshot.persistentStash.document);
+    });
+
+    it('uses the current owner fallback semantics for corrupt persisted slices', () => {
+        writeRawStoryHubSessionForTests('{not valid json');
+        storage.setItem(STASH_STORAGE_KEY, '{not valid json');
+        const activeRunStorageKey = createActiveRunStorageKey(DEFAULT_TARGET);
+        storage.setItem(activeRunStorageKey, '{not valid json');
+
+        const snapshot = createSaveWorldStateSnapshot({ activeRunIdentity: DEFAULT_TARGET });
+
+        expect(snapshot.storyHubSession.document).toEqual({
+            schemaVersion: STORY_HUB_SESSION_SCHEMA_VERSION,
+            hubs: {},
+            stories: {},
+        });
+        expect(storage.getItem(STORY_HUB_SESSION_STORAGE_KEY)).toBeNull();
+        expect(snapshot.persistentStash.document).toBeNull();
+        expect(storage.getItem(STASH_STORAGE_KEY)).toBeNull();
+        expect(snapshot.activeRun.document).toBeNull();
+        expect(storage.getItem(activeRunStorageKey)).toBeNull();
     });
 
     it('uses the current owner fallback semantics for stale or corrupt persisted slices', () => {
@@ -242,5 +335,20 @@ describe('SaveWorldStateSnapshot', () => {
         expect(storage.getItem(STASH_STORAGE_KEY)).toBeNull();
         expect(snapshot.activeRun.document).toBeNull();
         expect(storage.getItem(staleActiveRunStorageKey)).toBeNull();
+    });
+
+    it('keeps default no-op migrations as pass-through for each snapshot owner', () => {
+        const { run } = startRun();
+
+        const snapshot = createSaveWorldStateSnapshot({ activeRunIdentity: DEFAULT_TARGET });
+
+        expect(applySaveCompatibilityMigrations('storyHubSession', snapshot.storyHubSession.document))
+            .toBe(snapshot.storyHubSession.document);
+        expect(applySaveCompatibilityMigrations('persistentStash', snapshot.persistentStash.document))
+            .toBe(snapshot.persistentStash.document);
+        expect(applySaveCompatibilityMigrations('activeRun', snapshot.activeRun.document))
+            .toBe(snapshot.activeRun.document);
+        expect(snapshot.activeRun.document?.runId).toBe(run.runId);
+        expect(Object.values(snapshot.registry).flatMap((entry) => entry.migrationHooks)).toEqual([]);
     });
 });
