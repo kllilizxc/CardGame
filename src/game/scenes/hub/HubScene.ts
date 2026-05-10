@@ -30,12 +30,21 @@ import {
     validateHubTownDefinition,
     type HubNavigationState,
     type HubTownAction,
+    type HubTownNavigateAction,
     type HubTownStartStoryAction,
     type HubTownDefinition,
     type HubTownLocation,
     type HubTownSurfacePosition,
     type HubTownViewport,
 } from './hubTown';
+
+function isHubTownNavigateAction(action: HubTownAction): action is HubTownNavigateAction {
+    return action.kind === 'navigate';
+}
+
+function isHubTownStartStoryAction(action: HubTownAction): action is HubTownStartStoryAction {
+    return action.kind === 'startStory';
+}
 
 export class HubScene extends Scene {
     private launchData: NormalizedHubSceneLaunchData = normalizeHubSceneLaunchData();
@@ -354,7 +363,7 @@ export class HubScene extends Scene {
             const sourcePosition = getHubLocationSurfacePosition(this.town, location);
 
             location.actions.forEach((action) => {
-                if (action.kind !== 'navigate') {
+                if (!isHubTownNavigateAction(action)) {
                     return;
                 }
 
@@ -648,7 +657,7 @@ export class HubScene extends Scene {
     }
 
     private createActionIntent(action: HubTownAction) {
-        if (action.kind !== 'startStory') {
+        if (!isHubTownStartStoryAction(action)) {
             return createHubActionIntent(action);
         }
 

@@ -110,6 +110,14 @@ export type HubSceneActionIntent =
     | HubTownActionIntent
     | HubSceneLocationSelectionIntent;
 
+function isHubTownNavigateAction(action: HubTownAction): action is HubTownNavigateAction {
+    return action.kind === 'navigate';
+}
+
+function isHubTownStartStoryAction(action: HubTownAction): action is HubTownStartStoryAction {
+    return action.kind === 'startStory';
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -281,7 +289,7 @@ function validateNavigationTargets(locations: HubTownLocation[]): void {
 
     locations.forEach((location) => {
         location.actions.forEach((action) => {
-            if (action.kind === 'navigate' && !locationIds.has(action.targetLocationId)) {
+            if (isHubTownNavigateAction(action) && !locationIds.has(action.targetLocationId)) {
                 throw new Error(`Hub action ${action.id} points to missing targetLocationId: ${action.targetLocationId}`);
             }
         });
@@ -406,12 +414,16 @@ export function createHubActionIntent(
     action: HubTownAction,
     savedStorySession?: StoryRuntimeSessionSnapshot | null,
 ): HubTownActionIntent {
-    if (action.kind === 'navigate') {
+    if (isHubTownNavigateAction(action)) {
         return {
             kind: 'navigateLocation',
             targetLocationId: action.targetLocationId,
             ...(action.statusText ? { statusText: action.statusText } : {}),
         };
+    }
+
+    if (!isHubTownStartStoryAction(action)) {
+        throw new Error(`Hub action ${action.id} has unsupported kind: ${action.kind}`);
     }
 
     return {

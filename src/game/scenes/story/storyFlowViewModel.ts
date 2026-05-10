@@ -218,10 +218,20 @@ function getChoiceStoryEffects(choice: StoryChoiceDefinition): StoryEffect[] {
     return Array.isArray(choice.effects) ? [...choice.effects] : [];
 }
 
-function findStoryBattleTrigger(effects: StoryEffect[]): StoryBattleTrigger | null {
-    const battleEffect = effects.find((effect) => effect.kind === 'startBattle');
+function isStartBattleEffect(
+    effect: StoryEffect,
+): effect is Extract<StoryEffect, { kind: 'startBattle' }> {
+    return effect.kind === 'startBattle';
+}
 
-    return battleEffect?.kind === 'startBattle' ? { ...battleEffect.battle } : null;
+function findStoryBattleTrigger(effects: StoryEffect[]): StoryBattleTrigger | null {
+    const battleEffect = effects.find(isStartBattleEffect);
+
+    if (!battleEffect) {
+        return null;
+    }
+
+    return { ...battleEffect.battle };
 }
 
 function createStoryBattleLaunchMetadata(params: {

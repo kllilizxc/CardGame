@@ -53,6 +53,12 @@ export interface StoryGraph {
     choices: StoryChoice[];
 }
 
+function isStartBattleEffect(
+    effect: StoryEffect,
+): effect is Extract<StoryEffect, { kind: 'startBattle' }> {
+    return effect.kind === 'startBattle';
+}
+
 function assertRecord(value: unknown, label: string): asserts value is Record<string, unknown> {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
         throw new Error(`Story graph ${label} must be an object.`);
@@ -454,7 +460,7 @@ function validateStoryBattleTriggers(
     nodeIds: Set<string>,
 ): void {
     effects.forEach((effect, index) => {
-        if (effect.kind !== 'startBattle') {
+        if (!isStartBattleEffect(effect)) {
             return;
         }
 
