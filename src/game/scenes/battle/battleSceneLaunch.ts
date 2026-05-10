@@ -6,6 +6,7 @@ import type {
 import {
     CONTENT_CATALOG_PUBLIC_PATH,
     createContentCatalogResolver,
+    type ContentResourceKind,
 } from '../../content/contentCatalog';
 import type {
     StoryBattleLaunchMetadata,
@@ -19,6 +20,7 @@ export const DEFAULT_BATTLE_ENCOUNTER_RESOURCE_ID = 'test_encounter_02';
 export const DEFAULT_BATTLE_ENCOUNTER_FILE = 'data/encounters/medium-enemy.json';
 export const DEFAULT_BATTLE_DECK_RESOURCE_ID = 'deck.starter';
 export const DEFAULT_BATTLE_DECK_FILE = 'data/decks/starter-deck.json';
+export const BATTLE_STATUS_DEFINITIONS_CACHE_KEY = 'statusDefinitions';
 
 export interface StarterDeckData {
     cards: ExpeditionCardStack[];
@@ -52,6 +54,85 @@ export interface DefaultBattleRuntimeResources {
     deckResourceId: string;
     deckFile: string;
 }
+
+export type BattleSharedRuntimeResourceCacheKey =
+    | 'unitCards'
+    | 'artifactCards'
+    | 'talismanCards'
+    | 'pillCards'
+    | 'fieldCards'
+    | 'skillCards'
+    | 'gongfaList'
+    | typeof BATTLE_STATUS_DEFINITIONS_CACHE_KEY;
+
+export interface BattleSharedRuntimeResource {
+    cacheKey: BattleSharedRuntimeResourceCacheKey;
+    resourceId: string;
+    publicPath: string;
+}
+
+export type BattleSharedRuntimeResources = Record<
+    BattleSharedRuntimeResourceCacheKey,
+    BattleSharedRuntimeResource
+>;
+
+interface BattleSharedRuntimeResourceRequest {
+    cacheKey: BattleSharedRuntimeResourceCacheKey;
+    resourceId: string;
+    expectedKind: Extract<ContentResourceKind, 'card' | 'gongfa' | 'status'>;
+    compatibilityPublicPath: string;
+}
+
+const BATTLE_SHARED_RUNTIME_RESOURCE_REQUESTS: BattleSharedRuntimeResourceRequest[] = [
+    {
+        cacheKey: 'unitCards',
+        resourceId: 'cards.units',
+        expectedKind: 'card',
+        compatibilityPublicPath: 'data/cards/units.json',
+    },
+    {
+        cacheKey: 'artifactCards',
+        resourceId: 'cards.artifacts',
+        expectedKind: 'card',
+        compatibilityPublicPath: 'data/cards/artifacts.json',
+    },
+    {
+        cacheKey: 'talismanCards',
+        resourceId: 'cards.talismans',
+        expectedKind: 'card',
+        compatibilityPublicPath: 'data/cards/talismans.json',
+    },
+    {
+        cacheKey: 'pillCards',
+        resourceId: 'cards.pills',
+        expectedKind: 'card',
+        compatibilityPublicPath: 'data/cards/pills.json',
+    },
+    {
+        cacheKey: 'fieldCards',
+        resourceId: 'cards.fields',
+        expectedKind: 'card',
+        compatibilityPublicPath: 'data/cards/fields.json',
+    },
+    {
+        cacheKey: 'skillCards',
+        resourceId: 'cards.skills',
+        expectedKind: 'card',
+        compatibilityPublicPath: 'data/cards/skills.json',
+    },
+    {
+        cacheKey: 'gongfaList',
+        resourceId: 'gongfa.list',
+        expectedKind: 'gongfa',
+        compatibilityPublicPath: 'data/gongfa/gongfa-list.json',
+    },
+    {
+        cacheKey: BATTLE_STATUS_DEFINITIONS_CACHE_KEY,
+        resourceId: 'status.definitions',
+        expectedKind: 'status',
+        compatibilityPublicPath: 'data/config/status-definitions.json',
+    },
+];
 
 function isRunDeck(value: unknown): value is ExpeditionCardStack[] {
     return Array.isArray(value)
@@ -368,6 +449,44 @@ function assertDefaultCatalogPathMatchesCompatibilityAlias(
     throw new Error(
         `BattleScene direct/default ${resourceFieldName} ${resourceId} resolved to catalog publicPath ${catalogPublicPath}, but default ${fileFieldName} is ${defaultFile}.`,
     );
+}
+
+function assertSharedCatalogPathPreservesCacheKey(
+    request: BattleSharedRuntimeResourceRequest,
+    catalogPublicPath: string,
+): void {
+    if (catalogPublicPath === request.compatibilityPublicPath) {
+        return;
+    }
+
+    throw new Error(
+        `BattleScene shared runtime resource ${request.resourceId} resolved to catalog publicPath ${catalogPublicPath}, but cache key ${request.cacheKey} must continue loading ${request.compatibilityPublicPath}.`,
+    );
+}
+
+export function resolveBattleSharedRuntimeResources(rawCatalog: unknown): BattleSharedRuntimeResources {
+    const catalogResolver = createContentCatalogResolver(rawCatalog, {
+        context: 'BattleScene',
+        sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+    });
+    const resources: Partial<BattleSharedRuntimeResources> = {};
+
+    for (const request of BATTLE_SHARED_RUNTIME_RESOURCE_REQUESTS) {
+        const catalogResource = catalogResolver.resolveJsonResource({
+            resourceId: request.resourceId,
+            expectedKind: request.expectedKind,
+        });
+
+        assertSharedCatalogPathPreservesCacheKey(request, catalogResource.publicPath);
+
+        resources[request.cacheKey] = {
+            cacheKey: request.cacheKey,
+            resourceId: request.resourceId,
+            publicPath: catalogResource.publicPath,
+        };
+    }
+
+    return resources as BattleSharedRuntimeResources;
 }
 
 export function resolveDefaultBattleRuntimeResources(

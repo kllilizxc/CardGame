@@ -46,6 +46,7 @@ import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import { createExpeditionBattleCompleteEvent } from './battleCompletion';
 import { createStoryBattleCompleteEvent } from '../story/storyBattleRoundTrip';
 import {
+    BATTLE_STATUS_DEFINITIONS_CACHE_KEY,
     getBattleDeckCacheKey,
     getBattleDeckFile,
     getBattleDeckStacks,
@@ -54,9 +55,12 @@ import {
     getEncounterUnits,
     normalizeBattleLaunchPayload,
     normalizeStoryBattleLaunchPayload,
+    resolveBattleSharedRuntimeResources,
     resolveDefaultBattleRuntimeResources,
     resolveExpeditionBattleRuntimeResources,
     resolveStoryBattleRuntimeResources,
+    type BattleSharedRuntimeResourceCacheKey,
+    type BattleSharedRuntimeResources,
     type DefaultBattleRuntimeResources,
     type ExpeditionBattleRuntimeResources,
     type StoryBattleRuntimeResources,
@@ -113,6 +117,7 @@ export class BattleScene extends Scene {
     private layout!: BattleLayoutConfig;
     private launchPayload: BattleLaunchPayload | null = null;
     private storyLaunchPayload: StoryBattleSceneLaunchPayload | null = null;
+    private sharedRuntimeResources: BattleSharedRuntimeResources | null = null;
     private defaultRuntimeResources: DefaultBattleRuntimeResources | null = null;
     private storyRuntimeResources: StoryBattleRuntimeResources | null = null;
     private expeditionRuntimeResources: ExpeditionBattleRuntimeResources | null = null;
@@ -127,6 +132,7 @@ export class BattleScene extends Scene {
     init(data?: unknown): void {
         this.launchPayload = normalizeBattleLaunchPayload(data);
         this.storyLaunchPayload = this.launchPayload ? null : normalizeStoryBattleLaunchPayload(data);
+        this.sharedRuntimeResources = null;
         this.defaultRuntimeResources = null;
         this.storyRuntimeResources = null;
         this.expeditionRuntimeResources = null;
@@ -173,13 +179,33 @@ export class BattleScene extends Scene {
         return height / 1080;
     }
 
+    private getRequiredSharedRuntimeJson(cacheKey: BattleSharedRuntimeResourceCacheKey): unknown {
+        const resource = this.sharedRuntimeResources?.[cacheKey];
+
+        if (!resource) {
+            throw new Error(`BattleScene shared runtime cache key ${cacheKey} was not resolved before create().`);
+        }
+
+        const data = this.cache.json.get(resource.cacheKey);
+
+        if (data === undefined) {
+            throw new Error(
+                `BattleScene failed to load catalog resource ${resource.resourceId} from public/${resource.publicPath}: JSON cache key ${resource.cacheKey} is missing after preload.`,
+            );
+        }
+
+        return data;
+    }
+
     preload() {
-        this.load.json('unitCards', 'data/cards/units.json');
-        this.load.json('artifactCards', 'data/cards/artifacts.json');
-        this.load.json('talismanCards', 'data/cards/talismans.json');
-        this.load.json('pillCards', 'data/cards/pills.json');
-        this.load.json('fieldCards', 'data/cards/fields.json');
-        this.load.json('skillCards', 'data/cards/skills.json');
+        this.sharedRuntimeResources = resolveBattleSharedRuntimeResources(
+            this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+        );
+
+        Object.values(this.sharedRuntimeResources).forEach((resource) => {
+            this.load.json(resource.cacheKey, resource.publicPath);
+        });
+
         this.defaultRuntimeResources = resolveDefaultBattleRuntimeResources(
             this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
             this.launchPayload,
@@ -205,7 +231,6 @@ export class BattleScene extends Scene {
             this.expeditionRuntimeResources,
             this.defaultRuntimeResources,
         ));
-        this.load.json('gongfaList', 'data/gongfa/gongfa-list.json');
     }
 
     async create() {
@@ -225,11 +250,13 @@ export class BattleScene extends Scene {
         this.battleContext = new BattleContext(this);
 
         // 使用 ManagerFactory 统一初始化所有管理器
-        const gongfaData = this.cache.json.get('gongfaList') as { gongfa: any[] };
+        const gongfaData = this.getRequiredSharedRuntimeJson('gongfaList') as { gongfa: any[] };
+        const statusDefinitionsData = this.getRequiredSharedRuntimeJson(BATTLE_STATUS_DEFINITIONS_CACHE_KEY);
         const managers = await ManagerFactory.createManagers(this, this.battleContext, {
             layout: this.layout,
             cardScale: this.cardScale,
             gongfaData: gongfaData?.gongfa || [],
+            statusDefinitionsData,
             fieldAccessors: {
                 getPlayerField: () => this.playerField,
                 getEnemyField: () => this.enemyField,
@@ -251,12 +278,12 @@ export class BattleScene extends Scene {
         this.sacrificeUI = new SacrificeSelectionUI(this);
 
         // 加载所有卡牌数据
-        const unitCardsData = this.cache.json.get('unitCards') as { units: UnitCard[] };
-        const artifactCardsData = this.cache.json.get('artifactCards') as { artifacts: any[] };
-        const talismanCardsData = this.cache.json.get('talismanCards') as { talismans: any[] };
-        const fieldCardsData = this.cache.json.get('fieldCards') as { fields: any[] };
-        const pillCardsData = this.cache.json.get('pillCards') as { pills: any[] };
-        const skillCardsData = this.cache.json.get('skillCards') as { skills: SkillCard[] };
+        const unitCardsData = this.getRequiredSharedRuntimeJson('unitCards') as { units: UnitCard[] };
+        const artifactCardsData = this.getRequiredSharedRuntimeJson('artifactCards') as { artifacts: any[] };
+        const talismanCardsData = this.getRequiredSharedRuntimeJson('talismanCards') as { talismans: any[] };
+        const fieldCardsData = this.getRequiredSharedRuntimeJson('fieldCards') as { fields: any[] };
+        const pillCardsData = this.getRequiredSharedRuntimeJson('pillCards') as { pills: any[] };
+        const skillCardsData = this.getRequiredSharedRuntimeJson('skillCards') as { skills: SkillCard[] };
         const starterDeckData = this.cache.json.get(this.deckCacheKey) as { cards: Array<{ id: string; count: number }> };
 
         // 创建卡牌索引

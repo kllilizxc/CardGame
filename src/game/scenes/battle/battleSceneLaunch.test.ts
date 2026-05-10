@@ -12,6 +12,7 @@ import {
     getEncounterUnits,
     normalizeBattleLaunchPayload,
     normalizeStoryBattleLaunchPayload,
+    resolveBattleSharedRuntimeResources,
     resolveDefaultBattleRuntimeResources,
     resolveExpeditionBattleRuntimeResources,
     resolveStoryBattleRuntimeResources,
@@ -107,6 +108,104 @@ describe('battleSceneLaunch', () => {
         expect(getBattleDeckFile(null, null, runtimeResources)).toBe('data/decks/starter-deck.json');
         expect(getEncounterCacheKey(null)).toBe('currentEncounter');
         expect(getBattleDeckCacheKey(null)).toBe('starterDeck');
+    });
+
+    it('resolves shared Battle card, gongfa, and status assets through stable catalog resource ids while preserving legacy cache keys', () => {
+        const runtimeResources = resolveBattleSharedRuntimeResources(contentCatalogJson);
+
+        expect(runtimeResources).toEqual({
+            unitCards: {
+                cacheKey: 'unitCards',
+                resourceId: 'cards.units',
+                publicPath: 'data/cards/units.json',
+            },
+            artifactCards: {
+                cacheKey: 'artifactCards',
+                resourceId: 'cards.artifacts',
+                publicPath: 'data/cards/artifacts.json',
+            },
+            talismanCards: {
+                cacheKey: 'talismanCards',
+                resourceId: 'cards.talismans',
+                publicPath: 'data/cards/talismans.json',
+            },
+            pillCards: {
+                cacheKey: 'pillCards',
+                resourceId: 'cards.pills',
+                publicPath: 'data/cards/pills.json',
+            },
+            fieldCards: {
+                cacheKey: 'fieldCards',
+                resourceId: 'cards.fields',
+                publicPath: 'data/cards/fields.json',
+            },
+            skillCards: {
+                cacheKey: 'skillCards',
+                resourceId: 'cards.skills',
+                publicPath: 'data/cards/skills.json',
+            },
+            gongfaList: {
+                cacheKey: 'gongfaList',
+                resourceId: 'gongfa.list',
+                publicPath: 'data/gongfa/gongfa-list.json',
+            },
+            statusDefinitions: {
+                cacheKey: 'statusDefinitions',
+                resourceId: 'status.definitions',
+                publicPath: 'data/config/status-definitions.json',
+            },
+        });
+    });
+
+    it('fails actionably when shared Battle catalog resources are missing, wrong-kind, or path-mismatched', () => {
+        expect(() => resolveBattleSharedRuntimeResources({
+            schemaVersion: 1,
+            resources: [],
+        })).toThrow(
+            'contentCatalog.resources must contain at least one resource.',
+        );
+
+        expect(() => resolveBattleSharedRuntimeResources({
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'cards.artifacts',
+                    kind: 'card',
+                    schemaVersion: 1,
+                    publicPath: 'data/cards/artifacts.json',
+                },
+            ],
+        })).toThrow(
+            'BattleScene could not resolve catalog resource cards.units: no catalog entry exists for that resource id.',
+        );
+
+        expect(() => resolveBattleSharedRuntimeResources({
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'cards.units',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/cards/units.json',
+                },
+            ],
+        })).toThrow(
+            'BattleScene could not resolve catalog resource cards.units: catalog resource has kind deck; expected card.',
+        );
+
+        expect(() => resolveBattleSharedRuntimeResources({
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'cards.units',
+                    kind: 'card',
+                    schemaVersion: 1,
+                    publicPath: 'data/cards/units-v2.json',
+                },
+            ],
+        })).toThrow(
+            'BattleScene shared runtime resource cards.units resolved to catalog publicPath data/cards/units-v2.json, but cache key unitCards must continue loading data/cards/units.json.',
+        );
     });
 
     it('skips direct/default catalog resolution for Story and Expedition launches so their ownership rules stay isolated', () => {

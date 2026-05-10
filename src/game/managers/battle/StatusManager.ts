@@ -30,10 +30,10 @@ export class StatusManager {
   /**
    * 初始化状态管理器
    */
-  async initialize(): Promise<void> {
+  async initialize(statusDefinitionsData?: unknown): Promise<void> {
     if (this.initialized) return;
     
-    await loadStatusDefinitions();
+    await loadStatusDefinitions(statusDefinitionsData);
     this.initialized = true;
     console.log('StatusManager initialized');
   }

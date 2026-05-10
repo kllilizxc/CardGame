@@ -27,6 +27,7 @@ export interface ManagerFactoryConfig {
     layout: BattleLayoutConfig;
     cardScale: number;
     gongfaData?: any[];
+    statusDefinitionsData?: unknown;
     fieldAccessors: {
         getPlayerField: () => CardSprite[];
         getEnemyField: () => CardSprite[];
@@ -70,7 +71,7 @@ export class ManagerFactory {
 
         // 4. 初始化 StatusManager (异步)
         const statusManager = new StatusManager();
-        await statusManager.initialize();
+        await statusManager.initialize(config.statusDefinitionsData);
         console.log('StatusManager initialized');
         battleContext.setStatusManager(statusManager);
 

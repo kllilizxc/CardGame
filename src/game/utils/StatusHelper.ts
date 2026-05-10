@@ -5,10 +5,45 @@ import type { StatusDefinition, StatusInstance } from '@data/types/status';
 // 状态定义缓存
 let statusDefinitionsCache: Map<string, StatusDefinition> | null = null;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function createStatusDefinitionCache(
+  data: unknown,
+  context: string
+): Map<string, StatusDefinition> {
+  if (!isRecord(data) || !Array.isArray(data.statuses)) {
+    throw new Error(`${context} must declare a top-level statuses array.`);
+  }
+
+  const definitions = new Map<string, StatusDefinition>();
+
+  data.statuses.forEach((status, index) => {
+    if (!isRecord(status) || typeof status.id !== 'string' || status.id.trim().length === 0) {
+      throw new Error(`${context} statuses[${index}] must declare a non-empty string id.`);
+    }
+
+    definitions.set(status.id, status as unknown as StatusDefinition);
+  });
+
+  return definitions;
+}
+
 /**
  * 加载状态定义
  */
-export async function loadStatusDefinitions(): Promise<Map<string, StatusDefinition>> {
+export async function loadStatusDefinitions(
+  runtimeStatusDefinitions?: unknown
+): Promise<Map<string, StatusDefinition>> {
+  if (runtimeStatusDefinitions !== undefined) {
+    statusDefinitionsCache = createStatusDefinitionCache(
+      runtimeStatusDefinitions,
+      'BattleScene runtime status.definitions'
+    );
+    return statusDefinitionsCache;
+  }
+
   if (statusDefinitionsCache) {
     return statusDefinitionsCache;
   }
@@ -16,11 +51,11 @@ export async function loadStatusDefinitions(): Promise<Map<string, StatusDefinit
   try {
     const response = await fetch('/data/config/status-definitions.json');
     const data = await response.json();
-    
-    statusDefinitionsCache = new Map();
-    for (const status of data.statuses) {
-      statusDefinitionsCache.set(status.id, status);
-    }
+
+    statusDefinitionsCache = createStatusDefinitionCache(
+      data,
+      'data/config/status-definitions.json'
+    );
     
     return statusDefinitionsCache;
   } catch (error) {
