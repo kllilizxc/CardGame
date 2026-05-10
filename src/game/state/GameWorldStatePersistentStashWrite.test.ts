@@ -6,11 +6,18 @@ import initialWorldState from '../../../public/data/world/initial-state.json';
 import {
     createActiveRunStorageKey,
     resetRunPersistenceForTests,
+    type RunPersistenceStorageAdapter,
     STASH_STORAGE_KEY,
 } from '../services/RunPersistence';
 import type { PersistentStash, RunSnapshot } from '../types/expedition';
+import { createGameWorldState } from './GameWorldState';
 import { createPersistentStashFromWorldStateSeed } from './GameWorldStateSeed';
-import { writeGameWorldStatePersistentStash } from './GameWorldStatePersistentStashWrite';
+import {
+    planGameWorldStatePersistentStashWrite,
+    planGameWorldStatePersistentStashWriteFromView,
+    writeGameWorldStatePersistentStash,
+    writeGameWorldStatePersistentStashPlan,
+} from './GameWorldStatePersistentStashWrite';
 
 const SYNTHETIC_TARGET = {
     expeditionId: 'synthetic-expedition',
@@ -214,5 +221,108 @@ describe('GameWorldStatePersistentStashWrite', () => {
         result.document.items[0].count = 999;
 
         expect(JSON.parse(storage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(expectedSeedStash);
+    });
+
+    it('plans a stored-stash write separately from applying it through the explicit storage adapter', () => {
+        const storage = new MemoryStorage();
+        const storedStash = createStoredStash();
+        storage.setItem(STASH_STORAGE_KEY, JSON.stringify(storedStash));
+
+        const plan = withThrowingAmbientLocalStorage(() => planGameWorldStatePersistentStashWrite({
+            ...createSeedSources(),
+            storage,
+        }));
+
+        expect(plan.source).toBe('stored-stash');
+        expect(plan.storageKey).toBe(STASH_STORAGE_KEY);
+        expect(plan.document).toEqual(storedStash);
+        expect(JSON.parse(storage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(storedStash);
+
+        plan.document.deck[0].count = 999;
+        plan.document.items[0].count = 999;
+        plan.document.lastRunSummary!.kept.cards[0].count = 999;
+
+        expect(JSON.parse(storage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(storedStash);
+
+        const result = withThrowingAmbientLocalStorage(() => writeGameWorldStatePersistentStashPlan(plan, storage));
+
+        expect(JSON.parse(storage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(plan.document);
+
+        result.document.deck[0].count = 123;
+        result.document.items[0].count = 123;
+        result.document.lastRunSummary!.kept.cards[0].count = 123;
+
+        expect(JSON.parse(storage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(plan.document);
+    });
+
+    it('plans and applies a seed-fallback view without writing until the apply step', () => {
+        const storage = new MemoryStorage();
+        const expectedSeedStash = createPersistentStashFromWorldStateSeed(createSeedSources());
+
+        const plan = withThrowingAmbientLocalStorage(() => planGameWorldStatePersistentStashWrite({
+            ...createSeedSources(),
+            storage,
+        }));
+
+        expect(plan.source).toBe('seed-fallback');
+        expect(plan.storageKey).toBe(STASH_STORAGE_KEY);
+        expect(plan.document).toEqual(expectedSeedStash);
+        expect(storage.getItem(STASH_STORAGE_KEY)).toBeNull();
+
+        const result = withThrowingAmbientLocalStorage(() => writeGameWorldStatePersistentStashPlan(plan, storage));
+
+        expect(result).toEqual(plan);
+        expect(JSON.parse(storage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(expectedSeedStash);
+
+        plan.document.deck[0].count = 999;
+        result.document.items[0].count = 999;
+
+        expect(JSON.parse(storage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(expectedSeedStash);
+    });
+
+    it('rejects incompatible persistent-stash compatibility metadata before writing', () => {
+        const storage = new MemoryStorage();
+        const worldState = createGameWorldState({
+            ...createSeedSources(),
+            storage,
+        });
+        (
+            worldState.persistentStash.compatibility as { storageKey: string }
+        ).storageKey = 'cardgame.incompatible-persistent-stash.v2';
+
+        expect(() => planGameWorldStatePersistentStashWriteFromView(worldState)).toThrow(
+            'GameWorldState persistent-stash write attempted to use an incompatible storage boundary.',
+        );
+        expect(storage.getItem(STASH_STORAGE_KEY)).toBeNull();
+    });
+
+    it('rejects malformed write plans and storage adapters with explicit errors', () => {
+        const storage = new MemoryStorage();
+        const plan = planGameWorldStatePersistentStashWrite({
+            ...createSeedSources(),
+            storage,
+        });
+        const malformedStorage = {
+            getItem: storage.getItem.bind(storage),
+            removeItem: storage.removeItem.bind(storage),
+        } as unknown as RunPersistenceStorageAdapter;
+
+        expect(() => writeGameWorldStatePersistentStashPlan(
+            {
+                ...plan,
+                storageKey: 'cardgame.incompatible-persistent-stash.v2' as typeof STASH_STORAGE_KEY,
+            },
+            storage,
+        )).toThrow('GameWorldState persistent-stash write plan uses an incompatible storage key.');
+        expect(() => writeGameWorldStatePersistentStashPlan(plan, malformedStorage)).toThrow(
+            'GameWorldState persistent-stash write requires an explicit storage adapter with getItem, setItem, and removeItem.',
+        );
+        expect(() => withThrowingAmbientLocalStorage(() => planGameWorldStatePersistentStashWrite({
+            ...createSeedSources(),
+            storage: undefined as unknown as RunPersistenceStorageAdapter,
+        }))).toThrow(
+            'GameWorldState persistent-stash write requires an explicit storage adapter with getItem, setItem, and removeItem.',
+        );
+        expect(storage.getItem(STASH_STORAGE_KEY)).toBeNull();
     });
 });

@@ -17,7 +17,7 @@ describe('startup scene flow', () => {
     });
 
     it('registers WorldMapScene before Hub and Expedition scenes so the map shell can launch content', () => {
-        const mainConfig = read('src/game/main.ts');
+        const mainConfig = read('src/game/main.ts').replace(/\r\n/g, '\n');
 
         expect(mainConfig).toContain("import { WorldMapScene } from './scenes/worldmap/WorldMapScene'");
         expect(mainConfig).toContain("import { HubScene } from './scenes/hub/HubScene'");

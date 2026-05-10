@@ -20,11 +20,13 @@ export interface GameWorldStatePersistentStashWriteOptions extends Omit<GameWorl
     readonly storage: RunPersistenceStorageAdapter;
 }
 
-export interface GameWorldStatePersistentStashWriteResult {
+export interface GameWorldStatePersistentStashWritePlan {
     readonly source: GameWorldStatePersistentStashSource;
     readonly storageKey: typeof STASH_STORAGE_KEY;
     readonly document: PersistentStash;
 }
+
+export interface GameWorldStatePersistentStashWriteResult extends GameWorldStatePersistentStashWritePlan {}
 
 function cloneRewardBundle(bundle: DeepReadonly<RunRewardBundle>): RunRewardBundle {
     return {
@@ -88,28 +90,94 @@ function assertPersistentStashCompatibility(worldState: GameWorldState): void {
     throw new Error('GameWorldState persistent-stash write attempted to use an incompatible storage boundary.');
 }
 
-export function writeGameWorldStatePersistentStashFromView(
+function assertExplicitStorageAdapter(storage: RunPersistenceStorageAdapter): void {
+    const candidate = storage as Partial<RunPersistenceStorageAdapter> | null | undefined;
+
+    if (
+        candidate
+        && typeof candidate.getItem === 'function'
+        && typeof candidate.setItem === 'function'
+        && typeof candidate.removeItem === 'function'
+    ) {
+        return;
+    }
+
+    throw new Error(
+        'GameWorldState persistent-stash write requires an explicit storage adapter with getItem, setItem, and removeItem.',
+    );
+}
+
+function assertPersistentStashWritePlan(plan: GameWorldStatePersistentStashWritePlan): void {
+    if (plan.storageKey === STASH_STORAGE_KEY) {
+        return;
+    }
+
+    throw new Error('GameWorldState persistent-stash write plan uses an incompatible storage key.');
+}
+
+function cloneWritePlan(
+    plan: GameWorldStatePersistentStashWritePlan,
+): GameWorldStatePersistentStashWritePlan {
+    return {
+        source: plan.source,
+        storageKey: plan.storageKey,
+        document: clonePersistentStashDocument(plan.document),
+    };
+}
+
+export function planGameWorldStatePersistentStashWriteFromView(
     worldState: GameWorldState,
-    storage: RunPersistenceStorageAdapter,
-): GameWorldStatePersistentStashWriteResult {
+): GameWorldStatePersistentStashWritePlan {
     assertPersistentStashCompatibility(worldState);
 
     const document = clonePersistentStashDocument(worldState.persistentStash.document);
 
-    savePersistentStash(document, storage);
-
     return {
         source: worldState.persistentStash.source,
         storageKey: STASH_STORAGE_KEY,
-        document: clonePersistentStashDocument(document),
+        document,
     };
+}
+
+export function planGameWorldStatePersistentStashWrite(
+    options: GameWorldStatePersistentStashWriteOptions,
+): GameWorldStatePersistentStashWritePlan {
+    assertExplicitStorageAdapter(options.storage);
+
+    return planGameWorldStatePersistentStashWriteFromView(createGameWorldState(options));
+}
+
+export function writeGameWorldStatePersistentStashPlan(
+    plan: GameWorldStatePersistentStashWritePlan,
+    storage: RunPersistenceStorageAdapter,
+): GameWorldStatePersistentStashWriteResult {
+    assertPersistentStashWritePlan(plan);
+    assertExplicitStorageAdapter(storage);
+
+    const document = clonePersistentStashDocument(plan.document);
+    savePersistentStash(document, storage);
+
+    return cloneWritePlan({
+        ...plan,
+        document,
+    });
+}
+
+export function writeGameWorldStatePersistentStashFromView(
+    worldState: GameWorldState,
+    storage: RunPersistenceStorageAdapter,
+): GameWorldStatePersistentStashWriteResult {
+    return writeGameWorldStatePersistentStashPlan(
+        planGameWorldStatePersistentStashWriteFromView(worldState),
+        storage,
+    );
 }
 
 export function writeGameWorldStatePersistentStash(
     options: GameWorldStatePersistentStashWriteOptions,
 ): GameWorldStatePersistentStashWriteResult {
-    return writeGameWorldStatePersistentStashFromView(
-        createGameWorldState(options),
+    return writeGameWorldStatePersistentStashPlan(
+        planGameWorldStatePersistentStashWrite(options),
         options.storage,
     );
 }
