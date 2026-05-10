@@ -4,7 +4,7 @@ import type { CardSprite } from '../../objects/CardSprite';
 import type { ArtifactSprite } from '../../objects/ArtifactSprite';
 import type { TalismanSprite } from '../../objects/TalismanSprite';
 import type { FieldSprite } from '../../objects/FieldSprite';
-import type { AnyCard } from '@data/types/cards/all';
+import type { AnyCard } from '@data/types/cards';
 
 type BattleScenePreviewLayout = {
     cardPreview?: {
