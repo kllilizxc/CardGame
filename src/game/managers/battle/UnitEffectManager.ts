@@ -5,16 +5,14 @@ import type { CardSprite } from '../../objects/CardSprite';
 import type {
     Gongfa,
     GongfaAction,
-    EffectCondition,
     EffectSchema,
-    ArtifactEquippedCondition,
 } from '@data/types/gongfa';
-import { EffectEventType, EffectEventSide, EffectConditionType } from '@data/types/gongfa';
+import { EffectEventType, EffectEventSide } from '@data/types/gongfa';
 import type { UnitCard } from '@data/types/cards/unit';
 import type { ArtifactCard, ArtifactWeaponType } from '@data/types/cards/artifact';
 import { evaluateGongfaNumberExpression, type GongfaExpressionContext } from './gongfaExpression';
-import { extractGongfaWeaponTypeFromLabels } from './gongfaCardFilter';
 import type { GongfaCardOperationCard } from './gongfaCardOperations';
+import { areGongfaConditionsSatisfied } from './gongfaConditionEvaluation';
 import {
     executeGongfaActions,
     type GongfaOperationDispatchContext
@@ -98,7 +96,7 @@ export class UnitEffectManager {
                 return;
             }
 
-            if (!this.areConditionsSatisfied(gongfa.schema.conditions || [], contextWithUnit)) {
+            if (!areGongfaConditionsSatisfied(gongfa.schema.conditions || [], contextWithUnit)) {
                 return;
             }
 
@@ -125,94 +123,6 @@ export class UnitEffectManager {
         }
 
         return event.side === currentSide;
-    }
-
-    private areConditionsSatisfied(conditions: EffectCondition[], context: GongfaRuntimeContext): boolean {
-        return conditions.every(condition => {
-            switch (condition.type) {
-                case EffectConditionType.ArtifactUsedThisTurn: {
-                    const weaponType = condition.weaponType;
-                    const minimum = condition.minimum ?? 1;
-                    if (weaponType) {
-                        const count = context.artifactUsage[weaponType] ?? 0;
-                        return count >= minimum;
-                    }
-                    const total = Object.values(context.artifactUsage).reduce((sum, value) => sum + value, 0);
-                    return total >= minimum;
-                }
-                case EffectConditionType.UnitOnField: {
-                    if (!condition.unitId && !condition.requiredLabelsAnyOf) {
-                        return true;
-                    }
-                    return context.playerField.some(fieldUnit => {
-                        const data = fieldUnit.getCardData();
-                        if (condition.unitId && data.id !== condition.unitId) {
-                            return false;
-                        }
-                        if (condition.requiredLabelsAnyOf && condition.requiredLabelsAnyOf.length > 0) {
-                            const labels = data.labels || [];
-                            return condition.requiredLabelsAnyOf.some(label => labels.includes(label));
-                        }
-                        return true;
-                    });
-                }
-                case EffectConditionType.CardInHand: {
-                    const minimum = condition.minimum ?? 1;
-                    let count = 0;
-                    context.hand.forEach(cardSprite => {
-                        const data = cardSprite.getCardData();
-                        if (condition.requiredLabelsAnyOf && condition.requiredLabelsAnyOf.length > 0) {
-                            const labels = data.labels || [];
-                            if (condition.requiredLabelsAnyOf.some(label => labels.includes(label))) {
-                                count++;
-                            }
-                        } else {
-                            count++;
-                        }
-                    });
-                    return count >= minimum;
-                }
-                case EffectConditionType.ArtifactEquipped: {
-                    const artifactCondition = condition as ArtifactEquippedCondition;
-                    if (!context.equippedArtifact) {
-                        return false;
-                    }
-                    
-                    // 检查武器类型
-                    if (artifactCondition.weaponType) {
-                        const weaponType = context.equippedArtifact.weaponType || 
-                            extractGongfaWeaponTypeFromLabels(context.equippedArtifact.labels || []);
-                        if (weaponType !== artifactCondition.weaponType) {
-                            return false;
-                        }
-                    }
-                    
-                    // 检查星级限制
-                    if (artifactCondition.maxStar !== undefined) {
-                        const artifactStar = getStarFromGradeId(context.equippedArtifact.gradeId);
-                        let maxStarValue: number;
-                        
-                        if (typeof artifactCondition.maxStar === 'string') {
-                            // 解析表达式，如 "card.star + 1"
-                            maxStarValue = this.evaluateExpression(artifactCondition.maxStar, context);
-                        } else {
-                            maxStarValue = artifactCondition.maxStar;
-                        }
-                        
-                        if (artifactStar > maxStarValue) {
-                            return false;
-                        }
-                    }
-                    
-                    return true;
-                }
-                case EffectConditionType.Custom:
-                    console.warn(`自定义功法条件暂未实现：${condition.scriptId}`);
-                    return false;
-                default:
-                    return false;
-            }
-        });
     }
 
     private executeActions(actions: GongfaAction[], context: GongfaRuntimeContext): boolean {
