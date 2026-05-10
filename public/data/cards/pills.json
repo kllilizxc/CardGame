@@ -86,7 +86,7 @@
           "actions": [
             {
               "type": "applyStatus",
-              "statusId": "shield",
+              "statusId": "armor",
               "value": 10
             }
           ],

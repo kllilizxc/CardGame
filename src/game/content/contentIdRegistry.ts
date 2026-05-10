@@ -3,7 +3,7 @@ import type {
     ContentCatalogValidationFailure,
 } from './contentCatalog';
 
-type CatalogIdRegistryName = 'card' | 'gongfa' | 'world item';
+type CatalogIdRegistryName = 'card' | 'gongfa' | 'status' | 'world item';
 
 interface CatalogIdResource {
     entry: ContentCatalogEntry;
@@ -19,6 +19,7 @@ interface CatalogIdLocation {
 interface ContentIdRegistries {
     cards: Map<string, CatalogIdLocation>;
     gongfa: Map<string, CatalogIdLocation>;
+    statuses: Map<string, CatalogIdLocation>;
     worldItems: Map<string, CatalogIdLocation>;
 }
 
@@ -111,6 +112,7 @@ function buildContentIdRegistries(
     const registries: ContentIdRegistries = {
         cards: new Map(),
         gongfa: new Map(),
+        statuses: new Map(),
         worldItems: new Map(),
     };
 
@@ -125,6 +127,10 @@ function buildContentIdRegistries(
 
         if (resource.entry.kind === 'gongfa') {
             registerGongfaIds(resource, registries, failures);
+        }
+
+        if (resource.entry.kind === 'status') {
+            registerStatusIds(resource, registries, failures);
         }
 
         if (resource.entry.kind === 'worldSeed') {
@@ -212,6 +218,46 @@ function registerGongfaIds(
     });
 }
 
+function registerStatusIds(
+    resource: CatalogIdResource,
+    registries: ContentIdRegistries,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (!isRecord(resource.json)) {
+        return;
+    }
+
+    if (!Array.isArray(resource.json.statuses)) {
+        addFailure(
+            failures,
+            resource.entry,
+            `Catalog status resource ${resource.entry.resourceId} in ${resource.entry.publicPath} must declare a top-level statuses array.`,
+        );
+        return;
+    }
+
+    resource.json.statuses.forEach((value, index) => {
+        const context = `statuses[${index}]`;
+
+        if (!isRecord(value)) {
+            addFailure(
+                failures,
+                resource.entry,
+                `Catalog status entry ${resource.entry.resourceId} ${context} in ${resource.entry.publicPath} must be an object.`,
+            );
+            return;
+        }
+
+        const id = readRegistryStringId(resource, value, context, 'status', failures);
+
+        if (!id) {
+            return;
+        }
+
+        registerCatalogId(registries.statuses, 'status', resource, id, context, failures);
+    });
+}
+
 function registerWorldItemIds(
     resource: CatalogIdResource,
     registries: ContentIdRegistries,
@@ -263,6 +309,7 @@ function validateContentIdReferences(
 
         if (resource.entry.kind === 'card') {
             validateCardGongfaReferences(resource, registries, failures);
+            validateCardLegacyApplyStatusReferences(resource, registries, failures);
         }
 
         if (resource.entry.kind === 'deck') {
@@ -280,6 +327,63 @@ function validateContentIdReferences(
         if (resource.entry.kind === 'expeditionShop') {
             validateExpeditionShopRewardReferences(resource, registries, failures);
         }
+    }
+}
+
+function validateCardLegacyApplyStatusReferences(
+    resource: CatalogIdResource,
+    registries: ContentIdRegistries,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (!isRecord(resource.json)) {
+        return;
+    }
+
+    for (const [collectionName, collection] of Object.entries(resource.json)) {
+        if (!Array.isArray(collection)) {
+            continue;
+        }
+
+        collection.forEach((value, cardIndex) => {
+            if (!isRecord(value)) {
+                return;
+            }
+
+            const cardId = typeof value.id === 'string' && value.id.trim().length > 0 ? value.id : undefined;
+            const cardContext = `Card ${resource.entry.resourceId} ${collectionName}[${cardIndex}]${cardId ? ` ${cardId}` : ''}`;
+
+            if (!Array.isArray(value.effects)) {
+                return;
+            }
+
+            value.effects.forEach((effect, effectIndex) => {
+                if (!isRecord(effect) || !Array.isArray(effect.actions)) {
+                    return;
+                }
+
+                effect.actions.forEach((action, actionIndex) => {
+                    if (!isRecord(action) || action.type !== 'applyStatus') {
+                        return;
+                    }
+
+                    const actionContext = `${cardContext} effects[${effectIndex}].actions[${actionIndex}]`;
+                    const statusId = readReferenceId(resource.entry, action, 'statusId', actionContext, failures);
+
+                    if (!statusId) {
+                        return;
+                    }
+
+                    validateRegisteredIdReference(
+                        registries.statuses,
+                        resource.entry,
+                        `${actionContext}.statusId`,
+                        'status',
+                        statusId,
+                        failures,
+                    );
+                });
+            });
+        });
     }
 }
 

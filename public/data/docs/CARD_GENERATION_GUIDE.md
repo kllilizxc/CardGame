@@ -188,7 +188,7 @@ export interface EffectAction {
 - `"drawCards"`：抽牌
 - `"healPlayer"`：回复玩家生命
 - `"damagePlayer"`：对玩家造成伤害
-- `"applyStatus"`：施加状态（如护盾、易伤等）
+- `"applyStatus"`：施加状态；`statusId` 必须来自 `public/data/config/status-definitions.json` 的 `statuses[].id`（例如护甲使用 `armor`，易伤使用 `vulnerable`，不要使用旧称 `shield`）
 - `"destroyUnit"`：摧毁单位
 - `"custom"`：脚本处理的特殊动作
 
@@ -320,6 +320,6 @@ export interface EffectAction {
 ---
 
 本指南会随着规则演化继续补充，例如：
-- 更精细的 statusId 枚举（护盾、易伤、眩晕等）。
+- 状态词汇以 `status-definitions.json` 为唯一 registry，新增状态需先添加规范 `id` 再让卡牌 `applyStatus.statusId` 引用。
 - 自动描述生成的模板规范。
 - 特定标签（labels）的标准列表，用于避免同义词分裂。

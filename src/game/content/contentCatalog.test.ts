@@ -1262,7 +1262,7 @@ describe('content catalog', () => {
     });
 
 
-    it('returns actionable failures for duplicate catalog-backed card, gongfa, and world item IDs', () => {
+    it('returns actionable failures for duplicate catalog-backed card, gongfa, status, and world item IDs', () => {
         const catalog = {
             schemaVersion: 1,
             resources: [
@@ -1285,6 +1285,12 @@ describe('content catalog', () => {
                     publicPath: 'data/gongfa/gongfa-list.json',
                 },
                 {
+                    resourceId: 'status.definitions',
+                    kind: 'status',
+                    schemaVersion: 1,
+                    publicPath: 'data/config/status-definitions.json',
+                },
+                {
                     resourceId: 'world.seed.items-artifacts',
                     kind: 'worldSeed',
                     schemaVersion: 1,
@@ -1305,6 +1311,12 @@ describe('content catalog', () => {
                     { id: 'gongfa.duplicate', schema: {} },
                 ],
             },
+            'data/config/status-definitions.json': {
+                statuses: [
+                    { id: 'duplicate_status' },
+                    { id: 'duplicate_status' },
+                ],
+            },
             'data/world/items.artifacts.json': {
                 artifacts: [{ id: 'duplicate_item' }],
                 tools: [{ id: 'duplicate_item' }],
@@ -1314,11 +1326,12 @@ describe('content catalog', () => {
         expect(result.failures.map((failure) => failure.message)).toEqual([
             'Catalog card id DUPLICATE_CARD is declared more than once: cards.units units[0] in data/cards/units.json; duplicate cards.artifacts artifacts[0] in data/cards/artifacts.json.',
             'Catalog gongfa id gongfa.duplicate is declared more than once: gongfa.list gongfa[0] in data/gongfa/gongfa-list.json; duplicate gongfa.list gongfa[1] in data/gongfa/gongfa-list.json.',
+            'Catalog status id duplicate_status is declared more than once: status.definitions statuses[0] in data/config/status-definitions.json; duplicate status.definitions statuses[1] in data/config/status-definitions.json.',
             'Catalog world item id duplicate_item is declared more than once: world.seed.items-artifacts artifacts[0] in data/world/items.artifacts.json; duplicate world.seed.items-artifacts tools[0] in data/world/items.artifacts.json.',
         ]);
     });
 
-    it('returns actionable failures for missing deck, encounter, Expedition reward, and gongfa content IDs', () => {
+    it('returns actionable failures for missing deck, encounter, Expedition reward, gongfa, and legacy applyStatus status content IDs', () => {
         const catalog = {
             schemaVersion: 1,
             resources: [
@@ -1333,6 +1346,12 @@ describe('content catalog', () => {
                     kind: 'gongfa',
                     schemaVersion: 1,
                     publicPath: 'data/gongfa/gongfa-list.json',
+                },
+                {
+                    resourceId: 'status.definitions',
+                    kind: 'status',
+                    schemaVersion: 1,
+                    publicPath: 'data/config/status-definitions.json',
                 },
                 {
                     resourceId: 'world.seed.items-artifacts',
@@ -1371,10 +1390,40 @@ describe('content catalog', () => {
                 units: [
                     { id: 'CARD_VALID', kind: 'unit', gongfaIds: ['gongfa.valid'] },
                     { id: 'CARD_BAD_GONGFA', kind: 'unit', gongfaIds: ['gongfa.missing'] },
+                    {
+                        id: 'CARD_BAD_STATUS',
+                        kind: 'unit',
+                        effects: [
+                            {
+                                actions: [
+                                    {
+                                        type: 'applyStatus',
+                                        statusId: 'status.missing',
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    {
+                        id: 'CARD_MISSING_STATUS_FIELD',
+                        kind: 'unit',
+                        effects: [
+                            {
+                                actions: [
+                                    {
+                                        type: 'applyStatus',
+                                    },
+                                ],
+                            },
+                        ],
+                    },
                 ],
             },
             'data/gongfa/gongfa-list.json': {
                 gongfa: [{ id: 'gongfa.valid', schema: {} }],
+            },
+            'data/config/status-definitions.json': {
+                statuses: [{ id: 'status.valid' }],
             },
             'data/world/items.artifacts.json': {
                 artifacts: [{ id: 'item.valid' }],
@@ -1426,6 +1475,8 @@ describe('content catalog', () => {
 
         expect(result.failures.map((failure) => failure.message)).toEqual([
             'Card cards.units units[1] CARD_BAD_GONGFA gongfaIds[0] references gongfa id gongfa.missing, but no catalog gongfa resource declares that id.',
+            'Card cards.units units[2] CARD_BAD_STATUS effects[0].actions[0].statusId references status id status.missing, but no catalog status resource declares that id.',
+            'Card cards.units units[3] CARD_MISSING_STATUS_FIELD effects[0].actions[0].statusId must be a non-empty string so the catalog can verify the content ID reference.',
             'Deck deck.test cards[0].id references card id CARD_MISSING_FROM_DECK, but no catalog card resource declares that id.',
             'Encounter encounter.test enemies[0].cardId references card id CARD_MISSING_FROM_ENCOUNTER, but no catalog card resource declares that id.',
             'Expedition events events.test eventsByNodeId.event.test.pool[0].rewards.cards[0].id references card id CARD_MISSING_FROM_EVENT, but no catalog card resource declares that id.',
