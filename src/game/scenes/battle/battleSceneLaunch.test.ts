@@ -4,6 +4,8 @@ import contentCatalogJson from '../../../../public/data/content-catalog.json';
 import type { BattleLaunchPayload } from '../../types/expedition';
 import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import {
+    BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
+    BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
     getBattleDeckCacheKey,
     getBattleDeckFile,
     getBattleDeckStacks,
@@ -81,6 +83,26 @@ const storyBattleCatalog = {
     ],
 };
 
+
+function createCatalogWithEntryOverride(resourceId: string, override: Record<string, unknown>): unknown {
+    return {
+        schemaVersion: 1,
+        resources: contentCatalogJson.resources.map((entry) => (
+            entry.resourceId === resourceId ? { ...entry, ...override } : entry
+        )),
+    };
+}
+
+function createCatalogWithoutRuntimeGradeConfigs(): unknown {
+    return {
+        schemaVersion: 1,
+        resources: contentCatalogJson.resources.filter((entry) => (
+            entry.resourceId !== 'config.combat-baseline'
+            && entry.resourceId !== 'config.artifact-grade'
+        )),
+    };
+}
+
 describe('battleSceneLaunch', () => {
     it('normalizes a complete expedition battle launch payload', () => {
         expect(normalizeBattleLaunchPayload(payload)).toEqual(payload);
@@ -154,6 +176,28 @@ describe('battleSceneLaunch', () => {
                 resourceId: 'status.definitions',
                 publicPath: 'data/config/status-definitions.json',
             },
+            combatBaselineConfig: {
+                cacheKey: BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
+                resourceId: 'config.combat-baseline',
+                publicPath: 'data/config/combat-baseline.json',
+            },
+            artifactGradeConfig: {
+                cacheKey: BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
+                resourceId: 'config.artifact-grade',
+                publicPath: 'data/config/artifact-grade.json',
+            },
+        });
+    });
+
+    it('keeps runtime realm and grade configs optional so helpers can use static imports when catalog data is absent', () => {
+        const runtimeResources = resolveBattleSharedRuntimeResources(createCatalogWithoutRuntimeGradeConfigs());
+
+        expect(runtimeResources.combatBaselineConfig).toBeUndefined();
+        expect(runtimeResources.artifactGradeConfig).toBeUndefined();
+        expect(runtimeResources.unitCards).toEqual({
+            cacheKey: 'unitCards',
+            resourceId: 'cards.units',
+            publicPath: 'data/cards/units.json',
         });
     });
 
@@ -205,6 +249,36 @@ describe('battleSceneLaunch', () => {
             ],
         })).toThrow(
             'BattleScene shared runtime resource cards.units resolved to catalog publicPath data/cards/units-v2.json, but cache key unitCards must continue loading data/cards/units.json.',
+        );
+    });
+
+    it('fails actionably when runtime realm and grade config catalog entries have wrong kind or publicPath', () => {
+        expect(() => resolveBattleSharedRuntimeResources(createCatalogWithEntryOverride(
+            'config.combat-baseline',
+            { kind: 'deck' },
+        ))).toThrow(
+            'BattleScene could not resolve catalog resource config.combat-baseline: catalog resource has kind deck; expected config.',
+        );
+
+        expect(() => resolveBattleSharedRuntimeResources(createCatalogWithEntryOverride(
+            'config.combat-baseline',
+            { publicPath: 'data/config/combat-baseline-v2.json' },
+        ))).toThrow(
+            'BattleScene shared runtime resource config.combat-baseline resolved to catalog publicPath data/config/combat-baseline-v2.json, but cache key combatBaselineConfig must continue loading data/config/combat-baseline.json.',
+        );
+
+        expect(() => resolveBattleSharedRuntimeResources(createCatalogWithEntryOverride(
+            'config.artifact-grade',
+            { kind: 'deck' },
+        ))).toThrow(
+            'BattleScene could not resolve catalog resource config.artifact-grade: catalog resource has kind deck; expected config.',
+        );
+
+        expect(() => resolveBattleSharedRuntimeResources(createCatalogWithEntryOverride(
+            'config.artifact-grade',
+            { publicPath: 'data/config/artifact-grade-v2.json' },
+        ))).toThrow(
+            'BattleScene shared runtime resource config.artifact-grade resolved to catalog publicPath data/config/artifact-grade-v2.json, but cache key artifactGradeConfig must continue loading data/config/artifact-grade.json.',
         );
     });
 

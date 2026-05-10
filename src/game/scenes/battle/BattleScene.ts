@@ -8,12 +8,15 @@ import type { UnitCard } from '../../../../public/data/types/cards/unit';
 import type { ArtifactCard, ArtifactWeaponType } from '../../../../public/data/types/cards/artifact';
 import type { TalismanCard } from '../../../../public/data/types/cards/talisman';
 import type { FieldCard } from '../../../../public/data/types/cards/field';
+import type { CombatBaselineConfig } from '../../../../public/data/types/combat-baseline';
+import type { ArtifactGradeConfig } from '../../../../public/data/types/artifact-grade';
 import { BattleLog } from '../../ui/battle/BattleLog';
 import { CardListView } from '../../ui/common/CardListView';
 import { BattleAnimationManager } from '../../managers/battle/BattleAnimationManager';
 import { CombatManager } from '../../managers/battle/CombatManager';
 import { CardManager } from '../../managers/battle/CardManager';
-import { getUnitStar } from '../../utils/RealmHelper';
+import { getUnitStar, installRuntimeRealmConfig, resetRuntimeRealmConfig } from '../../utils/RealmHelper';
+import { installRuntimeArtifactGradeConfig, resetRuntimeArtifactGradeConfig } from '../../utils/ArtifactHelper';
 import { TurnManager } from '../../managers/battle/TurnManager';
 import { ArtifactManager } from '../../managers/battle/ArtifactManager';
 import { TalismanManager } from '../../managers/battle/TalismanManager';
@@ -46,6 +49,8 @@ import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import { createExpeditionBattleCompleteEvent } from './battleCompletion';
 import { createStoryBattleCompleteEvent } from '../story/storyBattleRoundTrip';
 import {
+    BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
+    BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
     BATTLE_STATUS_DEFINITIONS_CACHE_KEY,
     getBattleDeckCacheKey,
     getBattleDeckFile,
@@ -59,6 +64,7 @@ import {
     resolveDefaultBattleRuntimeResources,
     resolveExpeditionBattleRuntimeResources,
     resolveStoryBattleRuntimeResources,
+    type BattleOptionalSharedRuntimeResourceCacheKey,
     type BattleSharedRuntimeResourceCacheKey,
     type BattleSharedRuntimeResources,
     type DefaultBattleRuntimeResources,
@@ -130,6 +136,8 @@ export class BattleScene extends Scene {
     }
 
     init(data?: unknown): void {
+        resetRuntimeRealmConfig();
+        resetRuntimeArtifactGradeConfig();
         this.launchPayload = normalizeBattleLaunchPayload(data);
         this.storyLaunchPayload = this.launchPayload ? null : normalizeStoryBattleLaunchPayload(data);
         this.sharedRuntimeResources = null;
@@ -197,6 +205,40 @@ export class BattleScene extends Scene {
         return data;
     }
 
+    private getOptionalSharedRuntimeJson(cacheKey: BattleOptionalSharedRuntimeResourceCacheKey): unknown | undefined {
+        const resource = this.sharedRuntimeResources?.[cacheKey];
+
+        if (!resource) {
+            return undefined;
+        }
+
+        const data = this.cache.json.get(resource.cacheKey);
+
+        if (data === undefined) {
+            throw new Error(
+                `BattleScene failed to load catalog resource ${resource.resourceId} from public/${resource.publicPath}: JSON cache key ${resource.cacheKey} is missing after preload.`,
+            );
+        }
+
+        return data;
+    }
+
+    private installRuntimeHelperConfigs(): void {
+        resetRuntimeRealmConfig();
+        resetRuntimeArtifactGradeConfig();
+
+        const combatBaselineConfig = this.getOptionalSharedRuntimeJson(BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY);
+        const artifactGradeConfig = this.getOptionalSharedRuntimeJson(BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY);
+
+        if (combatBaselineConfig !== undefined) {
+            installRuntimeRealmConfig(combatBaselineConfig as CombatBaselineConfig);
+        }
+
+        if (artifactGradeConfig !== undefined) {
+            installRuntimeArtifactGradeConfig(artifactGradeConfig as ArtifactGradeConfig);
+        }
+    }
+
     preload() {
         this.sharedRuntimeResources = resolveBattleSharedRuntimeResources(
             this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
@@ -248,6 +290,9 @@ export class BattleScene extends Scene {
 
         // 初始化战斗上下文
         this.battleContext = new BattleContext(this);
+
+        // 注入运行时目录加载的境界 / 法器品级配置；缺省时 helper 保持 static fallback。
+        this.installRuntimeHelperConfigs();
 
         // 使用 ManagerFactory 统一初始化所有管理器
         const gongfaData = this.getRequiredSharedRuntimeJson('gongfaList') as { gongfa: any[] };

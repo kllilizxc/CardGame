@@ -21,6 +21,8 @@ export const DEFAULT_BATTLE_ENCOUNTER_FILE = 'data/encounters/medium-enemy.json'
 export const DEFAULT_BATTLE_DECK_RESOURCE_ID = 'deck.starter';
 export const DEFAULT_BATTLE_DECK_FILE = 'data/decks/starter-deck.json';
 export const BATTLE_STATUS_DEFINITIONS_CACHE_KEY = 'statusDefinitions';
+export const BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY = 'combatBaselineConfig';
+export const BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY = 'artifactGradeConfig';
 
 export interface StarterDeckData {
     cards: ExpeditionCardStack[];
@@ -55,7 +57,7 @@ export interface DefaultBattleRuntimeResources {
     deckFile: string;
 }
 
-export type BattleSharedRuntimeResourceCacheKey =
+export type BattleRequiredSharedRuntimeResourceCacheKey =
     | 'unitCards'
     | 'artifactCards'
     | 'talismanCards'
@@ -65,21 +67,28 @@ export type BattleSharedRuntimeResourceCacheKey =
     | 'gongfaList'
     | typeof BATTLE_STATUS_DEFINITIONS_CACHE_KEY;
 
+export type BattleOptionalSharedRuntimeResourceCacheKey =
+    | typeof BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY
+    | typeof BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY;
+
+export type BattleSharedRuntimeResourceCacheKey =
+    | BattleRequiredSharedRuntimeResourceCacheKey
+    | BattleOptionalSharedRuntimeResourceCacheKey;
+
 export interface BattleSharedRuntimeResource {
     cacheKey: BattleSharedRuntimeResourceCacheKey;
     resourceId: string;
     publicPath: string;
 }
 
-export type BattleSharedRuntimeResources = Record<
-    BattleSharedRuntimeResourceCacheKey,
-    BattleSharedRuntimeResource
->;
+export type BattleSharedRuntimeResources =
+    & Record<BattleRequiredSharedRuntimeResourceCacheKey, BattleSharedRuntimeResource>
+    & Partial<Record<BattleOptionalSharedRuntimeResourceCacheKey, BattleSharedRuntimeResource>>;
 
 interface BattleSharedRuntimeResourceRequest {
     cacheKey: BattleSharedRuntimeResourceCacheKey;
     resourceId: string;
-    expectedKind: Extract<ContentResourceKind, 'card' | 'gongfa' | 'status'>;
+    expectedKind: Extract<ContentResourceKind, 'card' | 'gongfa' | 'status' | 'config'>;
     compatibilityPublicPath: string;
 }
 
@@ -131,6 +140,21 @@ const BATTLE_SHARED_RUNTIME_RESOURCE_REQUESTS: BattleSharedRuntimeResourceReques
         resourceId: 'status.definitions',
         expectedKind: 'status',
         compatibilityPublicPath: 'data/config/status-definitions.json',
+    },
+];
+
+const BATTLE_OPTIONAL_SHARED_RUNTIME_CONFIG_REQUESTS: BattleSharedRuntimeResourceRequest[] = [
+    {
+        cacheKey: BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
+        resourceId: 'config.combat-baseline',
+        expectedKind: 'config',
+        compatibilityPublicPath: 'data/config/combat-baseline.json',
+    },
+    {
+        cacheKey: BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
+        resourceId: 'config.artifact-grade',
+        expectedKind: 'config',
+        compatibilityPublicPath: 'data/config/artifact-grade.json',
     },
 ];
 
@@ -464,6 +488,24 @@ function assertSharedCatalogPathPreservesCacheKey(
     );
 }
 
+function rawCatalogHasResourceId(rawCatalog: unknown, resourceId: string): boolean {
+    if (typeof rawCatalog !== 'object' || rawCatalog === null) {
+        return false;
+    }
+
+    const resources = (rawCatalog as { resources?: unknown }).resources;
+
+    if (!Array.isArray(resources)) {
+        return false;
+    }
+
+    return resources.some((entry) => (
+        typeof entry === 'object'
+        && entry !== null
+        && (entry as { resourceId?: unknown }).resourceId === resourceId
+    ));
+}
+
 export function resolveBattleSharedRuntimeResources(rawCatalog: unknown): BattleSharedRuntimeResources {
     const catalogResolver = createContentCatalogResolver(rawCatalog, {
         context: 'BattleScene',
@@ -472,6 +514,25 @@ export function resolveBattleSharedRuntimeResources(rawCatalog: unknown): Battle
     const resources: Partial<BattleSharedRuntimeResources> = {};
 
     for (const request of BATTLE_SHARED_RUNTIME_RESOURCE_REQUESTS) {
+        const catalogResource = catalogResolver.resolveJsonResource({
+            resourceId: request.resourceId,
+            expectedKind: request.expectedKind,
+        });
+
+        assertSharedCatalogPathPreservesCacheKey(request, catalogResource.publicPath);
+
+        resources[request.cacheKey] = {
+            cacheKey: request.cacheKey,
+            resourceId: request.resourceId,
+            publicPath: catalogResource.publicPath,
+        };
+    }
+
+    for (const request of BATTLE_OPTIONAL_SHARED_RUNTIME_CONFIG_REQUESTS) {
+        if (!rawCatalogHasResourceId(rawCatalog, request.resourceId)) {
+            continue;
+        }
+
         const catalogResource = catalogResolver.resolveJsonResource({
             resourceId: request.resourceId,
             expectedKind: request.expectedKind,

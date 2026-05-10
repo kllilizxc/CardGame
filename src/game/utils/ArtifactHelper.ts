@@ -40,24 +40,34 @@ export function buildArtifactGradeLookup(config: ArtifactGradeConfig): ArtifactG
   return lookup;
 }
 
-// 从 canonical artifact-grade.json 构建品级配置映射表
-const GRADE_LOOKUP = buildArtifactGradeLookup(artifactGradeData);
-const GRADE_CONFIG: Record<string, ArtifactGradeDisplayConfig> = {};
+function buildArtifactGradeDisplayConfig(
+  lookup: ArtifactGradeLookup
+): Record<string, ArtifactGradeDisplayConfig> {
+  const displayConfig: Record<string, ArtifactGradeDisplayConfig> = {};
 
-Object.entries(GRADE_LOOKUP).forEach(([gradeId, grade]) => {
-  GRADE_CONFIG[gradeId] = {
-    value: grade.value,
-    tier: grade.tier,
-    quality: grade.quality
-  };
-});
+  Object.entries(lookup).forEach(([gradeId, grade]) => {
+    displayConfig[gradeId] = {
+      value: grade.value,
+      tier: grade.tier,
+      quality: grade.quality
+    };
+  });
+
+  return displayConfig;
+}
+
+// 从 canonical artifact-grade.json 构建品级配置映射表，作为无 runtime 数据时的 fallback。
+const STATIC_GRADE_LOOKUP = buildArtifactGradeLookup(artifactGradeData);
+const STATIC_GRADE_CONFIG = buildArtifactGradeDisplayConfig(STATIC_GRADE_LOOKUP);
+let activeGradeLookup: ArtifactGradeLookup = STATIC_GRADE_LOOKUP;
+let activeGradeConfig: Record<string, ArtifactGradeDisplayConfig> = STATIC_GRADE_CONFIG;
 
 /**
  * 根据品级ID获取星级（1-6星，按品阶计算）
  * 星级由品阶决定，品质不影响星级
  */
 export function getStarFromGradeId(gradeId: string): number {
-  const config = GRADE_LOOKUP[gradeId];
+  const config = activeGradeLookup[gradeId];
   if (!config) {
     console.warn(`Unknown gradeId: ${gradeId}, defaulting to 1 star`);
     return 1;
@@ -76,18 +86,41 @@ export function getArtifactStar(artifact: ArtifactCard): number {
  * 根据品级ID获取品级配置
  */
 export function getGradeConfig(gradeId: string): ArtifactGradeDisplayConfig | undefined {
-  return GRADE_CONFIG[gradeId];
+  return activeGradeConfig[gradeId];
 }
 
 /**
  * 获取品级完整显示名称（如：黄阶下品、天阶上品）
  */
 export function getGradeDisplayName(gradeId: string): string {
-  const config = GRADE_CONFIG[gradeId];
+  const config = activeGradeConfig[gradeId];
   if (!config) {
     return '未知品级';
   }
   return `${config.tier}${config.quality}`;
+}
+
+/**
+ * 安装运行时目录加载的 artifact-grade 配置。
+ * 传入 undefined/null 时回退到 checked-in static import，保留旧 helper 行为。
+ */
+export function installRuntimeArtifactGradeConfig(config: ArtifactGradeConfig | null | undefined): void {
+  if (!config) {
+    resetRuntimeArtifactGradeConfig();
+    return;
+  }
+
+  activeGradeLookup = buildArtifactGradeLookup(config);
+  activeGradeConfig = buildArtifactGradeDisplayConfig(activeGradeLookup);
+}
+
+/**
+ * 重置为 checked-in static artifact-grade fallback。
+ * 主要用于场景重新初始化和测试隔离。
+ */
+export function resetRuntimeArtifactGradeConfig(): void {
+  activeGradeLookup = STATIC_GRADE_LOOKUP;
+  activeGradeConfig = STATIC_GRADE_CONFIG;
 }
 
 /**
