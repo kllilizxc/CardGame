@@ -6,7 +6,6 @@ import {
     normalizeActiveRunRouteKey,
     parseActiveRunRouteKey,
     saveActiveRun,
-    savePersistentStash,
     type ActiveRunTargetIdentity,
     type RunPersistenceStorageAdapter,
 } from '../services/RunPersistence';
@@ -20,6 +19,7 @@ import {
     addRewardBundleToCarriedBundle,
     createStartingLoadoutFromStash,
 } from './GameWorldStateStashOperations';
+import { writeGameWorldStatePersistentStashDocumentWithFallbackStorage } from './GameWorldStatePersistentStashWrite';
 import type {
     ExpeditionMapDefinition,
     ExpeditionRouteIdentity,
@@ -151,15 +151,25 @@ export class ExpeditionState {
                 ?? undefined,
         );
         const normalizedRouteKey = normalizeActiveRunRouteKey(activeRunRouteKey, normalizedTargetIdentity);
-        const persistentStash = loadPersistentStash(storage) ?? createPersistentStashFromWorldStateSeed({
+        const storedPersistentStash = loadPersistentStash(storage);
+        const persistentStash = storedPersistentStash ?? createPersistentStashFromWorldStateSeed({
             worldState,
             starterDeck,
         });
         const activeRun = loadActiveRun(activeRunRouteKey ?? normalizedRouteKey, normalizedTargetIdentity, storage);
+        const persistentStashWrite = writeGameWorldStatePersistentStashDocumentWithFallbackStorage({
+            source: storedPersistentStash ? 'stored-stash' : 'seed-fallback',
+            document: persistentStash,
+            storage,
+        });
 
-        savePersistentStash(persistentStash, storage);
-
-        return new ExpeditionState(persistentStash, activeRun, normalizedTargetIdentity, normalizedRouteKey, storage);
+        return new ExpeditionState(
+            persistentStashWrite.document,
+            activeRun,
+            normalizedTargetIdentity,
+            normalizedRouteKey,
+            storage,
+        );
     }
 
     createRunSnapshot({ expeditionId, mapId, entryNodeId }: CreateRunSnapshotParams): RunSnapshot {

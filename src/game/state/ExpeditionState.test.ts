@@ -15,6 +15,7 @@ import {
     STASH_STORAGE_KEY,
 } from '../services/RunPersistence';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
+import type { PersistentStash, RunSnapshot } from '../types/expedition';
 import { ExpeditionState } from './ExpeditionState';
 
 const DEFAULT_TARGET = {
@@ -90,6 +91,69 @@ function getCheckedInExpeditionTarget(destinationId: string): { expeditionId: st
     };
 }
 
+function createStoredStash(): PersistentStash {
+    return {
+        stashId: 'player-existing-stash',
+        deckRef: 'player-existing-deck',
+        deck: [{ id: 'EXISTING_CARD', count: 1 }],
+        items: [{ id: 'tool.existing', itemType: 'tool', count: 3 }],
+        spiritStones: 777,
+        lastRunSummary: {
+            runId: 'run-finished',
+            outcome: 'extract',
+            finalNodeId: 'extract.synthetic',
+            kept: {
+                cards: [{ id: 'EXISTING_CARD', count: 1 }],
+                items: [{ id: 'tool.existing', itemType: 'tool', count: 1 }],
+                spiritStones: 12,
+            },
+            lost: {
+                cards: [],
+                items: [],
+                spiritStones: 0,
+            },
+            endedAt: '2026-05-10T00:00:00.000Z',
+        },
+    };
+}
+
+function createStoredActiveRun(
+    target: { expeditionId: string; mapId: string },
+    runId: string,
+    currentNodeId: string,
+): RunSnapshot {
+    return {
+        runId,
+        routeKey: `expedition:${target.expeditionId}:${target.mapId}`,
+        expeditionId: target.expeditionId,
+        mapId: target.mapId,
+        status: 'inProgress',
+        currentNodeId,
+        startingLoadout: {
+            cards: [{ id: 'EXISTING_CARD', count: 1 }],
+            items: [{ id: 'tool.existing', itemType: 'tool', count: 1 }],
+            spiritStones: 12,
+        },
+        carriedDeck: [{ id: 'EXISTING_CARD', count: 1 }],
+        carriedItems: [{ id: 'tool.existing', itemType: 'tool', count: 1 }],
+        spiritStones: 12,
+        visitedNodeIds: [currentNodeId],
+        nodeStates: {
+            [currentNodeId]: {
+                nodeId: currentNodeId,
+                status: 'cleared',
+                visited: true,
+                rewardClaimed: true,
+            },
+        },
+        startedAt: '2026-05-10T00:00:00.000Z',
+    };
+}
+
+function sortedJsonKeys(storage: Storage, key: string): string[] {
+    return Object.keys(JSON.parse(storage.getItem(key) ?? '{}')).sort();
+}
+
 describe('ExpeditionState', () => {
     beforeEach(() => {
         resetRunPersistenceForTests();
@@ -163,6 +227,96 @@ describe('ExpeditionState', () => {
         expect(JSON.parse(injectedStorage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET)) ?? 'null')?.runId).toBe(run.runId);
         expect(loadPersistentStash()).toBeNull();
         expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
+    });
+
+    it('bootstraps a stored stash through the GameWorldState writer without changing JSON shape or other active-run routes', () => {
+        const injectedStorage = new MemoryStorage();
+        const storedStash = createStoredStash();
+        const syntheticRun = createStoredActiveRun(SYNTHETIC_TARGET, 'run-synthetic', 'event.synthetic');
+        const defaultRun = createStoredActiveRun(DEFAULT_TARGET, 'run-default', 'entrance.mountain-gate');
+        const syntheticActiveRunKey = createActiveRunStorageKey(SYNTHETIC_TARGET);
+        const defaultActiveRunKey = createActiveRunStorageKey(DEFAULT_TARGET);
+        injectedStorage.setItem(STASH_STORAGE_KEY, JSON.stringify(storedStash));
+        injectedStorage.setItem(syntheticActiveRunKey, JSON.stringify(syntheticRun));
+        injectedStorage.setItem(defaultActiveRunKey, JSON.stringify(defaultRun));
+
+        const state = withThrowingAmbientLocalStorage(() => ExpeditionState.bootstrap({
+            worldState: {
+                stash: {
+                    stashId: 'seed-that-must-not-replace-existing',
+                    deckRef: 'seed-deck-ref',
+                    items: [],
+                    spiritStones: 1,
+                },
+            },
+            starterDeck: {
+                cards: [{ id: 'SEED_CARD', count: 9 }],
+            },
+            targetIdentity: SYNTHETIC_TARGET,
+            storage: injectedStorage,
+        }));
+
+        expect(state.persistentStash).toEqual(storedStash);
+        expect(state.activeRun?.runId).toBe(syntheticRun.runId);
+        expect(JSON.parse(injectedStorage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(storedStash);
+        expect(sortedJsonKeys(injectedStorage, STASH_STORAGE_KEY)).toEqual([
+            'deck',
+            'deckRef',
+            'items',
+            'lastRunSummary',
+            'spiritStones',
+            'stashId',
+        ]);
+        expect(JSON.parse(injectedStorage.getItem(defaultActiveRunKey) ?? 'null')?.runId).toBe(defaultRun.runId);
+        expect(loadPersistentStash()).toBeNull();
+        expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
+    });
+
+    it('materializes the seed-fallback stash through the GameWorldState writer with the compatibility JSON shape', () => {
+        const injectedStorage = new MemoryStorage();
+
+        const state = withThrowingAmbientLocalStorage(() => ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            storage: injectedStorage,
+        }));
+
+        expect(state.persistentStash.stashId).toBe('phase01.starter-stash');
+        expect(JSON.parse(injectedStorage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(state.persistentStash);
+        expect(sortedJsonKeys(injectedStorage, STASH_STORAGE_KEY)).toEqual([
+            'deck',
+            'deckRef',
+            'items',
+            'lastRunSummary',
+            'spiritStones',
+            'stashId',
+        ]);
+        expect(state.persistentStash.deck).toEqual(starterDeckJson.cards);
+        expect(state.persistentStash.items).toEqual(initialWorldState.stash.items);
+        expect(state.persistentStash.spiritStones).toBe(initialWorldState.stash.spiritStones);
+    });
+
+    it('cleans corrupt stash and active-run reads on bootstrap before materializing seed fallback', () => {
+        const injectedStorage = new MemoryStorage();
+        const activeRunKey = createActiveRunStorageKey(SYNTHETIC_TARGET);
+        const otherActiveRunKey = createActiveRunStorageKey(DEFAULT_TARGET);
+        const defaultRun = createStoredActiveRun(DEFAULT_TARGET, 'run-default', 'entrance.mountain-gate');
+        injectedStorage.setItem(STASH_STORAGE_KEY, '{not valid json');
+        injectedStorage.setItem(activeRunKey, '{not valid json');
+        injectedStorage.setItem(otherActiveRunKey, JSON.stringify(defaultRun));
+
+        const state = withThrowingAmbientLocalStorage(() => ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            targetIdentity: SYNTHETIC_TARGET,
+            storage: injectedStorage,
+        }));
+
+        expect(state.activeRun).toBeNull();
+        expect(state.persistentStash.stashId).toBe('phase01.starter-stash');
+        expect(JSON.parse(injectedStorage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(state.persistentStash);
+        expect(injectedStorage.getItem(activeRunKey)).toBeNull();
+        expect(JSON.parse(injectedStorage.getItem(otherActiveRunKey) ?? 'null')?.runId).toBe(defaultRun.runId);
     });
 
     it('creates and persists a run snapshot from the current stash loadout', () => {
