@@ -4,37 +4,31 @@ import { getStarFromGradeId } from '../../utils/ArtifactHelper';
 import type { CardSprite } from '../../objects/CardSprite';
 import type {
     Gongfa,
-    EffectAction,
+    GongfaAction,
     EffectCondition,
     EffectSchema,
-    RecoverCardFromDiscardAction,
-    SearchCardFromDeckAction,
-    DrawAndFilterAction,
     ImmediateAttackAction,
     GainArmorAction,
     ArtifactEquippedCondition,
-    CardFilter
 } from '@data/types/gongfa';
-import { EffectEventType, EffectEventSide, EffectConditionType, EffectActionType, EffectActionDestination } from '@data/types/gongfa';
+import { EffectEventType, EffectEventSide, EffectConditionType, EffectActionType } from '@data/types/gongfa';
 import type { UnitCard } from '@data/types/cards/unit';
 import type { ArtifactCard, ArtifactWeaponType } from '@data/types/cards/artifact';
-import type { TalismanCard } from '@data/types/cards/talisman';
-import type { FieldCard } from '@data/types/cards/field';
-import { describeGongfa } from '../../utils/GongfaDescriptionBuilder';
 import { evaluateGongfaNumberExpression, type GongfaExpressionContext } from './gongfaExpression';
+import { extractGongfaWeaponTypeFromLabels } from './gongfaCardFilter';
 import {
-    extractGongfaWeaponTypeFromLabels,
-    isGongfaCardFilterMatch,
-    type GongfaFilterCard
-} from './gongfaCardFilter';
+    executeGongfaCardOperation,
+    type GongfaCardOperationCard,
+    type GongfaCardOperationContext
+} from './gongfaCardOperations';
 
 type AnyHandSprite = CardSprite | import('../../objects/ArtifactSprite').ArtifactSprite | import('../../objects/TalismanSprite').TalismanSprite | import('../../objects/FieldSprite').FieldSprite;
 
 export interface GongfaRuntimeContext {
     playerField: CardSprite[];
     enemyField?: CardSprite[];
-    discardPile: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[];
-    deck?: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[]; // 卡组，用于抽牌筛选
+    discardPile: GongfaCardOperationCard[];
+    deck?: GongfaCardOperationCard[]; // 卡组，用于抽牌筛选
     hand: AnyHandSprite[];
     discardPileButton?: Phaser.GameObjects.Rectangle;
     cardScale: number;
@@ -223,28 +217,18 @@ export class UnitEffectManager {
         });
     }
 
-    private executeActions(actions: EffectAction[], context: GongfaRuntimeContext): boolean {
+    private executeActions(actions: GongfaAction[], context: GongfaRuntimeContext): boolean {
         let executed = false;
         for (const action of actions) {
             switch (action.type) {
-                case EffectActionType.RecoverCardFromDiscard: {
-                    const recoverAction = action as RecoverCardFromDiscardAction;
-                    const amount = recoverAction.amount ?? recoverAction.filter.amount ?? 1;
-                    const recovered = this.recoverCardsFromDiscard(recoverAction, amount, context);
-                    executed = executed || recovered;
-                    break;
-                }
-                case EffectActionType.SearchCardFromDeck: {
-                    const searchAction = action as SearchCardFromDeckAction;
-                    const amount = searchAction.amount ?? searchAction.filter.amount ?? 1;
-                    const searched = this.searchCardsFromDeck(searchAction, amount, context);
-                    executed = executed || searched;
-                    break;
-                }
+                case EffectActionType.RecoverCardFromDiscard:
+                case EffectActionType.SearchCardFromDeck:
                 case EffectActionType.DrawAndFilter: {
-                    const drawFilterAction = action as DrawAndFilterAction;
-                    const filtered = this.drawAndFilterCards(drawFilterAction, context);
-                    executed = executed || filtered;
+                    const moved = executeGongfaCardOperation(
+                        action,
+                        this.createCardOperationContext(context)
+                    );
+                    executed = executed || moved;
                     break;
                 }
                 case EffectActionType.ImmediateAttack: {
@@ -271,8 +255,7 @@ export class UnitEffectManager {
                     break;
                 }
                 case EffectActionType.Custom: {
-                    const customAction = action as Extract<EffectAction, { type: EffectActionType.Custom }>;
-                    console.warn(`自定义功法动作暂未实现：${customAction.scriptId}`);
+                    console.warn(`自定义功法动作暂未实现：${action.scriptId}`);
                     break;
                 }
                 default:
@@ -280,146 +263,6 @@ export class UnitEffectManager {
             }
         }
         return executed;
-    }
-
-    private recoverCardsFromDiscard(
-        action: RecoverCardFromDiscardAction,
-        amount: number,
-        context: GongfaRuntimeContext
-    ): boolean {
-        if (action.destination !== EffectActionDestination.Hand) {
-            console.warn(`暂不支持的功法回收目的地：${action.destination}`);
-            return false;
-        }
-
-        if (!context.gameActionHandler) {
-            console.warn('GameActionHandler 未提供，无法回收卡牌');
-            return false;
-        }
-
-        const filterFunc = this.createCardFilterPredicate(action.filter, context);
-
-        // 调用 GameActionHandler 的弃牌堆选择方法
-        context.gameActionHandler.recoverFromDiscardPile(amount, filterFunc);
-
-        return true; // 返回true表示已触发选择UI
-    }
-
-    private searchCardsFromDeck(
-        action: SearchCardFromDeckAction,
-        amount: number,
-        context: GongfaRuntimeContext
-    ): boolean {
-        if (!context.gameActionHandler) {
-            console.warn('GameActionHandler 未提供，无法检索卡牌');
-            return false;
-        }
-
-        const filterFunc = this.createCardFilterPredicate(action.filter, context);
-
-        // 根据目的地调用不同的方法
-        if (action.destination === EffectActionDestination.Hand) {
-            // 检索到手牌
-            context.gameActionHandler.searchDeck(amount, filterFunc);
-        } else if (action.destination === EffectActionDestination.DiscardPile) {
-            // 检索到弃牌堆（不需要UI，直接添加）
-            context.gameActionHandler.searchDeckToDiscard(amount, filterFunc);
-        } else {
-            console.warn(`暂不支持的功法检索目的地：${action.destination}`);
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * 抽牌并筛选
-     */
-    private drawAndFilterCards(
-        action: DrawAndFilterAction,
-        context: GongfaRuntimeContext
-    ): boolean {
-        if (!context.deck || context.deck.length === 0) {
-            console.warn('[DrawAndFilter] 卡组为空或未提供');
-            return false;
-        }
-
-        if (!context.gameActionHandler) {
-            console.warn('[DrawAndFilter] gameActionHandler 未提供');
-            return false;
-        }
-
-        const { amount, filter, matchDestination, nonMatchDestination } = action;
-        const drawnCards: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[] = [];
-
-        // 从卡组顶部抽取指定数量的卡牌
-        for (let i = 0; i < amount && context.deck.length > 0; i++) {
-            const card = context.deck.shift();
-            if (card) {
-                drawnCards.push(card);
-            }
-        }
-
-        if (drawnCards.length === 0) {
-            return false;
-        }
-
-        // 筛选卡牌
-        const matchedCards: typeof drawnCards = [];
-        const nonMatchedCards: typeof drawnCards = [];
-
-        const filterFunc = this.createCardFilterPredicate(filter, context);
-        for (const card of drawnCards) {
-            if (filterFunc(card)) {
-                matchedCards.push(card);
-            } else {
-                nonMatchedCards.push(card);
-            }
-        }
-
-        // 将匹配的卡牌放到指定位置
-        this.moveCardsToDestination(matchedCards, matchDestination, context);
-        // 将不匹配的卡牌放到指定位置
-        this.moveCardsToDestination(nonMatchedCards, nonMatchDestination, context);
-
-        this.battleContext.battleLog.addLog(
-            `抽取${drawnCards.length}张卡牌，其中${matchedCards.length}张符合条件`
-        );
-
-        return true;
-    }
-
-    /**
-     * 将卡牌移动到指定位置
-     */
-    private moveCardsToDestination(
-        cards: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[],
-        destination: EffectActionDestination,
-        context: GongfaRuntimeContext
-    ): void {
-        for (const card of cards) {
-            switch (destination) {
-                case EffectActionDestination.Hand:
-                    // 添加到手牌
-                    if (context.gameActionHandler) {
-                        context.gameActionHandler.addCardToHand(card, context.cardScale);
-                    }
-                    break;
-                case EffectActionDestination.DiscardPile:
-                    // 添加到弃牌堆
-                    context.discardPile.push(card);
-                    break;
-                case EffectActionDestination.DeckTop:
-                    // 放回卡组顶部
-                    if (context.deck) {
-                        context.deck.unshift(card);
-                    }
-                    break;
-                default:
-                    console.warn(`不支持的目标位置：${destination}`);
-                    break;
-            }
-        }
     }
 
     private executeImmediateAttack(
@@ -544,18 +387,15 @@ export class UnitEffectManager {
         return true;
     }
 
-    private createCardFilterPredicate(
-        filter: CardFilter,
-        context: GongfaRuntimeContext
-    ): (card: GongfaFilterCard) => boolean {
-        const expressionContext = this.buildExpressionContext(context) ?? {};
-        return (card: GongfaFilterCard) => {
-            try {
-                return isGongfaCardFilterMatch(card, filter, expressionContext);
-            } catch (error) {
-                console.error(`卡牌筛选表达式计算失败: ${filter.maxStar}`, error);
-                return false;
-            }
+    private createCardOperationContext(context: GongfaRuntimeContext): GongfaCardOperationContext {
+        return {
+            discardPile: context.discardPile,
+            deck: context.deck,
+            hand: context.hand,
+            cardScale: context.cardScale,
+            gameActionHandler: context.gameActionHandler,
+            battleLog: this.battleContext.battleLog,
+            expressionContext: this.buildExpressionContext(context) ?? {}
         };
     }
 
