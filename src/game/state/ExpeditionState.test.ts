@@ -7,10 +7,12 @@ import prototypeShopJson from '../../../public/data/mijing/prototype-shop.json';
 import worldMapJson from '../../../public/data/world/world-map.json';
 
 import {
+    createActiveRunStorageKey,
     loadActiveRun,
     loadPersistentStash,
     resetRunPersistenceForTests,
     savePersistentStash,
+    STASH_STORAGE_KEY,
 } from '../services/RunPersistence';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
 import { ExpeditionState } from './ExpeditionState';
@@ -24,6 +26,55 @@ const SYNTHETIC_TARGET = {
     expeditionId: 'synthetic-expedition',
     mapId: 'synthetic-map',
 };
+
+class MemoryStorage implements Storage {
+    private readonly values = new Map<string, string>();
+
+    get length(): number {
+        return this.values.size;
+    }
+
+    clear(): void {
+        this.values.clear();
+    }
+
+    getItem(key: string): string | null {
+        return this.values.get(key) ?? null;
+    }
+
+    key(index: number): string | null {
+        return [...this.values.keys()][index] ?? null;
+    }
+
+    removeItem(key: string): void {
+        this.values.delete(key);
+    }
+
+    setItem(key: string, value: string): void {
+        this.values.set(key, value);
+    }
+}
+
+function withThrowingAmbientLocalStorage<T>(callback: () => T): T {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+
+    Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        get(): Storage {
+            throw new Error('ambient globalThis.localStorage must not be used by injected ExpeditionState persistence');
+        },
+    });
+
+    try {
+        return callback();
+    } finally {
+        if (descriptor) {
+            Object.defineProperty(globalThis, 'localStorage', descriptor);
+        } else {
+            delete (globalThis as { localStorage?: Storage }).localStorage;
+        }
+    }
+}
 
 function getCheckedInExpeditionTarget(destinationId: string): { expeditionId: string; mapId: string } {
     const worldMap = validateWorldMapDefinition(worldMapJson);
@@ -92,6 +143,26 @@ describe('ExpeditionState', () => {
 
         expect(restoredState.persistentStash).toEqual(existingStash);
         expect(loadPersistentStash()).toEqual(existingStash);
+    });
+
+    it('persists seed-fallback stash and active runs through an injected storage adapter without touching ambient localStorage', () => {
+        const injectedStorage = new MemoryStorage();
+
+        const state = withThrowingAmbientLocalStorage(() => ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            targetIdentity: SYNTHETIC_TARGET,
+            storage: injectedStorage,
+        }));
+        const run = withThrowingAmbientLocalStorage(() => state.createRunSnapshot({
+            ...SYNTHETIC_TARGET,
+            entryNodeId: 'entrance.synthetic',
+        }));
+
+        expect(JSON.parse(injectedStorage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(state.persistentStash);
+        expect(JSON.parse(injectedStorage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET)) ?? 'null')?.runId).toBe(run.runId);
+        expect(loadPersistentStash()).toBeNull();
+        expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
     });
 
     it('creates and persists a run snapshot from the current stash loadout', () => {

@@ -156,7 +156,7 @@ npm run dev-nolog # 关闭 log.js 匿名统计
 `src/game/services/SaveCompatibility.ts` 是一个不拥有读写流程的兼容性登记表。它引用现有 persistence 常量，不新增 writer，也不改变 persisted JSON shape 或玩家可见的保存 / 恢复行为。
 
 - Story / Hub session 仍由 `StoryHubSessionPersistence` 拥有，使用 `cardgame.story-hub-session.v1`，document `schemaVersion` 为 `1`。
-- 永久仓库仍由 `RunPersistence` 拥有，使用 `cardgame.persistent-stash.v1`；storage key 带 `v1`，但 `PersistentStash` JSON 当前不内嵌 schema version。
+- 永久仓库仍由 `RunPersistence` 拥有，使用 `cardgame.persistent-stash.v1`；storage key 带 `v1`，但 `PersistentStash` JSON 当前不内嵌 schema version。`RunPersistence` 的 stash 读写保留默认 localStorage / memory fallback，同时允许调用方注入 `Storage`-like adapter；`ExpeditionState.bootstrap` 的 seed-fallback 持久化与 `RunResolution` 的终局 stash 写入会沿用该 adapter，便于测试当前写入边界，但不把 `GameWorldState` 扩展成 writer。
 - Active run 仍由 `RunPersistence` 拥有，canonical storage key 为 `cardgame.active-run.v1:expedition:<expeditionId>:<mapId>`；route identity 继续按运行时 persistence 的 `expeditionId + mapId` 规则 trim / fallback 到默认秘境身份。
 - 兼容性登记保留 legacy active-run inventory：未分区旧 key `cardgame.active-run.v1`，以及旧 route-key 形式 `cardgame.active-run.v1:<raw routeKey>`，供现有 migration lookup / cleanup 语义对照。
 - Migration hooks 目前是显式 no-op placeholders；只有未来任务明确改变持久化 schema 时才会加入真实迁移。

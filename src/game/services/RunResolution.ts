@@ -6,6 +6,7 @@ import {
     saveActiveRun,
     savePersistentStash,
     type ActiveRunTargetIdentity,
+    type RunPersistenceStorageAdapter,
 } from './RunPersistence';
 import {
     addCarriedBundleToStash,
@@ -27,6 +28,7 @@ export interface RunResolutionOptions {
     stash?: PersistentStash | null;
     targetIdentity?: ActiveRunTargetIdentity;
     activeRunRouteKey?: string;
+    storage?: RunPersistenceStorageAdapter;
 }
 
 export interface BattleVictoryResolution {
@@ -43,8 +45,8 @@ const [
 ] = RUN_RESOLUTION_TERMINAL_OUTCOMES;
 
 function resolveRun(options: RunResolutionOptions): { run: RunSnapshot; stash: PersistentStash } {
-    const run = options.run ?? loadActiveRun(options.activeRunRouteKey, options.targetIdentity);
-    const stash = options.stash ?? loadPersistentStash();
+    const run = options.run ?? loadActiveRun(options.activeRunRouteKey, options.targetIdentity, options.storage);
+    const stash = options.stash ?? loadPersistentStash(options.storage);
 
     if (!run) {
         throw new Error('Cannot resolve expedition run because there is no active run.');
@@ -69,7 +71,7 @@ function getActiveRunRouteKey(run: RunSnapshot, options: RunResolutionOptions): 
 }
 
 function clearResolvedActiveRun(run: RunSnapshot, options: RunResolutionOptions): void {
-    clearActiveRun(options.activeRunRouteKey, getActiveRunIdentity(run, options));
+    clearActiveRun(options.activeRunRouteKey, getActiveRunIdentity(run, options), options.storage);
 }
 
 function resolveTerminalOutcome(
@@ -96,7 +98,7 @@ function resolveTerminalOutcome(
         lastRunSummary: summary,
     };
 
-    savePersistentStash(resolvedStash);
+    savePersistentStash(resolvedStash, options.storage);
     clearResolvedActiveRun(run, options);
 
     return summary;
@@ -117,6 +119,7 @@ export function resolveBattleVictory(options: RunResolutionOptions = {}): Battle
         resolvedRun,
         options.activeRunRouteKey,
         getActiveRunIdentity(run, options),
+        options.storage,
     );
 
     return {

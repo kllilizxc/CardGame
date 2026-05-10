@@ -8,6 +8,7 @@ import {
     saveActiveRun,
     savePersistentStash,
     type ActiveRunTargetIdentity,
+    type RunPersistenceStorageAdapter,
 } from '../services/RunPersistence';
 import { enterReachableNode } from '../scenes/expedition/mapTraversal';
 import {
@@ -37,6 +38,7 @@ export interface ExpeditionBootstrapSources {
     targetIdentity?: ActiveRunTargetIdentity;
     activeRunRouteKey?: string | null;
     activeRunIdentity?: ActiveRunTargetIdentity;
+    storage?: RunPersistenceStorageAdapter;
 }
 
 export interface CreateRunSnapshotParams extends ExpeditionRouteIdentity {
@@ -113,16 +115,19 @@ export class ExpeditionState {
     public activeRun: RunSnapshot | null;
     private readonly targetIdentity: ExpeditionRouteIdentity;
     private readonly activeRunRouteKey: string;
+    private readonly storage?: RunPersistenceStorageAdapter;
 
     constructor(
         persistentStash: PersistentStash,
         activeRun: RunSnapshot | null,
         targetIdentity: ExpeditionRouteIdentity = normalizeActiveRunIdentity(),
         activeRunRouteKey?: string | null,
+        storage?: RunPersistenceStorageAdapter,
     ) {
         this.persistentStash = persistentStash;
         this.targetIdentity = normalizeActiveRunIdentity(targetIdentity);
         this.activeRunRouteKey = normalizeActiveRunRouteKey(activeRunRouteKey, this.targetIdentity);
+        this.storage = storage;
         this.activeRun = activeRun
             ? {
                 ...activeRun,
@@ -137,6 +142,7 @@ export class ExpeditionState {
         targetIdentity,
         activeRunRouteKey,
         activeRunIdentity,
+        storage,
     }: ExpeditionBootstrapSources): ExpeditionState {
         const normalizedTargetIdentity = normalizeActiveRunIdentity(
             targetIdentity
@@ -145,15 +151,15 @@ export class ExpeditionState {
                 ?? undefined,
         );
         const normalizedRouteKey = normalizeActiveRunRouteKey(activeRunRouteKey, normalizedTargetIdentity);
-        const persistentStash = loadPersistentStash() ?? createPersistentStashFromWorldStateSeed({
+        const persistentStash = loadPersistentStash(storage) ?? createPersistentStashFromWorldStateSeed({
             worldState,
             starterDeck,
         });
-        const activeRun = loadActiveRun(activeRunRouteKey ?? normalizedRouteKey, normalizedTargetIdentity);
+        const activeRun = loadActiveRun(activeRunRouteKey ?? normalizedRouteKey, normalizedTargetIdentity, storage);
 
-        savePersistentStash(persistentStash);
+        savePersistentStash(persistentStash, storage);
 
-        return new ExpeditionState(persistentStash, activeRun, normalizedTargetIdentity, normalizedRouteKey);
+        return new ExpeditionState(persistentStash, activeRun, normalizedTargetIdentity, normalizedRouteKey, storage);
     }
 
     createRunSnapshot({ expeditionId, mapId, entryNodeId }: CreateRunSnapshotParams): RunSnapshot {
@@ -330,9 +336,9 @@ export class ExpeditionState {
     }
 
     resetToEntranceState(): void {
-        clearActiveRun(this.targetIdentity);
+        clearActiveRun(this.targetIdentity, undefined, this.storage);
         this.activeRun = null;
-        this.persistentStash = loadPersistentStash() ?? this.persistentStash;
+        this.persistentStash = loadPersistentStash(this.storage) ?? this.persistentStash;
     }
 
     private persistActiveRun(run: RunSnapshot): void {
@@ -342,7 +348,7 @@ export class ExpeditionState {
             ...run,
             routeKey: this.activeRunRouteKey,
         };
-        saveActiveRun(this.activeRun, this.targetIdentity);
+        saveActiveRun(this.activeRun, this.targetIdentity, undefined, this.storage);
     }
 
     private assertRunIdentityMatchesState(identity: ExpeditionRouteIdentity): void {

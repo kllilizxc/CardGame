@@ -7,9 +7,11 @@ import worldMapJson from '../../../public/data/world/world-map.json';
 import { ExpeditionState } from '../state/ExpeditionState';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
 import {
+    createActiveRunStorageKey,
     loadActiveRun,
     loadPersistentStash,
     resetRunPersistenceForTests,
+    STASH_STORAGE_KEY,
 } from './RunPersistence';
 import {
     resolveBattleDefeat,
@@ -27,6 +29,55 @@ const SYNTHETIC_TARGET = {
     expeditionId: 'synthetic-expedition',
     mapId: 'synthetic-map',
 };
+
+class MemoryStorage implements Storage {
+    private readonly values = new Map<string, string>();
+
+    get length(): number {
+        return this.values.size;
+    }
+
+    clear(): void {
+        this.values.clear();
+    }
+
+    getItem(key: string): string | null {
+        return this.values.get(key) ?? null;
+    }
+
+    key(index: number): string | null {
+        return [...this.values.keys()][index] ?? null;
+    }
+
+    removeItem(key: string): void {
+        this.values.delete(key);
+    }
+
+    setItem(key: string, value: string): void {
+        this.values.set(key, value);
+    }
+}
+
+function withThrowingAmbientLocalStorage<T>(callback: () => T): T {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+
+    Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        get(): Storage {
+            throw new Error('ambient globalThis.localStorage must not be used by injected RunResolution writes');
+        },
+    });
+
+    try {
+        return callback();
+    } finally {
+        if (descriptor) {
+            Object.defineProperty(globalThis, 'localStorage', descriptor);
+        } else {
+            delete (globalThis as { localStorage?: Storage }).localStorage;
+        }
+    }
+}
 
 function getCheckedInExpeditionTarget(destinationId: string): { expeditionId: string; mapId: string } {
     const worldMap = validateWorldMapDefinition(worldMapJson);
@@ -46,11 +97,13 @@ function startRewardedRun(
     targetIdentity: { expeditionId: string; mapId: string } = DEFAULT_TARGET,
     rewardCardId = 'TL_002',
     entryNodeId = targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'entrance.mountain-gate' : 'entrance.synthetic',
+    storage?: Storage,
 ): ExpeditionState {
     const state = ExpeditionState.bootstrap({
         worldState: structuredClone(initialWorldState),
         starterDeck: structuredClone(starterDeckJson),
         targetIdentity,
+        storage,
     });
 
     state.createRunSnapshot({
@@ -195,6 +248,30 @@ describe('RunResolution', () => {
         expect(loadActiveRun(outerMountainTarget)).toBeNull();
         expect(loadActiveRun(jadeCaveTarget)?.runId).toBe(jadeCaveRunId);
         expect(loadActiveRun(jadeCaveTarget)?.carriedDeck).toContainEqual({ id: 'AR_001', count: 4 });
+    });
+
+    it('terminal resolution writes the resolved stash and active-run cleanup to an injected adapter without touching ambient localStorage', () => {
+        const injectedStorage = new MemoryStorage();
+        const state = startRewardedRun(SYNTHETIC_TARGET, 'AR_001', 'entrance.synthetic', injectedStorage);
+        const runId = state.activeRun?.runId;
+
+        const summary = withThrowingAmbientLocalStorage(() => resolveExtract({
+            storage: injectedStorage,
+            targetIdentity: SYNTHETIC_TARGET,
+            finalNodeId: 'extract.synthetic',
+            endedAt: '2026-05-10T01:00:00.000Z',
+        }));
+        const injectedStash = loadPersistentStash(injectedStorage);
+
+        expect(summary.runId).toBe(runId);
+        expect(summary.outcome).toBe('extract');
+        expect(injectedStash?.lastRunSummary).toEqual(summary);
+        expect(injectedStash?.deck).toContainEqual({ id: 'AR_001', count: 4 });
+        expect(loadActiveRun(SYNTHETIC_TARGET, undefined, injectedStorage)).toBeNull();
+        expect(injectedStorage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET))).toBeNull();
+        expect(injectedStorage.getItem(STASH_STORAGE_KEY)).not.toBeNull();
+        expect(loadPersistentStash()).toBeNull();
+        expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
     });
 
     it('battle victory persists the continued run under the same target identity', () => {

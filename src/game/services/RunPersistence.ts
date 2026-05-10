@@ -281,8 +281,11 @@ export function loadPersistentStash(storage?: RunPersistenceStorageAdapter): Per
     return readStoredJson<PersistentStash>(STASH_STORAGE_KEY, getStorageAdapter(storage));
 }
 
-export function savePersistentStash(stash: PersistentStash): void {
-    getStorageAdapter().setItem(STASH_STORAGE_KEY, JSON.stringify(stash));
+export function savePersistentStash(
+    stash: PersistentStash,
+    storage?: RunPersistenceStorageAdapter,
+): void {
+    getStorageAdapter(storage).setItem(STASH_STORAGE_KEY, JSON.stringify(stash));
 }
 
 export function loadActiveRun(
@@ -334,15 +337,17 @@ export function saveActiveRun(
     run: RunSnapshot,
     lookup?: ActiveRunStorageLookup,
     identity?: ActiveRunTargetIdentity,
+    storage?: RunPersistenceStorageAdapter,
 ): RunSnapshot {
-    return saveActiveRunToStorage(run, lookup, identity);
+    return saveActiveRunToStorage(run, lookup, identity, getStorageAdapter(storage));
 }
 
 export function clearActiveRun(
     lookup?: ActiveRunStorageLookup,
     identity?: ActiveRunTargetIdentity,
+    storage?: RunPersistenceStorageAdapter,
 ): void {
-    const storageAdapter = getStorageAdapter();
+    const storageAdapter = getStorageAdapter(storage);
     const normalizedIdentity = resolveLookupIdentity(lookup, identity);
 
     storageAdapter.removeItem(createActiveRunStorageKey(normalizedIdentity));
