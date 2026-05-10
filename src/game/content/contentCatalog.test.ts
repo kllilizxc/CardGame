@@ -37,6 +37,11 @@ import {
     CANONICAL_INITIAL_STATE_RESOURCE_ID,
     CANONICAL_WORLD_ITEM_REGISTRY_PUBLIC_PATH,
     CANONICAL_WORLD_ITEM_REGISTRY_RESOURCE_ID,
+    registerWorldItemIds,
+    type WorldItemIdRegistry,
+    type WorldSeedCatalogResource,
+    validateCanonicalWorldSeedCatalogEntries,
+    validateCanonicalWorldSeedReferences,
 } from './contentCatalogWorldSeed';
 
 const expectedCheckedInResources = [
@@ -1026,6 +1031,74 @@ describe('content catalog', () => {
         validateCatalogRouteReferences(index, failures);
 
         expect(failures).toEqual([]);
+    });
+
+    it('keeps world seed ID registry and starter stash validation helpers in a focused module', () => {
+        const resources: WorldSeedCatalogResource[] = [
+            {
+                entry: {
+                    resourceId: 'deck.starter',
+                    kind: 'deck',
+                    schemaVersion: 1,
+                    publicPath: 'data/decks/starter-deck.json',
+                },
+                json: {
+                    cards: [],
+                },
+            },
+            {
+                entry: canonicalInitialStateCatalogEntry,
+                json: {
+                    stash: {
+                        stashId: 'phase01.starter-stash',
+                        deckRef: 'starter-deck',
+                        items: [
+                            { id: 'tool.return-rope', itemType: 'tool', count: 1 },
+                        ],
+                        spiritStones: 36,
+                    },
+                },
+            },
+            {
+                entry: canonicalWorldItemRegistryCatalogEntry,
+                json: {
+                    tools: [{ id: 'tool.return-rope' }],
+                },
+            },
+        ];
+        const failures: ContentCatalogValidationFailure[] = [];
+        const invalidCanonicalWorldSeedResourceIds = validateCanonicalWorldSeedCatalogEntries(resources, failures);
+        const worldItems: WorldItemIdRegistry = new Map();
+
+        registerWorldItemIds(resources[2], worldItems, failures);
+        validateCanonicalWorldSeedReferences(resources[1], {
+            decks: new Map([
+                ['deck.starter', {
+                    resourceId: 'deck.starter',
+                    publicPath: 'data/decks/starter-deck.json',
+                    context: 'catalog resourceId',
+                }],
+                ['starter-deck', {
+                    resourceId: 'deck.starter',
+                    publicPath: 'data/decks/starter-deck.json',
+                    context: 'publicPath basename alias',
+                }],
+            ]),
+            worldItems,
+        }, failures);
+        validateCanonicalWorldSeedReferences(resources[2], {
+            decks: new Map(),
+            worldItems,
+        }, failures);
+
+        expect([...invalidCanonicalWorldSeedResourceIds]).toEqual([]);
+        expect(failures).toEqual([]);
+        expect(worldItems.get('tool.return-rope')).toEqual({
+            resourceId: CANONICAL_WORLD_ITEM_REGISTRY_RESOURCE_ID,
+            publicPath: CANONICAL_WORLD_ITEM_REGISTRY_PUBLIC_PATH,
+            context: 'tools[0]',
+            itemType: 'tool',
+        });
     });
 
     it('validates checked-in resources plus route-critical and content ID references with pure validators', () => {
