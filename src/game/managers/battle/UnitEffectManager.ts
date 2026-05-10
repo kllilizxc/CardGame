@@ -21,6 +21,7 @@ import type { ArtifactCard, ArtifactWeaponType } from '@data/types/cards/artifac
 import type { TalismanCard } from '@data/types/cards/talisman';
 import type { FieldCard } from '@data/types/cards/field';
 import { describeGongfa } from '../../utils/GongfaDescriptionBuilder';
+import { evaluateGongfaNumberExpression } from './gongfaExpression';
 
 type AnyHandSprite = CardSprite | import('../../objects/ArtifactSprite').ArtifactSprite | import('../../objects/TalismanSprite').TalismanSprite | import('../../objects/FieldSprite').FieldSprite;
 
@@ -606,27 +607,13 @@ export class UnitEffectManager {
         const unitData = context.triggerUnit.getCardData() as UnitCard;
         const unitStar = getUnitStar(unitData);
 
-        // 构造参数对象
-        const args = {
-            card: {
-                star: unitStar
-            },
-            artifact: {
-                star: context.equippedArtifact 
+        try {
+            return evaluateGongfaNumberExpression(expression, {
+                cardStar: unitStar,
+                artifactStar: context.equippedArtifact
                     ? getStarFromGradeId(context.equippedArtifact.gradeId)
                     : 0
-            }
-        };
-
-        try {
-            // 使用 new Function 创建函数，传入参数对象
-            const fn = new Function('args', `
-                const card = args.card;
-                const artifact = args.artifact;
-                return ${expression};
-            `);
-            const result = fn(args);
-            return typeof result === 'number' ? result : 0;
+            });
         } catch (error) {
             console.error(`表达式计算失败: ${expression}`, error);
             return 0;

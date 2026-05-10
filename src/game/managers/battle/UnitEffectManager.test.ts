@@ -13,6 +13,29 @@ import type { BattleContext } from '../../context/BattleContext';
 import type { CardSprite } from '../../objects/CardSprite';
 import { UnitEffectManager, type GongfaRuntimeContext } from './UnitEffectManager';
 
+function collectConsole(run: () => void): { warnings: string[]; errors: string[] } {
+  const originalWarn = console.warn;
+  const originalError = console.error;
+  const warnings: string[] = [];
+  const errors: string[] = [];
+
+  console.warn = (message?: unknown) => {
+    warnings.push(String(message));
+  };
+  console.error = (message?: unknown) => {
+    errors.push(String(message));
+  };
+
+  try {
+    run();
+  } finally {
+    console.warn = originalWarn;
+    console.error = originalError;
+  }
+
+  return { warnings, errors };
+}
+
 function createCardSprite(cardData: UnitCard): CardSprite {
   return {
     getCardData: () => cardData,
@@ -89,6 +112,60 @@ function createHarness(artifactGradeId: string) {
   return { manager, unitSprite, context, artifact, addLogMessages, gongfaLogNames, statusApplications };
 }
 
+function createOnSummonArmorHarness(value: string) {
+  const unitCard = {
+    id: 'unit.test_qi_swordsman',
+    name: '炼气剑修',
+    kind: 'unit',
+    realmId: 'realm_qi_1',
+    gongfaIds: ['gongfa.test_summon_armor'],
+    attack: 4,
+    health: 20,
+  } as UnitCard;
+  const unitSprite = createCardSprite(unitCard);
+  const addLogMessages: string[] = [];
+  const gongfaLogNames: string[] = [];
+  const statusApplications: Array<{ unitId: string; statusId: string; value: number; target: CardSprite }> = [];
+  const battleContext = {
+    battleLog: {
+      addLog: (message: string) => addLogMessages.push(message),
+      addGongfaLog: (_unitName: string, gongfaName: string) => gongfaLogNames.push(gongfaName),
+    },
+  } as unknown as BattleContext;
+  const context = {
+    playerField: [unitSprite],
+    discardPile: [],
+    hand: [],
+    cardScale: 1,
+    artifactUsage: {},
+    battleStatusController: {
+      applyStatusToUnit: (unitId: string, statusId: string, appliedValue: number, target: CardSprite) => {
+        statusApplications.push({ unitId, statusId, value: appliedValue, target });
+      },
+    },
+  } as GongfaRuntimeContext;
+  const gongfaList: Gongfa[] = [
+    {
+      id: 'gongfa.test_summon_armor',
+      name: '召唤护身',
+      description: '测试表达式求值失败回退。',
+      schema: {
+        event: { type: EffectEventType.OnSummon, side: EffectEventSide.Ally },
+        actions: [
+          {
+            type: EffectActionType.GainArmor,
+            target: 'self',
+            value,
+          },
+        ],
+      },
+    },
+  ];
+  const manager = new UnitEffectManager(battleContext, gongfaList);
+
+  return { manager, unitSprite, context, addLogMessages, gongfaLogNames, statusApplications };
+}
+
 describe('UnitEffectManager artifact grade lookup consumer contract', () => {
   it('uses artifact grade stars for equip conditions and artifact.star expressions without changing behavior', () => {
     const harness = createHarness('grade_earth_lower');
@@ -115,5 +192,35 @@ describe('UnitEffectManager artifact grade lookup consumer contract', () => {
     expect(harness.statusApplications).toEqual([]);
     expect(harness.addLogMessages).toEqual([]);
     expect(harness.gongfaLogNames).toEqual([]);
+  });
+});
+
+describe('UnitEffectManager gongfa expression fallback contract', () => {
+  it('rejects unsupported expression identifiers and falls back to 0 without applying armor', () => {
+    const harness = createOnSummonArmorHarness('card.attack + 1');
+
+    const consoleOutput = collectConsole(() => {
+      harness.manager.applyOnSummonEffects(harness.unitSprite, harness.context);
+    });
+
+    expect(harness.statusApplications).toEqual([]);
+    expect(harness.addLogMessages).toEqual([]);
+    expect(harness.gongfaLogNames).toEqual([]);
+    expect(consoleOutput.errors).toEqual(['表达式计算失败: card.attack + 1']);
+    expect(consoleOutput.warnings).toEqual(['护甲值无效: 0']);
+  });
+
+  it('keeps missing artifact.star context on the existing 0 fallback path', () => {
+    const harness = createOnSummonArmorHarness('artifact.star * 2');
+
+    const consoleOutput = collectConsole(() => {
+      harness.manager.applyOnSummonEffects(harness.unitSprite, harness.context);
+    });
+
+    expect(harness.statusApplications).toEqual([]);
+    expect(harness.addLogMessages).toEqual([]);
+    expect(harness.gongfaLogNames).toEqual([]);
+    expect(consoleOutput.errors).toEqual([]);
+    expect(consoleOutput.warnings).toEqual(['护甲值无效: 0']);
   });
 });
