@@ -12,6 +12,7 @@ import {
     loadPersistentStash,
     resetRunPersistenceForTests,
     STASH_STORAGE_KEY,
+    type RunPersistenceStorageAdapter,
 } from './RunPersistence';
 import {
     resolveBattleDefeat,
@@ -118,6 +119,45 @@ function startRewardedRun(
     });
 
     return state;
+}
+
+function readStoredPersistentStash(storage: Storage): Record<string, unknown> {
+    return JSON.parse(storage.getItem(STASH_STORAGE_KEY) ?? 'null') as Record<string, unknown>;
+}
+
+function expectRunResolutionPersistentStashJsonShape(stash: Record<string, unknown>): void {
+    expect(Object.keys(stash).sort()).toEqual([
+        'deck',
+        'deckRef',
+        'items',
+        'lastRunSummary',
+        'spiritStones',
+        'stashId',
+    ]);
+    expect(Array.isArray(stash.deck)).toBe(true);
+    expect(Array.isArray(stash.items)).toBe(true);
+    expect(typeof stash.spiritStones).toBe('number');
+
+    const summary = stash.lastRunSummary as Record<string, unknown>;
+
+    expect(Object.keys(summary).sort()).toEqual([
+        'endedAt',
+        'finalNodeId',
+        'kept',
+        'lost',
+        'outcome',
+        'runId',
+    ]);
+    expect(Object.keys(summary.kept as Record<string, unknown>).sort()).toEqual([
+        'cards',
+        'items',
+        'spiritStones',
+    ]);
+    expect(Object.keys(summary.lost as Record<string, unknown>).sort()).toEqual([
+        'cards',
+        'items',
+        'spiritStones',
+    ]);
 }
 
 describe('RunResolution', () => {
@@ -250,6 +290,81 @@ describe('RunResolution', () => {
         expect(loadActiveRun(jadeCaveTarget)?.carriedDeck).toContainEqual({ id: 'AR_001', count: 4 });
     });
 
+    it('terminal outcomes write resolved stash documents through the explicit GameWorldState stash writer plan', () => {
+        const scenarios = [
+            {
+                outcome: 'defeat' as const,
+                finalNodeId: 'battle.synthetic-defeat',
+                resolve: resolveBattleDefeat,
+            },
+            {
+                outcome: 'extract' as const,
+                finalNodeId: 'extract.synthetic',
+                resolve: resolveExtract,
+            },
+            {
+                outcome: 'boss-clear' as const,
+                finalNodeId: 'boss.synthetic',
+                resolve: resolveBossClear,
+            },
+        ];
+
+        for (const scenario of scenarios) {
+            const injectedStorage = new MemoryStorage();
+            const otherRouteState = withThrowingAmbientLocalStorage(() => startRewardedRun(
+                DEFAULT_TARGET,
+                'TL_002',
+                'entrance.mountain-gate',
+                injectedStorage,
+            ));
+            const state = withThrowingAmbientLocalStorage(() => startRewardedRun(
+                SYNTHETIC_TARGET,
+                'AR_001',
+                'entrance.synthetic',
+                injectedStorage,
+            ));
+            const otherRouteRunId = otherRouteState.activeRun?.runId;
+            const runId = state.activeRun?.runId;
+
+            const summary = withThrowingAmbientLocalStorage(() => scenario.resolve({
+                storage: injectedStorage,
+                targetIdentity: SYNTHETIC_TARGET,
+                finalNodeId: scenario.finalNodeId,
+                endedAt: '2026-05-10T01:00:00.000Z',
+            }));
+            const storedStash = readStoredPersistentStash(injectedStorage);
+
+            expect(summary).toEqual(storedStash.lastRunSummary);
+            expect(summary.runId).toBe(runId);
+            expect(summary.outcome).toBe(scenario.outcome);
+            expect(summary.finalNodeId).toBe(scenario.finalNodeId);
+            expectRunResolutionPersistentStashJsonShape(storedStash);
+            expect(loadActiveRun(SYNTHETIC_TARGET, undefined, injectedStorage)).toBeNull();
+            expect(injectedStorage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET))).toBeNull();
+            expect(loadActiveRun(DEFAULT_TARGET, undefined, injectedStorage)?.runId).toBe(otherRouteRunId);
+            expect(loadPersistentStash()).toBeNull();
+            expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
+
+            if (scenario.outcome === 'defeat') {
+                expect(storedStash.deck).toEqual([]);
+                expect(storedStash.items).toEqual([]);
+                expect(storedStash.spiritStones).toBe(0);
+                expect(summary.kept).toEqual({ cards: [], items: [], spiritStones: 0 });
+                expect(summary.lost.cards).toContainEqual({ id: 'AR_001', count: 4 });
+                expect(summary.lost.items).toContainEqual({ id: 'tool_talisman_basic', itemType: 'tool', count: 1 });
+                expect(summary.lost.spiritStones).toBe(54);
+            } else {
+                expect(storedStash.deck).toContainEqual({ id: 'AR_001', count: 4 });
+                expect(storedStash.items).toContainEqual({ id: 'tool_talisman_basic', itemType: 'tool', count: 1 });
+                expect(storedStash.spiritStones).toBe(54);
+                expect(summary.kept.cards).toContainEqual({ id: 'AR_001', count: 4 });
+                expect(summary.kept.items).toContainEqual({ id: 'tool_talisman_basic', itemType: 'tool', count: 1 });
+                expect(summary.kept.spiritStones).toBe(54);
+                expect(summary.lost).toEqual({ cards: [], items: [], spiritStones: 0 });
+            }
+        }
+    });
+
     it('terminal resolution writes the resolved stash and active-run cleanup to an injected adapter without touching ambient localStorage', () => {
         const injectedStorage = new MemoryStorage();
         const state = startRewardedRun(SYNTHETIC_TARGET, 'AR_001', 'entrance.synthetic', injectedStorage);
@@ -272,6 +387,27 @@ describe('RunResolution', () => {
         expect(injectedStorage.getItem(STASH_STORAGE_KEY)).not.toBeNull();
         expect(loadPersistentStash()).toBeNull();
         expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
+    });
+
+    it('uses the GameWorldState persistent-stash writer storage validation before clearing a terminal run', () => {
+        const state = startRewardedRun(DEFAULT_TARGET, 'TL_002');
+        const run = state.activeRun!;
+        const stash = loadPersistentStash()!;
+        const malformedStorage = {
+            getItem: () => null,
+            removeItem: () => undefined,
+        } as unknown as RunPersistenceStorageAdapter;
+
+        expect(() => resolveExtract({
+            run,
+            stash,
+            storage: malformedStorage,
+            targetIdentity: DEFAULT_TARGET,
+            finalNodeId: 'extract.malformed-storage',
+        })).toThrow(
+            'GameWorldState persistent-stash write requires an explicit storage adapter with getItem, setItem, and removeItem.',
+        );
+        expect(loadActiveRun(DEFAULT_TARGET)?.runId).toBe(run.runId);
     });
 
     it('battle victory persists the continued run under the same target identity', () => {

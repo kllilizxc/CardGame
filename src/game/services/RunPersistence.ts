@@ -34,6 +34,12 @@ function getStorageAdapter(storage?: RunPersistenceStorageAdapter): RunPersisten
     };
 }
 
+export function resolveRunPersistenceStorageAdapter(
+    storage?: RunPersistenceStorageAdapter,
+): RunPersistenceStorageAdapter {
+    return getStorageAdapter(storage);
+}
+
 function readStoredJson<T>(key: string, storage = getStorageAdapter()): T | null {
     const rawValue = storage.getItem(key);
 
