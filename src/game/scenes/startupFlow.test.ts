@@ -89,4 +89,18 @@ describe('startup scene flow', () => {
         expect(worldMapScene).toContain('init(data?: WorldMapReturnPayload)');
         expect(worldMapScene).toContain('returnStatusText');
     });
+
+    it('routes runtime Story/Hub session writes through the GameWorldState write boundary without adding restore UI', () => {
+        const hubScene = read('src/game/scenes/hub/HubScene.ts');
+        const storyScene = read('src/game/scenes/story/StoryScene.ts');
+
+        expect(hubScene).toContain('writeGameWorldStateHubSessionSnapshotWithFallbackStorage');
+        expect(hubScene).not.toContain('saveHubSessionSnapshot');
+        expect(storyScene).toContain('writeGameWorldStateStoryRuntimeSessionWithFallbackStorage');
+        expect(storyScene).toContain('clearGameWorldStateStoryRuntimeSessionWithFallbackStorage');
+        expect(storyScene).not.toContain('saveStoryRuntimeSession');
+        expect(storyScene).not.toContain('clearStoryRuntimeSession');
+        expect(hubScene).not.toContain('恢复存档');
+        expect(storyScene).not.toContain('恢复存档');
+    });
 });

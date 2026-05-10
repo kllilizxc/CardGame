@@ -6,6 +6,8 @@ import initialWorldState from '../../../public/data/world/initial-state.json';
 import { resetRunPersistenceForTests } from '../services/RunPersistence';
 import {
     createStoryRuntimeSessionStorageKey,
+    loadHubSessionSnapshot,
+    loadStoryRuntimeSession,
     resetStoryHubSessionPersistenceForTests,
     STORY_HUB_SESSION_SCHEMA_VERSION,
     STORY_HUB_SESSION_STORAGE_KEY,
@@ -16,11 +18,14 @@ import type { StoryState } from '../types/story';
 import { createGameWorldState } from './GameWorldState';
 import {
     applyGameWorldStateStoryHubSessionPlan,
+    clearGameWorldStateStoryRuntimeSessionWithFallbackStorage,
     planGameWorldStateStoryHubSessionWrite,
     planGameWorldStateStoryHubSessionWriteFromDocument,
     planGameWorldStateStoryHubSessionWriteFromView,
+    writeGameWorldStateHubSessionSnapshotWithFallbackStorage,
     writeGameWorldStateStoryHubSessionDocument,
     writeGameWorldStateStoryHubSessionPlan,
+    writeGameWorldStateStoryRuntimeSessionWithFallbackStorage,
 } from './GameWorldStateStoryHubSessionWrite';
 
 class MemoryStorage implements Storage {
@@ -54,7 +59,7 @@ class MemoryStorage implements Storage {
 let previousLocalStorageDescriptor: PropertyDescriptor | undefined;
 let localStorageOverrideActive = false;
 
-function withThrowingAmbientLocalStorage<T>(callback: () => T): T {
+function overrideLocalStorage(descriptor: PropertyDescriptor): void {
     if (!localStorageOverrideActive) {
         previousLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
         localStorageOverrideActive = true;
@@ -62,6 +67,27 @@ function withThrowingAmbientLocalStorage<T>(callback: () => T): T {
 
     Object.defineProperty(globalThis, 'localStorage', {
         configurable: true,
+        ...descriptor,
+    });
+}
+
+function installMemoryStorage(storage = new MemoryStorage()): MemoryStorage {
+    overrideLocalStorage({ value: storage });
+
+    return storage;
+}
+
+function removeAmbientLocalStorageForTest(): void {
+    if (!localStorageOverrideActive) {
+        previousLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+        localStorageOverrideActive = true;
+    }
+
+    delete (globalThis as { localStorage?: Storage }).localStorage;
+}
+
+function withThrowingAmbientLocalStorage<T>(callback: () => T): T {
+    overrideLocalStorage({
         get(): Storage {
             throw new Error('ambient globalThis.localStorage must not be used by GameWorldState Story/Hub writes');
         },
@@ -256,6 +282,136 @@ describe('GameWorldStateStoryHubSessionWrite', () => {
 
         expect(directResult.document).toEqual(plan.document);
         expect(JSON.parse(directStorage.getItem(STORY_HUB_SESSION_STORAGE_KEY) ?? 'null')).toEqual(plan.document);
+    });
+
+    it('uses the accepted write boundary for default-fallback Hub save, Story save, and Story clear without changing key or JSON shape', () => {
+        const ambientStorage = installMemoryStorage();
+        const storyKey = {
+            hubId: 'hub.qingyun-town',
+            actionId: 'action.start-qingyun-entry-story',
+            storyGraphFile: 'data/story/story-graph.json',
+        };
+
+        const hubWrite = writeGameWorldStateHubSessionSnapshotWithFallbackStorage({
+            snapshot: {
+                hubId: 'hub.qingyun-town',
+                currentLocationId: 'location.qingyun-town.teahouse',
+                statusText: '默认 fallback Hub session',
+                updatedAt: '2026-05-09T09:00:00.000Z',
+            },
+        });
+        const storyWrite = writeGameWorldStateStoryRuntimeSessionWithFallbackStorage({
+            snapshot: {
+                ...storyKey,
+                storyState: createStoryState('sect_entry_018_runtime_save'),
+                selectedChoiceIds: ['sect_entry_001_choice_help_girl'],
+                statusText: '默认 fallback Story session',
+                updatedAt: '2026-05-09T09:01:00.000Z',
+            },
+        });
+
+        expect(hubWrite.owner).toBe('storyHubSession');
+        expect(storyWrite.storageKey).toBe(STORY_HUB_SESSION_STORAGE_KEY);
+        expect(ambientStorage.length).toBe(1);
+        expect(ambientStorage.key(0)).toBe(STORY_HUB_SESSION_STORAGE_KEY);
+        expect(JSON.parse(ambientStorage.getItem(STORY_HUB_SESSION_STORAGE_KEY) ?? 'null')).toEqual({
+            schemaVersion: STORY_HUB_SESSION_SCHEMA_VERSION,
+            hubs: {
+                'hub.qingyun-town': {
+                    hubId: 'hub.qingyun-town',
+                    currentLocationId: 'location.qingyun-town.teahouse',
+                    statusText: '默认 fallback Hub session',
+                    updatedAt: '2026-05-09T09:00:00.000Z',
+                },
+            },
+            stories: {
+                [createStoryRuntimeSessionStorageKey(storyKey)]: {
+                    ...storyKey,
+                    storyState: createStoryState('sect_entry_018_runtime_save'),
+                    selectedChoiceIds: ['sect_entry_001_choice_help_girl'],
+                    statusText: '默认 fallback Story session',
+                    updatedAt: '2026-05-09T09:01:00.000Z',
+                },
+            },
+        });
+
+        const clearResult = clearGameWorldStateStoryRuntimeSessionWithFallbackStorage({
+            key: storyKey,
+        });
+
+        expect(clearResult.document).toEqual({
+            schemaVersion: STORY_HUB_SESSION_SCHEMA_VERSION,
+            hubs: {
+                'hub.qingyun-town': {
+                    hubId: 'hub.qingyun-town',
+                    currentLocationId: 'location.qingyun-town.teahouse',
+                    statusText: '默认 fallback Hub session',
+                    updatedAt: '2026-05-09T09:00:00.000Z',
+                },
+            },
+            stories: {},
+        });
+        expect(loadStoryRuntimeSession(storyKey)).toBeNull();
+        expect(loadHubSessionSnapshot('hub.qingyun-town')?.currentLocationId)
+            .toBe('location.qingyun-town.teahouse');
+        expect(ambientStorage.length).toBe(1);
+        expect(ambientStorage.key(0)).toBe(STORY_HUB_SESSION_STORAGE_KEY);
+    });
+
+    it('keeps the no-localStorage memory fallback on the boundary-backed runtime helpers', () => {
+        removeAmbientLocalStorageForTest();
+        resetStoryHubSessionPersistenceForTests();
+
+        writeGameWorldStateHubSessionSnapshotWithFallbackStorage({
+            snapshot: {
+                hubId: 'hub.memory-town',
+                currentLocationId: 'location.memory-town.gate',
+                updatedAt: '2026-05-09T10:00:00.000Z',
+            },
+        });
+
+        expect(loadHubSessionSnapshot('hub.memory-town')).toEqual({
+            hubId: 'hub.memory-town',
+            currentLocationId: 'location.memory-town.gate',
+            updatedAt: '2026-05-09T10:00:00.000Z',
+        });
+    });
+
+    it('can persist a Story/Battle round-trip result snapshot through the Story/Hub write boundary', () => {
+        const storage = new MemoryStorage();
+        const hubSession = {
+            hubId: 'hub.qingyun-town',
+            actionId: 'action.start-qingyun-entry-story',
+            storyGraphFile: 'data/story/story-graph.json',
+        };
+        const document = createStoryHubSessionDocument('sect_entry_019_before_battle');
+        const sessionKey = createStoryRuntimeSessionStorageKey(hubSession);
+        document.stories[sessionKey] = {
+            ...document.stories[sessionKey],
+            ...hubSession,
+            storyState: createStoryState('sect_entry_020_after_battle'),
+            selectedChoiceIds: [
+                'sect_entry_001_choice_help_girl',
+                'sect_entry_004_choice_trial_bell',
+            ],
+            statusText: '战斗胜利，剧情已回到：钟鸣之后',
+            updatedAt: '2026-05-09T10:03:00.000Z',
+        };
+
+        const result = writeGameWorldStateStoryRuntimeSessionWithFallbackStorage({
+            storage,
+            snapshot: document.stories[sessionKey],
+        });
+
+        expect(result.document.stories[sessionKey].storyState.currentNodeId)
+            .toBe('sect_entry_020_after_battle');
+        expect(JSON.parse(storage.getItem(STORY_HUB_SESSION_STORAGE_KEY) ?? 'null')).toEqual({
+            schemaVersion: STORY_HUB_SESSION_SCHEMA_VERSION,
+            hubs: {},
+            stories: {
+                [sessionKey]: document.stories[sessionKey],
+            },
+        });
     });
 
     it('rejects incompatible compatibility metadata before writing', () => {

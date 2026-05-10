@@ -3,9 +3,9 @@ import { Scene } from 'phaser';
 import { EventBus } from '../../EventBus';
 import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import {
-    clearStoryRuntimeSession,
-    saveStoryRuntimeSession,
-} from '../../services/StoryHubSessionPersistence';
+    clearGameWorldStateStoryRuntimeSessionWithFallbackStorage,
+    writeGameWorldStateStoryRuntimeSessionWithFallbackStorage,
+} from '../../state/GameWorldStateStoryHubSessionWrite';
 import type { StoryState } from '../../types/story';
 import {
     createInitialStoryRuntime,
@@ -365,12 +365,14 @@ export class StoryScene extends Scene {
             return;
         }
 
-        saveStoryRuntimeSession({
-            ...this.launchData.hubSession,
-            storyState: cloneStoryState(this.storyState),
-            selectedChoiceIds: [...this.selectedChoiceIds],
-            statusText,
-            updatedAt: new Date().toISOString(),
+        writeGameWorldStateStoryRuntimeSessionWithFallbackStorage({
+            snapshot: {
+                ...this.launchData.hubSession,
+                storyState: cloneStoryState(this.storyState),
+                selectedChoiceIds: [...this.selectedChoiceIds],
+                statusText,
+                updatedAt: new Date().toISOString(),
+            },
         });
     }
 
@@ -379,6 +381,8 @@ export class StoryScene extends Scene {
             return;
         }
 
-        clearStoryRuntimeSession(this.launchData.hubSession);
+        clearGameWorldStateStoryRuntimeSessionWithFallbackStorage({
+            key: this.launchData.hubSession,
+        });
     }
 }

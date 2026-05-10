@@ -5,8 +5,8 @@ import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import {
     loadHubSessionSnapshot,
     loadStoryRuntimeSession,
-    saveHubSessionSnapshot,
 } from '../../services/StoryHubSessionPersistence';
+import { writeGameWorldStateHubSessionSnapshotWithFallbackStorage } from '../../state/GameWorldStateStoryHubSessionWrite';
 import { createWorldMapReturnIntent } from '../worldmap/worldMap';
 import {
     assertHubSceneCatalogResourceMatchesLoadedHub,
@@ -660,11 +660,13 @@ export class HubScene extends Scene {
     }
 
     private persistHubNavigationState(): void {
-        saveHubSessionSnapshot({
-            hubId: this.launchData.hubId,
-            currentLocationId: this.navigationState.currentLocationId,
-            ...(this.navigationState.statusText ? { statusText: this.navigationState.statusText } : {}),
-            updatedAt: new Date().toISOString(),
+        writeGameWorldStateHubSessionSnapshotWithFallbackStorage({
+            snapshot: {
+                hubId: this.launchData.hubId,
+                currentLocationId: this.navigationState.currentLocationId,
+                ...(this.navigationState.statusText ? { statusText: this.navigationState.statusText } : {}),
+                updatedAt: new Date().toISOString(),
+            },
         });
     }
 }

@@ -47,6 +47,12 @@ function getStorageAdapter(storage?: StoryHubSessionStorageAdapter): StoryHubSes
     };
 }
 
+export function resolveStoryHubSessionStorageAdapter(
+    storage?: StoryHubSessionStorageAdapter,
+): StoryHubSessionStorageAdapter {
+    return getStorageAdapter(storage);
+}
+
 function createEmptyDocument(): StoryHubSessionDocument {
     return {
         schemaVersion: STORY_HUB_SESSION_SCHEMA_VERSION,

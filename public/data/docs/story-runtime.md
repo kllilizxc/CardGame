@@ -44,7 +44,7 @@ Missing numeric attributes default to `0`. Missing flags/history entries count a
 
 ## Story / Hub session persistence
 
-`src/game/services/StoryHubSessionPersistence.ts` is the first durable local boundary for Story / Hub session state. It writes versioned JSON to `cardgame.story-hub-session.v1` and owns all direct storage access for this slice.
+`src/game/services/StoryHubSessionPersistence.ts` is the first durable local boundary for Story / Hub session state. It writes versioned JSON to `cardgame.story-hub-session.v1` and owns all direct storage access for this slice. Runtime Hub-location saves and Story runtime-session saves/clears go through `GameWorldStateStoryHubSessionWrite` fallback helpers, which preserve the same localStorage-first / memory fallback and delegate the final document write back to this persistence boundary.
 
 - Hub location snapshots are keyed by `hubId` and store the current location id, optional status text, and update time. A saved location is only restored if it still exists in the current Hub JSON; corrupt or stale storage falls back to the default Hub location. A world-map Hub destination with `targetLocationId` intentionally overrides the saved location and writes that explicit Hub location back to the same snapshot.
 - Story runtime snapshots are keyed by `hubId + actionId + storyGraphFile` and store `StoryState`, selected choice ids, optional status text, and update time. `HubScene` resumes a matching snapshot when the same `startStory` action launches again. The checked-in town shell now uses this to keep the gate-market mainline (`data/story/story-graph.json`) and tea-house side story (`data/story/qingyun-teahouse-rumors.json`) from sharing progress.
