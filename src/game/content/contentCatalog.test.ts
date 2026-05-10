@@ -14,6 +14,12 @@ import {
 } from './contentCatalog';
 import { validateCatalogRouteReferences } from './contentCatalogRouteReferences';
 import {
+    registerGongfaIds,
+    validateCardGongfaReferences,
+    validateGongfaSchemaShapesAndReferences,
+    type GongfaIdRegistry,
+} from './contentCatalogGongfaDefinitions';
+import {
     loadContentCatalogValidationIndex,
     resolveCatalogResourceIdReference,
     validateResourceDomainId,
@@ -888,6 +894,74 @@ describe('content catalog', () => {
                 message: 'Catalog resource hub.expected (hub) domain id mismatch: data/hub/catalog-hub.json declares hubId "hub.actual".',
             },
         ]);
+    });
+
+    it('keeps gongfa ID and schema validation helpers in a focused module', () => {
+        const failures: ContentCatalogValidationFailure[] = [];
+        const gongfaRegistry: GongfaIdRegistry = new Map();
+        const statusRegistry = new Map([
+            [
+                'status.valid',
+                {
+                    resourceId: 'status.definitions',
+                    publicPath: 'data/config/status-definitions.json',
+                    context: 'statuses[0]',
+                },
+            ],
+        ]);
+        const gongfaResource = {
+            entry: {
+                resourceId: 'gongfa.list',
+                kind: 'gongfa' as const,
+                schemaVersion: 1,
+                publicPath: 'data/gongfa/gongfa-list.json',
+            },
+            json: {
+                gongfa: [
+                    {
+                        id: 'gongfa.valid',
+                        schema: {
+                            event: {
+                                type: 'TurnStart',
+                            },
+                            actions: [
+                                {
+                                    type: 'ApplyStatus',
+                                    statusId: 'status.valid',
+                                    target: 'self',
+                                },
+                            ],
+                        },
+                    },
+                ],
+            },
+        };
+
+        registerGongfaIds(gongfaResource, gongfaRegistry, failures);
+        validateGongfaSchemaShapesAndReferences(gongfaResource, statusRegistry, failures);
+        validateCardGongfaReferences(
+            {
+                entry: {
+                    resourceId: 'cards.units',
+                    kind: 'card' as const,
+                    schemaVersion: 1,
+                    publicPath: 'data/cards/units.json',
+                },
+                json: {
+                    units: [
+                        {
+                            id: 'CARD_WITH_GONGFA',
+                            gongfaIds: ['gongfa.valid'],
+                        },
+                    ],
+                },
+            },
+            gongfaRegistry,
+            failures,
+        );
+
+        expect([...gongfaRegistry.keys()]).toEqual(['gongfa.valid']);
+        expect(failures).toEqual([]);
     });
 
     it('keeps route-reference validation helpers in a focused module', () => {
