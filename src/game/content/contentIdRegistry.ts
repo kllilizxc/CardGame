@@ -5,6 +5,8 @@ import type {
 
 type CatalogIdRegistryName = 'card' | 'gongfa' | 'status' | 'world item';
 
+const CANONICAL_STATUS_DEFINITIONS_PUBLIC_PATH = 'data/config/status-definitions.json';
+
 interface CatalogIdResource {
     entry: ContentCatalogEntry;
     json?: unknown;
@@ -79,10 +81,14 @@ function reportMissingRegistryId(
     id: string,
     failures: ContentCatalogValidationFailure[],
 ): void {
+    const missingDeclaration = registryName === 'status'
+        ? `canonical ${CANONICAL_STATUS_DEFINITIONS_PUBLIC_PATH} does not declare that id`
+        : `no catalog ${registryName} resource declares that id`;
+
     addFailure(
         failures,
         ownerEntry,
-        `${context} references ${registryName} id ${id}, but no catalog ${registryName} resource declares that id.`,
+        `${context} references ${registryName} id ${id}, but ${missingDeclaration}.`,
     );
 }
 
@@ -129,7 +135,10 @@ function buildContentIdRegistries(
             registerGongfaIds(resource, registries, failures);
         }
 
-        if (resource.entry.kind === 'status') {
+        if (
+            resource.entry.kind === 'status'
+            && resource.entry.publicPath === CANONICAL_STATUS_DEFINITIONS_PUBLIC_PATH
+        ) {
             registerStatusIds(resource, registries, failures);
         }
 
