@@ -31,6 +31,14 @@ export interface BattleVictoryResolution {
     finalNodeId: string;
 }
 
+export const RUN_RESOLUTION_BOUNDARY_MODULE = 'src/game/services/RunResolution.ts';
+export const RUN_RESOLUTION_TERMINAL_OUTCOMES = ['defeat', 'extract', 'boss-clear'] as const satisfies readonly TerminalRunOutcome[];
+const [
+    RUN_RESOLUTION_DEFEAT_OUTCOME,
+    RUN_RESOLUTION_EXTRACT_OUTCOME,
+    RUN_RESOLUTION_BOSS_CLEAR_OUTCOME,
+] = RUN_RESOLUTION_TERMINAL_OUTCOMES;
+
 function cloneCardStacks(stacks: ExpeditionCardStack[]): ExpeditionCardStack[] {
     return stacks.map((stack) => ({ ...stack }));
 }
@@ -259,13 +267,13 @@ export function resolveBattleVictory(options: RunResolutionOptions = {}): Battle
 }
 
 export function resolveBattleDefeat(options: RunResolutionOptions = {}): RunResolutionSummary {
-    return resolveTerminalOutcome('defeat', options);
+    return resolveTerminalOutcome(RUN_RESOLUTION_DEFEAT_OUTCOME, options);
 }
 
 export function resolveExtract(options: RunResolutionOptions = {}): RunResolutionSummary {
-    return resolveTerminalOutcome('extract', options);
+    return resolveTerminalOutcome(RUN_RESOLUTION_EXTRACT_OUTCOME, options);
 }
 
 export function resolveBossClear(options: RunResolutionOptions = {}): RunResolutionSummary {
-    return resolveTerminalOutcome('boss-clear', options);
+    return resolveTerminalOutcome(RUN_RESOLUTION_BOSS_CLEAR_OUTCOME, options);
 }

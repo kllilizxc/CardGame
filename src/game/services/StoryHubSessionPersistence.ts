@@ -148,6 +148,24 @@ function cloneStoryRuntimeSessionSnapshot(snapshot: StoryRuntimeSessionSnapshot)
     };
 }
 
+function cloneStoryHubSessionDocument(document: StoryHubSessionDocument): StoryHubSessionDocument {
+    return {
+        schemaVersion: STORY_HUB_SESSION_SCHEMA_VERSION,
+        hubs: Object.fromEntries(
+            Object.entries(document.hubs).map(([hubId, snapshot]) => [
+                hubId,
+                cloneHubSessionSnapshot(snapshot),
+            ]),
+        ),
+        stories: Object.fromEntries(
+            Object.entries(document.stories).map(([sessionKey, snapshot]) => [
+                sessionKey,
+                cloneStoryRuntimeSessionSnapshot(snapshot),
+            ]),
+        ),
+    };
+}
+
 function parseHubSessions(value: unknown): Record<string, HubSessionSnapshot> | null {
     if (!isRecord(value)) {
         return null;
@@ -233,6 +251,10 @@ export function createStoryRuntimeSessionStorageKey(key: StoryHubSessionKey): st
     return [key.hubId, key.actionId, key.storyGraphFile]
         .map((part) => encodeURIComponent(part))
         .join('|');
+}
+
+export function loadStoryHubSessionDocumentSnapshot(): StoryHubSessionDocument {
+    return cloneStoryHubSessionDocument(loadDocument());
 }
 
 export function loadHubSessionSnapshot(hubId: string): HubSessionSnapshot | null {

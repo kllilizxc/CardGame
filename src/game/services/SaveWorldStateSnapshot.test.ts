@@ -1,0 +1,246 @@
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+
+import initialWorldState from '../../../public/data/world/initial-state.json';
+import starterDeckJson from '../../../public/data/decks/starter-deck.json';
+
+import { ExpeditionState } from '../state/ExpeditionState';
+import type { RunSnapshot } from '../types/expedition';
+import type { StoryState } from '../types/story';
+import {
+    createActiveRunCompatibilityKeys,
+    SAVE_COMPATIBILITY_REGISTRY,
+} from './SaveCompatibility';
+import {
+    createActiveRunRouteKey,
+    createActiveRunStorageKey,
+    loadActiveRun,
+    loadPersistentStash,
+    resetRunPersistenceForTests,
+    STASH_STORAGE_KEY,
+} from './RunPersistence';
+import { RUN_RESOLUTION_TERMINAL_OUTCOMES } from './RunResolution';
+import {
+    resetStoryHubSessionPersistenceForTests,
+    saveHubSessionSnapshot,
+    saveStoryRuntimeSession,
+    STORY_HUB_SESSION_SCHEMA_VERSION,
+    STORY_HUB_SESSION_STORAGE_KEY,
+    writeRawStoryHubSessionForTests,
+} from './StoryHubSessionPersistence';
+import { createSaveWorldStateSnapshot } from './SaveWorldStateSnapshot';
+
+const DEFAULT_TARGET = {
+    expeditionId: 'phase01-first-playable-expedition',
+    mapId: 'phase01-prototype-map',
+};
+
+const SYNTHETIC_TARGET = {
+    expeditionId: 'synthetic-expedition',
+    mapId: 'synthetic-map',
+};
+
+class MemoryStorage implements Storage {
+    private readonly values = new Map<string, string>();
+
+    get length(): number {
+        return this.values.size;
+    }
+
+    clear(): void {
+        this.values.clear();
+    }
+
+    getItem(key: string): string | null {
+        return this.values.get(key) ?? null;
+    }
+
+    key(index: number): string | null {
+        return [...this.values.keys()][index] ?? null;
+    }
+
+    removeItem(key: string): void {
+        this.values.delete(key);
+    }
+
+    setItem(key: string, value: string): void {
+        this.values.set(key, value);
+    }
+
+    keys(): string[] {
+        return [...this.values.keys()];
+    }
+}
+
+let previousLocalStorageDescriptor: PropertyDescriptor | undefined;
+let storage: MemoryStorage;
+
+function installMemoryStorage(): void {
+    previousLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    storage = new MemoryStorage();
+
+    Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        value: storage,
+    });
+}
+
+function restoreLocalStorage(): void {
+    if (previousLocalStorageDescriptor) {
+        Object.defineProperty(globalThis, 'localStorage', previousLocalStorageDescriptor);
+    } else {
+        delete (globalThis as { localStorage?: Storage }).localStorage;
+    }
+}
+
+function createStoryState(nodeId = 'sect_entry_003_help_girl'): StoryState {
+    return {
+        storyId: 'story.qingyun-entry',
+        currentLocationId: 'location.qingyun-gate',
+        currentSublocationId: 'sublocation.qingyun.queue-edge',
+        currentNodeId: nodeId,
+        visitedNodeIds: ['sect_entry_001', nodeId],
+        triggeredDialogueIds: ['dialogue.frail_girl.intro'],
+        flags: {
+            'story.sect_entry.helped_frail_girl': true,
+        },
+        attributes: {
+            心性: 56,
+        },
+        relations: {
+            'npc.frail-girl': 5,
+        },
+    };
+}
+
+function startRun(
+    targetIdentity: { expeditionId: string; mapId: string } = DEFAULT_TARGET,
+    entryNodeId = targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'entrance.mountain-gate' : 'entrance.synthetic',
+): { state: ExpeditionState; run: RunSnapshot } {
+    const state = ExpeditionState.bootstrap({
+        worldState: structuredClone(initialWorldState),
+        starterDeck: structuredClone(starterDeckJson),
+        targetIdentity,
+    });
+    const run = state.createRunSnapshot({
+        ...targetIdentity,
+        entryNodeId,
+    });
+
+    return { state, run };
+}
+
+function writeStaleActiveRun(targetIdentity: { expeditionId: string; mapId: string }): string {
+    const storageKey = createActiveRunStorageKey(targetIdentity);
+
+    storage.setItem(storageKey, JSON.stringify({
+        runId: 'run-stale-route',
+        expeditionId: 'other-expedition',
+        mapId: 'other-map',
+    }));
+
+    return storageKey;
+}
+
+describe('SaveWorldStateSnapshot', () => {
+    beforeEach(() => {
+        installMemoryStorage();
+        resetRunPersistenceForTests();
+        resetStoryHubSessionPersistenceForTests();
+    });
+
+    afterEach(() => {
+        resetRunPersistenceForTests();
+        resetStoryHubSessionPersistenceForTests();
+        restoreLocalStorage();
+    });
+
+    it('builds one read-only compatibility view from the existing local persistence slices', () => {
+        saveHubSessionSnapshot({
+            hubId: 'hub.qingyun-town',
+            currentLocationId: 'location.qingyun-town.teahouse',
+            statusText: '你穿过集市，来到茶棚边听散修议论今日试炼。',
+            updatedAt: '2026-05-09T06:00:00.000Z',
+        });
+        saveStoryRuntimeSession({
+            hubId: 'hub.qingyun-town',
+            actionId: 'action.start-qingyun-entry-story',
+            storyGraphFile: 'data/story/story-graph.json',
+            storyState: createStoryState(),
+            selectedChoiceIds: ['sect_entry_001_choice_help_girl'],
+            statusText: '已选择：注意到队伍中有一名体弱少女，主动上前搭话。',
+            updatedAt: '2026-05-09T06:01:00.000Z',
+        });
+        const { state, run } = startRun();
+        state.applyNodeRewardPreview({
+            cards: [{ id: 'TL_002', count: 1 }],
+            items: [],
+            spiritStones: 7,
+        });
+        const storageKeysBeforeSnapshot = storage.keys().sort();
+
+        const snapshot = createSaveWorldStateSnapshot({ activeRunIdentity: DEFAULT_TARGET });
+
+        expect(snapshot.registry).toBe(SAVE_COMPATIBILITY_REGISTRY);
+        expect(snapshot.storyHubSession.compatibility).toBe(SAVE_COMPATIBILITY_REGISTRY.storyHubSession);
+        expect(snapshot.storyHubSession.document.hubs['hub.qingyun-town']).toMatchObject({
+            hubId: 'hub.qingyun-town',
+            currentLocationId: 'location.qingyun-town.teahouse',
+        });
+        expect(Object.keys(snapshot.storyHubSession.document.stories)).toEqual([
+            'hub.qingyun-town|action.start-qingyun-entry-story|data%2Fstory%2Fstory-graph.json',
+        ]);
+        expect(snapshot.persistentStash.compatibility).toBe(SAVE_COMPATIBILITY_REGISTRY.persistentStash);
+        expect(snapshot.persistentStash.document).toEqual(loadPersistentStash());
+        expect(snapshot.activeRun.compatibility).toBe(SAVE_COMPATIBILITY_REGISTRY.activeRun);
+        expect(snapshot.activeRun.keys).toEqual(createActiveRunCompatibilityKeys(undefined, DEFAULT_TARGET));
+        expect(snapshot.activeRun.document?.runId).toBe(run.runId);
+        expect(snapshot.activeRun.document?.carriedDeck).toContainEqual({ id: 'TL_002', count: 1 });
+        expect(snapshot.runResolution.boundaryModule).toBe('src/game/services/RunResolution.ts');
+        expect(snapshot.runResolution.terminalOutcomes).toBe(RUN_RESOLUTION_TERMINAL_OUTCOMES);
+        expect(loadActiveRun(DEFAULT_TARGET)?.runId).toBe(run.runId);
+        expect(loadPersistentStash()?.lastRunSummary).toBeNull();
+        expect(storage.keys().sort()).toEqual(storageKeysBeforeSnapshot);
+    });
+
+    it('selects the requested route-keyed active run while keeping the persistent stash global', () => {
+        const defaultRun = startRun(DEFAULT_TARGET).run;
+        const syntheticRun = startRun(SYNTHETIC_TARGET).run;
+
+        const syntheticSnapshot = createSaveWorldStateSnapshot({
+            activeRunIdentity: SYNTHETIC_TARGET,
+        });
+        const defaultSnapshot = createSaveWorldStateSnapshot({
+            activeRunLookup: createActiveRunRouteKey(DEFAULT_TARGET),
+        });
+
+        expect(syntheticSnapshot.activeRun.keys.routeKey).toBe('expedition:synthetic-expedition:synthetic-map');
+        expect(syntheticSnapshot.activeRun.document?.runId).toBe(syntheticRun.runId);
+        expect(defaultSnapshot.activeRun.keys.routeKey).toBe('expedition:phase01-first-playable-expedition:phase01-prototype-map');
+        expect(defaultSnapshot.activeRun.document?.runId).toBe(defaultRun.runId);
+        expect(syntheticSnapshot.persistentStash.document?.stashId).toBe('phase01.starter-stash');
+        expect(defaultSnapshot.persistentStash.document).toEqual(syntheticSnapshot.persistentStash.document);
+    });
+
+    it('uses the current owner fallback semantics for stale or corrupt persisted slices', () => {
+        writeRawStoryHubSessionForTests(JSON.stringify({
+            schemaVersion: 0,
+            hubs: {},
+            stories: {},
+        }));
+        storage.setItem(STASH_STORAGE_KEY, '{not valid json');
+        const staleActiveRunStorageKey = writeStaleActiveRun(DEFAULT_TARGET);
+
+        const snapshot = createSaveWorldStateSnapshot({ activeRunIdentity: DEFAULT_TARGET });
+
+        expect(snapshot.storyHubSession.document).toEqual({
+            schemaVersion: STORY_HUB_SESSION_SCHEMA_VERSION,
+            hubs: {},
+            stories: {},
+        });
+        expect(storage.getItem(STORY_HUB_SESSION_STORAGE_KEY)).toBeNull();
+        expect(snapshot.persistentStash.document).toBeNull();
+        expect(storage.getItem(STASH_STORAGE_KEY)).toBeNull();
+        expect(snapshot.activeRun.document).toBeNull();
+        expect(storage.getItem(staleActiveRunStorageKey)).toBeNull();
+    });
+});
