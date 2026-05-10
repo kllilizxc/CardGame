@@ -186,14 +186,19 @@ export class FieldManager {
         // 根据作用范围选择目标
         if (scope === 'allUnits') {
             targetUnits = [...playerUnits, ...enemyUnits];
-        } else if (scope === 'allyUnits') {
+        } else if (scope === 'allyUnits' || scope === 'allAllies') {
             targetUnits = isPlayerTurn ? playerUnits : enemyUnits;
-        } else if (scope === 'enemyUnits') {
+        } else if (scope === 'enemyUnits' || scope === 'allEnemies') {
             targetUnits = isPlayerTurn ? enemyUnits : playerUnits;
         }
 
         // 对称场地效果对双方都生效
-        if (isSymmetric && (scope === 'allyUnits' || scope === 'enemyUnits')) {
+        if (isSymmetric && (
+            scope === 'allyUnits'
+            || scope === 'allAllies'
+            || scope === 'enemyUnits'
+            || scope === 'allEnemies'
+        )) {
             targetUnits = [...playerUnits, ...enemyUnits];
         }
 

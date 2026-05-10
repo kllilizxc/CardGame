@@ -6,6 +6,7 @@ import type { BattleLog } from '../../ui/battle/BattleLog';
 import type { CardManager } from '../../managers/battle/CardManager';
 import type { DeckSelectionUI } from '../../ui/common/DeckSelectionUI';
 import type { BattleAnimationManager } from '../../managers/battle/BattleAnimationManager';
+import type { StatusManager } from '../../managers/battle/StatusManager';
 import { getStatusDefinition } from '../../utils/StatusHelper';
 import type { ArtifactCard } from '@data/types/cards/artifact';
 import type { UnitCard } from '@data/types/cards/unit';
@@ -15,6 +16,7 @@ import type { PillCard } from '@data/types/cards/pill';
 import type { LegacyEffectAction } from '@data/types/cards/effects';
 
 type GameActionCard = UnitCard | ArtifactCard | TalismanCard | FieldCard | PillCard;
+type SceneWithStatusManager = Scene & { statusManager?: StatusManager };
 
 /**
  * 游戏动作处理上下文
@@ -93,7 +95,7 @@ export class GameActionHandler {
 
                     if (sprite) {
                         hand.push(sprite);
-                        cardManager.arrangeHand(hand as any);
+                        cardManager.arrangeHand(hand);
                         battleLog.addLog(`检索了【${card.name}】`);
                         updateDeckCount();
                     }
@@ -195,7 +197,7 @@ export class GameActionHandler {
 
                     if (sprite) {
                         hand.push(sprite);
-                        cardManager.arrangeHand(hand as any);
+                        cardManager.arrangeHand(hand);
                         battleLog.addLog(`从弃牌堆回收了【${card.name}】`);
                     }
                 }
@@ -214,7 +216,7 @@ export class GameActionHandler {
         const sprite = CardSpriteFactory.createSprite(scene, cardData, 0, 0, cardScale);
         if (sprite) {
             hand.push(sprite);
-            cardManager.arrangeHand(hand as any);
+            cardManager.arrangeHand(hand);
             battleLog.addLog(`获得了【${cardData.name}】`);
             return true;
         }
@@ -381,15 +383,14 @@ export class GameActionHandler {
         const { battleLog, scene } = this.context;
         const targetData = target.getCardData();
         
-        // 获取 statusManager
-        const battleScene = scene as any;
-        if (!battleScene.statusManager) {
+        const statusManager = this.getStatusManager(scene);
+        if (!statusManager) {
             console.warn('StatusManager not available');
             return;
         }
 
         // 施加状态
-        const success = battleScene.statusManager.applyStatus(
+        const success = statusManager.applyStatus(
             targetData.id,
             statusId,
             stacks
@@ -408,7 +409,7 @@ export class GameActionHandler {
             );
 
             // 更新状态显示UI
-            const statuses = battleScene.statusManager.getUnitStatuses(targetData.id);
+            const statuses = statusManager.getUnitStatuses(targetData.id);
             target.updateStatusDisplay(statuses);
         }
     }
@@ -420,15 +421,14 @@ export class GameActionHandler {
         const { battleLog, scene } = this.context;
         const targetData = target.getCardData();
         
-        // 获取 statusManager
-        const battleScene = scene as any;
-        if (!battleScene.statusManager) {
+        const statusManager = this.getStatusManager(scene);
+        if (!statusManager) {
             console.warn('StatusManager not available');
             return;
         }
 
         // 移除所有负面状态
-        battleScene.statusManager.clearDebuffs(targetData.id);
+        statusManager.clearDebuffs(targetData.id);
 
         // 记录日志
         const cardRefs = sourceCard ? [sourceCard, target] : [target];
@@ -438,8 +438,12 @@ export class GameActionHandler {
         );
 
         // 更新状态显示UI
-        const statuses = battleScene.statusManager.getUnitStatuses(targetData.id);
+        const statuses = statusManager.getUnitStatuses(targetData.id);
         target.updateStatusDisplay(statuses);
+    }
+
+    private getStatusManager(scene: Scene): StatusManager | undefined {
+        return (scene as SceneWithStatusManager).statusManager;
     }
 
     /**

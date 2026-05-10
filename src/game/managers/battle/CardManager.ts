@@ -10,6 +10,7 @@ import type { FieldCard } from '@data/types/cards/field';
 import type { BattleLayoutConfig } from '../../config/LayoutConfig';
 import type { BattleLog } from '../../ui/battle/BattleLog';
 import type { BattleAnimationManager } from './BattleAnimationManager';
+import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 
 type DrawCardData = UnitCard | ArtifactCard | TalismanCard | FieldCard;
 type CardSpriteData = CardSprite | ArtifactSprite | TalismanSprite | FieldSprite;
@@ -86,7 +87,7 @@ export class CardManager {
     }
 
     // 排列手牌
-    public arrangeHand(hand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[]): void {
+    public arrangeHand(hand: BaseCardSprite[]): void {
         const layoutZone = this.layout?.handZone;
         if (layoutZone) {
             const y = layoutZone.y;

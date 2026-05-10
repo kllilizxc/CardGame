@@ -139,6 +139,7 @@ export type EffectTiming =
   | 'onSummon'
   | 'onDeath'
   | 'onAttack'
+  | 'onKill'
   | 'onDamaged'
   | 'turnStart'
   | 'turnEnd'
@@ -154,6 +155,8 @@ export type EffectTargetScope =
   | 'allEnemies'
   | 'singleAlly'
   | 'singleEnemy'
+  | 'attackTarget'
+  | 'damageSource'
   | 'allUnits'
   | 'none';
 
@@ -183,6 +186,7 @@ export type LegacyEffectActionType =
   | 'dealDamage'
   | 'heal'
   | 'drawCards'
+  | 'searchDeck'
   | 'healPlayer'
   | 'damagePlayer'
   | 'applyStatus'
@@ -190,13 +194,54 @@ export type LegacyEffectActionType =
   | 'destroyUnit'
   | 'custom';
 
-export interface LegacyEffectAction {
-  type: LegacyEffectActionType;
-  value?: number;
+interface LegacyEffectActionBase {
   statusId?: string;
   stacks?: number;
   scriptId?: string;
 }
+
+type LegacyValueEffectActionType =
+  | 'modifyAttack'
+  | 'modifyHealth'
+  | 'dealDamage'
+  | 'heal'
+  | 'drawCards'
+  | 'searchDeck'
+  | 'healPlayer'
+  | 'damagePlayer';
+
+export interface LegacyValueEffectAction extends LegacyEffectActionBase {
+  type: LegacyValueEffectActionType;
+  value: number;
+}
+
+export interface LegacyApplyStatusEffectAction extends LegacyEffectActionBase {
+  type: 'applyStatus';
+  statusId: string;
+  value?: number;
+}
+
+export interface LegacyRemoveDebuffsEffectAction extends LegacyEffectActionBase {
+  type: 'removeDebuffs';
+  value?: number;
+}
+
+export interface LegacyDestroyUnitEffectAction extends LegacyEffectActionBase {
+  type: 'destroyUnit';
+  value?: number;
+}
+
+export interface LegacyCustomEffectAction extends LegacyEffectActionBase {
+  type: 'custom';
+  value?: number;
+}
+
+export type LegacyEffectAction =
+  | LegacyValueEffectAction
+  | LegacyApplyStatusEffectAction
+  | LegacyRemoveDebuffsEffectAction
+  | LegacyDestroyUnitEffectAction
+  | LegacyCustomEffectAction;
 
 // 兼容结构：旧字段 + 新 schema
 export interface CardEffect {

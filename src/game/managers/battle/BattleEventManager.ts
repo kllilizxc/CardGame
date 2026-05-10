@@ -145,17 +145,18 @@ export class BattleEventManager {
                 this.highlightedTargetSide = targetSide;
                 
                 if (target) {
-                    this.targetHighlight = this.scene.add.graphics();
+                    const targetHighlight = this.scene.add.graphics();
+                    this.targetHighlight = targetHighlight;
                     const color = targetSide === 'ally' ? 0x3498db : 0x00ff00;
-                    this.targetHighlight.lineStyle(4, color, 1);
-                    this.targetHighlight.setDepth(999);
+                    targetHighlight.lineStyle(4, color, 1);
+                    targetHighlight.setDepth(999);
 
                     // 如果是群体目标，高亮所有相应单位
                     if (highlightAllUnits) {
                         const unitsToHighlight = targetSide === 'ally' ? this.playerField : this.enemyField;
                         unitsToHighlight.forEach(unit => {
                             const bounds = unit.getBounds();
-                            this.targetHighlight!.strokeRoundedRect(
+                            targetHighlight.strokeRoundedRect(
                                 bounds.x,
                                 bounds.y,
                                 bounds.width,
@@ -166,7 +167,7 @@ export class BattleEventManager {
                     } else {
                         // 单体目标，只高亮当前单位
                         const bounds = target.getBounds();
-                        this.targetHighlight.strokeRoundedRect(
+                        targetHighlight.strokeRoundedRect(
                             bounds.x,
                             bounds.y,
                             bounds.width,
