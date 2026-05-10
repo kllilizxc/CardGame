@@ -3,10 +3,10 @@ import { describe, expect, it } from 'bun:test';
 import initialWorldState from '../../../public/data/world/initial-state.json';
 import starterDeckJson from '../../../public/data/decks/starter-deck.json';
 
-import type { ExpeditionItemStack } from '../types/expedition';
+import { createItemStacksFromSeed } from '../testing/fixtures/expeditionWorldStateFixtures';
 import { createPersistentStashFromWorldStateSeed } from './GameWorldStateSeed';
 
-const initialWorldStateStashItems = initialWorldState.stash.items as unknown as ExpeditionItemStack[];
+const initialWorldStateStashItems = createItemStacksFromSeed(initialWorldState.stash.items);
 
 describe('GameWorldStateSeed', () => {
     it('creates a persistent stash from the checked-in world seed and starter deck', () => {

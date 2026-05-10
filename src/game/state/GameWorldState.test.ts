@@ -33,6 +33,7 @@ import { createGameWorldState } from './GameWorldState';
 import { createPersistentStashFromWorldStateSeed } from './GameWorldStateSeed';
 import {
     DEFAULT_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
     SYNTHETIC_EXPEDITION_TARGET,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 
@@ -291,9 +292,9 @@ describe('GameWorldState', () => {
         });
 
         expect(worldState.activeRun.identity).toEqual(SYNTHETIC_TARGET);
-        expect(worldState.activeRun.keys.routeKey).toBe('expedition:synthetic-expedition:synthetic-map');
+        expect(worldState.activeRun.keys.routeKey).toBe(SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY);
         expect(worldState.activeRun.keys.canonicalStorageKey).toBe(
-            'cardgame.active-run.v1:expedition:synthetic-expedition:synthetic-map',
+            createActiveRunStorageKey(SYNTHETIC_TARGET),
         );
         expect(worldState.activeRun.document).toBeNull();
     });

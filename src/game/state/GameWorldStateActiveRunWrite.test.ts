@@ -23,6 +23,7 @@ import {
     createRunSnapshot as createRunSnapshotFixture,
     OTHER_EXPEDITION_TARGET,
     SYNTHETIC_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 
 const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
@@ -156,11 +157,11 @@ describe('GameWorldStateActiveRunWrite', () => {
         });
 
         expect(plan.operation).toBe('save');
-        expect(plan.routeKey).toBe('expedition:synthetic-expedition:synthetic-map');
+        expect(plan.routeKey).toBe(SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY);
         expect(plan.canonicalStorageKey).toBe(createActiveRunStorageKey(SYNTHETIC_TARGET));
         expect(plan.legacyUnscopedStorageKey).toBe(ACTIVE_RUN_STORAGE_KEY);
         expect(plan.legacyRouteStorageKeys).toEqual([LEGACY_ROUTE_STORAGE_KEY]);
-        expect(plan.document?.routeKey).toBe('expedition:synthetic-expedition:synthetic-map');
+        expect(plan.document?.routeKey).toBe(SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY);
         expect(storage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET))).toBeNull();
 
         activeRun.carriedDeck[0].count = 999;

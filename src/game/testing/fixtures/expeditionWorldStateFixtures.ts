@@ -13,7 +13,13 @@ import type {
     RunSnapshot,
 } from '../../types/expedition';
 
-type NullableRunId = string | null;
+export type NullableRunId = string | null;
+
+interface WorldStateSeedItemStack {
+    id: string;
+    itemType: string;
+    count: number;
+}
 
 export const DEFAULT_EXPEDITION_TARGET: ExpeditionRouteIdentity = {
     expeditionId: 'phase01-first-playable-expedition',
@@ -48,7 +54,18 @@ export function createItemStack(
     return { id, itemType, count };
 }
 
-export function createTestStoryHubDocument(statusText: string, updatedAt = DEFAULT_STORY_HUB_SESSION_UPDATED_AT): StoryHubSessionDocument {
+export function createItemStacksFromSeed(stacks: readonly WorldStateSeedItemStack[]): ExpeditionItemStack[] {
+    return stacks.map((stack) => createItemStack(
+        stack.id,
+        stack.itemType as ExpeditionItemType,
+        stack.count,
+    ));
+}
+
+export function createTestStoryHubDocument(
+    statusText: string,
+    updatedAt = DEFAULT_STORY_HUB_SESSION_UPDATED_AT,
+): StoryHubSessionDocument {
     return {
         schemaVersion: STORY_HUB_SESSION_SCHEMA_VERSION,
         hubs: {
@@ -64,35 +81,37 @@ export function createTestStoryHubDocument(statusText: string, updatedAt = DEFAU
 }
 
 export function createTestPersistentStash(overrides: Partial<PersistentStash> = {}): PersistentStash {
-    return {
+    const base: PersistentStash = {
         stashId: 'test-stash',
         deckRef: 'test-deck',
         deck: [{ id: 'TEST_CARD', count: 2 }],
-        items: [{ id: 'tool.return-rope', itemType: 'tool', count: 1 }],
+        items: [createItemStack('tool.return-rope', 'tool', 1)],
         spiritStones: 10,
         lastRunSummary: null,
         ...overrides,
     };
+
+    return base satisfies PersistentStash;
 }
 
 export function createTestRewardBundle(overrides: Partial<RunRewardBundle> = {}): RunRewardBundle {
-    return {
-        cards: [
-            { id: 'CARD_A', count: 1 },
-        ],
+    const base: RunRewardBundle = {
+        cards: [{ id: 'CARD_A', count: 1 }],
         items: [
             createItemStack('item.rope', 'tool', 1),
         ],
         spiritStones: 0,
         ...overrides,
     };
+
+    return base satisfies RunRewardBundle;
 }
 
 export function createTestShopOffer(overrides: Partial<PrototypeShopOffer> = {}): PrototypeShopOffer {
-    return {
+    const base: PrototypeShopOffer = {
         id: 'offer.default',
         label: '默认商店奖励',
-        description: '用于测试场景的默认商店奖励。',
+        description: '用于世界状态测试输入统一的默认商店。',
         cost: {
             spiritStones: 0,
         },
@@ -103,20 +122,24 @@ export function createTestShopOffer(overrides: Partial<PrototypeShopOffer> = {})
         },
         ...overrides,
     };
+
+    return base satisfies PrototypeShopOffer;
 }
 
 export function createTestShopDefinition(overrides: Partial<PrototypeShopDefinition> = {}): PrototypeShopDefinition {
-    return {
+    const base: PrototypeShopDefinition = {
         nodeId: 'shop.test',
         title: '测试商店',
         description: '用于世界状态测试输入统一的默认商店。',
         offers: [createTestShopOffer()],
         ...overrides,
     };
+
+    return base satisfies PrototypeShopDefinition;
 }
 
 export function createTestEventDefinition(overrides: Partial<PrototypeEventDefinition> = {}): PrototypeEventDefinition {
-    return {
+    const base: PrototypeEventDefinition = {
         nodeId: 'event.test',
         title: '测试事件',
         description: '用于世界状态测试输入统一的默认事件。',
@@ -131,13 +154,16 @@ export function createTestEventDefinition(overrides: Partial<PrototypeEventDefin
         ],
         ...overrides,
     };
+
+    return base satisfies PrototypeEventDefinition;
 }
 
 export interface RunSnapshotBuilderOptions extends Omit<Partial<RunSnapshot>, 'expeditionId' | 'mapId' | 'routeKey' | 'runId'> {
     runId?: string;
 }
 
-export interface RunSnapshotStorageBuilderOptions extends Omit<Partial<RunSnapshot>, 'expeditionId' | 'mapId' | 'routeKey'> {
+export interface RunSnapshotStorageBuilderOptions
+    extends Omit<Partial<RunSnapshot>, 'expeditionId' | 'mapId' | 'routeKey'> {
     runId?: NullableRunId;
 }
 
@@ -157,7 +183,7 @@ export function createRunSnapshotFixture(
         ...overrides
     } = options;
 
-    return {
+    const fixture = {
         runId,
         routeKey: createActiveRunRouteKey(identity),
         expeditionId: identity.expeditionId,
@@ -166,11 +192,11 @@ export function createRunSnapshotFixture(
         currentNodeId,
         startingLoadout: {
             cards: [{ id: 'CARD_A', count: 2 }],
-            items: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
+            items: [createItemStack('item.rope', 'tool', 1)],
             spiritStones: 0,
         },
         carriedDeck: [{ id: 'CARD_A', count: 3 }],
-        carriedItems: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
+        carriedItems: [createItemStack('item.rope', 'tool', 1)],
         spiritStones: 12,
         visitedNodeIds: [currentNodeId],
         nodeStates: {
@@ -183,7 +209,9 @@ export function createRunSnapshotFixture(
         },
         startedAt: DEFAULT_WORLD_RUN_STARTED_AT,
         ...overrides,
-    };
+    } satisfies RunSnapshotStorageFixture;
+
+    return fixture;
 }
 
 export function createRunSnapshot(
@@ -192,8 +220,10 @@ export function createRunSnapshot(
 ): RunSnapshot {
     const fixture = createRunSnapshotFixture(identity, options as RunSnapshotStorageBuilderOptions);
 
-    return {
+    const snapshot = {
         ...fixture,
         runId: fixture.runId ?? createRunId('run'),
-    };
+    } satisfies RunSnapshot;
+
+    return snapshot;
 }

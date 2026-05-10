@@ -5,7 +5,7 @@ import starterDeckJson from '../../../../public/data/decks/starter-deck.json';
 
 import { resetRunPersistenceForTests } from '../../services/RunPersistence';
 import { ExpeditionState } from '../../state/ExpeditionState';
-import type { ExpeditionItemType } from '../../types/expedition';
+import { createItemStack } from '../../testing/fixtures/expeditionWorldStateFixtures';
 import {
     createPostRunEntranceStatus,
     createPreparationSummary,
@@ -84,12 +84,12 @@ describe('entryFlowModel', () => {
             endedAt: '2026-05-08T12:00:00.000Z',
             kept: {
                 cards: [{ id: 'AR_001', count: 1 }],
-                items: [{ id: 'artifact_fly_sword_basic', itemType: 'artifact' as ExpeditionItemType, count: 1 }],
+                items: [createItemStack('artifact_fly_sword_basic', 'artifact', 1)],
                 spiritStones: 12,
             },
             lost: {
                 cards: [{ id: 'TL_002', count: 1 }],
-                items: [{ id: 'tool_talisman_basic', itemType: 'tool' as ExpeditionItemType, count: 1 }],
+                items: [createItemStack('tool_talisman_basic', 'tool', 1)],
                 spiritStones: 6,
             },
         };
@@ -119,7 +119,7 @@ describe('entryFlowModel', () => {
             stashId: 'phase01.starter-stash',
             deckRef: 'starter-deck',
             deck: [{ id: 'AR_001', count: 2 }],
-            items: [{ id: 'tool_talisman_basic', itemType: 'tool' as ExpeditionItemType, count: 1 }],
+            items: [createItemStack('tool_talisman_basic', 'tool', 1)],
             spiritStones: 24,
             lastRunSummary: null,
         };

@@ -9,6 +9,7 @@ import worldMapJson from '../../../public/data/world/world-map.json';
 import {
     ACTIVE_RUN_STORAGE_KEY,
     createActiveRunStorageKey,
+    createActiveRunRouteKey,
     loadActiveRun,
     loadPersistentStash,
     resetRunPersistenceForTests,
@@ -26,16 +27,19 @@ import type {
 import { ExpeditionState } from './ExpeditionState';
 import {
     DEFAULT_EXPEDITION_TARGET,
+    DEFAULT_EXPEDITION_TARGET_ROUTE_KEY,
     SYNTHETIC_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
     createRunSnapshot as createRunSnapshotFixture,
     createTestPersistentStash,
+    createItemStacksFromSeed,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 
 const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
 const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
 const LEGACY_ROUTE_LOOKUP = 'worldMap:destination.synthetic-expedition';
 const LEGACY_ROUTE_STORAGE_KEY = `${ACTIVE_RUN_STORAGE_KEY}:${LEGACY_ROUTE_LOOKUP}`;
-const initialWorldStateStashItems = initialWorldState.stash.items as unknown as ExpeditionItemStack[];
+const initialWorldStateStashItems = createItemStacksFromSeed(initialWorldState.stash.items);
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -277,7 +281,7 @@ describe('ExpeditionState', () => {
         ) as RunSnapshot;
 
         expect(storedRun.runId).toBe(run.runId);
-        expect(storedRun.routeKey).toBe('expedition:synthetic-expedition:synthetic-map');
+        expect(storedRun.routeKey).toBe(SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY);
         expect(state.activeRun).toEqual(storedRun);
         expect(injectedStorage.getItem(ACTIVE_RUN_STORAGE_KEY)).toBeNull();
         expect(injectedStorage.getItem(LEGACY_ROUTE_STORAGE_KEY)).toBeNull();
@@ -426,7 +430,7 @@ describe('ExpeditionState', () => {
             activeRunIdentity: jadeCaveTarget,
         });
 
-        expect(outerMountainRun.routeKey).toBe('expedition:phase01-first-playable-expedition:phase01-prototype-map');
+        expect(outerMountainRun.routeKey).toBe(DEFAULT_EXPEDITION_TARGET_ROUTE_KEY);
         expect(jadeCaveState.activeRun).toBeNull();
 
         const jadeCaveRun = jadeCaveState.createRunSnapshot({
@@ -446,7 +450,7 @@ describe('ExpeditionState', () => {
             activeRunIdentity: jadeCaveTarget,
         });
 
-        expect(jadeCaveRun.routeKey).toBe('expedition:phase01-jade-cave-expedition:phase01-jade-cave-map');
+        expect(jadeCaveRun.routeKey).toBe(createActiveRunRouteKey(jadeCaveTarget));
         expect(loadActiveRun(outerMountainTarget)?.runId).toBe(outerMountainRun.runId);
         expect(loadActiveRun(jadeCaveTarget)?.runId).toBe(jadeCaveRun.runId);
         expect(restoredOuterMountainState.activeRun?.runId).toBe(outerMountainRun.runId);
@@ -664,8 +668,8 @@ describe('ExpeditionState', () => {
             targetIdentity: jadeCaveTarget,
         });
 
-        expect(outerMountainRun.routeKey).toBe('expedition:phase01-first-playable-expedition:phase01-prototype-map');
-        expect(jadeCaveRun.routeKey).toBe('expedition:phase01-jade-cave-expedition:phase01-jade-cave-map');
+        expect(outerMountainRun.routeKey).toBe(DEFAULT_EXPEDITION_TARGET_ROUTE_KEY);
+        expect(jadeCaveRun.routeKey).toBe(createActiveRunRouteKey(jadeCaveTarget));
         expect(restoredOuterMountainState.activeRun?.runId).toBe(outerMountainRun.runId);
         expect(restoredJadeCaveState.activeRun?.runId).toBe(jadeCaveRun.runId);
         expect(loadActiveRun(outerMountainTarget)?.runId).toBe(outerMountainRun.runId);

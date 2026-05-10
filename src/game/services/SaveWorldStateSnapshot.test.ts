@@ -4,7 +4,7 @@ import initialWorldState from '../../../public/data/world/initial-state.json';
 import starterDeckJson from '../../../public/data/decks/starter-deck.json';
 
 import { ExpeditionState } from '../state/ExpeditionState';
-import type { ExpeditionItemStack, RunSnapshot } from '../types/expedition';
+import type { RunSnapshot } from '../types/expedition';
 import type { StoryState } from '../types/story';
 import {
     applySaveCompatibilityMigrations,
@@ -34,12 +34,15 @@ import {
 import { createSaveWorldStateSnapshot } from './SaveWorldStateSnapshot';
 import {
     DEFAULT_EXPEDITION_TARGET,
+    DEFAULT_EXPEDITION_TARGET_ROUTE_KEY,
     SYNTHETIC_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
+    createItemStacksFromSeed,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 
 const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
 const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
-const initialWorldStateStashItems = initialWorldState.stash.items as unknown as ExpeditionItemStack[];
+const initialWorldStateStashItems = createItemStacksFromSeed(initialWorldState.stash.items);
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -352,9 +355,9 @@ describe('SaveWorldStateSnapshot', () => {
             activeRunLookup: createActiveRunRouteKey(DEFAULT_TARGET),
         });
 
-        expect(syntheticSnapshot.activeRun.keys.routeKey).toBe('expedition:synthetic-expedition:synthetic-map');
+        expect(syntheticSnapshot.activeRun.keys.routeKey).toBe(SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY);
         expect(syntheticSnapshot.activeRun.document?.runId).toBe(syntheticRun.runId);
-        expect(defaultSnapshot.activeRun.keys.routeKey).toBe('expedition:phase01-first-playable-expedition:phase01-prototype-map');
+        expect(defaultSnapshot.activeRun.keys.routeKey).toBe(DEFAULT_EXPEDITION_TARGET_ROUTE_KEY);
         expect(defaultSnapshot.activeRun.document?.runId).toBe(defaultRun.runId);
         expect(syntheticSnapshot.persistentStash.document?.stashId).toBe('phase01.starter-stash');
         expect(syntheticSnapshot.persistentStash.document?.deck).toEqual(starterDeckJson.cards);

@@ -29,13 +29,15 @@ import {
 import {
     DEFAULT_EXPEDITION_TARGET,
     SYNTHETIC_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
+    createItemStacksFromSeed,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 
 const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
 const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
 const LEGACY_ROUTE_LOOKUP = 'worldMap:destination.synthetic-expedition';
 const LEGACY_ROUTE_STORAGE_KEY = `${ACTIVE_RUN_STORAGE_KEY}:${LEGACY_ROUTE_LOOKUP}`;
-const initialWorldStateStashItems = initialWorldState.stash.items as unknown as ExpeditionItemStack[];
+const initialWorldStateStashItems = createItemStacksFromSeed(initialWorldState.stash.items);
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -506,7 +508,7 @@ describe('RunResolution', () => {
         ) as RunSnapshot;
 
         expect(victory.run).toEqual(storedRun);
-        expect(storedRun.routeKey).toBe('expedition:synthetic-expedition:synthetic-map');
+        expect(storedRun.routeKey).toBe(SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY);
         expect(storedRun.currentNodeId).toBe('battle.synthetic');
         expect(storedRun.pendingEncounter).toBeNull();
         expect(Object.keys(storedRun).sort()).toEqual([

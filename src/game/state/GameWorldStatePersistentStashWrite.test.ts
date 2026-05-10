@@ -16,6 +16,7 @@ import {
     createRunSnapshot,
     createTestPersistentStash,
     SYNTHETIC_EXPEDITION_TARGET,
+    createItemStacksFromSeed,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 import {
     planGameWorldStatePersistentStashWrite,
@@ -25,7 +26,7 @@ import {
 } from './GameWorldStatePersistentStashWrite';
 
 const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
-const initialWorldStateStashItems = initialWorldState.stash.items as unknown as ExpeditionItemStack[];
+const initialWorldStateStashItems = createItemStacksFromSeed(initialWorldState.stash.items);
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();

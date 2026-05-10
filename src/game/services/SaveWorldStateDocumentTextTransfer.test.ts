@@ -24,6 +24,7 @@ import {
     createTestStoryHubDocument,
     DEFAULT_EXPEDITION_TARGET,
     SYNTHETIC_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 
 const DEFAULT_TARGET: ExpeditionRouteIdentity = DEFAULT_EXPEDITION_TARGET;
@@ -203,7 +204,7 @@ describe('SaveWorldStateDocumentTextTransfer', () => {
             activeRunIdentity: SYNTHETIC_TARGET,
         }));
 
-        expect(result.document.worldState.activeRun.keys.routeKey).toBe('expedition:synthetic-expedition:synthetic-map');
+        expect(result.document.worldState.activeRun.keys.routeKey).toBe(SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY);
         expect(result.document.worldState.activeRun.document?.runId).toBe(syntheticRun.runId);
         expect(result.jsonText).toBe(serializeSaveWorldStateDocumentJsonText(result.document));
         expect(repeated.jsonText).toBe(result.jsonText);

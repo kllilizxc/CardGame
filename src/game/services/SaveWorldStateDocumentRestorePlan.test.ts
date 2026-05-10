@@ -29,6 +29,7 @@ import { createSaveWorldStateDocumentRestorePlan } from './SaveWorldStateDocumen
 import {
     DEFAULT_EXPEDITION_TARGET,
     SYNTHETIC_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 
 const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
@@ -250,14 +251,14 @@ describe('SaveWorldStateDocumentRestorePlan', () => {
             {
                 operation: 'setItem',
                 owner: 'activeRun',
-                routeKey: 'expedition:synthetic-expedition:synthetic-map',
+                routeKey: SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
                 storageKey: createActiveRunStorageKey(SYNTHETIC_TARGET),
                 value: JSON.stringify(document.worldState.activeRun.document),
             },
             {
                 operation: 'no-op',
                 owner: 'activeRun',
-                routeKey: 'expedition:synthetic-expedition:synthetic-map',
+                routeKey: SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
                 storageKey: ACTIVE_RUN_STORAGE_KEY,
                 reason: 'legacy-active-run-write-disabled',
             },
