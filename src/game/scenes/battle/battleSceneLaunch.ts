@@ -8,6 +8,13 @@ import {
     createContentCatalogResolver,
     type ContentResourceKind,
 } from '../../content/contentCatalog';
+import type { ArtifactCard } from '@data/types/cards/artifact';
+import type { FieldCard } from '@data/types/cards/field';
+import type { PillCard } from '@data/types/cards/pill';
+import type { SkillCard } from '@data/types/cards/skill';
+import type { TalismanCard } from '@data/types/cards/talisman';
+import type { UnitCard } from '@data/types/cards/unit';
+import type { Gongfa } from '@data/types/gongfa';
 import type {
     StoryBattleLaunchMetadata,
     StoryBattleSceneLaunchPayload,
@@ -84,6 +91,34 @@ export interface BattleSharedRuntimeResource {
 export type BattleSharedRuntimeResources =
     & Record<BattleRequiredSharedRuntimeResourceCacheKey, BattleSharedRuntimeResource>
     & Partial<Record<BattleOptionalSharedRuntimeResourceCacheKey, BattleSharedRuntimeResource>>;
+
+export interface BattleSharedUnitCardsData {
+    readonly units: readonly UnitCard[];
+}
+
+export interface BattleSharedArtifactCardsData {
+    readonly artifacts: readonly ArtifactCard[];
+}
+
+export interface BattleSharedTalismanCardsData {
+    readonly talismans: readonly TalismanCard[];
+}
+
+export interface BattleSharedPillCardsData {
+    readonly pills: readonly PillCard[];
+}
+
+export interface BattleSharedFieldCardsData {
+    readonly fields: readonly FieldCard[];
+}
+
+export interface BattleSharedSkillCardsData {
+    readonly skills: readonly SkillCard[];
+}
+
+export interface BattleSharedGongfaListData {
+    readonly gongfa: readonly Gongfa[];
+}
 
 interface BattleSharedRuntimeResourceRequest {
     cacheKey: BattleSharedRuntimeResourceCacheKey;

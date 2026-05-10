@@ -4,13 +4,13 @@ import { ArtifactSprite } from '../../objects/ArtifactSprite';
 import { TalismanSprite } from '../../objects/TalismanSprite';
 import { FieldSprite } from '../../objects/FieldSprite';
 import { PillSprite } from '../../objects/PillSprite';
+import type { AnyCard } from '@data/types/cards/all';
 import type { UnitCard } from '@data/types/cards/unit';
 import type { ArtifactCard } from '@data/types/cards/artifact';
 import type { TalismanCard } from '@data/types/cards/talisman';
 import type { FieldCard } from '@data/types/cards/field';
 import type { PillCard } from '@data/types/cards/pill';
 
-type AnyCard = UnitCard | ArtifactCard | TalismanCard | FieldCard | PillCard;
 type AnyCardSprite = CardSprite | ArtifactSprite | TalismanSprite | FieldSprite | PillSprite;
 
 /**
@@ -18,7 +18,7 @@ type AnyCardSprite = CardSprite | ArtifactSprite | TalismanSprite | FieldSprite 
  * 用于从卡组中选择一张卡（技能"注定一抽"等）
  */
 export class DeckSelectionUI extends GameObjects.Container {
-    private cards: AnyCard[];
+    private cards: readonly AnyCard[];
     private background!: GameObjects.Rectangle;
     private overlay!: GameObjects.Rectangle;
     private titleText!: GameObjects.Text;
@@ -27,7 +27,7 @@ export class DeckSelectionUI extends GameObjects.Container {
     private cardSprites: AnyCardSprite[] = [];
     private maskShape!: GameObjects.Graphics;
     private onCardSelected: ((card: AnyCard) => void) | null = null;
-    private onCardsSelected: ((cards: AnyCard[]) => void) | null = null;
+    private onCardsSelected: ((cards: readonly AnyCard[]) => void) | null = null;
     private onCancel: (() => void) | null = null;
     private isMultiSelect: boolean = false;
     private maxSelectCount: number = 1;
@@ -62,9 +62,9 @@ export class DeckSelectionUI extends GameObjects.Container {
      * @param onCancel 取消回调
      */
     public show(
-        cards: AnyCard[], 
+        cards: readonly AnyCard[], 
         count: number = 1,
-        onSelected: ((card: AnyCard) => void) | ((cards: AnyCard[]) => void),
+        onSelected: ((card: AnyCard) => void) | ((cards: readonly AnyCard[]) => void),
         onCancel?: () => void
     ): void {
         this.cards = cards;
@@ -75,7 +75,7 @@ export class DeckSelectionUI extends GameObjects.Container {
 
         if (this.isMultiSelect) {
             // 多选模式
-            this.onCardsSelected = onSelected as (cards: AnyCard[]) => void;
+            this.onCardsSelected = onSelected as (cards: readonly AnyCard[]) => void;
             this.onCardSelected = null;
         } else {
             // 单选模式
@@ -91,7 +91,7 @@ export class DeckSelectionUI extends GameObjects.Container {
     /**
      * @deprecated 使用 show(cards, count, onSelected, onCancel) 代替
      */
-    public showMultiSelect(cards: AnyCard[], maxCount: number, onCardsSelected: (cards: AnyCard[]) => void, onCancel?: () => void): void {
+    public showMultiSelect(cards: readonly AnyCard[], maxCount: number, onCardsSelected: (cards: readonly AnyCard[]) => void, onCancel?: () => void): void {
         this.show(cards, maxCount, onCardsSelected, onCancel);
     }
 

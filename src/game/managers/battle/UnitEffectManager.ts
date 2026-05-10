@@ -41,7 +41,7 @@ export class UnitEffectManager {
 
     constructor(
         battleContext: BattleContext,
-        gongfaList: Gongfa[]
+        gongfaList: readonly Gongfa[]
     ) {
         this.battleContext = battleContext;
 

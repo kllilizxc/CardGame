@@ -196,7 +196,7 @@ export class CardSprite extends BaseCardSprite {
         }
 
         // 从缓存加载功法数据，并生成描述
-        const gongfaListData = this.scene.cache.json.get('gongfaList') as { gongfa: Gongfa[] } | undefined;
+        const gongfaListData = this.scene.cache.json.get('gongfaList') as { readonly gongfa: readonly Gongfa[] } | undefined;
         if (gongfaListData && gongfaListData.gongfa) {
             gongfaListData.gongfa.forEach(gongfa => {
                 // 如果没有描述，从 schema 自动生成

@@ -38,8 +38,7 @@ import { BattleState } from '../../state/BattleState';
 import { BattleUIManager } from '../../ui/battle/BattleUIManager';
 import { CardPreviewManager } from '../../managers/common/CardPreviewManager';
 import { PillTooltipUI } from '../../ui/common/PillTooltipUI';
-import type { Gongfa } from '@data/types/gongfa';
-import type { AnyCard } from '@types/cards/all';
+import type { AnyCard } from '@data/types/cards/all';
 import type { BattleLaunchPayload } from '../../types/expedition';
 import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import { createExpeditionBattleCompleteEvent } from './battleCompletion';
@@ -54,8 +53,15 @@ import {
     getEncounterCacheKey,
     getEncounterFile,
     getEncounterUnits,
+    type BattleSharedArtifactCardsData,
     normalizeBattleLaunchPayload,
     normalizeStoryBattleLaunchPayload,
+    type BattleSharedFieldCardsData,
+    type BattleSharedGongfaListData,
+    type BattleSharedPillCardsData,
+    type BattleSharedSkillCardsData,
+    type BattleSharedTalismanCardsData,
+    type BattleSharedUnitCardsData,
     resolveBattleSharedRuntimeResources,
     resolveDefaultBattleRuntimeResources,
     resolveExpeditionBattleRuntimeResources,
@@ -182,7 +188,7 @@ export class BattleScene extends Scene {
         return height / 1080;
     }
 
-    private getRequiredSharedRuntimeJson(cacheKey: BattleSharedRuntimeResourceCacheKey): unknown {
+    private getRequiredSharedRuntimeJson<TData>(cacheKey: BattleSharedRuntimeResourceCacheKey): TData {
         const resource = this.sharedRuntimeResources?.[cacheKey];
 
         if (!resource) {
@@ -197,10 +203,10 @@ export class BattleScene extends Scene {
             );
         }
 
-        return data;
+        return data as TData;
     }
 
-    private getRequiredRuntimeJson(cacheKey: string): unknown {
+    private getRequiredRuntimeJson<TData>(cacheKey: string): TData {
         const data = this.cache.json.get(cacheKey);
 
         if (data === undefined) {
@@ -209,10 +215,10 @@ export class BattleScene extends Scene {
             );
         }
 
-        return data;
+        return data as TData;
     }
 
-    private getOptionalSharedRuntimeJson(cacheKey: BattleOptionalSharedRuntimeResourceCacheKey): unknown | undefined {
+    private getOptionalSharedRuntimeJson<TData>(cacheKey: BattleOptionalSharedRuntimeResourceCacheKey): TData | undefined {
         const resource = this.sharedRuntimeResources?.[cacheKey];
 
         if (!resource) {
@@ -227,7 +233,7 @@ export class BattleScene extends Scene {
             );
         }
 
-        return data;
+        return data as TData;
     }
 
     private installRuntimeHelperConfigs(): void {
@@ -302,8 +308,8 @@ export class BattleScene extends Scene {
         this.installRuntimeHelperConfigs();
 
         // 使用 ManagerFactory 统一初始化所有管理器
-        const gongfaData = this.getRequiredSharedRuntimeJson('gongfaList') as { gongfa: readonly Gongfa[] };
-        const statusDefinitionsData = this.getRequiredSharedRuntimeJson(BATTLE_STATUS_DEFINITIONS_CACHE_KEY);
+        const gongfaData = this.getRequiredSharedRuntimeJson<BattleSharedGongfaListData>('gongfaList');
+        const statusDefinitionsData = this.getRequiredSharedRuntimeJson<unknown>(BATTLE_STATUS_DEFINITIONS_CACHE_KEY);
         const managers = await ManagerFactory.createManagers(this, this.battleContext, {
             layout: this.layout,
             cardScale: this.cardScale,
@@ -329,13 +335,13 @@ export class BattleScene extends Scene {
         this.sacrificeUI = new SacrificeSelectionUI(this);
 
         // 加载所有卡牌数据
-        const unitCardsData = this.getRequiredSharedRuntimeJson('unitCards') as { units: UnitCard[] };
-        const artifactCardsData = this.getRequiredSharedRuntimeJson('artifactCards') as { artifacts: ArtifactCard[] };
-        const talismanCardsData = this.getRequiredSharedRuntimeJson('talismanCards') as { talismans: TalismanCard[] };
-        const fieldCardsData = this.getRequiredSharedRuntimeJson('fieldCards') as { fields: FieldCard[] };
-        const pillCardsData = this.getRequiredSharedRuntimeJson('pillCards') as { pills: PillCard[] };
-        const skillCardsData = this.getRequiredSharedRuntimeJson('skillCards') as { skills: SkillCard[] };
-        const starterDeckData = this.cache.json.get(this.deckCacheKey) as { cards: Array<{ id: string; count: number }> };
+        const unitCardsData = this.getRequiredSharedRuntimeJson<BattleSharedUnitCardsData>('unitCards');
+        const artifactCardsData = this.getRequiredSharedRuntimeJson<BattleSharedArtifactCardsData>('artifactCards');
+        const talismanCardsData = this.getRequiredSharedRuntimeJson<BattleSharedTalismanCardsData>('talismanCards');
+        const fieldCardsData = this.getRequiredSharedRuntimeJson<BattleSharedFieldCardsData>('fieldCards');
+        const pillCardsData = this.getRequiredSharedRuntimeJson<BattleSharedPillCardsData>('pillCards');
+        const skillCardsData = this.getRequiredSharedRuntimeJson<BattleSharedSkillCardsData>('skillCards');
+        const starterDeckData = this.getRequiredRuntimeJson<{ cards: Array<{ id: string; count: number }> }>(this.deckCacheKey);
 
         // 创建卡牌索引
         const allCards = new Map<string, UnitCard | ArtifactCard | TalismanCard | FieldCard | PillCard>();
@@ -905,7 +911,7 @@ export class BattleScene extends Scene {
             return;
         }
 
-        const cardsDataObj = this.cache.json.get('unitCards') as { units: UnitCard[] };
+        const cardsDataObj = this.getRequiredSharedRuntimeJson<BattleSharedUnitCardsData>('unitCards');
         const allCards = cardsDataObj.units;
 
         const spawnedEnemies: CardSprite[] = [];

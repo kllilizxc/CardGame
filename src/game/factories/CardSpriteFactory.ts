@@ -5,13 +5,12 @@ import { TalismanSprite } from '../objects/TalismanSprite';
 import { FieldSprite } from '../objects/FieldSprite';
 import { PillSprite } from '../objects/PillSprite';
 import type { BaseCardSprite } from '../objects/BaseCardSprite';
-import type { UnitCard } from '../../../public/data/types/cards/unit';
-import type { ArtifactCard } from '../../../public/data/types/cards/artifact';
-import type { TalismanCard } from '../../../public/data/types/cards/talisman';
-import type { FieldCard } from '../../../public/data/types/cards/field';
-import type { PillCard } from '../../../public/data/types/cards/pill';
-
-type AnyCard = UnitCard | ArtifactCard | TalismanCard | FieldCard | PillCard;
+import type { AnyCard } from '@data/types/cards/all';
+import type { UnitCard } from '@data/types/cards/unit';
+import type { ArtifactCard } from '@data/types/cards/artifact';
+import type { TalismanCard } from '@data/types/cards/talisman';
+import type { FieldCard } from '@data/types/cards/field';
+import type { PillCard } from '@data/types/cards/pill';
 
 /**
  * 卡片精灵工厂
@@ -55,7 +54,7 @@ export class CardSpriteFactory {
      */
     static createSprites(
         scene: Scene,
-        cards: AnyCard[],
+        cards: readonly AnyCard[],
         scale: number = 1
     ): BaseCardSprite[] {
         return cards
