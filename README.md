@@ -49,6 +49,13 @@ npm run dev-nolog # 关闭 log.js 匿名统计
 | --- | --- |
 | `npm run build` | 生成 `dist/`，并发送一次 log.js 统计 |
 | `npm run build-nolog` | 同上，跳过 log.js |
+| `npm run typecheck` | TypeScript 质量门：仅做类型检查，不输出构建产物 |
+
+质量门：
+
+| 门禁类型 | 命令 | 用途 |
+| --- | --- | --- |
+| TypeScript 质量门 | `npm run typecheck` | 在本地与 CI 阶段进行类型安全校验，确保代码变更前后无类型回归 |
 
 > **log.js** 仅收集 package name / 构建类型 / Phaser 版本。若需彻底禁用，可删除 `log.js` 并修改 `package.json` scripts。
 
