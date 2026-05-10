@@ -62,12 +62,55 @@ const canonicalArtifactGradeCatalogEntry = {
     publicPath: 'data/config/artifact-grade.json',
 } as const;
 
+const canonicalRealmPresetsCatalogEntry = {
+    resourceId: 'config.realm-presets',
+    kind: 'config',
+    schemaVersion: 1,
+    publicPath: 'data/config/realm-presets.json',
+} as const;
+
+const validRealmPresetsRegistry = {
+    realmStages: [
+        {
+            stage: '炼气',
+            phases: [{ phase: '1层', value: 1 }],
+        },
+        {
+            stage: '筑基',
+            phases: [{ phase: '初期', value: 4 }],
+        },
+    ],
+};
+
 const validCombatBaselineRegistry = {
-    realms: [{ id: 'realm.valid' }],
+    realms: [
+        {
+            id: 'realm.valid',
+            stage: '炼气',
+            phase: '1层',
+            value: 1,
+            attackMin: 1,
+            attackMax: 2,
+            healthMin: 3,
+            healthMax: 4,
+        },
+    ],
 };
 
 const validArtifactGradeRegistry = {
-    grades: [{ id: 'grade.valid' }],
+    grades: [
+        {
+            id: 'grade.valid',
+            tier: '黄阶',
+            quality: '下品',
+            star: 1,
+            value: 1,
+            attackBonusMin: 1,
+            attackBonusMax: 2,
+            healthBonusMin: 3,
+            healthBonusMax: 4,
+        },
+    ],
 };
 
 function createValidStatusDefinition(id: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -106,6 +149,7 @@ function createValidGongfaSchema(overrides: Record<string, unknown> = {}): Recor
 
 function createCanonicalRealmAndGradeOverrides(): Record<string, unknown> {
     return {
+        [canonicalRealmPresetsCatalogEntry.publicPath]: validRealmPresetsRegistry,
         [canonicalCombatBaselineCatalogEntry.publicPath]: validCombatBaselineRegistry,
         [canonicalArtifactGradeCatalogEntry.publicPath]: validArtifactGradeRegistry,
     };
@@ -132,6 +176,20 @@ function createPublicFileSourceWithOverrides(overrides: Record<string, unknown>)
         readText(publicPath: string): string | undefined {
             if (publicPath in overrides) {
                 return JSON.stringify(overrides[publicPath]);
+            }
+
+            return publicFileSource.readText(publicPath);
+        },
+    };
+}
+
+function createPublicFileSourceWithRawOverrides(overrides: Record<string, string>): ContentCatalogFileSource {
+    const publicFileSource = createPublicFileSource();
+
+    return {
+        readText(publicPath: string): string | undefined {
+            if (publicPath in overrides) {
+                return overrides[publicPath];
             }
 
             return publicFileSource.readText(publicPath);
@@ -1386,17 +1444,17 @@ describe('content catalog', () => {
             },
             'data/config/combat-baseline.json': {
                 realms: [
-                    { id: 'realm.valid' },
-                    { id: 'realm.valid' },
-                    { id: '' },
+                    { id: 'realm.valid', stage: '炼气', phase: '1层', value: 1, attackMin: 1, attackMax: 2, healthMin: 3, healthMax: 4 },
+                    { id: 'realm.valid', stage: '炼气', phase: '6层', value: 2, attackMin: 1, attackMax: 2, healthMin: 3, healthMax: 4 },
+                    { id: '', stage: '炼气', phase: '12层', value: 3, attackMin: 1, attackMax: 2, healthMin: 3, healthMax: 4 },
                     42,
                 ],
             },
             'data/config/artifact-grade.json': {
                 grades: [
-                    { id: 'grade.valid' },
-                    { id: 'grade.valid' },
-                    { id: '' },
+                    { id: 'grade.valid', tier: '黄阶', quality: '下品', star: 1, value: 1, attackBonusMin: 1, attackBonusMax: 2, healthBonusMin: 3, healthBonusMax: 4 },
+                    { id: 'grade.valid', tier: '黄阶', quality: '中品', star: 1, value: 2, attackBonusMin: 1, attackBonusMax: 2, healthBonusMin: 3, healthBonusMax: 4 },
+                    { id: '', tier: '黄阶', quality: '上品', star: 1, value: 3, attackBonusMin: 1, attackBonusMax: 2, healthBonusMin: 3, healthBonusMax: 4 },
                     42,
                 ],
             },
@@ -1407,17 +1465,17 @@ describe('content catalog', () => {
         }));
 
         expect(result.failures.map((failure) => failure.message)).toEqual([
-            'Catalog card id DUPLICATE_CARD is declared more than once: cards.units units[0] in data/cards/units.json; duplicate cards.artifacts artifacts[0] in data/cards/artifacts.json.',
-            'Catalog gongfa id gongfa.duplicate is declared more than once: gongfa.list gongfa[0] in data/gongfa/gongfa-list.json; duplicate gongfa.list gongfa[1] in data/gongfa/gongfa-list.json.',
-            'Catalog status id duplicate_status is declared more than once: status.definitions statuses[0] in data/config/status-definitions.json; duplicate status.definitions statuses[1] in data/config/status-definitions.json.',
-            'Catalog status entry status.definitions statuses[2] in data/config/status-definitions.json must declare a non-empty string id.',
-            'Catalog status entry status.definitions statuses[3] in data/config/status-definitions.json must declare a non-empty string id.',
             'Catalog realm id realm.valid is declared more than once: config.combat-baseline realms[0] in data/config/combat-baseline.json; duplicate config.combat-baseline realms[1] in data/config/combat-baseline.json.',
             'Catalog realm entry config.combat-baseline realms[2] in data/config/combat-baseline.json must declare a non-empty string id.',
             'Catalog realm entry config.combat-baseline realms[3] in data/config/combat-baseline.json must be an object.',
             'Catalog grade id grade.valid is declared more than once: config.artifact-grade grades[0] in data/config/artifact-grade.json; duplicate config.artifact-grade grades[1] in data/config/artifact-grade.json.',
             'Catalog grade entry config.artifact-grade grades[2] in data/config/artifact-grade.json must declare a non-empty string id.',
             'Catalog grade entry config.artifact-grade grades[3] in data/config/artifact-grade.json must be an object.',
+            'Catalog card id DUPLICATE_CARD is declared more than once: cards.units units[0] in data/cards/units.json; duplicate cards.artifacts artifacts[0] in data/cards/artifacts.json.',
+            'Catalog gongfa id gongfa.duplicate is declared more than once: gongfa.list gongfa[0] in data/gongfa/gongfa-list.json; duplicate gongfa.list gongfa[1] in data/gongfa/gongfa-list.json.',
+            'Catalog status id duplicate_status is declared more than once: status.definitions statuses[0] in data/config/status-definitions.json; duplicate status.definitions statuses[1] in data/config/status-definitions.json.',
+            'Catalog status entry status.definitions statuses[2] in data/config/status-definitions.json must declare a non-empty string id.',
+            'Catalog status entry status.definitions statuses[3] in data/config/status-definitions.json must declare a non-empty string id.',
             'Catalog world item id duplicate_item is declared more than once: world.seed.items-artifacts artifacts[0] in data/world/items.artifacts.json; duplicate world.seed.items-artifacts tools[0] in data/world/items.artifacts.json.',
         ]);
     });
@@ -1634,6 +1692,7 @@ describe('content catalog', () => {
         const malformedRegistryCatalog = {
             schemaVersion: 1,
             resources: [
+                canonicalRealmPresetsCatalogEntry,
                 canonicalCombatBaselineCatalogEntry,
                 canonicalArtifactGradeCatalogEntry,
             ],
@@ -1641,14 +1700,168 @@ describe('content catalog', () => {
         const malformedRegistryResult = validateContentCatalog(
             malformedRegistryCatalog,
             createPublicFileSourceWithOverrides({
+                'data/config/realm-presets.json': { realmStagesByValue: {} },
                 'data/config/combat-baseline.json': { realmsById: {} },
                 'data/config/artifact-grade.json': { gradesById: {} },
             }),
         );
 
         expect(malformedRegistryResult.failures.map((failure) => failure.message)).toEqual([
+            'Catalog realm presets config config.realm-presets in data/config/realm-presets.json must declare a top-level realmStages array.',
             'Catalog realm registry config.combat-baseline in data/config/combat-baseline.json must declare a top-level realms array.',
             'Catalog grade registry config.artifact-grade in data/config/artifact-grade.json must declare a top-level grades array.',
+        ]);
+    });
+
+    it('returns actionable failures for canonical realm preset shape and numeric value drift', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                canonicalRealmPresetsCatalogEntry,
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithRawOverrides({
+            'data/config/realm-presets.json': JSON.stringify({
+                realmStages: [
+                    {
+                        stage: '炼气',
+                        phases: [
+                            { phase: '1层', value: 1 },
+                            { phase: '2层', value: 1 },
+                            { phase: 3, value: -1 },
+                        ],
+                    },
+                    {
+                        stage: 42,
+                        phases: 'not an array',
+                    },
+                    42,
+                ],
+            }).replace('"value":-1', '"value":1e309'),
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toEqual([
+            'Catalog realm preset value 1 is declared more than once: config.realm-presets realmStages[0].phases[0] in data/config/realm-presets.json; duplicate config.realm-presets realmStages[0].phases[1] in data/config/realm-presets.json.',
+            'Catalog realm preset phase config.realm-presets realmStages[0].phases[2] in data/config/realm-presets.json phase must be a string.',
+            'Catalog realm preset phase config.realm-presets realmStages[0].phases[2] in data/config/realm-presets.json value must be a finite non-negative number.',
+            'Catalog realm preset stage config.realm-presets realmStages[1] in data/config/realm-presets.json stage must be a string.',
+            'Catalog realm preset stage config.realm-presets realmStages[1] in data/config/realm-presets.json must declare a phases array.',
+            'Catalog realm preset stage config.realm-presets realmStages[2] in data/config/realm-presets.json must be an object.',
+        ]);
+    });
+
+    it('returns actionable failures for combat-baseline shape, numeric ranges, and realm-preset consistency', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                canonicalRealmPresetsCatalogEntry,
+                canonicalCombatBaselineCatalogEntry,
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithRawOverrides({
+            'data/config/realm-presets.json': JSON.stringify(validRealmPresetsRegistry),
+            'data/config/combat-baseline.json': JSON.stringify({
+                realms: [
+                    { id: 'realm.valid', stage: '炼气', phase: '1层', value: 1, attackMin: 1, attackMax: 2, healthMin: 3, healthMax: 4 },
+                    { id: 'realm.valid', stage: '炼气', phase: '2层', value: 2, attackMin: 1, attackMax: 2, healthMin: 3, healthMax: 4 },
+                    { id: 'realm.duplicate_value', stage: '筑基', phase: '初期', value: 1, attackMin: 1, attackMax: 2, healthMin: 3, healthMax: 4 },
+                    { id: 'realm.bad_display', stage: 42, phase: [], value: 4, attackMin: 1, attackMax: 2, healthMin: 3, healthMax: 4 },
+                    { id: 'realm.bad_numeric', stage: '炼气', phase: '3层', value: -1, attackMin: -1, attackMax: 2, healthMin: 3, healthMax: 4 },
+                    { id: 'realm.bad_attack_range', stage: '筑基', phase: '中期', value: 5, attackMin: 3, attackMax: 2, healthMin: 3, healthMax: 4 },
+                    { id: 'realm.bad_health_range', stage: '筑基', phase: '后期', value: 6, attackMin: 1, attackMax: 2, healthMin: 5, healthMax: 4 },
+                    { id: 'realm.unknown_preset', stage: '金丹', phase: '初期', value: 99, attackMin: 1, attackMax: 2, healthMin: 3, healthMax: 4 },
+                ],
+            }).replace('"value":-1', '"value":1e309'),
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toEqual([
+            'Catalog realm id realm.valid is declared more than once: config.combat-baseline realms[0] in data/config/combat-baseline.json; duplicate config.combat-baseline realms[1] in data/config/combat-baseline.json.',
+            'Catalog combat baseline realm config.combat-baseline realms[1] in data/config/combat-baseline.json value 2 is not declared by canonical data/config/realm-presets.json.',
+            'Catalog realm value 1 is declared more than once: config.combat-baseline realms[0] in data/config/combat-baseline.json; duplicate config.combat-baseline realms[2] in data/config/combat-baseline.json.',
+            'Catalog combat baseline realm config.combat-baseline realms[3] in data/config/combat-baseline.json stage must be a string.',
+            'Catalog combat baseline realm config.combat-baseline realms[3] in data/config/combat-baseline.json phase must be a string.',
+            'Catalog combat baseline realm config.combat-baseline realms[4] in data/config/combat-baseline.json value must be a finite non-negative number.',
+            'Catalog combat baseline realm config.combat-baseline realms[4] in data/config/combat-baseline.json attackMin must be a finite non-negative number.',
+            'Catalog combat baseline realm config.combat-baseline realms[5] in data/config/combat-baseline.json attackMin must be <= attackMax.',
+            'Catalog combat baseline realm config.combat-baseline realms[5] in data/config/combat-baseline.json value 5 is not declared by canonical data/config/realm-presets.json.',
+            'Catalog combat baseline realm config.combat-baseline realms[6] in data/config/combat-baseline.json healthMin must be <= healthMax.',
+            'Catalog combat baseline realm config.combat-baseline realms[6] in data/config/combat-baseline.json value 6 is not declared by canonical data/config/realm-presets.json.',
+            'Catalog combat baseline realm config.combat-baseline realms[7] in data/config/combat-baseline.json value 99 is not declared by canonical data/config/realm-presets.json.',
+        ]);
+    });
+
+    it('returns actionable failures for artifact-grade display fields, numeric ranges, duplicate values, and star bounds', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                canonicalArtifactGradeCatalogEntry,
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithRawOverrides({
+            'data/config/artifact-grade.json': JSON.stringify({
+                grades: [
+                    { id: 'grade.valid', tier: '黄阶', quality: '下品', star: 1, value: 1, attackBonusMin: 1, attackBonusMax: 2, healthBonusMin: 3, healthBonusMax: 4 },
+                    { id: 'grade.valid', tier: '黄阶', quality: '中品', star: 1, value: 2, attackBonusMin: 1, attackBonusMax: 2, healthBonusMin: 3, healthBonusMax: 4 },
+                    { id: 'grade.duplicate_value', tier: '地阶', quality: '下品', star: 2, value: 1, attackBonusMin: 1, attackBonusMax: 2, healthBonusMin: 3, healthBonusMax: 4 },
+                    { id: 'grade.bad_display', tier: 42, quality: [], star: 2, value: 3, attackBonusMin: 1, attackBonusMax: 2, healthBonusMin: 3, healthBonusMax: 4 },
+                    { id: 'grade.bad_numeric', tier: '玄阶', quality: '下品', star: 3, value: -1, attackBonusMin: -1, attackBonusMax: 2, healthBonusMin: 3, healthBonusMax: 4 },
+                    { id: 'grade.bad_star_low', tier: '玄阶', quality: '中品', star: 0, value: 4, attackBonusMin: 1, attackBonusMax: 2, healthBonusMin: 3, healthBonusMax: 4 },
+                    { id: 'grade.bad_star_high', tier: '玄阶', quality: '上品', star: 13, value: 5, attackBonusMin: 1, attackBonusMax: 2, healthBonusMin: 3, healthBonusMax: 4 },
+                    { id: 'grade.bad_attack_range', tier: '天阶', quality: '下品', star: 4, value: 6, attackBonusMin: 3, attackBonusMax: 2, healthBonusMin: 3, healthBonusMax: 4 },
+                    { id: 'grade.bad_health_range', tier: '天阶', quality: '中品', star: 4, value: 7, attackBonusMin: 1, attackBonusMax: 2, healthBonusMin: 5, healthBonusMax: 4 },
+                ],
+            }).replace('"value":-1', '"value":1e309'),
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toEqual([
+            'Catalog grade id grade.valid is declared more than once: config.artifact-grade grades[0] in data/config/artifact-grade.json; duplicate config.artifact-grade grades[1] in data/config/artifact-grade.json.',
+            'Catalog grade value 1 is declared more than once: config.artifact-grade grades[0] in data/config/artifact-grade.json; duplicate config.artifact-grade grades[2] in data/config/artifact-grade.json.',
+            'Catalog artifact grade config.artifact-grade grades[3] in data/config/artifact-grade.json tier must be a string.',
+            'Catalog artifact grade config.artifact-grade grades[3] in data/config/artifact-grade.json quality must be a string.',
+            'Catalog artifact grade config.artifact-grade grades[4] in data/config/artifact-grade.json value must be a finite non-negative number.',
+            'Catalog artifact grade config.artifact-grade grades[4] in data/config/artifact-grade.json attackBonusMin must be a finite non-negative number.',
+            'Catalog artifact grade config.artifact-grade grades[5] in data/config/artifact-grade.json star must be an integer between 1 and 12.',
+            'Catalog artifact grade config.artifact-grade grades[6] in data/config/artifact-grade.json star must be an integer between 1 and 12.',
+            'Catalog artifact grade config.artifact-grade grades[7] in data/config/artifact-grade.json attackBonusMin must be <= attackBonusMax.',
+            'Catalog artifact grade config.artifact-grade grades[8] in data/config/artifact-grade.json healthBonusMin must be <= healthBonusMax.',
+        ]);
+    });
+
+    it('returns actionable failures when canonical config catalog kind or publicPath drifts', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    ...canonicalRealmPresetsCatalogEntry,
+                    kind: 'card',
+                    publicPath: 'data/config/realm-presets-v2.json',
+                },
+                {
+                    ...canonicalCombatBaselineCatalogEntry,
+                    kind: 'deck',
+                    publicPath: 'data/config/combat-baseline-v2.json',
+                },
+                {
+                    ...canonicalArtifactGradeCatalogEntry,
+                    kind: 'status',
+                    publicPath: 'data/config/artifact-grade-v2.json',
+                },
+            ],
+        };
+
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/config/realm-presets-v2.json': validRealmPresetsRegistry,
+            'data/config/combat-baseline-v2.json': validCombatBaselineRegistry,
+            'data/config/artifact-grade-v2.json': validArtifactGradeRegistry,
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toEqual([
+            'Catalog canonical config config.realm-presets must have kind config; found card.',
+            'Catalog canonical config config.realm-presets must use publicPath data/config/realm-presets.json; found data/config/realm-presets-v2.json.',
+            'Catalog canonical config config.combat-baseline must have kind config; found deck.',
+            'Catalog canonical config config.combat-baseline must use publicPath data/config/combat-baseline.json; found data/config/combat-baseline-v2.json.',
+            'Catalog canonical config config.artifact-grade must have kind config; found status.',
+            'Catalog canonical config config.artifact-grade must use publicPath data/config/artifact-grade.json; found data/config/artifact-grade-v2.json.',
         ]);
     });
 

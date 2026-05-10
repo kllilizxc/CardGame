@@ -72,6 +72,10 @@
 1. 选择合理的 `stage` 与 `phase`（与世界观、故事节点匹配）。
 2. 查找对应的 `value` 并写入 `realm.value`。
 
+约束：`realm-presets.json` 中每个 `value` 必须唯一，且 `combat-baseline.json.realms[*].value`
+必须能在 realm presets 中找到。当前凡人境只有一个无小阶段预设（`phase: ""`, `value: 0`），
+炼气及以上再按小阶段细分。
+
 ### 2.3 战斗数值基线（config/combat-baseline.json）
 
 `combat-baseline.json` 为普通单位提供推荐的攻/血区间：

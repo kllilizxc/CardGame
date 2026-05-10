@@ -13,10 +13,13 @@ import type { ArtifactWeaponType } from '@data/types/cards/artifact';
 type CatalogIdRegistryName = 'card' | 'gongfa' | 'status' | 'world item' | 'realm' | 'grade';
 
 const CANONICAL_STATUS_DEFINITIONS_PUBLIC_PATH = 'data/config/status-definitions.json';
+const CANONICAL_REALM_PRESETS_RESOURCE_ID = 'config.realm-presets';
+const CANONICAL_REALM_PRESETS_PUBLIC_PATH = 'data/config/realm-presets.json';
 const CANONICAL_REALM_REGISTRY_RESOURCE_ID = 'config.combat-baseline';
 const CANONICAL_REALM_REGISTRY_PUBLIC_PATH = 'data/config/combat-baseline.json';
 const CANONICAL_GRADE_REGISTRY_RESOURCE_ID = 'config.artifact-grade';
 const CANONICAL_GRADE_REGISTRY_PUBLIC_PATH = 'data/config/artifact-grade.json';
+const MAX_ARTIFACT_STAR = 12;
 
 const STATUS_CATEGORY_VALUES = ['buff', 'debuff', 'special'] as const satisfies readonly StatusCategory[];
 const STATUS_TIMING_VALUES = [
@@ -102,9 +105,11 @@ interface ContentIdRegistries {
     cards: Map<string, CatalogIdLocation>;
     gongfa: Map<string, CatalogIdLocation>;
     statuses: Map<string, CatalogIdLocation>;
+    realmPresetValues: CanonicalNumericValueRegistry;
     realms: CanonicalContentIdRegistry;
     grades: CanonicalContentIdRegistry;
     worldItems: Map<string, CatalogIdLocation>;
+    invalidCanonicalConfigResourceIds: Set<string>;
 }
 
 const WORLD_ITEM_COLLECTION_NAMES = ['artifacts', 'tools', 'consumables', 'quests', 'questItems'] as const;
@@ -119,6 +124,13 @@ interface CanonicalContentIdRegistry {
     referenceField: 'realmId' | 'gradeId';
     isPresent: boolean;
     missingReported: boolean;
+}
+
+interface CanonicalNumericValueRegistry {
+    values: Map<number, CatalogIdLocation>;
+    resourceId: string;
+    publicPath: string;
+    isPresent: boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -160,6 +172,46 @@ function createCanonicalContentIdRegistry(
         isPresent: false,
         missingReported: false,
     };
+}
+
+function createCanonicalNumericValueRegistry(
+    resourceId: string,
+    publicPath: string,
+): CanonicalNumericValueRegistry {
+    return {
+        values: new Map(),
+        resourceId,
+        publicPath,
+        isPresent: false,
+    };
+}
+
+function validateCanonicalConfigCatalogEntry(
+    resource: CatalogIdResource,
+    expectedPublicPath: string,
+    failures: ContentCatalogValidationFailure[],
+): boolean {
+    let isValid = true;
+
+    if (resource.entry.kind !== 'config') {
+        addFailure(
+            failures,
+            resource.entry,
+            `Catalog canonical config ${resource.entry.resourceId} must have kind config; found ${resource.entry.kind}.`,
+        );
+        isValid = false;
+    }
+
+    if (resource.entry.publicPath !== expectedPublicPath) {
+        addFailure(
+            failures,
+            resource.entry,
+            `Catalog canonical config ${resource.entry.resourceId} must use publicPath ${expectedPublicPath}; found ${resource.entry.publicPath}.`,
+        );
+        isValid = false;
+    }
+
+    return isValid;
 }
 
 function registerCatalogId(
@@ -224,6 +276,131 @@ function readRegistryStringId(
         `Catalog ${registryName} entry ${resource.entry.resourceId} ${context} in ${resource.entry.publicPath} must declare a non-empty string id.`,
     );
     return undefined;
+}
+
+function addCanonicalConfigShapeFailure(
+    resource: CatalogIdResource,
+    subject: string,
+    context: string,
+    message: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    addFailure(
+        failures,
+        resource.entry,
+        `Catalog ${subject} ${resource.entry.resourceId} ${context} in ${resource.entry.publicPath} ${message}.`,
+    );
+}
+
+function validateCanonicalStringField(
+    resource: CatalogIdResource,
+    record: Record<string, unknown>,
+    subject: string,
+    context: string,
+    field: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (typeof record[field] === 'string') {
+        return;
+    }
+
+    addCanonicalConfigShapeFailure(resource, subject, context, `${field} must be a string`, failures);
+}
+
+function readCanonicalNonNegativeNumberField(
+    resource: CatalogIdResource,
+    record: Record<string, unknown>,
+    subject: string,
+    context: string,
+    field: string,
+    failures: ContentCatalogValidationFailure[],
+): number | undefined {
+    const value = record[field];
+
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+        return value;
+    }
+
+    addCanonicalConfigShapeFailure(
+        resource,
+        subject,
+        context,
+        `${field} must be a finite non-negative number`,
+        failures,
+    );
+    return undefined;
+}
+
+function readCanonicalArtifactStarField(
+    resource: CatalogIdResource,
+    record: Record<string, unknown>,
+    context: string,
+    failures: ContentCatalogValidationFailure[],
+): number | undefined {
+    const value = record.star;
+
+    if (typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= MAX_ARTIFACT_STAR) {
+        return value;
+    }
+
+    addCanonicalConfigShapeFailure(
+        resource,
+        'artifact grade',
+        context,
+        `star must be an integer between 1 and ${MAX_ARTIFACT_STAR}`,
+        failures,
+    );
+    return undefined;
+}
+
+function validateCanonicalMinMaxFields(
+    resource: CatalogIdResource,
+    subject: string,
+    context: string,
+    minField: string,
+    maxField: string,
+    minValue: number | undefined,
+    maxValue: number | undefined,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (minValue === undefined || maxValue === undefined || minValue <= maxValue) {
+        return;
+    }
+
+    addCanonicalConfigShapeFailure(
+        resource,
+        subject,
+        context,
+        `${minField} must be <= ${maxField}`,
+        failures,
+    );
+}
+
+function registerCatalogNumericValue(
+    registry: Map<number, CatalogIdLocation>,
+    registryName: string,
+    resource: CatalogIdResource,
+    value: number,
+    context: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    const location: CatalogIdLocation = {
+        resourceId: resource.entry.resourceId,
+        publicPath: resource.entry.publicPath,
+        context,
+    };
+    const existing = registry.get(value);
+
+    if (existing) {
+        addFailure(
+            failures,
+            resource.entry,
+            `Catalog ${registryName} value ${value} is declared more than once: ${formatCatalogIdLocation(existing)}; duplicate ${formatCatalogIdLocation(location)}.`,
+        );
+        return;
+    }
+
+    registry.set(value, location);
 }
 
 function formatAllowedValues(values: readonly string[]): string {
@@ -1027,10 +1204,15 @@ function buildContentIdRegistries(
     resources: Iterable<CatalogIdResource>,
     failures: ContentCatalogValidationFailure[],
 ): ContentIdRegistries {
+    const resourceList = [...resources];
     const registries: ContentIdRegistries = {
         cards: new Map(),
         gongfa: new Map(),
         statuses: new Map(),
+        realmPresetValues: createCanonicalNumericValueRegistry(
+            CANONICAL_REALM_PRESETS_RESOURCE_ID,
+            CANONICAL_REALM_PRESETS_PUBLIC_PATH,
+        ),
         realms: createCanonicalContentIdRegistry(
             CANONICAL_REALM_REGISTRY_RESOURCE_ID,
             CANONICAL_REALM_REGISTRY_PUBLIC_PATH,
@@ -1048,15 +1230,48 @@ function buildContentIdRegistries(
             'gradeId',
         ),
         worldItems: new Map(),
+        invalidCanonicalConfigResourceIds: new Set(),
     };
 
-    for (const resource of resources) {
-        if (resource.entry.resourceId === CANONICAL_REALM_REGISTRY_RESOURCE_ID) {
-            registerCanonicalContentIds(resource, registries.realms, failures);
-        }
+    for (const resource of resourceList) {
+        if (resource.entry.resourceId === CANONICAL_REALM_PRESETS_RESOURCE_ID) {
+            registries.realmPresetValues.isPresent = true;
 
+            if (validateCanonicalConfigCatalogEntry(resource, CANONICAL_REALM_PRESETS_PUBLIC_PATH, failures)) {
+                validateCanonicalRealmPresetsConfig(resource, registries.realmPresetValues, failures);
+            } else {
+                registries.invalidCanonicalConfigResourceIds.add(resource.entry.resourceId);
+            }
+        }
+    }
+
+    for (const resource of resourceList) {
+        if (resource.entry.resourceId === CANONICAL_REALM_REGISTRY_RESOURCE_ID) {
+            registries.realms.isPresent = true;
+
+            if (validateCanonicalConfigCatalogEntry(resource, CANONICAL_REALM_REGISTRY_PUBLIC_PATH, failures)) {
+                validateCanonicalCombatBaselineConfig(resource, registries.realms, registries.realmPresetValues, failures);
+            } else {
+                registries.invalidCanonicalConfigResourceIds.add(resource.entry.resourceId);
+            }
+        }
+    }
+
+    for (const resource of resourceList) {
         if (resource.entry.resourceId === CANONICAL_GRADE_REGISTRY_RESOURCE_ID) {
-            registerCanonicalContentIds(resource, registries.grades, failures);
+            registries.grades.isPresent = true;
+
+            if (validateCanonicalConfigCatalogEntry(resource, CANONICAL_GRADE_REGISTRY_PUBLIC_PATH, failures)) {
+                validateCanonicalArtifactGradeConfig(resource, registries.grades, failures);
+            } else {
+                registries.invalidCanonicalConfigResourceIds.add(resource.entry.resourceId);
+            }
+        }
+    }
+
+    for (const resource of resourceList) {
+        if (registries.invalidCanonicalConfigResourceIds.has(resource.entry.resourceId)) {
+            continue;
         }
 
         if (!resource.json || !isRecord(resource.json)) {
@@ -1086,13 +1301,100 @@ function buildContentIdRegistries(
     return registries;
 }
 
-function registerCanonicalContentIds(
+function validateCanonicalRealmPresetsConfig(
     resource: CatalogIdResource,
-    registry: CanonicalContentIdRegistry,
+    registry: CanonicalNumericValueRegistry,
     failures: ContentCatalogValidationFailure[],
 ): void {
-    registry.isPresent = true;
+    if (!isRecord(resource.json)) {
+        addFailure(
+            failures,
+            resource.entry,
+            `Catalog realm presets config ${resource.entry.resourceId} in ${resource.entry.publicPath} must be an object.`,
+        );
+        return;
+    }
 
+    if (!Array.isArray(resource.json.realmStages)) {
+        addFailure(
+            failures,
+            resource.entry,
+            `Catalog realm presets config ${resource.entry.resourceId} in ${resource.entry.publicPath} must declare a top-level realmStages array.`,
+        );
+        return;
+    }
+
+    resource.json.realmStages.forEach((stageValue, stageIndex) => {
+        const stageContext = `realmStages[${stageIndex}]`;
+
+        if (!isRecord(stageValue)) {
+            addCanonicalConfigShapeFailure(
+                resource,
+                'realm preset stage',
+                stageContext,
+                'must be an object',
+                failures,
+            );
+            return;
+        }
+
+        validateCanonicalStringField(resource, stageValue, 'realm preset stage', stageContext, 'stage', failures);
+
+        if (!Array.isArray(stageValue.phases)) {
+            addCanonicalConfigShapeFailure(
+                resource,
+                'realm preset stage',
+                stageContext,
+                'must declare a phases array',
+                failures,
+            );
+            return;
+        }
+
+        stageValue.phases.forEach((phaseValue, phaseIndex) => {
+            const phaseContext = `${stageContext}.phases[${phaseIndex}]`;
+
+            if (!isRecord(phaseValue)) {
+                addCanonicalConfigShapeFailure(
+                    resource,
+                    'realm preset phase',
+                    phaseContext,
+                    'must be an object',
+                    failures,
+                );
+                return;
+            }
+
+            validateCanonicalStringField(resource, phaseValue, 'realm preset phase', phaseContext, 'phase', failures);
+            const presetValue = readCanonicalNonNegativeNumberField(
+                resource,
+                phaseValue,
+                'realm preset phase',
+                phaseContext,
+                'value',
+                failures,
+            );
+
+            if (presetValue !== undefined) {
+                registerCatalogNumericValue(
+                    registry.values,
+                    'realm preset',
+                    resource,
+                    presetValue,
+                    phaseContext,
+                    failures,
+                );
+            }
+        });
+    });
+}
+
+function validateCanonicalCombatBaselineConfig(
+    resource: CatalogIdResource,
+    registry: CanonicalContentIdRegistry,
+    realmPresetValues: CanonicalNumericValueRegistry,
+    failures: ContentCatalogValidationFailure[],
+): void {
     if (!isRecord(resource.json)) {
         addFailure(
             failures,
@@ -1113,6 +1415,8 @@ function registerCanonicalContentIds(
         return;
     }
 
+    const values = new Map<number, CatalogIdLocation>();
+
     collection.forEach((value, index) => {
         const context = `${registry.collectionName}[${index}]`;
 
@@ -1126,12 +1430,202 @@ function registerCanonicalContentIds(
         }
 
         const id = readRegistryStringId(resource, value, context, registry.registryName, failures);
+        validateCanonicalStringField(resource, value, 'combat baseline realm', context, 'stage', failures);
+        validateCanonicalStringField(resource, value, 'combat baseline realm', context, 'phase', failures);
+        const realmValue = readCanonicalNonNegativeNumberField(
+            resource,
+            value,
+            'combat baseline realm',
+            context,
+            'value',
+            failures,
+        );
+        const attackMin = readCanonicalNonNegativeNumberField(
+            resource,
+            value,
+            'combat baseline realm',
+            context,
+            'attackMin',
+            failures,
+        );
+        const attackMax = readCanonicalNonNegativeNumberField(
+            resource,
+            value,
+            'combat baseline realm',
+            context,
+            'attackMax',
+            failures,
+        );
+        const healthMin = readCanonicalNonNegativeNumberField(
+            resource,
+            value,
+            'combat baseline realm',
+            context,
+            'healthMin',
+            failures,
+        );
+        const healthMax = readCanonicalNonNegativeNumberField(
+            resource,
+            value,
+            'combat baseline realm',
+            context,
+            'healthMax',
+            failures,
+        );
 
-        if (!id) {
+        validateCanonicalMinMaxFields(
+            resource,
+            'combat baseline realm',
+            context,
+            'attackMin',
+            'attackMax',
+            attackMin,
+            attackMax,
+            failures,
+        );
+        validateCanonicalMinMaxFields(
+            resource,
+            'combat baseline realm',
+            context,
+            'healthMin',
+            'healthMax',
+            healthMin,
+            healthMax,
+            failures,
+        );
+
+        if (id) {
+            registerCatalogId(registry.ids, registry.registryName, resource, id, context, failures);
+        }
+
+        if (realmValue !== undefined) {
+            registerCatalogNumericValue(values, 'realm', resource, realmValue, context, failures);
+
+            if (realmPresetValues.isPresent && !realmPresetValues.values.has(realmValue)) {
+                addCanonicalConfigShapeFailure(
+                    resource,
+                    'combat baseline realm',
+                    context,
+                    `value ${realmValue} is not declared by canonical ${realmPresetValues.publicPath}`,
+                    failures,
+                );
+            }
+        }
+    });
+}
+
+function validateCanonicalArtifactGradeConfig(
+    resource: CatalogIdResource,
+    registry: CanonicalContentIdRegistry,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (!isRecord(resource.json)) {
+        addFailure(
+            failures,
+            resource.entry,
+            `Catalog ${registry.registryName} registry ${resource.entry.resourceId} in ${resource.entry.publicPath} must be an object.`,
+        );
+        return;
+    }
+
+    const collection = resource.json[registry.collectionName];
+
+    if (!Array.isArray(collection)) {
+        addFailure(
+            failures,
+            resource.entry,
+            `Catalog ${registry.registryName} registry ${resource.entry.resourceId} in ${resource.entry.publicPath} must declare a top-level ${registry.collectionName} array.`,
+        );
+        return;
+    }
+
+    const values = new Map<number, CatalogIdLocation>();
+
+    collection.forEach((value, index) => {
+        const context = `${registry.collectionName}[${index}]`;
+
+        if (!isRecord(value)) {
+            addFailure(
+                failures,
+                resource.entry,
+                `Catalog ${registry.registryName} entry ${resource.entry.resourceId} ${context} in ${resource.entry.publicPath} must be an object.`,
+            );
             return;
         }
 
-        registerCatalogId(registry.ids, registry.registryName, resource, id, context, failures);
+        const id = readRegistryStringId(resource, value, context, registry.registryName, failures);
+        validateCanonicalStringField(resource, value, 'artifact grade', context, 'tier', failures);
+        validateCanonicalStringField(resource, value, 'artifact grade', context, 'quality', failures);
+        readCanonicalArtifactStarField(resource, value, context, failures);
+        const gradeValue = readCanonicalNonNegativeNumberField(
+            resource,
+            value,
+            'artifact grade',
+            context,
+            'value',
+            failures,
+        );
+        const attackBonusMin = readCanonicalNonNegativeNumberField(
+            resource,
+            value,
+            'artifact grade',
+            context,
+            'attackBonusMin',
+            failures,
+        );
+        const attackBonusMax = readCanonicalNonNegativeNumberField(
+            resource,
+            value,
+            'artifact grade',
+            context,
+            'attackBonusMax',
+            failures,
+        );
+        const healthBonusMin = readCanonicalNonNegativeNumberField(
+            resource,
+            value,
+            'artifact grade',
+            context,
+            'healthBonusMin',
+            failures,
+        );
+        const healthBonusMax = readCanonicalNonNegativeNumberField(
+            resource,
+            value,
+            'artifact grade',
+            context,
+            'healthBonusMax',
+            failures,
+        );
+
+        validateCanonicalMinMaxFields(
+            resource,
+            'artifact grade',
+            context,
+            'attackBonusMin',
+            'attackBonusMax',
+            attackBonusMin,
+            attackBonusMax,
+            failures,
+        );
+        validateCanonicalMinMaxFields(
+            resource,
+            'artifact grade',
+            context,
+            'healthBonusMin',
+            'healthBonusMax',
+            healthBonusMin,
+            healthBonusMax,
+            failures,
+        );
+
+        if (id) {
+            registerCatalogId(registry.ids, registry.registryName, resource, id, context, failures);
+        }
+
+        if (gradeValue !== undefined) {
+            registerCatalogNumericValue(values, 'grade', resource, gradeValue, context, failures);
+        }
     });
 }
 
@@ -1298,6 +1792,10 @@ function validateContentIdReferences(
     failures: ContentCatalogValidationFailure[],
 ): void {
     for (const resource of resources) {
+        if (registries.invalidCanonicalConfigResourceIds.has(resource.entry.resourceId)) {
+            continue;
+        }
+
         if (!resource.json || !isRecord(resource.json)) {
             continue;
         }

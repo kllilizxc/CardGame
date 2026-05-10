@@ -3,9 +3,7 @@
     {
       "stage": "凡人",
       "phases": [
-        { "phase": "初期", "value": 0 },
-        { "phase": "中期", "value": 0 },
-        { "phase": "后期", "value": 0 }
+        { "phase": "", "value": 0 }
       ]
     },
     {
