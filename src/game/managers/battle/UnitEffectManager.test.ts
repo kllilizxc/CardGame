@@ -558,3 +558,66 @@ describe('UnitEffectManager unsupported gongfa action dispatch', () => {
     ]);
   });
 });
+
+describe('UnitEffectManager gongfa event matching delegation', () => {
+  it('does not execute actions or emit logs when the event side mismatches', () => {
+    const unitCard = {
+      id: 'unit.test_side_mismatch_owner',
+      name: '侧别测试修士',
+      kind: 'unit',
+      realmId: 'realm_qi_1',
+      gongfaIds: ['gongfa.test_side_mismatch'],
+      attack: 4,
+      health: 20,
+    } as UnitCard;
+    const unitSprite = createCardSprite(unitCard);
+    const addLogMessages: string[] = [];
+    const gongfaLogNames: string[] = [];
+    const statusApplications: Array<{ unitId: string; statusId: string; value: number; target: CardSprite }> = [];
+    const battleContext = {
+      battleLog: {
+        addLog: (message: string) => addLogMessages.push(message),
+        addGongfaLog: (_unitName: string, gongfaName: string) => gongfaLogNames.push(gongfaName),
+      },
+    } as unknown as BattleContext;
+    const manager = new UnitEffectManager(battleContext, [
+      {
+        id: 'gongfa.test_side_mismatch',
+        name: '敌侧才触发',
+        description: '玩家侧召唤时不应触发。',
+        schema: {
+          event: { type: EffectEventType.OnSummon, side: EffectEventSide.Enemy },
+          actions: [
+            {
+              type: EffectActionType.GainArmor,
+              target: 'self',
+              value: 3,
+            },
+          ],
+        },
+      },
+    ]);
+    const context = {
+      playerField: [unitSprite],
+      discardPile: [],
+      hand: [],
+      cardScale: 1,
+      artifactUsage: {},
+      battleStatusController: {
+        applyStatusToUnit: (unitId: string, statusId: string, value: number, target: CardSprite) => {
+          statusApplications.push({ unitId, statusId, value, target });
+        },
+      },
+    } as GongfaRuntimeContext;
+
+    const consoleOutput = collectConsole(() => {
+      manager.applyOnSummonEffects(unitSprite, context);
+    });
+
+    expect(statusApplications).toEqual([]);
+    expect(addLogMessages).toEqual([]);
+    expect(gongfaLogNames).toEqual([]);
+    expect(consoleOutput.errors).toEqual([]);
+    expect(consoleOutput.warnings).toEqual([]);
+  });
+});

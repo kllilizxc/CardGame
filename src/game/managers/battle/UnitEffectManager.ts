@@ -5,7 +5,6 @@ import type { CardSprite } from '../../objects/CardSprite';
 import type {
     Gongfa,
     GongfaAction,
-    EffectSchema,
 } from '@data/types/gongfa';
 import { EffectEventType, EffectEventSide } from '@data/types/gongfa';
 import type { UnitCard } from '@data/types/cards/unit';
@@ -17,6 +16,7 @@ import {
     executeGongfaActions,
     type GongfaOperationDispatchContext
 } from './gongfaOperationDispatch';
+import { isGongfaEventMatch } from './gongfaEventMatching';
 
 type AnyHandSprite = CardSprite | import('../../objects/ArtifactSprite').ArtifactSprite | import('../../objects/TalismanSprite').TalismanSprite | import('../../objects/FieldSprite').FieldSprite;
 
@@ -92,7 +92,7 @@ export class UnitEffectManager {
                 return;
             }
 
-            if (!this.isEventMatch(gongfa.schema.event, eventType, side)) {
+            if (!isGongfaEventMatch(gongfa.schema.event, { type: eventType, side })) {
                 return;
             }
 
@@ -107,22 +107,6 @@ export class UnitEffectManager {
                 this.battleContext.battleLog.addGongfaLog(cardData.name, displayName, description, [unit]);
             }
         });
-    }
-
-    private isEventMatch(event: EffectSchema['event'], currentType: EffectEventType, currentSide: EffectEventSide): boolean {
-        if (event.type === EffectEventType.Custom) {
-            return event.type === currentType && event.side === currentSide;
-        }
-
-        if (event.type !== currentType) {
-            return false;
-        }
-
-        if (!event.side || event.side === EffectEventSide.Any) {
-            return true;
-        }
-
-        return event.side === currentSide;
     }
 
     private executeActions(actions: GongfaAction[], context: GongfaRuntimeContext): boolean {
