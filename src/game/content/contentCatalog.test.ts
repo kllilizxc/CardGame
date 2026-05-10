@@ -24,6 +24,14 @@ import {
     resolveCatalogResourceIdReference,
     validateResourceDomainId,
 } from './contentCatalogValidationIndex';
+import {
+    CANONICAL_GRADE_REGISTRY_PUBLIC_PATH,
+    CANONICAL_GRADE_REGISTRY_RESOURCE_ID,
+    CANONICAL_REALM_PRESETS_PUBLIC_PATH,
+    CANONICAL_REALM_PRESETS_RESOURCE_ID,
+    CANONICAL_REALM_REGISTRY_PUBLIC_PATH,
+    CANONICAL_REALM_REGISTRY_RESOURCE_ID,
+} from './contentCatalogCanonicalConfig';
 
 const expectedCheckedInResources = [
     ['worldMap', 'data/world/world-map.json'],
@@ -62,24 +70,24 @@ const expectedCheckedInResources = [
 ] as const;
 
 const canonicalCombatBaselineCatalogEntry = {
-    resourceId: 'config.combat-baseline',
+    resourceId: CANONICAL_REALM_REGISTRY_RESOURCE_ID,
     kind: 'config',
     schemaVersion: 1,
-    publicPath: 'data/config/combat-baseline.json',
+    publicPath: CANONICAL_REALM_REGISTRY_PUBLIC_PATH,
 } as const;
 
 const canonicalArtifactGradeCatalogEntry = {
-    resourceId: 'config.artifact-grade',
+    resourceId: CANONICAL_GRADE_REGISTRY_RESOURCE_ID,
     kind: 'config',
     schemaVersion: 1,
-    publicPath: 'data/config/artifact-grade.json',
+    publicPath: CANONICAL_GRADE_REGISTRY_PUBLIC_PATH,
 } as const;
 
 const canonicalRealmPresetsCatalogEntry = {
-    resourceId: 'config.realm-presets',
+    resourceId: CANONICAL_REALM_PRESETS_RESOURCE_ID,
     kind: 'config',
     schemaVersion: 1,
-    publicPath: 'data/config/realm-presets.json',
+    publicPath: CANONICAL_REALM_PRESETS_PUBLIC_PATH,
 } as const;
 
 const validRealmPresetsRegistry = {
