@@ -342,6 +342,21 @@ describe('UnitEffectManager gongfa expression fallback contract', () => {
     expect(consoleOutput.errors).toEqual([]);
     expect(consoleOutput.warnings).toEqual(['护甲值无效: 0']);
   });
+
+  it('keeps GainArmor return semantics so orchestration logs even when armor status runtime is absent', () => {
+    const harness = createOnSummonArmorHarness('3');
+    delete (harness.context as Partial<GongfaRuntimeContext>).battleStatusController;
+
+    const consoleOutput = collectConsole(() => {
+      harness.manager.applyOnSummonEffects(harness.unitSprite, harness.context);
+    });
+
+    expect(harness.statusApplications).toEqual([]);
+    expect(harness.addLogMessages).toEqual(['【炼气剑修】获得 3 点护甲']);
+    expect(harness.gongfaLogNames).toEqual(['召唤护身']);
+    expect(consoleOutput.errors).toEqual([]);
+    expect(consoleOutput.warnings).toEqual(['battleStatusController 未提供，无法应用护甲状态']);
+  });
 });
 
 describe('UnitEffectManager CardFilter runtime adapters', () => {

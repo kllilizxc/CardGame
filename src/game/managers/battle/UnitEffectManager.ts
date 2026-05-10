@@ -8,7 +8,6 @@ import type {
     EffectCondition,
     EffectSchema,
     ImmediateAttackAction,
-    GainArmorAction,
     ArtifactEquippedCondition,
 } from '@data/types/gongfa';
 import { EffectEventType, EffectEventSide, EffectConditionType, EffectActionType } from '@data/types/gongfa';
@@ -21,6 +20,7 @@ import {
     type GongfaCardOperationCard,
     type GongfaCardOperationContext
 } from './gongfaCardOperations';
+import { executeGongfaArmorOperation, type GongfaArmorOperationContext } from './gongfaArmorOperations';
 
 type AnyHandSprite = CardSprite | import('../../objects/ArtifactSprite').ArtifactSprite | import('../../objects/TalismanSprite').TalismanSprite | import('../../objects/FieldSprite').FieldSprite;
 
@@ -238,8 +238,10 @@ export class UnitEffectManager {
                     break;
                 }
                 case EffectActionType.GainArmor: {
-                    const armorAction = action as GainArmorAction;
-                    const gained = this.executeGainArmor(armorAction, context);
+                    const gained = executeGongfaArmorOperation(
+                        action,
+                        this.createArmorOperationContext(context)
+                    );
                     executed = executed || gained;
                     break;
                 }
@@ -339,54 +341,6 @@ export class UnitEffectManager {
         return true;
     }
 
-    private executeGainArmor(action: GainArmorAction, context: GongfaRuntimeContext): boolean {
-        if (!context.triggerUnit) {
-            console.warn('获得护甲需要触发单位信息');
-            return false;
-        }
-
-        // 计算护甲值
-        let armorValue = 0;
-        if (typeof action.value === 'number') {
-            armorValue = action.value;
-        } else if (typeof action.value === 'string') {
-            armorValue = this.evaluateExpression(action.value, context);
-        }
-
-        if (armorValue <= 0) {
-            console.warn(`护甲值无效: ${armorValue}`);
-            return false;
-        }
-
-        // 确定目标
-        let target: CardSprite | null = null;
-        if (action.target === 'self') {
-            target = context.triggerUnit;
-        }
-
-        if (!target) {
-            console.warn('未找到护甲目标');
-            return false;
-        }
-
-        const targetData = target.getCardData();
-        this.battleContext.battleLog.addLog(`【${targetData.name}】获得 ${armorValue} 点护甲`);
-
-        // 应用护甲状态
-        if (context.battleStatusController) {
-            context.battleStatusController.applyStatusToUnit(
-                targetData.id,
-                'armor',
-                armorValue,
-                target // 传递单位精灵以更新显示
-            );
-        } else {
-            console.warn('battleStatusController 未提供，无法应用护甲状态');
-        }
-
-        return true;
-    }
-
     private createCardOperationContext(context: GongfaRuntimeContext): GongfaCardOperationContext {
         return {
             discardPile: context.discardPile,
@@ -396,6 +350,15 @@ export class UnitEffectManager {
             gameActionHandler: context.gameActionHandler,
             battleLog: this.battleContext.battleLog,
             expressionContext: this.buildExpressionContext(context) ?? {}
+        };
+    }
+
+    private createArmorOperationContext(context: GongfaRuntimeContext): GongfaArmorOperationContext {
+        return {
+            triggerUnit: context.triggerUnit,
+            battleStatusController: context.battleStatusController,
+            battleLog: this.battleContext.battleLog,
+            evaluateExpression: (expression: string) => this.evaluateExpression(expression, context)
         };
     }
 
