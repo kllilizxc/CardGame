@@ -8,6 +8,11 @@ import { describeGongfa } from '../utils/GongfaDescriptionBuilder';
 import { getUnitStar, getRealmConfig } from '../utils/RealmHelper';
 import { getStatusDisplayText, getStatusCategoryColor, getStatusFullDescription } from '../utils/StatusHelper';
 
+type BattleSceneCardDragBridge = Phaser.Scene & {
+    swapPlayerFieldCards?: (card: CardSprite, x: number, y: number) => boolean;
+    isCardInPlayerField?: (x: number, y: number) => boolean;
+};
+
 export class CardSprite extends BaseCardSprite {
     private cardData: UnitCard;
     private starsText: GameObjects.Text;
@@ -105,7 +110,7 @@ export class CardSprite extends BaseCardSprite {
         this.setupDragEvents({
             onDragEnd: () => {
                 // 拖拽结束后的处理
-                const battleScene = this.scene as any; // BattleScene
+                const battleScene = this.scene as BattleSceneCardDragBridge;
                 
                 // 检查是否拖拽到己方场地上的其他单位（用于换位）
                 if (battleScene.swapPlayerFieldCards) {

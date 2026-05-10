@@ -288,7 +288,12 @@ export class DeckSelectionUI extends GameObjects.Container {
      */
     private setupInteraction(): void {
         // 鼠标滚轮滚动
-        this.scene.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gameObjects: any[], _deltaX: number, deltaY: number) => {
+        this.scene.input.on('wheel', (
+            _pointer: Phaser.Input.Pointer,
+            _gameObjects: Phaser.GameObjects.GameObject[],
+            _deltaX: number,
+            deltaY: number
+        ) => {
             if (this.visible) {
                 this.scroll(deltaY * 0.5);
             }

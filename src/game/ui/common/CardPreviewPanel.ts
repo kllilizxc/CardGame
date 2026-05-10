@@ -3,6 +3,7 @@ import { CardSpriteFactory } from '../../factories/CardSpriteFactory';
 import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 import { GongfaTooltip } from './GongfaTooltip';
 import type { PanelConfig } from '../../config/LayoutConfig';
+import type { AnyCard } from '@types/cards/all';
 
 /**
  * 固定的卡牌预览面板
@@ -64,7 +65,7 @@ export class CardPreviewPanel {
     /**
      * 从卡牌数据显示预览
      */
-    public showCardFromData(cardData: any): void {
+    public showCardFromData(cardData: AnyCard): void {
         // 清除旧的预览卡片
         if (this.currentPreviewCard) {
             this.currentPreviewCard.destroy();

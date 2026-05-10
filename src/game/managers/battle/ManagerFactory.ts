@@ -19,6 +19,7 @@ import { SacrificeManager } from './SacrificeManager';
 import { BattleEventManager } from './BattleEventManager';
 import type { CardSprite } from '../../objects/CardSprite';
 import type { BattleLayoutConfig } from '../../config/LayoutConfig';
+import type { Gongfa } from '@data/types/gongfa';
 
 /**
  * 管理器工厂配置
@@ -26,7 +27,7 @@ import type { BattleLayoutConfig } from '../../config/LayoutConfig';
 export interface ManagerFactoryConfig {
     layout: BattleLayoutConfig;
     cardScale: number;
-    gongfaData?: any[];
+    gongfaData?: readonly Gongfa[];
     statusDefinitionsData?: unknown;
     fieldAccessors: {
         getPlayerField: () => CardSprite[];

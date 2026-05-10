@@ -4,6 +4,21 @@ import type { CardSprite } from '../../objects/CardSprite';
 import type { ArtifactSprite } from '../../objects/ArtifactSprite';
 import type { TalismanSprite } from '../../objects/TalismanSprite';
 import type { FieldSprite } from '../../objects/FieldSprite';
+import type { AnyCard } from '@types/cards/all';
+
+type BattleScenePreviewLayout = {
+    cardPreview?: {
+        x: number;
+        y: number;
+    };
+    depth?: {
+        cardPreview?: number;
+    };
+};
+
+type BattleSceneWithLayout = Phaser.Scene & {
+    layout?: BattleScenePreviewLayout;
+};
 
 /**
  * 卡牌预览管理器
@@ -28,11 +43,11 @@ export class CardPreviewManager {
     /**
      * 从卡牌数据显示预览
      */
-    public showFromData(cardData: any): void {
+    public showFromData(cardData: AnyCard): void {
         // 先隐藏旧的预览
         this.hide();
 
-        const battleScene = this.scene as any;
+        const battleScene = this.scene as BattleSceneWithLayout;
         const layout = battleScene.layout;
         
         // 使用布局配置的位置，如果没有则使用默认值

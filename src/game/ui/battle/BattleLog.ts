@@ -2,10 +2,11 @@ import { Scene } from 'phaser';
 import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 import { GongfaTooltip } from '../common/GongfaTooltip';
 import type { PanelConfig } from '../../config/LayoutConfig';
+import type { AnyCard } from '@types/cards/all';
 
 interface LogEntry {
     text: string;
-    cardRefs: Array<{ name: string; card: BaseCardSprite; cardData: any }>;
+    cardRefs: Array<{ name: string; card: BaseCardSprite; cardData: AnyCard }>;
     timestamp: number;
     gongfaInfo?: { name: string; description: string };
 }
@@ -363,7 +364,7 @@ export class BattleLog {
         x: number,
         y: number,
         text: string,
-        cardRefs: Array<{ name: string; card: BaseCardSprite; cardData: any }>,
+        cardRefs: Array<{ name: string; card: BaseCardSprite; cardData: AnyCard }>,
         gongfaInfo: { name: string; description: string } | undefined,
         fontSize: string,
         maxWidth: number
@@ -373,7 +374,7 @@ export class BattleLog {
             text: string; 
             isCard: boolean; 
             isGongfa: boolean;
-            cardRef?: { name: string; card: BaseCardSprite; cardData: any };
+            cardRef?: { name: string; card: BaseCardSprite; cardData: AnyCard };
             gongfaInfo?: { name: string; description: string };
         }> = [];
         let remaining = text;

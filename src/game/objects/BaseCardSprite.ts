@@ -1,4 +1,13 @@
 import { GameObjects } from 'phaser';
+import type { AnyCard } from '@types/cards/all';
+
+type BattleSceneWithEffectManager = Phaser.Scene & {
+    battleContext?: {
+        effectManager?: {
+            returnCardToPosition(card: BaseCardSprite, x: number, y: number): void;
+        };
+    };
+};
 
 /**
  * 卡片显示模式
@@ -156,14 +165,14 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      * 获取卡牌数据（子类需实现）
      * 返回具体的卡牌数据对象，用于类型安全的数据访问
      */
-    public abstract getCardData(): any;
+    public abstract getCardData(): AnyCard;
 
     /**
      * 返回原始位置
      */
     public returnToOriginalPosition(): void {
         // 尝试通过 BattleScene 获取 battleContext
-        const battleScene = this.scene as any;
+        const battleScene = this.scene as BattleSceneWithEffectManager;
         if (battleScene.battleContext?.effectManager) {
             battleScene.battleContext.effectManager.returnCardToPosition(
                 this,

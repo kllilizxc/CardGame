@@ -161,16 +161,15 @@ export class SacrificeSelectionUI extends GameObjects.Container {
             unit.setDepth(5001);
             
             // 获取卡牌的原始尺寸（不受scale影响）
-            const cardWidth = (unit as any).CARD_WIDTH || 120;
-            const cardHeight = (unit as any).CARD_HEIGHT || 180;
-            const baseScale = (unit as any).getCardBaseScale ? (unit as any).getCardBaseScale() : unit.scaleX;
+            const cardWidth = unit.width;
+            const cardHeight = unit.height;
             
             // 创建透明遮罩层（完全透明，但可交互）
             const overlay = this.scene.add.rectangle(
                 unit.x,
                 unit.y,
-                cardWidth * baseScale,
-                cardHeight * baseScale,
+                cardWidth,
+                cardHeight,
                 0xffffff,
                 0.001 // 几乎完全透明，但必须有一点alpha才能交互
             );
@@ -244,15 +243,14 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         this.removeHighlight(unit);
 
         // 获取卡牌的原始尺寸（不受scale影响）
-        const cardWidth = (unit as any).CARD_WIDTH || 120;
-        const cardHeight = (unit as any).CARD_HEIGHT || 180;
-        const baseScale = (unit as any).getCardBaseScale ? (unit as any).getCardBaseScale() : unit.scaleX;
+        const cardWidth = unit.width;
+        const cardHeight = unit.height;
         
         const highlight = this.scene.add.graphics();
         highlight.lineStyle(4, color, alpha);
         // 使用固定的内边距，确保所有卡牌高亮宽度一致
-        const width = cardWidth * baseScale;
-        const height = cardHeight * baseScale;
+        const width = cardWidth;
+        const height = cardHeight;
         
         highlight.strokeRoundedRect(
             unit.x - width / 2,

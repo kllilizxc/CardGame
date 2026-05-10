@@ -183,7 +183,12 @@ export class CardListView extends GameObjects.Container {
 
     private setupInteraction() {
         // 鼠标滚轮滚动
-        this.scene.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gameObjects: any[], _deltaX: number, deltaY: number) => {
+        this.scene.input.on('wheel', (
+            _pointer: Phaser.Input.Pointer,
+            _gameObjects: Phaser.GameObjects.GameObject[],
+            _deltaX: number,
+            deltaY: number
+        ) => {
             this.scroll(deltaY * 0.5);
         });
 

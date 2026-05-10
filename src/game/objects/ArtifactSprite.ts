@@ -3,6 +3,10 @@ import type { ArtifactCard } from '@data/types/cards/artifact';
 import { BaseCardSprite } from './BaseCardSprite';
 import { getArtifactStar, getGradeDisplayName, getElementsDisplayText, getElementColor } from '../utils/ArtifactHelper';
 
+type BattleSceneArtifactDragBridge = Phaser.Scene & {
+    tryEquipArtifact?: (artifact: ArtifactSprite) => boolean;
+};
+
 export class ArtifactSprite extends BaseCardSprite {
     private cardData: ArtifactCard;
     private starsText: GameObjects.Text;
@@ -96,7 +100,7 @@ export class ArtifactSprite extends BaseCardSprite {
         this.setupDragEvents({
             onDragEnd: () => {
                 // 拖拽结束后的处理
-                const battleScene = this.scene as any;
+                const battleScene = this.scene as BattleSceneArtifactDragBridge;
                 if (battleScene.tryEquipArtifact) {
                     const success = battleScene.tryEquipArtifact(this);
                     if (!success) {
