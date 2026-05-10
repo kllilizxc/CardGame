@@ -200,6 +200,18 @@ export class BattleScene extends Scene {
         return data;
     }
 
+    private getRequiredRuntimeJson(cacheKey: string): unknown {
+        const data = this.cache.json.get(cacheKey);
+
+        if (data === undefined) {
+            throw new Error(
+                `BattleScene failed to load encounter resource from preload: JSON cache key ${cacheKey} is missing after create preload.`,
+            );
+        }
+
+        return data;
+    }
+
     private getOptionalSharedRuntimeJson(cacheKey: BattleOptionalSharedRuntimeResourceCacheKey): unknown | undefined {
         const resource = this.sharedRuntimeResources?.[cacheKey];
 
@@ -887,7 +899,7 @@ export class BattleScene extends Scene {
     }
 
     private spawnEnemies() {
-        const encounterData = this.getRequiredSharedRuntimeJson(this.encounterCacheKey);
+        const encounterData = this.getRequiredRuntimeJson(this.encounterCacheKey);
         if (!encounterData) {
             console.error('遭遇配置加载失败！');
             return;
