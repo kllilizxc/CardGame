@@ -7,10 +7,16 @@ import {
     CONTENT_CATALOG_PUBLIC_PATH,
     QINGYUN_WORLD_MAP_RESOURCE_ID,
     type ContentCatalogFileSource,
+    type ContentCatalogValidationFailure,
     createContentCatalogResolver,
     parseContentCatalogDefinition,
     validateContentCatalog,
 } from './contentCatalog';
+import {
+    loadContentCatalogValidationIndex,
+    resolveCatalogResourceIdReference,
+    validateResourceDomainId,
+} from './contentCatalogValidationIndex';
 
 const expectedCheckedInResources = [
     ['worldMap', 'data/world/world-map.json'],
@@ -817,6 +823,70 @@ describe('content catalog', () => {
         expect(catalog.resources.map((entry) => [entry.kind, entry.publicPath])).toEqual(expectedCheckedInResources);
         expect(new Set(catalog.resources.map((entry) => entry.resourceId)).size).toBe(catalog.resources.length);
         expect(new Set(catalog.resources.map((entry) => entry.publicPath)).size).toBe(catalog.resources.length);
+    });
+
+    it('keeps validation index plumbing in a focused module', () => {
+        const catalog = parseContentCatalogDefinition({
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'hub.catalog',
+                    kind: 'hub',
+                    schemaVersion: 1,
+                    publicPath: 'data/hub/catalog-hub.json',
+                },
+            ],
+        });
+        const failures: ContentCatalogValidationFailure[] = [];
+        const { index, validatedResourceCount } = loadContentCatalogValidationIndex(
+            catalog,
+            createPublicFileSourceWithOverrides({
+                'data/hub/catalog-hub.json': catalogHubDefinition,
+            }),
+            {
+                hub(json: unknown): unknown {
+                    return {
+                        validatedHubId: (json as { hubId?: unknown }).hubId,
+                    };
+                },
+            },
+            failures,
+        );
+
+        expect(validatedResourceCount).toBe(1);
+        expect(index.byPath.get('data/hub/catalog-hub.json')?.json).toEqual(catalogHubDefinition);
+        expect(index.byResourceId.get('hub.catalog')?.validated).toEqual({
+            validatedHubId: 'hub.catalog',
+        });
+        expect(resolveCatalogResourceIdReference(index, failures, catalog.resources[0], {
+            context: 'Focused validation index fixture',
+            resourceIdField: 'hubResourceId',
+            resourceId: 'hub.catalog',
+            publicPathField: 'hubFile',
+            publicPath: 'data/hub/catalog-hub.json',
+            expectedKinds: ['hub'],
+        })?.entry.resourceId).toBe('hub.catalog');
+
+        const domainFailures: ContentCatalogValidationFailure[] = [];
+        validateResourceDomainId(
+            {
+                ...catalog.resources[0],
+                resourceId: 'hub.expected',
+            },
+            {
+                hubId: 'hub.actual',
+            },
+            domainFailures,
+        );
+
+        expect(failures).toEqual([]);
+        expect(domainFailures).toEqual([
+            {
+                resourceId: 'hub.expected',
+                publicPath: 'data/hub/catalog-hub.json',
+                message: 'Catalog resource hub.expected (hub) domain id mismatch: data/hub/catalog-hub.json declares hubId "hub.actual".',
+            },
+        ]);
     });
 
     it('validates checked-in resources plus route-critical and content ID references with pure validators', () => {
