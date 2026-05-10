@@ -70,6 +70,24 @@ const validArtifactGradeRegistry = {
     grades: [{ id: 'grade.valid' }],
 };
 
+function createValidStatusDefinition(id: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+        id,
+        name: `Status ${id}`,
+        description: `Valid status definition for ${id}.`,
+        category: 'buff',
+        timing: 'persistent',
+        effectType: 'mark',
+        stackConsumeType: 'none',
+        baseValue: 0,
+        icon: '●',
+        color: '#ffffff',
+        stackable: true,
+        maxStacks: 99,
+        ...overrides,
+    };
+}
+
 function createCanonicalRealmAndGradeOverrides(): Record<string, unknown> {
     return {
         [canonicalCombatBaselineCatalogEntry.publicPath]: validCombatBaselineRegistry,
@@ -1344,10 +1362,10 @@ describe('content catalog', () => {
             },
             'data/config/status-definitions.json': {
                 statuses: [
-                    { id: 'duplicate_status' },
-                    { id: 'duplicate_status' },
-                    { id: '' },
-                    { id: 42 },
+                    createValidStatusDefinition('duplicate_status'),
+                    createValidStatusDefinition('duplicate_status'),
+                    createValidStatusDefinition('', { id: '' }),
+                    createValidStatusDefinition('numeric_status_id', { id: 42 }),
                 ],
             },
             'data/config/combat-baseline.json': {
@@ -1385,6 +1403,60 @@ describe('content catalog', () => {
             'Catalog grade entry config.artifact-grade grades[2] in data/config/artifact-grade.json must declare a non-empty string id.',
             'Catalog grade entry config.artifact-grade grades[3] in data/config/artifact-grade.json must be an object.',
             'Catalog world item id duplicate_item is declared more than once: world.seed.items-artifacts artifacts[0] in data/world/items.artifacts.json; duplicate world.seed.items-artifacts tools[0] in data/world/items.artifacts.json.',
+        ]);
+    });
+
+    it('returns actionable failures for malformed canonical status definition vocabulary and value shapes', () => {
+        const catalog = {
+            schemaVersion: 1,
+            resources: [
+                {
+                    resourceId: 'status.definitions',
+                    kind: 'status',
+                    schemaVersion: 1,
+                    publicPath: 'data/config/status-definitions.json',
+                },
+            ],
+        };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/config/status-definitions.json': {
+                statuses: [
+                    {
+                        id: 'status.bad_shape',
+                        name: '',
+                        description: 42,
+                        category: 'benefit',
+                        timing: 'combatStart',
+                        effectType: 'multiplyDamage',
+                        stackConsumeType: 'perTurn',
+                        baseValue: '1',
+                        ignoreArmor: 'yes',
+                        affectedByArmor: 1,
+                        icon: 7,
+                        color: false,
+                        stackable: 'true',
+                        maxStacks: 0,
+                        defaultDuration: -1,
+                    },
+                ],
+            },
+        }));
+
+        expect(result.failures.map((failure) => failure.message)).toEqual([
+            'Catalog status definition status.definitions statuses[0] status.bad_shape in data/config/status-definitions.json name must be a non-empty string.',
+            'Catalog status definition status.definitions statuses[0] status.bad_shape in data/config/status-definitions.json description must be a non-empty string.',
+            'Catalog status definition status.definitions statuses[0] status.bad_shape in data/config/status-definitions.json category must be one of: buff, debuff, special.',
+            'Catalog status definition status.definitions statuses[0] status.bad_shape in data/config/status-definitions.json timing must be one of: turnStart, turnEnd, onDamaged, onAttack, onBeAttacked, persistent.',
+            'Catalog status definition status.definitions statuses[0] status.bad_shape in data/config/status-definitions.json effectType must be one of: damage, heal, modifyAttack, modifyDefense, amplifyDamage, reduceDamage, preventAction, preventSkill, taunt, stealth, mark.',
+            'Catalog status definition status.definitions statuses[0] status.bad_shape in data/config/status-definitions.json stackConsumeType must be one of: onTrigger, onDamage, allAtOnce, none.',
+            'Catalog status definition status.definitions statuses[0] status.bad_shape in data/config/status-definitions.json baseValue must be a finite number.',
+            'Catalog status definition status.definitions statuses[0] status.bad_shape in data/config/status-definitions.json ignoreArmor must be a boolean when present.',
+            'Catalog status definition status.definitions statuses[0] status.bad_shape in data/config/status-definitions.json affectedByArmor must be a boolean when present.',
+            'Catalog status definition status.definitions statuses[0] status.bad_shape in data/config/status-definitions.json icon must be a non-empty string.',
+            'Catalog status definition status.definitions statuses[0] status.bad_shape in data/config/status-definitions.json color must be a non-empty string.',
+            'Catalog status definition status.definitions statuses[0] status.bad_shape in data/config/status-definitions.json stackable must be a boolean.',
+            'Catalog status definition status.definitions statuses[0] status.bad_shape in data/config/status-definitions.json maxStacks must be a positive integer.',
+            'Catalog status definition status.definitions statuses[0] status.bad_shape in data/config/status-definitions.json defaultDuration must be a non-negative integer when present.',
         ]);
     });
 
@@ -1619,7 +1691,7 @@ describe('content catalog', () => {
                 gongfa: [{ id: 'gongfa.valid', schema: {} }],
             },
             'data/config/status-definitions.json': {
-                statuses: [{ id: 'status.valid' }],
+                statuses: [createValidStatusDefinition('status.valid')],
             },
             'data/config/combat-baseline.json': validCombatBaselineRegistry,
             'data/world/items.artifacts.json': {
@@ -1731,7 +1803,7 @@ describe('content catalog', () => {
                 ],
             },
             'data/config/status-definitions.json': {
-                statuses: [{ id: 'armor' }],
+                statuses: [createValidStatusDefinition('armor')],
             },
             'data/config/combat-baseline.json': validCombatBaselineRegistry,
             'data/config/extra-status-definitions.json': {

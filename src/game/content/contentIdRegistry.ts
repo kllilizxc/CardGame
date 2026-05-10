@@ -2,6 +2,12 @@ import type {
     ContentCatalogEntry,
     ContentCatalogValidationFailure,
 } from './contentCatalog';
+import type {
+    StackConsumeType,
+    StatusCategory,
+    StatusEffectType,
+    StatusTiming,
+} from '@data/types/status';
 
 type CatalogIdRegistryName = 'card' | 'gongfa' | 'status' | 'world item' | 'realm' | 'grade';
 
@@ -10,6 +16,35 @@ const CANONICAL_REALM_REGISTRY_RESOURCE_ID = 'config.combat-baseline';
 const CANONICAL_REALM_REGISTRY_PUBLIC_PATH = 'data/config/combat-baseline.json';
 const CANONICAL_GRADE_REGISTRY_RESOURCE_ID = 'config.artifact-grade';
 const CANONICAL_GRADE_REGISTRY_PUBLIC_PATH = 'data/config/artifact-grade.json';
+
+const STATUS_CATEGORY_VALUES = ['buff', 'debuff', 'special'] as const satisfies readonly StatusCategory[];
+const STATUS_TIMING_VALUES = [
+    'turnStart',
+    'turnEnd',
+    'onDamaged',
+    'onAttack',
+    'onBeAttacked',
+    'persistent',
+] as const satisfies readonly StatusTiming[];
+const STATUS_EFFECT_TYPE_VALUES = [
+    'damage',
+    'heal',
+    'modifyAttack',
+    'modifyDefense',
+    'amplifyDamage',
+    'reduceDamage',
+    'preventAction',
+    'preventSkill',
+    'taunt',
+    'stealth',
+    'mark',
+] as const satisfies readonly StatusEffectType[];
+const STATUS_STACK_CONSUME_TYPE_VALUES = [
+    'onTrigger',
+    'onDamage',
+    'allAtOnce',
+    'none',
+] as const satisfies readonly StackConsumeType[];
 
 interface CatalogIdResource {
     entry: ContentCatalogEntry;
@@ -148,6 +183,194 @@ function readRegistryStringId(
         `Catalog ${registryName} entry ${resource.entry.resourceId} ${context} in ${resource.entry.publicPath} must declare a non-empty string id.`,
     );
     return undefined;
+}
+
+function formatAllowedValues(values: readonly string[]): string {
+    return values.join(', ');
+}
+
+function addStatusDefinitionShapeFailure(
+    resource: CatalogIdResource,
+    context: string,
+    field: string,
+    expectation: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    addFailure(
+        failures,
+        resource.entry,
+        `${context} in ${resource.entry.publicPath} ${field} ${expectation}.`,
+    );
+}
+
+function validateRequiredStatusStringField(
+    resource: CatalogIdResource,
+    record: Record<string, unknown>,
+    context: string,
+    field: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    const value = record[field];
+
+    if (typeof value === 'string' && value.trim().length > 0) {
+        return;
+    }
+
+    addStatusDefinitionShapeFailure(resource, context, field, 'must be a non-empty string', failures);
+}
+
+function validateRequiredStatusVocabularyField(
+    resource: CatalogIdResource,
+    record: Record<string, unknown>,
+    context: string,
+    field: string,
+    allowedValues: readonly string[],
+    failures: ContentCatalogValidationFailure[],
+): void {
+    const value = record[field];
+
+    if (typeof value === 'string' && allowedValues.includes(value)) {
+        return;
+    }
+
+    addStatusDefinitionShapeFailure(
+        resource,
+        context,
+        field,
+        `must be one of: ${formatAllowedValues(allowedValues)}`,
+        failures,
+    );
+}
+
+function validateRequiredFiniteNumberField(
+    resource: CatalogIdResource,
+    record: Record<string, unknown>,
+    context: string,
+    field: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    const value = record[field];
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return;
+    }
+
+    addStatusDefinitionShapeFailure(resource, context, field, 'must be a finite number', failures);
+}
+
+function validateRequiredBooleanField(
+    resource: CatalogIdResource,
+    record: Record<string, unknown>,
+    context: string,
+    field: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    if (typeof record[field] === 'boolean') {
+        return;
+    }
+
+    addStatusDefinitionShapeFailure(resource, context, field, 'must be a boolean', failures);
+}
+
+function validateOptionalBooleanField(
+    resource: CatalogIdResource,
+    record: Record<string, unknown>,
+    context: string,
+    field: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    const value = record[field];
+
+    if (value === undefined || typeof value === 'boolean') {
+        return;
+    }
+
+    addStatusDefinitionShapeFailure(resource, context, field, 'must be a boolean when present', failures);
+}
+
+function validateRequiredPositiveIntegerField(
+    resource: CatalogIdResource,
+    record: Record<string, unknown>,
+    context: string,
+    field: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    const value = record[field];
+
+    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+        return;
+    }
+
+    addStatusDefinitionShapeFailure(resource, context, field, 'must be a positive integer', failures);
+}
+
+function validateOptionalNonNegativeIntegerField(
+    resource: CatalogIdResource,
+    record: Record<string, unknown>,
+    context: string,
+    field: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    const value = record[field];
+
+    if (value === undefined || (typeof value === 'number' && Number.isInteger(value) && value >= 0)) {
+        return;
+    }
+
+    addStatusDefinitionShapeFailure(resource, context, field, 'must be a non-negative integer when present', failures);
+}
+
+function validateCanonicalStatusDefinitionShape(
+    resource: CatalogIdResource,
+    record: Record<string, unknown>,
+    context: string,
+    id: string,
+    failures: ContentCatalogValidationFailure[],
+): void {
+    const definitionContext = `Catalog status definition ${resource.entry.resourceId} ${context} ${id}`;
+
+    validateRequiredStatusStringField(resource, record, definitionContext, 'name', failures);
+    validateRequiredStatusStringField(resource, record, definitionContext, 'description', failures);
+    validateRequiredStatusVocabularyField(
+        resource,
+        record,
+        definitionContext,
+        'category',
+        STATUS_CATEGORY_VALUES,
+        failures,
+    );
+    validateRequiredStatusVocabularyField(
+        resource,
+        record,
+        definitionContext,
+        'timing',
+        STATUS_TIMING_VALUES,
+        failures,
+    );
+    validateRequiredStatusVocabularyField(
+        resource,
+        record,
+        definitionContext,
+        'effectType',
+        STATUS_EFFECT_TYPE_VALUES,
+        failures,
+    );
+    validateRequiredStatusVocabularyField(
+        resource,
+        record,
+        definitionContext,
+        'stackConsumeType',
+        STATUS_STACK_CONSUME_TYPE_VALUES,
+        failures,
+    );
+    validateRequiredFiniteNumberField(resource, record, definitionContext, 'baseValue', failures);
+    validateOptionalBooleanField(resource, record, definitionContext, 'ignoreArmor', failures);
+    validateOptionalBooleanField(resource, record, definitionContext, 'affectedByArmor', failures);
+    validateRequiredStatusStringField(resource, record, definitionContext, 'icon', failures);
+    validateRequiredStatusStringField(resource, record, definitionContext, 'color', failures);
+    validateRequiredBooleanField(resource, record, definitionContext, 'stackable', failures);
+    validateRequiredPositiveIntegerField(resource, record, definitionContext, 'maxStacks', failures);
+    validateOptionalNonNegativeIntegerField(resource, record, definitionContext, 'defaultDuration', failures);
 }
 
 function buildContentIdRegistries(
@@ -375,6 +598,7 @@ function registerStatusIds(
             return;
         }
 
+        validateCanonicalStatusDefinitionShape(resource, value, context, id, failures);
         registerCatalogId(registries.statuses, 'status', resource, id, context, failures);
     });
 }
