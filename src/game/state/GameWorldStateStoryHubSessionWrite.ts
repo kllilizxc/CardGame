@@ -69,13 +69,13 @@ function cloneStoryHubSessionDocument(
 }
 
 function cloneHubSessionSnapshot(snapshot: DeepReadonly<HubSessionSnapshot>): HubSessionSnapshot {
-    return cloneJsonDocument(snapshot);
+    return cloneJsonDocument<HubSessionSnapshot>(snapshot);
 }
 
 function cloneStoryRuntimeSessionSnapshot(
     snapshot: DeepReadonly<StoryRuntimeSessionSnapshot>,
 ): StoryRuntimeSessionSnapshot {
-    return cloneJsonDocument(snapshot);
+    return cloneJsonDocument<StoryRuntimeSessionSnapshot>(snapshot);
 }
 
 function cloneStoryHubSessionKey(key: DeepReadonly<StoryHubSessionKey>): StoryHubSessionKey {

@@ -6,6 +6,10 @@ import initialWorldState from '../../../../public/data/world/initial-state.json'
 import starterDeckJson from '../../../../public/data/decks/starter-deck.json';
 
 import { ExpeditionState } from '../../state/ExpeditionState';
+import type {
+    PrototypeEventDefinition,
+    PrototypeShopDefinition,
+} from '../../types/expedition';
 import {
     createEventNodeView,
     createExtractNodeView,
@@ -30,7 +34,7 @@ function createStartedRun() {
 describe('nonCombatNodeFlow', () => {
     it('creates a concrete event view from the prototype event pool and marks claimed events', () => {
         const { state, run } = createStartedRun();
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
 
         const unclaimedView = createEventNodeView(event, run, () => 0);
 
@@ -49,7 +53,7 @@ describe('nonCombatNodeFlow', () => {
 
     it('creates shop offer views that expose affordability and purchased state', () => {
         const { state } = createStartedRun();
-        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'];
+        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'] as unknown as PrototypeShopDefinition;
         const swordOffer = shop.offers[0];
         const charmOffer = shop.offers[2];
 

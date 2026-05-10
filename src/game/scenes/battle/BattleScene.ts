@@ -14,7 +14,6 @@ import { getUnitStar, installRuntimeRealmConfig, resetRuntimeRealmConfig } from 
 import { installRuntimeArtifactGradeConfig, resetRuntimeArtifactGradeConfig } from '../../utils/ArtifactHelper';
 import { ArtifactManager } from '../../managers/battle/ArtifactManager';
 import { TalismanManager } from '../../managers/battle/TalismanManager';
-import { FieldManager } from '../../managers/battle/FieldManager';
 import { PillManager } from '../../managers/battle/PillManager';
 import { BattleEventManager } from '../../managers/battle/BattleEventManager';
 import { SacrificeManager } from '../../managers/battle/SacrificeManager';

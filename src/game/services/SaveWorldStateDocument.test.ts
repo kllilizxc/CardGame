@@ -4,6 +4,7 @@ import initialWorldState from '../../../public/data/world/initial-state.json';
 import starterDeckJson from '../../../public/data/decks/starter-deck.json';
 
 import { ExpeditionState } from '../state/ExpeditionState';
+import type { ExpeditionItemStack } from '../types/expedition';
 import type { StoryState } from '../types/story';
 import {
     createActiveRunCompatibilityKeys,
@@ -45,6 +46,7 @@ const SYNTHETIC_TARGET = {
     expeditionId: 'synthetic-expedition',
     mapId: 'synthetic-map',
 };
+const initialWorldStateStashItems = initialWorldState.stash.items as unknown as ExpeditionItemStack[];
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -272,7 +274,7 @@ describe('SaveWorldStateDocument', () => {
         });
         expect(document.worldState.persistentStash.document).toEqual(loadPersistentStash());
         expect(document.worldState.persistentStash.document?.deck).toEqual(starterDeckJson.cards);
-        expect(document.worldState.persistentStash.document?.items).toEqual(initialWorldState.stash.items);
+        expect(document.worldState.persistentStash.document?.items).toEqual(initialWorldStateStashItems);
         expect(document.worldState.activeRun.compatibility).toMatchObject({
             owner: 'activeRun',
             canonicalStorageKeyPrefix: 'cardgame.active-run.v1:',

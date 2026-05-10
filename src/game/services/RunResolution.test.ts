@@ -6,7 +6,11 @@ import worldMapJson from '../../../public/data/world/world-map.json';
 
 import { ExpeditionState } from '../state/ExpeditionState';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
-import type { RunSnapshot } from '../types/expedition';
+import type {
+    ExpeditionItemStack,
+    PersistentStash,
+    RunSnapshot,
+} from '../types/expedition';
 import {
     ACTIVE_RUN_STORAGE_KEY,
     createActiveRunStorageKey,
@@ -34,6 +38,7 @@ const SYNTHETIC_TARGET = {
 };
 const LEGACY_ROUTE_LOOKUP = 'worldMap:destination.synthetic-expedition';
 const LEGACY_ROUTE_STORAGE_KEY = `${ACTIVE_RUN_STORAGE_KEY}:${LEGACY_ROUTE_LOOKUP}`;
+const initialWorldStateStashItems = initialWorldState.stash.items as unknown as ExpeditionItemStack[];
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -125,11 +130,11 @@ function startRewardedRun(
     return state;
 }
 
-function readStoredPersistentStash(storage: Storage): Record<string, unknown> {
-    return JSON.parse(storage.getItem(STASH_STORAGE_KEY) ?? 'null') as Record<string, unknown>;
+function readStoredPersistentStash(storage: Storage): PersistentStash {
+    return JSON.parse(storage.getItem(STASH_STORAGE_KEY) ?? 'null') as PersistentStash;
 }
 
-function expectRunResolutionPersistentStashJsonShape(stash: Record<string, unknown>): void {
+function expectRunResolutionPersistentStashJsonShape(stash: PersistentStash): void {
     expect(Object.keys(stash).sort()).toEqual([
         'deck',
         'deckRef',
@@ -142,7 +147,7 @@ function expectRunResolutionPersistentStashJsonShape(stash: Record<string, unkno
     expect(Array.isArray(stash.items)).toBe(true);
     expect(typeof stash.spiritStones).toBe('number');
 
-    const summary = stash.lastRunSummary as Record<string, unknown>;
+    const summary = stash.lastRunSummary as unknown as Record<string, unknown>;
 
     expect(Object.keys(summary).sort()).toEqual([
         'endedAt',
@@ -197,7 +202,7 @@ describe('RunResolution', () => {
         expect(loadActiveRun()).toBeNull();
         expect(updatedStash?.deck).toEqual([...starterDeckJson.cards, { id: 'TL_002', count: 1 }]);
         expect(updatedStash?.items).toEqual([
-            ...initialWorldState.stash.items,
+            ...initialWorldStateStashItems,
             { id: 'tool_talisman_basic', itemType: 'tool', count: 1 },
         ]);
         expect(updatedStash?.spiritStones).toBe(54);
@@ -233,13 +238,18 @@ describe('RunResolution', () => {
         const defaultState = startRewardedRun(DEFAULT_TARGET, 'TL_002');
         const syntheticState = startRewardedRun(SYNTHETIC_TARGET, 'AR_001');
         const syntheticRunId = syntheticState.activeRun?.runId;
+        const defaultRunId = defaultState.activeRun?.runId;
+
+        if (!defaultRunId) {
+            throw new Error('Expected default active run id to exist.');
+        }
 
         const summary = resolveBattleDefeat({
             targetIdentity: DEFAULT_TARGET,
             finalNodeId: 'battle.mist-foxes',
         });
 
-        expect(summary.runId).toBe(defaultState.activeRun?.runId);
+        expect(summary.runId).toBe(defaultRunId);
         expect(loadActiveRun(DEFAULT_TARGET)).toBeNull();
         expect(loadActiveRun(SYNTHETIC_TARGET)?.runId).toBe(syntheticRunId);
         expect(loadActiveRun(SYNTHETIC_TARGET)?.carriedDeck).toContainEqual({ id: 'AR_001', count: 4 });
@@ -329,6 +339,11 @@ describe('RunResolution', () => {
             ));
             const otherRouteRunId = otherRouteState.activeRun?.runId;
             const runId = state.activeRun?.runId;
+
+            if (!runId) {
+                throw new Error('Expected synthetic active run id to exist.');
+            }
+
             injectedStorage.setItem(ACTIVE_RUN_STORAGE_KEY, JSON.stringify(state.activeRun));
             injectedStorage.setItem(LEGACY_ROUTE_STORAGE_KEY, JSON.stringify({
                 ...state.activeRun!,
@@ -344,7 +359,7 @@ describe('RunResolution', () => {
             }));
             const storedStash = readStoredPersistentStash(injectedStorage);
 
-            expect(summary).toEqual(storedStash.lastRunSummary);
+            expect(storedStash.lastRunSummary).toEqual(summary);
             expect(summary.runId).toBe(runId);
             expect(summary.outcome).toBe(scenario.outcome);
             expect(summary.finalNodeId).toBe(scenario.finalNodeId);
@@ -389,6 +404,10 @@ describe('RunResolution', () => {
             endedAt: '2026-05-10T01:00:00.000Z',
         }));
         const injectedStash = loadPersistentStash(injectedStorage);
+
+        if (!runId) {
+            throw new Error('Expected injected active run id to exist.');
+        }
 
         expect(summary.runId).toBe(runId);
         expect(summary.outcome).toBe('extract');

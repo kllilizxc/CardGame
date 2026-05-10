@@ -15,6 +15,7 @@ import {
     type StoryHubSessionStorageAdapter,
 } from '../services/StoryHubSessionPersistence';
 import type { StoryState } from '../types/story';
+import type { ExpeditionWorldStateSeed, StarterDeckSeed } from './GameWorldStateSeed';
 import { createGameWorldState } from './GameWorldState';
 import {
     applyGameWorldStateStoryHubSessionPlan,
@@ -115,10 +116,13 @@ function restoreLocalStorage(): void {
     localStorageOverrideActive = false;
 }
 
-function createSeedSources() {
+function createSeedSources(): {
+    worldState: ExpeditionWorldStateSeed;
+    starterDeck: StarterDeckSeed;
+} {
     return {
-        worldState: structuredClone(initialWorldState),
-        starterDeck: structuredClone(starterDeckJson),
+        worldState: structuredClone(initialWorldState) as unknown as ExpeditionWorldStateSeed,
+        starterDeck: structuredClone(starterDeckJson) as unknown as StarterDeckSeed,
     };
 }
 

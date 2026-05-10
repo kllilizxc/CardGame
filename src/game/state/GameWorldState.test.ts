@@ -240,6 +240,11 @@ describe('GameWorldState', () => {
         const defaultRun = createRunForTarget(DEFAULT_TARGET);
         const syntheticRun = createRunForTarget(SYNTHETIC_TARGET);
         const storageKeysBeforeRead = storage.keys().sort();
+        const storedStash = loadPersistentStash();
+
+        if (!storedStash) {
+            throw new Error('Expected stored persistent stash to exist.');
+        }
 
         const worldState = createGameWorldState({
             ...createSeedSources(),
@@ -254,7 +259,7 @@ describe('GameWorldState', () => {
             'hub.qingyun-town|action.start-qingyun-entry-story|data%2Fstory%2Fstory-graph.json',
         ]);
         expect(worldState.persistentStash.source).toBe('stored-stash');
-        expect(worldState.persistentStash.document).toEqual(loadPersistentStash());
+        expect(worldState.persistentStash.document).toEqual(storedStash);
         expect(worldState.activeRun.identity).toEqual(SYNTHETIC_TARGET);
         expect(worldState.activeRun.keys).toEqual(createActiveRunCompatibilityKeys(undefined, SYNTHETIC_TARGET));
         expect(worldState.activeRun.document?.runId).toBe(syntheticRun.runId);

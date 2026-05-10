@@ -3,7 +3,10 @@ import { describe, expect, it } from 'bun:test';
 import initialWorldState from '../../../public/data/world/initial-state.json';
 import starterDeckJson from '../../../public/data/decks/starter-deck.json';
 
+import type { ExpeditionItemStack } from '../types/expedition';
 import { createPersistentStashFromWorldStateSeed } from './GameWorldStateSeed';
+
+const initialWorldStateStashItems = initialWorldState.stash.items as unknown as ExpeditionItemStack[];
 
 describe('GameWorldStateSeed', () => {
     it('creates a persistent stash from the checked-in world seed and starter deck', () => {
@@ -16,7 +19,7 @@ describe('GameWorldStateSeed', () => {
             stashId: 'phase01.starter-stash',
             deckRef: 'starter-deck',
             deck: starterDeckJson.cards,
-            items: initialWorldState.stash.items,
+            items: initialWorldStateStashItems,
             spiritStones: 36,
             lastRunSummary: null,
         });

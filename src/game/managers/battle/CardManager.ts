@@ -77,7 +77,7 @@ export class CardManager {
                 this.battleLog.addLog(`抽取了场地卡【${cardData.name}】`, [sprite]);
                 break;
             default:
-                console.warn(`不支持的卡牌类型: ${cardData.kind}`);
+                console.warn(`不支持的卡牌类型: ${(cardData as { kind?: string }).kind ?? 'unknown'}`);
                 return { deck, hand };
         }
         

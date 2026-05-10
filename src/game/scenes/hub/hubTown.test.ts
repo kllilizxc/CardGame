@@ -642,9 +642,15 @@ describe('hub town shell content', () => {
     });
 
     it('rejects navigation actions that point to missing town locations', () => {
-        const brokenTown = structuredClone(townShellJson) as typeof townShellJson;
+        const brokenTown = validateHubTownDefinition(townShellJson);
+        const navigationAction = brokenTown.locations[0].actions[1];
+
+        if (navigationAction.kind !== 'navigate') {
+            throw new Error('Expected the second gate-market action to be a navigate action.');
+        }
+
         brokenTown.locations[0].actions[1] = {
-            ...brokenTown.locations[0].actions[1],
+            ...navigationAction,
             targetLocationId: 'location.qingyun-town.missing',
         };
 

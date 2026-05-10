@@ -9,7 +9,7 @@ import {
     type RunPersistenceStorageAdapter,
     STASH_STORAGE_KEY,
 } from '../services/RunPersistence';
-import type { PersistentStash, RunSnapshot } from '../types/expedition';
+import type { ExpeditionItemStack, PersistentStash, RunSnapshot } from '../types/expedition';
 import { createGameWorldState } from './GameWorldState';
 import { createPersistentStashFromWorldStateSeed } from './GameWorldStateSeed';
 import {
@@ -23,6 +23,7 @@ const SYNTHETIC_TARGET = {
     expeditionId: 'synthetic-expedition',
     mapId: 'synthetic-map',
 };
+const initialWorldStateStashItems = initialWorldState.stash.items as unknown as ExpeditionItemStack[];
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -214,7 +215,7 @@ describe('GameWorldStatePersistentStashWrite', () => {
             'stashId',
         ]);
         expect(result.document.deck).toEqual(starterDeckJson.cards);
-        expect(result.document.items).toEqual(initialWorldState.stash.items);
+        expect(result.document.items).toEqual(initialWorldStateStashItems);
         expect(result.document.spiritStones).toBe(initialWorldState.stash.spiritStones);
 
         result.document.deck[0].count = 999;

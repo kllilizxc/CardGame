@@ -854,8 +854,12 @@ describe('content catalog', () => {
 
         const catalog = parseContentCatalogDefinition(readCatalogJson());
 
+        const checkedInResources: readonly (readonly [string, string])[] = catalog.resources.map(
+            (entry): readonly [string, string] => [entry.kind, entry.publicPath],
+        );
+
         expect(catalog.schemaVersion).toBe(1);
-        expect(catalog.resources.map((entry) => [entry.kind, entry.publicPath])).toEqual(expectedCheckedInResources);
+        expect(checkedInResources).toEqual(expectedCheckedInResources);
         expect(new Set(catalog.resources.map((entry) => entry.resourceId)).size).toBe(catalog.resources.length);
         expect(new Set(catalog.resources.map((entry) => entry.publicPath)).size).toBe(catalog.resources.length);
     });

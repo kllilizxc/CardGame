@@ -4,7 +4,7 @@ import initialWorldState from '../../../public/data/world/initial-state.json';
 import starterDeckJson from '../../../public/data/decks/starter-deck.json';
 
 import { ExpeditionState } from '../state/ExpeditionState';
-import type { RunSnapshot } from '../types/expedition';
+import type { ExpeditionItemStack, RunSnapshot } from '../types/expedition';
 import type { StoryState } from '../types/story';
 import {
     applySaveCompatibilityMigrations,
@@ -42,6 +42,7 @@ const SYNTHETIC_TARGET = {
     expeditionId: 'synthetic-expedition',
     mapId: 'synthetic-map',
 };
+const initialWorldStateStashItems = initialWorldState.stash.items as unknown as ExpeditionItemStack[];
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -360,7 +361,7 @@ describe('SaveWorldStateSnapshot', () => {
         expect(defaultSnapshot.activeRun.document?.runId).toBe(defaultRun.runId);
         expect(syntheticSnapshot.persistentStash.document?.stashId).toBe('phase01.starter-stash');
         expect(syntheticSnapshot.persistentStash.document?.deck).toEqual(starterDeckJson.cards);
-        expect(syntheticSnapshot.persistentStash.document?.items).toEqual(initialWorldState.stash.items);
+        expect(syntheticSnapshot.persistentStash.document?.items).toEqual(initialWorldStateStashItems);
         expect(syntheticSnapshot.persistentStash.document?.spiritStones).toBe(initialWorldState.stash.spiritStones);
         expect(defaultSnapshot.persistentStash.document).toEqual(syntheticSnapshot.persistentStash.document);
     });

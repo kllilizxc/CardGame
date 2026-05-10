@@ -74,6 +74,10 @@ describe('mapTraversal', () => {
         const battleRun = expeditionState.enterReachableNode(prototypeMap, 'battle.mist-foxes');
         const persistedBattleRun = loadActiveRun();
 
+        if (!battleRun) {
+            throw new Error('Expected battle node entry to produce an active run snapshot.');
+        }
+
         expect(battleRun?.currentNodeId).toBe('battle.mist-foxes');
         expect(battleRun?.visitedNodeIds).toEqual(['entrance.mountain-gate', 'battle.mist-foxes']);
         expect(battleRun?.nodeStates['battle.mist-foxes']).toEqual({
@@ -83,13 +87,13 @@ describe('mapTraversal', () => {
             rewardClaimed: false,
         });
         expect(battleRun?.pendingEncounter).toEqual({
-            runId: battleRun?.runId,
+            runId: battleRun.runId,
             nodeId: 'battle.mist-foxes',
             nodeType: 'battle',
             encounterId: 'test_encounter_01',
             encounterResourceId: 'test_encounter_01',
             encounterFile: 'data/encounters/test-enemy.json',
-            runDeck: battleRun?.carriedDeck,
+            runDeck: battleRun.carriedDeck,
         });
         expect(persistedBattleRun?.pendingEncounter?.nodeId).toBe('battle.mist-foxes');
 

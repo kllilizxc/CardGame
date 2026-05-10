@@ -16,7 +16,13 @@ import {
     STASH_STORAGE_KEY,
 } from '../services/RunPersistence';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
-import type { PersistentStash, RunSnapshot } from '../types/expedition';
+import type {
+    ExpeditionItemStack,
+    PersistentStash,
+    PrototypeEventDefinition,
+    PrototypeShopDefinition,
+    RunSnapshot,
+} from '../types/expedition';
 import { ExpeditionState } from './ExpeditionState';
 
 const DEFAULT_TARGET = {
@@ -30,6 +36,7 @@ const SYNTHETIC_TARGET = {
 };
 const LEGACY_ROUTE_LOOKUP = 'worldMap:destination.synthetic-expedition';
 const LEGACY_ROUTE_STORAGE_KEY = `${ACTIVE_RUN_STORAGE_KEY}:${LEGACY_ROUTE_LOOKUP}`;
+const initialWorldStateStashItems = initialWorldState.stash.items as unknown as ExpeditionItemStack[];
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -190,7 +197,7 @@ describe('ExpeditionState', () => {
         expect(state.persistentStash.stashId).toBe('phase01.starter-stash');
         expect(state.persistentStash.deckRef).toBe('starter-deck');
         expect(state.persistentStash.deck).toEqual(starterDeckJson.cards);
-        expect(state.persistentStash.items).toEqual(initialWorldState.stash.items);
+        expect(state.persistentStash.items).toEqual(initialWorldStateStashItems);
         expect(state.persistentStash.spiritStones).toBe(initialWorldState.stash.spiritStones);
     });
 
@@ -347,7 +354,7 @@ describe('ExpeditionState', () => {
             'stashId',
         ]);
         expect(state.persistentStash.deck).toEqual(starterDeckJson.cards);
-        expect(state.persistentStash.items).toEqual(initialWorldState.stash.items);
+        expect(state.persistentStash.items).toEqual(initialWorldStateStashItems);
         expect(state.persistentStash.spiritStones).toBe(initialWorldState.stash.spiritStones);
     });
 
@@ -461,7 +468,7 @@ describe('ExpeditionState', () => {
             mapId: 'phase01-prototype-map',
             entryNodeId: 'entrance.mountain-gate',
         });
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
         const outcome = event.pool[0];
 
         const firstClaim = state.claimEventNodeReward(event.nodeId, structuredClone(outcome.rewards));
@@ -496,7 +503,7 @@ describe('ExpeditionState', () => {
             mapId: 'phase01-prototype-map',
             entryNodeId: 'entrance.mountain-gate',
         });
-        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'];
+        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'] as unknown as PrototypeShopDefinition;
         const swordOffer = shop.offers.find((offer) => offer.id === 'offer.qingyun-sword');
         const charmOffer = shop.offers.find((offer) => offer.id === 'offer.fly-sword-charm');
 

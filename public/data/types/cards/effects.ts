@@ -135,6 +135,7 @@ export interface EffectSchema {
 
 // 旧的卡牌效果触发时机（兼容旧数据）
 export type EffectTiming =
+  | 'permanent'
   | 'onSummon'
   | 'onDeath'
   | 'onAttack'
@@ -148,7 +149,9 @@ export type EffectTargetScope =
   | 'self'
   | 'ownerPlayer'
   | 'allyUnits'
+  | 'allAllies'
   | 'enemyUnits'
+  | 'allEnemies'
   | 'singleAlly'
   | 'singleEnemy'
   | 'allUnits'
@@ -177,10 +180,13 @@ export interface LegacyEffectCondition {
 export type LegacyEffectActionType =
   | 'modifyAttack'
   | 'modifyHealth'
+  | 'dealDamage'
+  | 'heal'
   | 'drawCards'
   | 'healPlayer'
   | 'damagePlayer'
   | 'applyStatus'
+  | 'removeDebuffs'
   | 'destroyUnit'
   | 'custom';
 
@@ -188,6 +194,7 @@ export interface LegacyEffectAction {
   type: LegacyEffectActionType;
   value?: number;
   statusId?: string;
+  stacks?: number;
   scriptId?: string;
 }
 

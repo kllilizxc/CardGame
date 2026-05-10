@@ -252,44 +252,52 @@ export class GameActionHandler {
         target?: CardSprite,
         targets?: CardSprite[]
     ): void {
+        const actionValue = action.value ?? 0;
+
         switch (action.type) {
             case 'modifyHealth':
                 if (target) {
-                    this.modifyHealth(target, action.value, source, sourceCard);
+                    this.modifyHealth(target, actionValue, source, sourceCard);
                 } else if (targets) {
-                    targets.forEach(t => this.modifyHealth(t, action.value, source, sourceCard));
+                    targets.forEach(t => this.modifyHealth(t, actionValue, source, sourceCard));
                 }
                 break;
 
             case 'dealDamage':
                 if (target) {
-                    this.modifyHealth(target, -Math.abs(action.value), source, sourceCard);
+                    this.modifyHealth(target, -Math.abs(actionValue), source, sourceCard);
                 } else if (targets) {
-                    targets.forEach(t => this.modifyHealth(t, -Math.abs(action.value), source, sourceCard));
+                    targets.forEach(t => this.modifyHealth(t, -Math.abs(actionValue), source, sourceCard));
                 }
                 break;
 
             case 'heal':
                 if (target) {
-                    this.modifyHealth(target, Math.abs(action.value), source, sourceCard);
+                    this.modifyHealth(target, Math.abs(actionValue), source, sourceCard);
                 } else if (targets) {
-                    targets.forEach(t => this.modifyHealth(t, Math.abs(action.value), source, sourceCard));
+                    targets.forEach(t => this.modifyHealth(t, Math.abs(actionValue), source, sourceCard));
                 }
                 break;
 
             case 'modifyAttack':
                 if (target) {
-                    this.modifyAttack(target, action.value, source, sourceCard);
+                    this.modifyAttack(target, actionValue, source, sourceCard);
                 } else if (targets) {
-                    targets.forEach(t => this.modifyAttack(t, action.value, source, sourceCard));
+                    targets.forEach(t => this.modifyAttack(t, actionValue, source, sourceCard));
                 }
                 break;
 
             case 'applyStatus':
+                if (!action.statusId) {
+                    console.warn(`效果动作缺少 statusId: ${action.type}`);
+                    break;
+                }
+                const statusId = action.statusId;
+                const stacks = action.stacks || 1;
                 if (target) {
-                    this.applyStatus(target, action.statusId, action.stacks || 1, source, sourceCard);
+                    this.applyStatus(target, statusId, stacks, source, sourceCard);
                 } else if (targets) {
-                    targets.forEach(t => this.applyStatus(t, action.statusId, action.stacks || 1, source, sourceCard));
+                    targets.forEach(t => this.applyStatus(t, statusId, stacks, source, sourceCard));
                 }
                 break;
 

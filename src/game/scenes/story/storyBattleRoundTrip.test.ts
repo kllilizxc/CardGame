@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'bun:test';
 
-import { createInitialStoryRuntime, createStoryChoiceTransition, createStoryFlowViewModel, type StoryGraphDefinition } from './storyFlowViewModel';
+import type { StoryBattleLaunchMetadata } from '../../types/story';
+import {
+    createInitialStoryRuntime,
+    createStoryChoiceTransition,
+    createStoryFlowViewModel,
+    type StoryChoiceTransition,
+    type StoryGraphDefinition,
+} from './storyFlowViewModel';
 import {
     applyStoryBattleResultToRuntime,
     createStoryBattleCompleteEvent,
@@ -95,7 +102,14 @@ function createBattleGraph(): StoryGraphDefinition {
     };
 }
 
-function createBattleTransition() {
+type StoryBattleChoiceTransition = Extract<StoryChoiceTransition, { status: 'selected' }> & {
+    battleLaunch: StoryBattleLaunchMetadata;
+};
+
+function createBattleTransition(): {
+    graph: StoryGraphDefinition;
+    transition: StoryBattleChoiceTransition;
+} {
     const graph = createBattleGraph();
     const view = createStoryFlowViewModel(graph, {
         storyState: createInitialStoryRuntime(graph),
@@ -107,7 +121,13 @@ function createBattleTransition() {
         throw new Error('Expected start_to_duel to produce battle launch metadata.');
     }
 
-    return { graph, transition };
+    return {
+        graph,
+        transition: {
+            ...transition,
+            battleLaunch: transition.battleLaunch,
+        },
+    };
 }
 
 describe('storyBattleRoundTrip', () => {

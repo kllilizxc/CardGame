@@ -3,7 +3,7 @@ import { describe, expect, it } from 'bun:test';
 import compactStoryGraphJson from '../../../../public/data/story/story-graph.compact.example.json';
 import storyGraphJson from '../../../../public/data/story/story-graph.json';
 
-import { validatePlayableStoryGraph } from './storyFlow';
+import { validatePlayableStoryGraph, type StoryGraph } from './storyFlow';
 
 describe('storyFlow', () => {
     it('keeps the compact authoring example valid against the playable StoryState schema', () => {
@@ -96,7 +96,7 @@ describe('storyFlow', () => {
             'Story graph choices[1].enabledWhen.operator must be one of >, >=, <, <=, ==, !=.',
         );
 
-        const brokenEffectGraph = structuredClone(storyGraphJson);
+        const brokenEffectGraph = structuredClone(storyGraphJson) as { choices: Array<{ effects: unknown[] }> };
         brokenEffectGraph.choices[0].effects[0] = {
             kind: 'setFlag',
         };
@@ -107,7 +107,7 @@ describe('storyFlow', () => {
     });
 
     it('validates story battle trigger effects and their explicit result nodes', () => {
-        const battleGraph = structuredClone(compactStoryGraphJson);
+        const battleGraph = structuredClone(compactStoryGraphJson) as unknown as StoryGraph;
         battleGraph.storyId = 'story.example.battle-trigger';
         battleGraph.nodes = [
             ...battleGraph.nodes,

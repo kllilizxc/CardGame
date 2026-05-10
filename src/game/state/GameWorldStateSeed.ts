@@ -1,5 +1,6 @@
 import type {
     ExpeditionCardStack,
+    ExpeditionItemType,
     ExpeditionItemStack,
     PersistentStash,
 } from '../types/expedition';
@@ -8,10 +9,16 @@ export interface StarterDeckSeed {
     cards: ExpeditionCardStack[];
 }
 
+export interface WorldStateItemStackSeed {
+    id: string;
+    itemType: string;
+    count: number;
+}
+
 export interface WorldStateStashSeed {
     stashId?: string;
     deckRef?: string;
-    items?: ExpeditionItemStack[];
+    items?: WorldStateItemStackSeed[];
     spiritStones?: number;
 }
 
@@ -36,8 +43,24 @@ function cloneCardStacks(stacks: ExpeditionCardStack[]): ExpeditionCardStack[] {
     return stacks.map((stack) => ({ ...stack }));
 }
 
-function cloneItemStacks(stacks: ExpeditionItemStack[]): ExpeditionItemStack[] {
-    return stacks.map((stack) => ({ ...stack }));
+function parseExpeditionItemType(itemType: string): ExpeditionItemType {
+    switch (itemType) {
+        case 'artifact':
+        case 'tool':
+        case 'consumable':
+        case 'quest':
+            return itemType;
+        default:
+            throw new Error(`World state stash itemType is unsupported: ${itemType}`);
+    }
+}
+
+function cloneItemStacks(stacks: WorldStateItemStackSeed[]): ExpeditionItemStack[] {
+    return stacks.map((stack) => ({
+        id: stack.id,
+        itemType: parseExpeditionItemType(stack.itemType),
+        count: stack.count,
+    }));
 }
 
 export function createPersistentStashFromWorldStateSeed({

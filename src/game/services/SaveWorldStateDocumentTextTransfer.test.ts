@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import type { PersistentStash, RunSnapshot } from '../types/expedition';
+import type { ExpeditionRouteIdentity, PersistentStash, RunSnapshot } from '../types/expedition';
 import {
     ACTIVE_RUN_STORAGE_KEY,
     createActiveRunRouteKey,
@@ -22,15 +22,15 @@ import {
     type StoryHubSessionDocument,
 } from './StoryHubSessionPersistence';
 
-const DEFAULT_TARGET = {
+const DEFAULT_TARGET: ExpeditionRouteIdentity = {
     expeditionId: 'phase01-first-playable-expedition',
     mapId: 'phase01-prototype-map',
-} as const;
+};
 
-const SYNTHETIC_TARGET = {
+const SYNTHETIC_TARGET: ExpeditionRouteIdentity = {
     expeditionId: 'synthetic-expedition',
     mapId: 'synthetic-map',
-} as const;
+};
 
 type StorageCall =
     | readonly ['getItem', string]
@@ -146,7 +146,7 @@ function createPersistentStash(): PersistentStash {
 }
 
 function createRunSnapshot(
-    identity: typeof DEFAULT_TARGET,
+    identity: ExpeditionRouteIdentity,
     runId: string,
 ): RunSnapshot {
     const routeKey = createActiveRunRouteKey(identity);
@@ -181,7 +181,7 @@ function createRunSnapshot(
 
 function seedCompleteWorldState(
     storage: RecordingStorage,
-    identity: typeof DEFAULT_TARGET,
+    identity: ExpeditionRouteIdentity,
     runId: string,
 ): RunSnapshot {
     const run = createRunSnapshot(identity, runId);
@@ -201,7 +201,7 @@ function parseStoredJson(rawValue: string | null): unknown {
     return JSON.parse(rawValue);
 }
 
-function corruptActiveRunOnSet(identity: typeof DEFAULT_TARGET, runId: string) {
+function corruptActiveRunOnSet(identity: ExpeditionRouteIdentity, runId: string) {
     return (key: string, value: string): string => {
         if (key !== createActiveRunStorageKey(identity)) {
             return value;
