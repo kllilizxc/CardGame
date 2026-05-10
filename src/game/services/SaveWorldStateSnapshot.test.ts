@@ -13,6 +13,8 @@ import {
     type SaveMigrationHook,
 } from './SaveCompatibility';
 import {
+    ACTIVE_RUN_STORAGE_KEY,
+    ACTIVE_RUN_STORAGE_KEY_PREFIX,
     createActiveRunRouteKey,
     createActiveRunStorageKey,
     loadActiveRun,
@@ -94,6 +96,27 @@ function restoreLocalStorage(): void {
     }
 }
 
+function withThrowingAmbientLocalStorage<T>(callback: () => T): T {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+
+    Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        get(): Storage {
+            throw new Error('ambient globalThis.localStorage must not be used by injected snapshot reads');
+        },
+    });
+
+    try {
+        return callback();
+    } finally {
+        if (descriptor) {
+            Object.defineProperty(globalThis, 'localStorage', descriptor);
+        } else {
+            delete (globalThis as { localStorage?: Storage }).localStorage;
+        }
+    }
+}
+
 function createStoryState(nodeId = 'sect_entry_003_help_girl'): StoryState {
     return {
         storyId: 'story.qingyun-entry',
@@ -141,6 +164,23 @@ function writeStaleActiveRun(targetIdentity: { expeditionId: string; mapId: stri
     }));
 
     return storageKey;
+}
+
+function copyCurrentPersistenceInto(
+    targetStorage: MemoryStorage,
+    targetIdentity: { expeditionId: string; mapId: string },
+): void {
+    for (const key of [
+        STORY_HUB_SESSION_STORAGE_KEY,
+        STASH_STORAGE_KEY,
+        createActiveRunStorageKey(targetIdentity),
+    ]) {
+        const rawValue = storage.getItem(key);
+
+        if (rawValue !== null) {
+            targetStorage.setItem(key, rawValue);
+        }
+    }
 }
 
 describe('SaveWorldStateSnapshot', () => {
@@ -239,6 +279,53 @@ describe('SaveWorldStateSnapshot', () => {
         expect(storage.keys().sort()).toEqual(storageKeysBeforeSnapshot);
     });
 
+    it('builds the current Story/Hub, stash, and route-keyed active-run slices from injected storage without touching ambient localStorage', () => {
+        saveHubSessionSnapshot({
+            hubId: 'hub.qingyun-town',
+            currentLocationId: 'location.qingyun-town.teahouse',
+            statusText: '注入式读取应只看显式 storage。',
+            updatedAt: '2026-05-09T06:00:00.000Z',
+        });
+        saveStoryRuntimeSession({
+            hubId: 'hub.qingyun-town',
+            actionId: 'action.start-qingyun-entry-story',
+            storyGraphFile: 'data/story/story-graph.json',
+            storyState: createStoryState('sect_entry_004_injected_storage'),
+            selectedChoiceIds: ['sect_entry_001_choice_help_girl'],
+            statusText: '注入式 story session',
+            updatedAt: '2026-05-09T06:01:00.000Z',
+        });
+        const { state, run } = startRun(SYNTHETIC_TARGET);
+        state.applyNodeRewardPreview({
+            cards: [{ id: 'AR_001', count: 1 }],
+            items: [],
+            spiritStones: 9,
+        });
+        const injectedStorage = new MemoryStorage();
+        copyCurrentPersistenceInto(injectedStorage, SYNTHETIC_TARGET);
+        const ambientKeysBeforeSnapshot = storage.keys().sort();
+
+        const snapshot = withThrowingAmbientLocalStorage(() => createSaveWorldStateSnapshot({
+            storage: injectedStorage,
+            activeRunIdentity: SYNTHETIC_TARGET,
+        }));
+
+        expect(snapshot.storyHubSession.document.hubs['hub.qingyun-town']).toMatchObject({
+            hubId: 'hub.qingyun-town',
+            currentLocationId: 'location.qingyun-town.teahouse',
+            statusText: '注入式读取应只看显式 storage。',
+        });
+        expect(Object.keys(snapshot.storyHubSession.document.stories)).toEqual([
+            'hub.qingyun-town|action.start-qingyun-entry-story|data%2Fstory%2Fstory-graph.json',
+        ]);
+        expect(snapshot.persistentStash.document?.stashId).toBe('phase01.starter-stash');
+        expect(snapshot.persistentStash.document?.deck).toEqual(starterDeckJson.cards);
+        expect(snapshot.activeRun.keys).toEqual(createActiveRunCompatibilityKeys(undefined, SYNTHETIC_TARGET));
+        expect(snapshot.activeRun.document?.runId).toBe(run.runId);
+        expect(snapshot.activeRun.document?.carriedDeck).toContainEqual({ id: 'AR_001', count: 4 });
+        expect(storage.keys().sort()).toEqual(ambientKeysBeforeSnapshot);
+    });
+
     it('runs the compatibility migration hook chain on loaded snapshot documents without writing storage', () => {
         ExpeditionState.bootstrap({
             worldState: structuredClone(initialWorldState),
@@ -314,6 +401,51 @@ describe('SaveWorldStateSnapshot', () => {
         expect(storage.getItem(activeRunStorageKey)).toBeNull();
     });
 
+    it('cleans corrupt injected Story/Hub, stash, and active-run JSON while keeping ambient localStorage unused', () => {
+        const injectedStorage = new MemoryStorage();
+        const activeRunStorageKey = createActiveRunStorageKey(DEFAULT_TARGET);
+        injectedStorage.setItem(STORY_HUB_SESSION_STORAGE_KEY, '{not valid json');
+        injectedStorage.setItem(STASH_STORAGE_KEY, '{not valid json');
+        injectedStorage.setItem(activeRunStorageKey, '{not valid json');
+
+        const snapshot = withThrowingAmbientLocalStorage(() => createSaveWorldStateSnapshot({
+            storage: injectedStorage,
+            activeRunIdentity: DEFAULT_TARGET,
+        }));
+
+        expect(snapshot.storyHubSession.document).toEqual({
+            schemaVersion: STORY_HUB_SESSION_SCHEMA_VERSION,
+            hubs: {},
+            stories: {},
+        });
+        expect(injectedStorage.getItem(STORY_HUB_SESSION_STORAGE_KEY)).toBeNull();
+        expect(snapshot.persistentStash.document).toBeNull();
+        expect(injectedStorage.getItem(STASH_STORAGE_KEY)).toBeNull();
+        expect(snapshot.activeRun.document).toBeNull();
+        expect(injectedStorage.getItem(activeRunStorageKey)).toBeNull();
+    });
+
+    it('migrates and cleans an injected legacy unscoped active run without using ambient localStorage', () => {
+        const { run } = startRun(DEFAULT_TARGET);
+        const injectedStorage = new MemoryStorage();
+        const canonicalStorageKey = createActiveRunStorageKey(DEFAULT_TARGET);
+        injectedStorage.setItem(ACTIVE_RUN_STORAGE_KEY, JSON.stringify(run));
+
+        const snapshot = withThrowingAmbientLocalStorage(() => createSaveWorldStateSnapshot({
+            storage: injectedStorage,
+            activeRunIdentity: DEFAULT_TARGET,
+        }));
+
+        expect(snapshot.activeRun.document?.runId).toBe(run.runId);
+        expect(injectedStorage.getItem(ACTIVE_RUN_STORAGE_KEY)).toBeNull();
+        expect(JSON.parse(injectedStorage.getItem(canonicalStorageKey) ?? '{}')).toMatchObject({
+            runId: run.runId,
+            routeKey: createActiveRunRouteKey(DEFAULT_TARGET),
+            expeditionId: DEFAULT_TARGET.expeditionId,
+            mapId: DEFAULT_TARGET.mapId,
+        });
+    });
+
     it('uses the current owner fallback semantics for stale or corrupt persisted slices', () => {
         writeRawStoryHubSessionForTests(JSON.stringify({
             schemaVersion: 0,
@@ -335,6 +467,34 @@ describe('SaveWorldStateSnapshot', () => {
         expect(storage.getItem(STASH_STORAGE_KEY)).toBeNull();
         expect(snapshot.activeRun.document).toBeNull();
         expect(storage.getItem(staleActiveRunStorageKey)).toBeNull();
+    });
+
+    it('falls back from an injected stale canonical route active run to an injected legacy route key and cleans both stale keys', () => {
+        const legacyRouteKey = 'legacy-default-route';
+        const legacyRouteStorageKey = `${ACTIVE_RUN_STORAGE_KEY_PREFIX}${legacyRouteKey}`;
+        const canonicalStorageKey = createActiveRunStorageKey(DEFAULT_TARGET);
+        const { run } = startRun(DEFAULT_TARGET);
+        const injectedStorage = new MemoryStorage();
+        injectedStorage.setItem(canonicalStorageKey, JSON.stringify({
+            runId: 'run-stale-route',
+            expeditionId: 'other-expedition',
+            mapId: 'other-map',
+        }));
+        injectedStorage.setItem(legacyRouteStorageKey, JSON.stringify(run));
+
+        const snapshot = withThrowingAmbientLocalStorage(() => createSaveWorldStateSnapshot({
+            storage: injectedStorage,
+            activeRunLookup: legacyRouteKey,
+            activeRunIdentity: DEFAULT_TARGET,
+        }));
+
+        expect(snapshot.activeRun.document?.runId).toBe(run.runId);
+        expect(snapshot.activeRun.keys).toEqual(createActiveRunCompatibilityKeys(legacyRouteKey, DEFAULT_TARGET));
+        expect(injectedStorage.getItem(legacyRouteStorageKey)).toBeNull();
+        expect(JSON.parse(injectedStorage.getItem(canonicalStorageKey) ?? '{}')).toMatchObject({
+            runId: run.runId,
+            routeKey: createActiveRunRouteKey(DEFAULT_TARGET),
+        });
     });
 
     it('keeps default no-op migrations as pass-through for each snapshot owner', () => {

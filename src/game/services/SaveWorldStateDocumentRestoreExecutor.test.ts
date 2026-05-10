@@ -123,6 +123,27 @@ function restoreLocalStorage(): void {
     }
 }
 
+function withThrowingAmbientLocalStorage<T>(callback: () => T): T {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+
+    Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        get(): Storage {
+            throw new Error('ambient globalThis.localStorage must not be used by injected save read/write flow');
+        },
+    });
+
+    try {
+        return callback();
+    } finally {
+        if (descriptor) {
+            Object.defineProperty(globalThis, 'localStorage', descriptor);
+        } else {
+            delete (globalThis as { localStorage?: Storage }).localStorage;
+        }
+    }
+}
+
 function createStoryState(nodeId = 'sect_entry_003_help_girl'): StoryState {
     return {
         storyId: 'story.qingyun-entry',
@@ -188,6 +209,25 @@ function createCompleteRestorePlan() {
     );
 
     return createSaveWorldStateDocumentRestorePlan(document);
+}
+
+function seedInjectedSourceStorage(
+    targetStorage: RecordingStorage,
+    targetIdentity: { expeditionId: string; mapId: string },
+): void {
+    const sourceStorage = globalThis.localStorage;
+
+    for (const key of [
+        STORY_HUB_SESSION_STORAGE_KEY,
+        STASH_STORAGE_KEY,
+        createActiveRunStorageKey(targetIdentity),
+    ]) {
+        const rawValue = sourceStorage.getItem(key);
+
+        if (rawValue !== null) {
+            targetStorage.seed(key, rawValue);
+        }
+    }
 }
 
 describe('SaveWorldStateDocumentRestoreExecutor', () => {
@@ -264,6 +304,52 @@ describe('SaveWorldStateDocumentRestoreExecutor', () => {
         expect(targetStorage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET))).toBe(
             plan.operations[2].operation === 'setItem' ? plan.operations[2].value : '',
         );
+    });
+
+    it('round-trips snapshot document creation and restore through injected storages without touching ambient localStorage', () => {
+        saveHubSessionSnapshot({
+            hubId: 'hub.qingyun-town',
+            currentLocationId: 'location.qingyun-town.teahouse',
+            statusText: 'round-trip source session',
+            updatedAt: '2026-05-09T06:00:00.000Z',
+        });
+        saveStoryRuntimeSession({
+            hubId: 'hub.qingyun-town',
+            actionId: 'action.start-qingyun-entry-story',
+            storyGraphFile: 'data/story/story-graph.json',
+            storyState: createStoryState('sect_entry_006_restore_injected_storage'),
+            selectedChoiceIds: ['sect_entry_001_choice_help_girl'],
+            statusText: 'round-trip source story',
+            updatedAt: '2026-05-09T06:01:00.000Z',
+        });
+        const syntheticRunId = startRun(SYNTHETIC_TARGET);
+        const sourceStorage = new RecordingStorage();
+        const targetStorage = new RecordingStorage();
+        seedInjectedSourceStorage(sourceStorage, SYNTHETIC_TARGET);
+
+        const restoredSnapshot = withThrowingAmbientLocalStorage(() => {
+            const sourceDocument = createSaveWorldStateDocument(createSaveWorldStateSnapshot({
+                storage: sourceStorage,
+                activeRunIdentity: SYNTHETIC_TARGET,
+            }));
+            const plan = createSaveWorldStateDocumentRestorePlan(sourceDocument);
+
+            executeSaveWorldStateDocumentRestorePlan(plan, targetStorage);
+
+            return createSaveWorldStateSnapshot({
+                storage: targetStorage,
+                activeRunIdentity: SYNTHETIC_TARGET,
+            });
+        });
+
+        expect(restoredSnapshot.storyHubSession.document.hubs['hub.qingyun-town']).toMatchObject({
+            currentLocationId: 'location.qingyun-town.teahouse',
+            statusText: 'round-trip source session',
+        });
+        expect(restoredSnapshot.persistentStash.document?.stashId).toBe('phase01.starter-stash');
+        expect(restoredSnapshot.activeRun.document?.runId).toBe(syntheticRunId);
+        expect(targetStorage.getItem(ACTIVE_RUN_STORAGE_KEY)).toBeNull();
+        expect(targetStorage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET))).not.toBeNull();
     });
 
     it('rejects malformed plan descriptors before performing any storage write', () => {

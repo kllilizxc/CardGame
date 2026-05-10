@@ -3,7 +3,7 @@ import type { StoryHubSessionKey, StoryState } from '../types/story';
 export const STORY_HUB_SESSION_STORAGE_KEY = 'cardgame.story-hub-session.v1';
 export const STORY_HUB_SESSION_SCHEMA_VERSION = 1;
 
-type StorageAdapter = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+export type StoryHubSessionStorageAdapter = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
 export interface HubSessionSnapshot {
     hubId: string;
@@ -27,7 +27,11 @@ export interface StoryHubSessionDocument {
 
 const memoryStorage = new Map<string, string>();
 
-function getStorageAdapter(): StorageAdapter {
+function getStorageAdapter(storage?: StoryHubSessionStorageAdapter): StoryHubSessionStorageAdapter {
+    if (storage) {
+        return storage;
+    }
+
     if (typeof globalThis.localStorage !== 'undefined') {
         return globalThis.localStorage;
     }
@@ -221,8 +225,8 @@ function parseDocument(value: unknown): StoryHubSessionDocument | null {
     };
 }
 
-function loadDocument(): StoryHubSessionDocument {
-    const storage = getStorageAdapter();
+function loadDocument(storageAdapter?: StoryHubSessionStorageAdapter): StoryHubSessionDocument {
+    const storage = getStorageAdapter(storageAdapter);
     const rawValue = storage.getItem(STORY_HUB_SESSION_STORAGE_KEY);
 
     if (!rawValue) {
@@ -253,8 +257,8 @@ export function createStoryRuntimeSessionStorageKey(key: StoryHubSessionKey): st
         .join('|');
 }
 
-export function loadStoryHubSessionDocumentSnapshot(): StoryHubSessionDocument {
-    return cloneStoryHubSessionDocument(loadDocument());
+export function loadStoryHubSessionDocumentSnapshot(storage?: StoryHubSessionStorageAdapter): StoryHubSessionDocument {
+    return cloneStoryHubSessionDocument(loadDocument(storage));
 }
 
 export function loadHubSessionSnapshot(hubId: string): HubSessionSnapshot | null {

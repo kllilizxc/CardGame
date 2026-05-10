@@ -24,9 +24,12 @@ import {
 import type { PersistentStash, RunSnapshot, TerminalRunOutcome } from '../types/expedition';
 
 export interface SaveWorldStateSnapshotOptions {
+    readonly storage?: SaveWorldStateSnapshotStorageAdapter;
     readonly activeRunLookup?: ActiveRunStorageLookup;
     readonly activeRunIdentity?: ActiveRunTargetIdentity;
 }
+
+export type SaveWorldStateSnapshotStorageAdapter = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
 export interface SaveWorldStateFixedSlice<TDocument> {
     readonly compatibility: FixedKeySaveCompatibilityEntry;
@@ -71,14 +74,14 @@ export function createSaveWorldStateSnapshot(options: SaveWorldStateSnapshotOpti
             compatibility: SAVE_COMPATIBILITY_REGISTRY.storyHubSession,
             document: applySaveCompatibilityMigrations(
                 'storyHubSession',
-                loadStoryHubSessionDocumentSnapshot(),
+                loadStoryHubSessionDocumentSnapshot(options.storage),
             ),
         },
         persistentStash: {
             compatibility: SAVE_COMPATIBILITY_REGISTRY.persistentStash,
             document: applyNullableSaveCompatibilityMigrations(
                 'persistentStash',
-                loadPersistentStash(),
+                loadPersistentStash(options.storage),
             ),
         },
         activeRun: {
@@ -86,7 +89,7 @@ export function createSaveWorldStateSnapshot(options: SaveWorldStateSnapshotOpti
             keys: createActiveRunCompatibilityKeys(options.activeRunLookup, options.activeRunIdentity),
             document: applyNullableSaveCompatibilityMigrations(
                 'activeRun',
-                loadActiveRun(options.activeRunLookup, options.activeRunIdentity),
+                loadActiveRun(options.activeRunLookup, options.activeRunIdentity, options.storage),
             ),
         },
         runResolution: {

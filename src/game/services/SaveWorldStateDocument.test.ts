@@ -10,6 +10,7 @@ import {
     SAVE_COMPATIBILITY_REGISTRY,
 } from './SaveCompatibility';
 import {
+    createActiveRunStorageKey,
     loadActiveRun,
     loadPersistentStash,
     resetRunPersistenceForTests,
@@ -98,6 +99,27 @@ function restoreLocalStorage(): void {
     }
 }
 
+function withThrowingAmbientLocalStorage<T>(callback: () => T): T {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+
+    Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        get(): Storage {
+            throw new Error('ambient globalThis.localStorage must not be used by injected document creation');
+        },
+    });
+
+    try {
+        return callback();
+    } finally {
+        if (descriptor) {
+            Object.defineProperty(globalThis, 'localStorage', descriptor);
+        } else {
+            delete (globalThis as { localStorage?: Storage }).localStorage;
+        }
+    }
+}
+
 function createStoryState(nodeId = 'sect_entry_003_help_girl'): StoryState {
     return {
         storyId: 'story.qingyun-entry',
@@ -139,6 +161,23 @@ function startRun(
     });
 
     return run.runId;
+}
+
+function copyCurrentPersistenceInto(
+    targetStorage: MemoryStorage,
+    targetIdentity: { expeditionId: string; mapId: string },
+): void {
+    for (const key of [
+        STORY_HUB_SESSION_STORAGE_KEY,
+        STASH_STORAGE_KEY,
+        createActiveRunStorageKey(targetIdentity),
+    ]) {
+        const rawValue = storage.getItem(key);
+
+        if (rawValue !== null) {
+            targetStorage.setItem(key, rawValue);
+        }
+    }
 }
 
 describe('SaveWorldStateDocument', () => {
@@ -249,6 +288,48 @@ describe('SaveWorldStateDocument', () => {
         expect(serialized).toContain(SAVE_WORLD_STATE_DOCUMENT_CONTENT_TYPE);
         expect(serialized).not.toContain('migrate');
         expect(storage.keys().sort()).toEqual(storageKeysBeforeDocument);
+    });
+
+    it('creates a serializable document from injected snapshot storage without consulting ambient localStorage', () => {
+        saveHubSessionSnapshot({
+            hubId: 'hub.qingyun-town',
+            currentLocationId: 'location.qingyun-town.teahouse',
+            statusText: 'document should come from injected storage',
+            updatedAt: '2026-05-09T06:00:00.000Z',
+        });
+        saveStoryRuntimeSession({
+            hubId: 'hub.qingyun-town',
+            actionId: 'action.start-qingyun-entry-story',
+            storyGraphFile: 'data/story/story-graph.json',
+            storyState: createStoryState('sect_entry_005_document_injected_storage'),
+            selectedChoiceIds: ['sect_entry_001_choice_help_girl'],
+            statusText: 'document injection story',
+            updatedAt: '2026-05-09T06:01:00.000Z',
+        });
+        const syntheticRunId = startRun(SYNTHETIC_TARGET);
+        const injectedStorage = new MemoryStorage();
+        copyCurrentPersistenceInto(injectedStorage, SYNTHETIC_TARGET);
+        const ambientKeysBeforeDocument = storage.keys().sort();
+
+        const document = withThrowingAmbientLocalStorage(() => createSaveWorldStateDocument(
+            createSaveWorldStateSnapshot({
+                storage: injectedStorage,
+                activeRunIdentity: SYNTHETIC_TARGET,
+            }),
+        ));
+
+        expect(document.worldState.storyHubSession.document.hubs['hub.qingyun-town']).toMatchObject({
+            currentLocationId: 'location.qingyun-town.teahouse',
+            statusText: 'document should come from injected storage',
+        });
+        expect(Object.keys(document.worldState.storyHubSession.document.stories)).toEqual([
+            'hub.qingyun-town|action.start-qingyun-entry-story|data%2Fstory%2Fstory-graph.json',
+        ]);
+        expect(document.worldState.persistentStash.document?.deck).toEqual(starterDeckJson.cards);
+        expect(document.worldState.activeRun.keys).toEqual(createActiveRunCompatibilityKeys(undefined, SYNTHETIC_TARGET));
+        expect(document.worldState.activeRun.document?.runId).toBe(syntheticRunId);
+        expect(document.worldState.activeRun.document?.carriedDeck).toContainEqual({ id: 'AR_001', count: 4 });
+        expect(storage.keys().sort()).toEqual(ambientKeysBeforeDocument);
     });
 
     it('clones and parses documents without sharing mutable nested references', () => {
