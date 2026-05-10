@@ -1,15 +1,13 @@
 import type { BattleContext } from '../../context/BattleContext';
-import { getUnitStar } from '../../utils/RealmHelper';
-import { getStarFromGradeId } from '../../utils/ArtifactHelper';
 import type { CardSprite } from '../../objects/CardSprite';
 import type {
     Gongfa,
     GongfaAction,
 } from '@data/types/gongfa';
 import { EffectEventType, EffectEventSide } from '@data/types/gongfa';
-import type { UnitCard } from '@data/types/cards/unit';
 import type { ArtifactCard, ArtifactWeaponType } from '@data/types/cards/artifact';
-import { evaluateGongfaNumberExpression, type GongfaExpressionContext } from './gongfaExpression';
+import { evaluateGongfaNumberExpression } from './gongfaExpression';
+import { buildGongfaExpressionContext } from './gongfaExpressionContext';
 import type { GongfaCardOperationCard } from './gongfaCardOperations';
 import { areGongfaConditionsSatisfied } from './gongfaConditionEvaluation';
 import {
@@ -125,7 +123,7 @@ export class UnitEffectManager {
                 cardScale: context.cardScale,
                 gameActionHandler: context.gameActionHandler,
                 battleLog: this.battleContext.battleLog,
-                expressionContext: this.buildExpressionContext(context) ?? {}
+                expressionContext: this.createExpressionContext(context) ?? {}
             },
             immediateAttack: {
                 triggerUnit: context.triggerUnit,
@@ -150,7 +148,7 @@ export class UnitEffectManager {
      * - "artifact.star * 2" - 法器星级 * 2
      */
     private evaluateExpression(expression: string, context: GongfaRuntimeContext): number {
-        const expressionContext = this.buildExpressionContext(context);
+        const expressionContext = this.createExpressionContext(context);
         if (!expressionContext) {
             console.warn(`表达式计算需要 triggerUnit: ${expression}`);
             return 0;
@@ -164,17 +162,10 @@ export class UnitEffectManager {
         }
     }
 
-    private buildExpressionContext(context: GongfaRuntimeContext): GongfaExpressionContext | undefined {
-        if (!context.triggerUnit) {
-            return undefined;
-        }
-
-        const unitData = context.triggerUnit.getCardData() as UnitCard;
-        return {
-            cardStar: getUnitStar(unitData),
-            artifactStar: context.equippedArtifact
-                ? getStarFromGradeId(context.equippedArtifact.gradeId)
-                : 0
-        };
+    private createExpressionContext(context: GongfaRuntimeContext) {
+        return buildGongfaExpressionContext({
+            triggerUnit: context.triggerUnit?.getCardData(),
+            equippedArtifact: context.equippedArtifact
+        });
     }
 }
