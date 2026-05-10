@@ -436,6 +436,29 @@ describe('GameWorldStateWrite', () => {
         expect(targetStorage.getItem('unrelated.key')).toBe('keep-me');
     });
 
+    it('rejects missing explicit storage and incompatible aggregate metadata before writes', () => {
+        const targetStorage = new RecordingStorage();
+        const plan = planGameWorldStateWriteFromDocuments({
+            storyHubSession: createStoryHubSessionDocument('sect_entry_025_reject_metadata'),
+            persistentStash: createPersistentStash(),
+            activeRun: createActiveRun(SYNTHETIC_TARGET, 'run-reject-metadata'),
+            activeRunIdentity: SYNTHETIC_TARGET,
+        });
+
+        expect(() => withThrowingAmbientLocalStorage(() => applyGameWorldStateWritePlan(
+            plan,
+            undefined as unknown as Parameters<typeof applyGameWorldStateWritePlan>[1],
+        ))).toThrow('GameWorldState write requires an explicit storage adapter');
+
+        const incompatiblePlan = structuredClone(plan);
+        (incompatiblePlan.slices[0].compatibility as { storageKey: string }).storageKey =
+            'cardgame.story-hub-session.v999';
+
+        expect(() => applyGameWorldStateWritePlan(incompatiblePlan, targetStorage))
+            .toThrow('GameWorldState write attempted to use incompatible storyHubSession compatibility metadata.');
+        expect(targetStorage.calls).toEqual([]);
+    });
+
     it('plans from GameWorldState with explicit storage and clones compatibility metadata before applying', () => {
         const storage = new RecordingStorage();
         const storyHubSession = createStoryHubSessionDocument('sect_entry_030_from_view');
