@@ -6,7 +6,9 @@ import worldMapJson from '../../../public/data/world/world-map.json';
 
 import { ExpeditionState } from '../state/ExpeditionState';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
+import type { RunSnapshot } from '../types/expedition';
 import {
+    ACTIVE_RUN_STORAGE_KEY,
     createActiveRunStorageKey,
     loadActiveRun,
     loadPersistentStash,
@@ -30,6 +32,8 @@ const SYNTHETIC_TARGET = {
     expeditionId: 'synthetic-expedition',
     mapId: 'synthetic-map',
 };
+const LEGACY_ROUTE_LOOKUP = 'worldMap:destination.synthetic-expedition';
+const LEGACY_ROUTE_STORAGE_KEY = `${ACTIVE_RUN_STORAGE_KEY}:${LEGACY_ROUTE_LOOKUP}`;
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -325,10 +329,16 @@ describe('RunResolution', () => {
             ));
             const otherRouteRunId = otherRouteState.activeRun?.runId;
             const runId = state.activeRun?.runId;
+            injectedStorage.setItem(ACTIVE_RUN_STORAGE_KEY, JSON.stringify(state.activeRun));
+            injectedStorage.setItem(LEGACY_ROUTE_STORAGE_KEY, JSON.stringify({
+                ...state.activeRun!,
+                routeKey: LEGACY_ROUTE_LOOKUP,
+            }));
 
             const summary = withThrowingAmbientLocalStorage(() => scenario.resolve({
                 storage: injectedStorage,
                 targetIdentity: SYNTHETIC_TARGET,
+                activeRunRouteKey: LEGACY_ROUTE_LOOKUP,
                 finalNodeId: scenario.finalNodeId,
                 endedAt: '2026-05-10T01:00:00.000Z',
             }));
@@ -341,6 +351,8 @@ describe('RunResolution', () => {
             expectRunResolutionPersistentStashJsonShape(storedStash);
             expect(loadActiveRun(SYNTHETIC_TARGET, undefined, injectedStorage)).toBeNull();
             expect(injectedStorage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET))).toBeNull();
+            expect(injectedStorage.getItem(ACTIVE_RUN_STORAGE_KEY)).toBeNull();
+            expect(injectedStorage.getItem(LEGACY_ROUTE_STORAGE_KEY)).toBeNull();
             expect(loadActiveRun(DEFAULT_TARGET, undefined, injectedStorage)?.runId).toBe(otherRouteRunId);
             expect(loadPersistentStash()).toBeNull();
             expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
@@ -435,5 +447,73 @@ describe('RunResolution', () => {
         expect(victory.run.pendingEncounter).toBeNull();
         expect(loadActiveRun(DEFAULT_TARGET)).toEqual(victory.run);
         expect(loadActiveRun(SYNTHETIC_TARGET)?.runId).toBe(syntheticRunId);
+    });
+
+    it('battle victory saves through the GameWorldState active-run writer with explicit storage and legacy cleanup', () => {
+        const injectedStorage = new MemoryStorage();
+        const otherRouteState = withThrowingAmbientLocalStorage(() => startRewardedRun(
+            DEFAULT_TARGET,
+            'TL_002',
+            'entrance.mountain-gate',
+            injectedStorage,
+        ));
+        const state = withThrowingAmbientLocalStorage(() => startRewardedRun(
+            SYNTHETIC_TARGET,
+            'AR_001',
+            'entrance.synthetic',
+            injectedStorage,
+        ));
+        const runWithPendingEncounter: RunSnapshot = {
+            ...state.activeRun!,
+            routeKey: LEGACY_ROUTE_LOOKUP,
+            currentNodeId: 'battle.synthetic',
+            pendingEncounter: {
+                runId: state.activeRun!.runId,
+                nodeId: 'battle.synthetic',
+                nodeType: 'battle',
+                encounterId: 'test_encounter_01',
+                encounterFile: 'data/encounters/test-enemy.json',
+                runDeck: state.activeRun!.carriedDeck,
+            },
+        };
+        injectedStorage.setItem(ACTIVE_RUN_STORAGE_KEY, JSON.stringify(runWithPendingEncounter));
+        injectedStorage.setItem(LEGACY_ROUTE_STORAGE_KEY, JSON.stringify(runWithPendingEncounter));
+
+        const victory = withThrowingAmbientLocalStorage(() => resolveBattleVictory({
+            run: runWithPendingEncounter,
+            storage: injectedStorage,
+            targetIdentity: SYNTHETIC_TARGET,
+            activeRunRouteKey: LEGACY_ROUTE_LOOKUP,
+            finalNodeId: 'battle.synthetic',
+        }));
+        const storedRun = JSON.parse(
+            injectedStorage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET)) ?? 'null',
+        ) as RunSnapshot;
+
+        expect(victory.run).toEqual(storedRun);
+        expect(storedRun.routeKey).toBe('expedition:synthetic-expedition:synthetic-map');
+        expect(storedRun.currentNodeId).toBe('battle.synthetic');
+        expect(storedRun.pendingEncounter).toBeNull();
+        expect(Object.keys(storedRun).sort()).toEqual([
+            'carriedDeck',
+            'carriedItems',
+            'currentNodeId',
+            'expeditionId',
+            'mapId',
+            'nodeStates',
+            'pendingEncounter',
+            'routeKey',
+            'runId',
+            'spiritStones',
+            'startedAt',
+            'startingLoadout',
+            'status',
+            'visitedNodeIds',
+        ]);
+        expect(injectedStorage.getItem(ACTIVE_RUN_STORAGE_KEY)).toBeNull();
+        expect(injectedStorage.getItem(LEGACY_ROUTE_STORAGE_KEY)).toBeNull();
+        expect(loadActiveRun(DEFAULT_TARGET, undefined, injectedStorage)?.runId).toBe(otherRouteState.activeRun?.runId);
+        expect(loadPersistentStash()).toBeNull();
+        expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
     });
 });

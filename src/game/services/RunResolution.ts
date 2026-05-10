@@ -1,10 +1,9 @@
 import {
-    clearActiveRun,
     loadActiveRun,
     loadPersistentStash,
     normalizeActiveRunRouteKey,
     resolveRunPersistenceStorageAdapter,
-    saveActiveRun,
+    type ActiveRunStorageLookup,
     type ActiveRunTargetIdentity,
     type RunPersistenceStorageAdapter,
     STASH_STORAGE_KEY,
@@ -13,6 +12,11 @@ import {
     writeGameWorldStatePersistentStashPlan,
     type GameWorldStatePersistentStashWritePlan,
 } from '../state/GameWorldStatePersistentStashWrite';
+import {
+    clearGameWorldStateActiveRun,
+    planGameWorldStateActiveRunWriteFromDocument,
+    writeGameWorldStateActiveRunPlan,
+} from '../state/GameWorldStateActiveRunWrite';
 import {
     addCarriedBundleToStash,
     createCarriedBundleFromRun,
@@ -82,12 +86,20 @@ function getActiveRunRouteKey(run: RunSnapshot, options: RunResolutionOptions): 
     );
 }
 
+function getActiveRunWriteLookup(run: RunSnapshot, options: RunResolutionOptions): ActiveRunStorageLookup {
+    return options.activeRunRouteKey ?? run.routeKey ?? getActiveRunIdentity(run, options);
+}
+
 function clearResolvedActiveRun(
     run: RunSnapshot,
     options: RunResolutionOptions,
     storage: RunPersistenceStorageAdapter,
 ): void {
-    clearActiveRun(options.activeRunRouteKey, getActiveRunIdentity(run, options), storage);
+    clearGameWorldStateActiveRun({
+        storage,
+        activeRunLookup: getActiveRunWriteLookup(run, options),
+        activeRunIdentity: getActiveRunIdentity(run, options),
+    });
 }
 
 function writeResolvedPersistentStash(
@@ -134,7 +146,7 @@ function resolveTerminalOutcome(
 }
 
 export function resolveBattleVictory(options: RunResolutionOptions = {}): BattleVictoryResolution {
-    const { run } = resolveRun(options);
+    const { run, storage } = resolveRun(options);
     const finalNodeId = options.finalNodeId ?? run.currentNodeId;
     const routeKey = getActiveRunRouteKey(run, options);
     const resolvedRun: RunSnapshot = {
@@ -144,15 +156,21 @@ export function resolveBattleVictory(options: RunResolutionOptions = {}): Battle
         status: 'inProgress',
         pendingEncounter: null,
     };
-    const persistedRun = saveActiveRun(
-        resolvedRun,
-        options.activeRunRouteKey,
-        getActiveRunIdentity(run, options),
-        options.storage,
+    const writeResult = writeGameWorldStateActiveRunPlan(
+        planGameWorldStateActiveRunWriteFromDocument({
+            document: resolvedRun,
+            activeRunLookup: getActiveRunWriteLookup(run, options),
+            activeRunIdentity: getActiveRunIdentity(run, options),
+        }),
+        storage,
     );
 
+    if (writeResult.operation !== 'save') {
+        throw new Error('Expected GameWorldState active-run writer to save a battle-victory run document.');
+    }
+
     return {
-        run: persistedRun,
+        run: writeResult.document,
         finalNodeId,
     };
 }

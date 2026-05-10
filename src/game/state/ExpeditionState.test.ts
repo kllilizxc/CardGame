@@ -7,6 +7,7 @@ import prototypeShopJson from '../../../public/data/mijing/prototype-shop.json';
 import worldMapJson from '../../../public/data/world/world-map.json';
 
 import {
+    ACTIVE_RUN_STORAGE_KEY,
     createActiveRunStorageKey,
     loadActiveRun,
     loadPersistentStash,
@@ -27,6 +28,8 @@ const SYNTHETIC_TARGET = {
     expeditionId: 'synthetic-expedition',
     mapId: 'synthetic-map',
 };
+const LEGACY_ROUTE_LOOKUP = 'worldMap:destination.synthetic-expedition';
+const LEGACY_ROUTE_STORAGE_KEY = `${ACTIVE_RUN_STORAGE_KEY}:${LEGACY_ROUTE_LOOKUP}`;
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -154,6 +157,24 @@ function sortedJsonKeys(storage: Storage, key: string): string[] {
     return Object.keys(JSON.parse(storage.getItem(key) ?? '{}')).sort();
 }
 
+function expectCreatedActiveRunJsonShape(storage: Storage, target: { expeditionId: string; mapId: string }): void {
+    expect(sortedJsonKeys(storage, createActiveRunStorageKey(target))).toEqual([
+        'carriedDeck',
+        'carriedItems',
+        'currentNodeId',
+        'expeditionId',
+        'mapId',
+        'nodeStates',
+        'routeKey',
+        'runId',
+        'spiritStones',
+        'startedAt',
+        'startingLoadout',
+        'status',
+        'visitedNodeIds',
+    ]);
+}
+
 describe('ExpeditionState', () => {
     beforeEach(() => {
         resetRunPersistenceForTests();
@@ -226,6 +247,40 @@ describe('ExpeditionState', () => {
         expect(JSON.parse(injectedStorage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(state.persistentStash);
         expect(JSON.parse(injectedStorage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET)) ?? 'null')?.runId).toBe(run.runId);
         expect(loadPersistentStash()).toBeNull();
+        expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
+    });
+
+    it('creates active-run snapshots through the GameWorldState writer with route normalization, legacy cleanup, and stable JSON shape', () => {
+        const injectedStorage = new MemoryStorage();
+        const legacyRun = createStoredActiveRun(SYNTHETIC_TARGET, 'run-legacy-before-create', 'event.synthetic');
+        injectedStorage.setItem(ACTIVE_RUN_STORAGE_KEY, JSON.stringify(legacyRun));
+        injectedStorage.setItem(LEGACY_ROUTE_STORAGE_KEY, JSON.stringify({
+            ...legacyRun,
+            routeKey: LEGACY_ROUTE_LOOKUP,
+        }));
+        const state = new ExpeditionState(
+            createStoredStash(),
+            null,
+            SYNTHETIC_TARGET,
+            LEGACY_ROUTE_LOOKUP,
+            injectedStorage,
+        );
+
+        const run = withThrowingAmbientLocalStorage(() => state.createRunSnapshot({
+            ...SYNTHETIC_TARGET,
+            entryNodeId: 'entrance.synthetic',
+        }));
+        const storedRun = JSON.parse(
+            injectedStorage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET)) ?? 'null',
+        ) as RunSnapshot;
+
+        expect(storedRun.runId).toBe(run.runId);
+        expect(storedRun.routeKey).toBe('expedition:synthetic-expedition:synthetic-map');
+        expect(state.activeRun).toEqual(storedRun);
+        expect(injectedStorage.getItem(ACTIVE_RUN_STORAGE_KEY)).toBeNull();
+        expect(injectedStorage.getItem(LEGACY_ROUTE_STORAGE_KEY)).toBeNull();
+        expectCreatedActiveRunJsonShape(injectedStorage, SYNTHETIC_TARGET);
+        expect(loadActiveRun(SYNTHETIC_TARGET, undefined, injectedStorage)?.runId).toBe(run.runId);
         expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
     });
 
@@ -640,5 +695,34 @@ describe('ExpeditionState', () => {
         expect(loadActiveRun(DEFAULT_TARGET)).toBeNull();
         expect(loadActiveRun(SYNTHETIC_TARGET)?.runId).toBe(syntheticRun.runId);
         expect(defaultRun.runId).not.toBe(syntheticRun.runId);
+    });
+
+    it('resets to entrance through the GameWorldState active-run clear writer and removes matching legacy keys', () => {
+        const injectedStorage = new MemoryStorage();
+        const syntheticRun = createStoredActiveRun(SYNTHETIC_TARGET, 'run-synthetic-clear', 'extract.synthetic');
+        const defaultRun = createStoredActiveRun(DEFAULT_TARGET, 'run-default-survives', 'event.default');
+        injectedStorage.setItem(createActiveRunStorageKey(SYNTHETIC_TARGET), JSON.stringify(syntheticRun));
+        injectedStorage.setItem(ACTIVE_RUN_STORAGE_KEY, JSON.stringify(syntheticRun));
+        injectedStorage.setItem(LEGACY_ROUTE_STORAGE_KEY, JSON.stringify({
+            ...syntheticRun,
+            routeKey: LEGACY_ROUTE_LOOKUP,
+        }));
+        injectedStorage.setItem(createActiveRunStorageKey(DEFAULT_TARGET), JSON.stringify(defaultRun));
+        const state = new ExpeditionState(
+            createStoredStash(),
+            syntheticRun,
+            SYNTHETIC_TARGET,
+            LEGACY_ROUTE_LOOKUP,
+            injectedStorage,
+        );
+
+        withThrowingAmbientLocalStorage(() => state.resetToEntranceState());
+
+        expect(state.activeRun).toBeNull();
+        expect(injectedStorage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET))).toBeNull();
+        expect(injectedStorage.getItem(ACTIVE_RUN_STORAGE_KEY)).toBeNull();
+        expect(injectedStorage.getItem(LEGACY_ROUTE_STORAGE_KEY)).toBeNull();
+        expect(loadActiveRun(DEFAULT_TARGET, undefined, injectedStorage)?.runId).toBe(defaultRun.runId);
+        expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
     });
 });

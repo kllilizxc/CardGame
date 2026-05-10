@@ -1,11 +1,10 @@
 import {
-    clearActiveRun,
     loadActiveRun,
     loadPersistentStash,
     normalizeActiveRunIdentity,
     normalizeActiveRunRouteKey,
     parseActiveRunRouteKey,
-    saveActiveRun,
+    resolveRunPersistenceStorageAdapter,
     type ActiveRunTargetIdentity,
     type RunPersistenceStorageAdapter,
 } from '../services/RunPersistence';
@@ -19,6 +18,11 @@ import {
     addRewardBundleToCarriedBundle,
     createStartingLoadoutFromStash,
 } from './GameWorldStateStashOperations';
+import {
+    clearGameWorldStateActiveRun,
+    planGameWorldStateActiveRunWriteFromDocument,
+    writeGameWorldStateActiveRunPlan,
+} from './GameWorldStateActiveRunWrite';
 import { writeGameWorldStatePersistentStashDocumentWithFallbackStorage } from './GameWorldStatePersistentStashWrite';
 import type {
     ExpeditionMapDefinition,
@@ -115,6 +119,7 @@ export class ExpeditionState {
     public activeRun: RunSnapshot | null;
     private readonly targetIdentity: ExpeditionRouteIdentity;
     private readonly activeRunRouteKey: string;
+    private readonly activeRunWriteLookup: string;
     private readonly storage?: RunPersistenceStorageAdapter;
 
     constructor(
@@ -126,7 +131,11 @@ export class ExpeditionState {
     ) {
         this.persistentStash = persistentStash;
         this.targetIdentity = normalizeActiveRunIdentity(targetIdentity);
-        this.activeRunRouteKey = normalizeActiveRunRouteKey(activeRunRouteKey, this.targetIdentity);
+        const requestedActiveRunLookup = activeRunRouteKey?.trim();
+        this.activeRunRouteKey = normalizeActiveRunRouteKey(requestedActiveRunLookup, this.targetIdentity);
+        this.activeRunWriteLookup = requestedActiveRunLookup && requestedActiveRunLookup.length > 0
+            ? requestedActiveRunLookup
+            : this.activeRunRouteKey;
         this.storage = storage;
         this.activeRun = activeRun
             ? {
@@ -346,7 +355,11 @@ export class ExpeditionState {
     }
 
     resetToEntranceState(): void {
-        clearActiveRun(this.targetIdentity, undefined, this.storage);
+        clearGameWorldStateActiveRun({
+            storage: this.resolveActiveRunWriteStorage(),
+            activeRunLookup: this.activeRunWriteLookup,
+            activeRunIdentity: this.targetIdentity,
+        });
         this.activeRun = null;
         this.persistentStash = loadPersistentStash(this.storage) ?? this.persistentStash;
     }
@@ -354,11 +367,28 @@ export class ExpeditionState {
     private persistActiveRun(run: RunSnapshot): void {
         this.assertRunIdentityMatchesState(run);
 
-        this.activeRun = {
+        const activeRun: RunSnapshot = {
             ...run,
             routeKey: this.activeRunRouteKey,
         };
-        saveActiveRun(this.activeRun, this.targetIdentity, undefined, this.storage);
+        const writeResult = writeGameWorldStateActiveRunPlan(
+            planGameWorldStateActiveRunWriteFromDocument({
+                document: activeRun,
+                activeRunLookup: this.activeRunWriteLookup,
+                activeRunIdentity: this.targetIdentity,
+            }),
+            this.resolveActiveRunWriteStorage(),
+        );
+
+        if (writeResult.operation !== 'save') {
+            throw new Error('Expected GameWorldState active-run writer to save a run document.');
+        }
+
+        this.activeRun = writeResult.document;
+    }
+
+    private resolveActiveRunWriteStorage(): RunPersistenceStorageAdapter {
+        return resolveRunPersistenceStorageAdapter(this.storage);
     }
 
     private assertRunIdentityMatchesState(identity: ExpeditionRouteIdentity): void {
