@@ -10,6 +10,11 @@ import {
     type ActiveRunTargetIdentity,
 } from '../services/RunPersistence';
 import { enterReachableNode } from '../scenes/expedition/mapTraversal';
+import {
+    createPersistentStashFromWorldStateSeed,
+    type ExpeditionWorldStateSeed,
+    type StarterDeckSeed,
+} from './GameWorldStateSeed';
 import type {
     ExpeditionCardStack,
     ExpeditionItemStack,
@@ -22,20 +27,7 @@ import type {
     RunSnapshot,
 } from '../types/expedition';
 
-interface StarterDeckSeed {
-    cards: ExpeditionCardStack[];
-}
-
-interface WorldStateStashSeed {
-    stashId?: string;
-    deckRef?: string;
-    items?: ExpeditionItemStack[];
-    spiritStones?: number;
-}
-
-export interface ExpeditionWorldStateSeed {
-    stash?: WorldStateStashSeed;
-}
+export type { ExpeditionWorldStateSeed, StarterDeckSeed } from './GameWorldStateSeed';
 
 export interface ExpeditionBootstrapSources {
     worldState: ExpeditionWorldStateSeed;
@@ -68,12 +60,6 @@ export type ExtractIntentResult =
     | { status: 'recorded'; activeRun: RunSnapshot }
     | { status: 'alreadyRecorded'; activeRun: RunSnapshot }
     | { status: 'noActiveRun'; activeRun: null };
-
-const DEFAULT_STARTER_ITEMS: ExpeditionItemStack[] = [
-    { id: 'tool.return-rope', itemType: 'tool', count: 1 },
-    { id: 'consumable.spirit-salve', itemType: 'consumable', count: 2 },
-];
-const DEFAULT_STARTER_SPIRIT_STONES = 36;
 
 function cloneCardStacks(stacks: ExpeditionCardStack[]): ExpeditionCardStack[] {
     return stacks.map((stack) => ({ ...stack }));
@@ -125,19 +111,6 @@ function createStartingLoadout(stash: PersistentStash): RunRewardBundle {
         cards: cloneCardStacks(stash.deck),
         items: cloneItemStacks(stash.items),
         spiritStones: stash.spiritStones,
-    };
-}
-
-function createSeedPersistentStash(worldState: ExpeditionWorldStateSeed, starterDeck: StarterDeckSeed): PersistentStash {
-    const stashSeed = worldState.stash;
-
-    return {
-        stashId: stashSeed?.stashId ?? 'phase01.starter-stash',
-        deckRef: stashSeed?.deckRef ?? 'starter-deck',
-        deck: cloneCardStacks(starterDeck.cards),
-        items: cloneItemStacks(stashSeed?.items ?? DEFAULT_STARTER_ITEMS),
-        spiritStones: stashSeed?.spiritStones ?? DEFAULT_STARTER_SPIRIT_STONES,
-        lastRunSummary: null,
     };
 }
 
@@ -203,7 +176,10 @@ export class ExpeditionState {
                 ?? undefined,
         );
         const normalizedRouteKey = normalizeActiveRunRouteKey(activeRunRouteKey, normalizedTargetIdentity);
-        const persistentStash = loadPersistentStash() ?? createSeedPersistentStash(worldState, starterDeck);
+        const persistentStash = loadPersistentStash() ?? createPersistentStashFromWorldStateSeed({
+            worldState,
+            starterDeck,
+        });
         const activeRun = loadActiveRun(activeRunRouteKey ?? normalizedRouteKey, normalizedTargetIdentity);
 
         savePersistentStash(persistentStash);

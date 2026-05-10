@@ -6,7 +6,12 @@ import prototypeEventsJson from '../../../public/data/mijing/prototype-events.js
 import prototypeShopJson from '../../../public/data/mijing/prototype-shop.json';
 import worldMapJson from '../../../public/data/world/world-map.json';
 
-import { resetRunPersistenceForTests, loadActiveRun } from '../services/RunPersistence';
+import {
+    loadActiveRun,
+    loadPersistentStash,
+    resetRunPersistenceForTests,
+    savePersistentStash,
+} from '../services/RunPersistence';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
 import { ExpeditionState } from './ExpeditionState';
 
@@ -51,6 +56,42 @@ describe('ExpeditionState', () => {
         expect(state.persistentStash.deck).toEqual(starterDeckJson.cards);
         expect(state.persistentStash.items).toEqual(initialWorldState.stash.items);
         expect(state.persistentStash.spiritStones).toBe(initialWorldState.stash.spiritStones);
+    });
+
+    it('saves the seeded stash once and reuses an existing persistent stash on bootstrap', () => {
+        const seededState = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+        });
+
+        expect(loadPersistentStash()).toEqual(seededState.persistentStash);
+
+        const existingStash = {
+            ...seededState.persistentStash,
+            stashId: 'player-existing-stash',
+            deckRef: 'player-existing-deck',
+            deck: [{ id: 'EXISTING_CARD', count: 1 }],
+            items: [{ id: 'tool.existing', itemType: 'tool' as const, count: 3 }],
+            spiritStones: 777,
+        };
+        savePersistentStash(existingStash);
+
+        const restoredState = ExpeditionState.bootstrap({
+            worldState: {
+                stash: {
+                    stashId: 'seed-that-must-not-replace-existing',
+                    deckRef: 'seed-deck-ref',
+                    items: [],
+                    spiritStones: 1,
+                },
+            },
+            starterDeck: {
+                cards: [{ id: 'SEED_CARD', count: 9 }],
+            },
+        });
+
+        expect(restoredState.persistentStash).toEqual(existingStash);
+        expect(loadPersistentStash()).toEqual(existingStash);
     });
 
     it('creates and persists a run snapshot from the current stash loadout', () => {
