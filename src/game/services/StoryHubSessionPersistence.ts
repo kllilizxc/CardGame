@@ -14,7 +14,7 @@ export interface HubSessionSnapshot {
 
 export interface StoryRuntimeSessionSnapshot extends StoryHubSessionKey {
     storyState: StoryState;
-    selectedChoiceIds: string[];
+    selectedChoiceIds: readonly string[];
     statusText?: string;
     updatedAt: string;
 }
@@ -73,7 +73,7 @@ function isOptionalString(value: unknown): value is string | undefined {
     return value === undefined || typeof value === 'string';
 }
 
-function isStringArray(value: unknown): value is string[] {
+function isStringArray(value: unknown): value is readonly string[] {
     return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
 }
 
@@ -146,7 +146,7 @@ function cloneHubSessionSnapshot(snapshot: HubSessionSnapshot): HubSessionSnapsh
     };
 }
 
-function cloneStoryRuntimeSessionSnapshot(snapshot: StoryRuntimeSessionSnapshot): StoryRuntimeSessionSnapshot {
+function cloneStoryRuntimeSessionSnapshot(snapshot: Readonly<StoryRuntimeSessionSnapshot>): StoryRuntimeSessionSnapshot {
     return {
         hubId: snapshot.hubId,
         actionId: snapshot.actionId,
@@ -320,7 +320,7 @@ export function loadStoryRuntimeSession(
 }
 
 export function saveStoryRuntimeSession(
-    snapshot: StoryRuntimeSessionSnapshot,
+    snapshot: Readonly<StoryRuntimeSessionSnapshot>,
     storage?: StoryHubSessionStorageAdapter,
 ): void {
     const document = loadDocument(storage);

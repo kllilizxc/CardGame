@@ -80,6 +80,12 @@ const expectedCheckedInResources = [
     ['worldSeed', 'data/world/skills.techniques.json'],
 ] as const;
 
+function toMutableCheckedInResources(
+    resources: readonly (readonly [string, string])[],
+): Array<[string, string]> {
+    return resources.map(([kind, path]) => [kind, path]);
+}
+
 const canonicalCombatBaselineCatalogEntry = {
     resourceId: CANONICAL_REALM_REGISTRY_RESOURCE_ID,
     kind: 'config',
@@ -859,7 +865,7 @@ describe('content catalog', () => {
         );
 
         expect(catalog.schemaVersion).toBe(1);
-        expect(checkedInResources).toEqual(expectedCheckedInResources);
+        expect(checkedInResources).toEqual(toMutableCheckedInResources(expectedCheckedInResources));
         expect(new Set(catalog.resources.map((entry) => entry.resourceId)).size).toBe(catalog.resources.length);
         expect(new Set(catalog.resources.map((entry) => entry.publicPath)).size).toBe(catalog.resources.length);
     });

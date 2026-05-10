@@ -273,9 +273,11 @@ describe('GameWorldStateStoryHubSessionWrite', () => {
         expect(storedDocument).toEqual(plan.document);
         expect(result.document).toEqual(plan.document);
 
-        result.document.stories[
-            'hub.qingyun-town|action.start-qingyun-entry-story|data%2Fstory%2Fstory-graph.json'
-        ].selectedChoiceIds.push('mutated-result-choice');
+        const resumedStoryKey = 'hub.qingyun-town|action.start-qingyun-entry-story|data%2Fstory%2Fstory-graph.json';
+        result.document.stories[resumedStoryKey] = {
+            ...result.document.stories[resumedStoryKey],
+            selectedChoiceIds: [...result.document.stories[resumedStoryKey].selectedChoiceIds, 'mutated-result-choice'],
+        };
 
         expect(JSON.parse(storage.getItem(STORY_HUB_SESSION_STORAGE_KEY) ?? 'null')).toEqual(storedDocument);
 
