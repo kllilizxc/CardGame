@@ -254,6 +254,27 @@ function saveDocument(
     getStorageAdapter(storageAdapter).setItem(STORY_HUB_SESSION_STORAGE_KEY, JSON.stringify(document));
 }
 
+export function cloneStoryHubSessionDocumentSnapshot(
+    document: StoryHubSessionDocument,
+): StoryHubSessionDocument {
+    const parsed = parseDocument(document);
+
+    if (!parsed) {
+        throw new Error(
+            'Invalid StoryHubSessionDocument: expected schemaVersion 1 with matching Hub and Story session identities.',
+        );
+    }
+
+    return parsed;
+}
+
+export function saveStoryHubSessionDocumentSnapshot(
+    document: StoryHubSessionDocument,
+    storage?: StoryHubSessionStorageAdapter,
+): void {
+    saveDocument(cloneStoryHubSessionDocumentSnapshot(document), storage);
+}
+
 export function createStoryRuntimeSessionStorageKey(key: StoryHubSessionKey): string {
     return [key.hubId, key.actionId, key.storyGraphFile]
         .map((part) => encodeURIComponent(part))
