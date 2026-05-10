@@ -2,6 +2,18 @@
 
 Curated debt worth tracking goes here.
 
+## Radar findings — 2026-05-10
+
+- **HOPI goal identity and mirror docs need reconciliation.**
+  - Evidence: this Radar task targets Goal `6d009b3c-9206-4ddd-b00c-0dd885707add`, but `rg "6d009b3c" .hopi .planning` finds no repo doc; the same mature-architecture objective is tracked under `.hopi/docs/goals/d252bb99-35c4-460e-b1f3-b3d3fe05af80.md`, `.hopi/docs/todo.md`, and a legacy `.hopi/docs/goals/goal-3.md` mirror whose Current Focus still names older commits (`630fcbe` / `d613926` / `ce0a4e6` / `8e245d0`) rather than the latest architecture batch.
+  - Why it matters: HOPI packets, Planner refreshes, and future Radar passes can attach evidence to the wrong durable doc or resurrect stale focus text if the Goal aliases are not explicit.
+  - Durable cleanup: map or migrate the current HOPI Goal ID to the durable `d252bb99-35c4-460e-b1f3-b3d3fe05af80` doc, then retire or refresh `goal-3.md` so there is one authoritative architecture Goal summary.
+
+- **Content validation remains concentrated in large registry/test modules after the validation-index split.**
+  - Evidence: `public/data/content-catalog.json` and `src/game/content/contentCatalogValidationIndex.ts` now exist, so the old "no catalog" debt is resolved; the remaining extension surface is still broad, with `src/game/content/contentIdRegistry.ts` at 2,761 lines / 88 KB and `src/game/content/contentCatalog.test.ts` at 2,586 lines / 123 KB owning many domains (cards, gongfa, status, config, world seed, Story, Hub, and Expedition) in one place.
+  - Why it matters: future domain-specific validation changes can create noisy conflicts or brittle fixture edits unless splits continue deliberately.
+  - Durable cleanup: continue extracting one validation domain at a time only when it reduces near-term change risk; preserve the current catalog public APIs, diagnostics, and zero-failure checked-in content validation.
+
 ## Radar findings — 2026-05-09
 
 - **Legacy planning docs drift from implemented Expedition/Story/WorldMap state.**
@@ -9,17 +21,7 @@ Curated debt worth tracking goes here.
   - Why it matters: future planning or Radar passes can under-scope follow-up work if they trust the stale `.planning` status instead of the code and summaries.
   - Durable cleanup: reconcile `.planning/PROJECT.md`, `.planning/STATE.md`, and `.planning/REQUIREMENTS.md` with the completed Phase 01 slices or mark `.planning` as superseded by HOPI docs.
 
-- **README/package metadata still carries template-era references.**
-  - Evidence: `package.json` is still named `template-react-ts` with Phaser template repository/author/homepage metadata; `README.md` references a top-level `docs/` directory and files such as `docs/ARTIFACT_SYSTEM.md`, `docs/CARD_LIST_VIEW.md`, and `docs/REFACTORING_CARD_SPRITES.md`, but no top-level `docs/` directory exists in this repo; README debugging guidance points to `src/game/ui/BattleLog.ts`, while the checked-in file is `src/game/ui/battle/BattleLog.ts`.
-  - Why it matters: onboarding docs and package metadata point contributors toward missing files and an upstream template identity instead of CardGame.
-  - Durable cleanup: refresh project metadata and either restore/move the referenced design docs or update README links to existing `public/data/docs/*` / `.hopi/docs/*` sources.
-
 - **Battle effect managers still contain no-op or incomplete effect hooks.**
   - Evidence: TODO scan found `ArtifactManager.onUnitAttack/onUnitDamaged` only logging effect text for artifact triggers, `FieldManager.applyFieldPermanentEffects/removeFieldPermanentEffects` not applying/removing permanent field effects, and `PillManager.modifyUnitAttack` not expiring duration-based attack modifiers.
   - Why it matters: content can declare artifact/field/pill effects that appear supported in UI/data but do not consistently affect combat state.
   - Durable cleanup: add focused tests around one manager at a time, then route these hooks through the existing battle effect/status infrastructure or explicitly narrow supported data fields.
-
-- **Content resource references are validated through scattered scene-specific seams rather than one versioned catalog.**
-  - Evidence: `public/data/world/world-map.json` owns `hubFile`, optional `targetLocationId`, and Expedition `worldStateFile` / `starterDeckFile` / `mapFile` / `eventsFile` / `shopFile` strings; Hub JSON owns `startStory.storyGraphFile` strings; story battle metadata can carry encounter/deck files; focused validators exist in files such as `src/game/scenes/worldmap/worldMap.ts`, `src/game/scenes/hub/hubTown.ts`, `src/game/types/prototypeExpeditionContent.ts`, and story tests, but there is no checked-in manifest/catalog file under `public/data` or `src/game` that enumerates resources and validates cross-resource references in one pass.
-  - Why it matters: as story graphs, Hub files, world-map destinations, Expedition maps, encounters, decks, and card/status data grow, broken file paths or stale IDs can slip through unless every scene-specific test is updated manually.
-  - Durable cleanup: introduce a versioned content catalog/manifest plus reusable cross-resource validation for stable IDs, file paths, and references before broad content production.

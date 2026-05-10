@@ -6,37 +6,28 @@ This file is the planning reservoir. The kanban is the active execution queue.
 
 ### Active / promoted kanban
 
-- [promoted] Add a narrow GameWorldState persistent-stash write boundary. -> generator task creation requested in this Planner pass
-  - Scope: create the next write-facing world-state seam over the existing persistent-stash compatibility key. Build on `GameWorldState`, `GameWorldStateStashOperations`, and the injected `savePersistentStash` boundary; keep it narrow to the persistent-stash slice and do not replace current Expedition/RunResolution runtime writers in this task.
-  - Suggested files: add a focused module such as `src/game/state/GameWorldStatePersistentStashWrite.ts` plus tests. Reuse `src/game/services/RunPersistence.ts` types/constants and `savePersistentStash`; touch `ExpeditionState.ts` or `RunResolution.ts` only if needed for type reuse, not behavioral rewiring.
-  - Validation expectations: cover planning/writing a stored-stash view and a seed-fallback view through an explicit storage adapter, preserving `cardgame.persistent-stash.v1`, JSON shape, cloning semantics, `lastRunSummary`, deck/item/spirit-stone stacks, and no ambient `globalThis.localStorage` dependency. Prove malformed adapter/options errors are explicit if a writer API is added.
-  - Test/build expectations: run `bun test src/game/state/GameWorldStatePersistentStashWrite.test.ts src/game/state/GameWorldState.test.ts src/game/state/GameWorldStateStashOperations.test.ts src/game/services/RunPersistence.test.ts`; run `bun test src/game/**/*.test.ts`; run `npm run build-nolog`.
-  - Acceptance: `GameWorldState` has a first explicit persistent-stash write seam ready for later runtime adoption; current storage keys, save document shape, active-run routing, Expedition/RunResolution behavior, economy/stash math, UI, and product content remain unchanged.
-- [promoted] Extract pure gongfa condition evaluation from UnitEffectManager. -> generator task creation requested in this Planner pass
-  - Scope: move the current gongfa condition checks into a typed, focused helper while preserving every existing condition semantic and warning. This follows the action-dispatch registry and keeps condition evaluation separate from Phaser/manager orchestration.
-  - Suggested files: add `src/game/managers/battle/gongfaConditionEvaluation.ts` and focused tests; update `src/game/managers/battle/UnitEffectManager.ts` / `UnitEffectManager.test.ts` to delegate. Reuse `gongfaExpression`, `gongfaCardFilter`, `RealmHelper`, and `ArtifactHelper`; do not edit operation adapter files unless only type imports are needed.
-  - Validation expectations: cover `ArtifactUsedThisTurn`, `UnitOnField`, `CardInHand`, and `ArtifactEquipped` including weapon labels, numeric and expression `maxStar`, missing trigger-unit fallback, and current `Custom` warning/false behavior. Prove action execution, gongfa log emission, and unsupported action warnings still behave through the existing dispatch tests.
-  - Test/build expectations: run `bun test src/game/managers/battle/gongfaConditionEvaluation.test.ts src/game/managers/battle/gongfaExpression.test.ts src/game/managers/battle/gongfaCardFilter.test.ts src/game/managers/battle/gongfaOperationDispatch.test.ts src/game/managers/battle/UnitEffectManager.test.ts`; run `bun test src/game/**/*.test.ts`; run `npm run build-nolog`.
-  - Acceptance: `UnitEffectManager` no longer owns the condition-switch implementation directly; no new condition/action semantics, universal effect interpreter, combat balance change, save behavior, UI/product content, or scene rewrite is introduced.
-- [promoted] Split content catalog validation index plumbing into a focused module. -> generator task creation requested in this Planner pass
-  - Scope: reduce the monolithic `contentCatalog.ts` validation surface by extracting resource loading, domain-id validation, and loaded-index helpers into a focused module without changing catalog rules, public APIs, runtime resolver behavior, or checked-in content.
-  - Suggested files: add `src/game/content/contentCatalogValidationIndex.ts` plus focused tests if useful; update `src/game/content/contentCatalog.ts` and `src/game/content/contentCatalog.test.ts`. Do not change `public/data/content-catalog.json` or domain JSON unless an existing test fixture proves the current data is already inconsistent.
-  - Validation expectations: preserve current duplicate/missing/malformed catalog diagnostics, missing JSON and invalid JSON failures, domain ID mismatch messages, validated resource counts, registered validator names, and zero-failure validation for checked-in content. Keep WorldMap/Hub/Story/Expedition/card/status/gongfa/config reference validation behavior byte-for-byte equivalent where practical.
-  - Test/build expectations: run `bun test src/game/content/contentCatalog.test.ts`; run `bun test src/game/**/*.test.ts`; run `npm run build-nolog`.
-  - Acceptance: catalog validation internals are easier to extend for future domain splits, while content catalog APIs, runtime loading, cross-resource validation semantics, product content, scenes, save behavior, and UI remain unchanged.
+- [radar] No active/promoted architecture task is added by this Radar pass. The previous promoted batch has landed in code and is reconciled to Done below (commits `5cf5611`, `566c98a`, and `04972b9`).
 
 ### Ready next batch
 
-- [parked] No additional ready candidates are promoted in this Planner pass; the generator lane is filled to its target with the three promoted tasks above.
+- [needs-planner] The generator lane appears empty after the landed batch; Planner should choose the next small behavior-preserving batch from the candidates below instead of Radar creating speculative implementation work.
 
 ### Later candidates / not in current batch
 
-- [candidate] After the GameWorldState persistent-stash write boundary lands, consider adopting that seam in the existing Expedition/RunResolution write paths only if tests prove current behavior, route identity, and storage shape remain unchanged.
-- [candidate] After gongfa condition evaluation is extracted, consider the next smallest battle semantic seam: either one explicit unsupported gongfa action only after a concrete content/product need, or a focused battle effect/status adapter review. Do not infer broad universal effect interpreter scope.
-- [candidate] After the content catalog validation-index split lands, continue splitting the catalog by domain only when it reduces future validation risk without changing rules; scene/controller decomposition remains parked until contract seams stay green.
+- [candidate] Consider adopting `GameWorldStatePersistentStashWrite` in the existing Expedition/RunResolution write paths only if tests prove current behavior, route identity, storage adapter behavior, and `cardgame.persistent-stash.v1` JSON shape remain unchanged.
+- [candidate] Consider the next smallest battle semantic seam only after a concrete content/product need: either one explicit unsupported gongfa action or a focused battle effect/status adapter review. Do not infer broad universal effect interpreter scope.
+- [candidate] Continue splitting catalog validation by domain only when it reduces near-term validation risk without changing catalog rules, public APIs, runtime resolver behavior, or checked-in content; scene/controller decomposition remains parked until contract seams stay green.
+- [maintenance-candidate] Reconcile HOPI Goal identity and mirror docs for this architecture Goal: map the current task Goal ID to the durable `d252bb99-35c4-460e-b1f3-b3d3fe05af80` doc or refresh/retire stale `goal-3.md` before future Planner/Radar summaries drift further.
 - [parked] Browser save/import-export UI, scene-triggered save/restore, new save keys, real migrations, profile/cloud save, unlock/current-position world-state ownership, economy redesign, broad scene rewrites, product content/UI, authoring tooling, and release/deploy work remain out of this batch.
 
 ### Done
+
+- [done] Added a narrow GameWorldState persistent-stash write boundary.
+  - Evidence: commit `5cf5611` added `GameWorldStatePersistentStashWrite.ts` and focused tests, building a write-facing seam over the existing `cardgame.persistent-stash.v1` compatibility key through explicit storage adapters while preserving stash JSON shape, cloning semantics, active-run routing, Expedition/RunResolution behavior, UI, and product content. Radar verification on 2026-05-10: `bun test src/game/state/GameWorldStatePersistentStashWrite.test.ts src/game/managers/battle/gongfaConditionEvaluation.test.ts src/game/content/contentCatalog.test.ts` passed 46 tests/0 failures.
+- [done] Extracted pure gongfa condition evaluation from UnitEffectManager.
+  - Evidence: commit `566c98a` added `gongfaConditionEvaluation.ts` and focused tests, delegating current condition checks for artifact usage, unit/card presence, equipped artifacts, expression max-star handling, missing trigger-unit fallback, and Custom warning/false behavior without changing action execution, combat balance, save behavior, UI, or product content. Radar verification on 2026-05-10: the 46-test focused run above passed with 0 failures.
+- [done] Split content catalog validation index plumbing into a focused module. -> task `d2a3a838-d065-4b66-beb3-d9ceffdc1776`
+  - Evidence: commit `04972b9` added `contentCatalogValidationIndex.ts` and catalog tests, moving resource loading, domain-id validation, loaded-index helpers, and resolver plumbing out of the monolithic catalog orchestration while preserving diagnostics, public APIs, runtime resolver behavior, checked-in content, scenes, save behavior, and UI. Radar verification on 2026-05-10: the 46-test focused run above passed with 0 failures.
 
 - [done] Added a manual JSON save-document text-transfer helper over injected adapters.
   - Evidence: commit `9617669` added `SaveWorldStateDocumentTextTransfer.ts` and focused tests, composing the JSON codec, injected transfer, and verification/readback seams into stable text export/restore helpers without ambient localStorage, browser UI, new save keys, real migrations, gameplay changes, or product content.
@@ -152,10 +143,12 @@ This file is the planning reservoir. The kanban is the active execution queue.
 - [active] Commit `e20c899` landed the first Hub sub-map presentation proof for existing Hub locations. Do not create a duplicate Hub sub-map task.
 - [parked] No next story-system implementation is ready until the human chooses one concrete post-sub-map product direction; the remaining candidates pull different ownership boundaries.
 - [blocked] 2026-05-10 Planner review: keep the story-system generator lane empty for this Goal until a human chooses exactly one next increment. Creating 2-3 speculative tasks now would either edit overlapping Hub/world-state/content files or silently decide product direction without approval.
+- [blocked] 2026-05-10 Planner refresh: no todo reservoir item is promoted in this pass; create or maintain one DecisionTopic asking for the single post-sub-map direction.
 
 ### Ready next batch
 
 - [blocked] None after the Hub sub-map presentation slice; ask one substantive product question before promoting the next implementation task.
+- [blocked] First executable batch remains intentionally empty until the product question is answered; once answered, promote only the selected direction and keep it to 1-2 non-overlapping tasks.
 - [not-ready] Candidate first-task shapes after the answer, to be promoted only for the selected direction:
   - If the choice is real second-level content: add one small Hub content slice with a new concrete location/action/story graph, preserving current `HubScene` sub-map and Story/Hub session boundaries.
   - If the choice is unlock/world-state: define and test the minimal read/write owner for destination or Hub-location unlock flags before adding locked content.
@@ -224,9 +217,8 @@ This file is the planning reservoir. The kanban is the active execution queue.
 
 ## Cross-goal maintenance spotted by Radar
 
-- [ready] Refresh project metadata and README onboarding references.
-  - Scope: replace template-era `package.json` identity/repository/bugs/homepage metadata with CardGame-owned metadata, and update README references that still point to missing top-level `docs/*` files or stale paths such as `src/game/ui/BattleLog.ts`.
-  - Acceptance: `package.json` no longer identifies the repo as `template-react-ts` or links to Phaser template issue/homepage URLs; README no longer lists missing top-level design docs unless they are restored; onboarding/debug references point to checked-in files such as `public/data/docs/*`, `.hopi/docs/*`, and `src/game/ui/battle/BattleLog.ts`; no runtime behavior changes.
+- [done] Refreshed project metadata and README onboarding references.
+  - Evidence: commit `6b1b0c3` replaced the template-era `package.json` identity/repository/bugs/homepage metadata with CardGame-owned metadata and updated README onboarding/debug references to checked-in paths such as `public/data/docs/*` and `src/game/ui/battle/BattleLog.ts`. Radar verification on 2026-05-10 confirmed `package.json` no longer uses `template-react-ts`, top-level `docs/*` references are not required, and the BattleLog path points to the checked-in file.
 
 - [done] Fix the red expedition copy test after the Chinese UI text update.
   - Scope: Align `src/game/scenes/expedition/entryFlowModel.test.ts` with the current Chinese `createPreparationSummary` output, or intentionally change the runtime copy if English is still desired.
