@@ -140,11 +140,13 @@ function createStoryState(nodeId = 'sect_entry_003_help_girl'): StoryState {
 function startRun(
     targetIdentity: { expeditionId: string; mapId: string } = DEFAULT_TARGET,
     entryNodeId = targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'entrance.mountain-gate' : 'entrance.synthetic',
+    runStorage?: MemoryStorage,
 ): { state: ExpeditionState; run: RunSnapshot } {
     const state = ExpeditionState.bootstrap({
         worldState: structuredClone(initialWorldState),
         starterDeck: structuredClone(starterDeckJson),
         targetIdentity,
+        storage: runStorage,
     });
     const run = state.createRunSnapshot({
         ...targetIdentity,
@@ -164,23 +166,6 @@ function writeStaleActiveRun(targetIdentity: { expeditionId: string; mapId: stri
     }));
 
     return storageKey;
-}
-
-function copyCurrentPersistenceInto(
-    targetStorage: MemoryStorage,
-    targetIdentity: { expeditionId: string; mapId: string },
-): void {
-    for (const key of [
-        STORY_HUB_SESSION_STORAGE_KEY,
-        STASH_STORAGE_KEY,
-        createActiveRunStorageKey(targetIdentity),
-    ]) {
-        const rawValue = storage.getItem(key);
-
-        if (rawValue !== null) {
-            targetStorage.setItem(key, rawValue);
-        }
-    }
 }
 
 describe('SaveWorldStateSnapshot', () => {
@@ -280,12 +265,13 @@ describe('SaveWorldStateSnapshot', () => {
     });
 
     it('builds the current Story/Hub, stash, and route-keyed active-run slices from injected storage without touching ambient localStorage', () => {
+        const injectedStorage = new MemoryStorage();
         saveHubSessionSnapshot({
             hubId: 'hub.qingyun-town',
             currentLocationId: 'location.qingyun-town.teahouse',
             statusText: '注入式读取应只看显式 storage。',
             updatedAt: '2026-05-09T06:00:00.000Z',
-        });
+        }, injectedStorage);
         saveStoryRuntimeSession({
             hubId: 'hub.qingyun-town',
             actionId: 'action.start-qingyun-entry-story',
@@ -294,15 +280,13 @@ describe('SaveWorldStateSnapshot', () => {
             selectedChoiceIds: ['sect_entry_001_choice_help_girl'],
             statusText: '注入式 story session',
             updatedAt: '2026-05-09T06:01:00.000Z',
-        });
-        const { state, run } = startRun(SYNTHETIC_TARGET);
+        }, injectedStorage);
+        const { state, run } = startRun(SYNTHETIC_TARGET, undefined, injectedStorage);
         state.applyNodeRewardPreview({
             cards: [{ id: 'AR_001', count: 1 }],
             items: [],
             spiritStones: 9,
         });
-        const injectedStorage = new MemoryStorage();
-        copyCurrentPersistenceInto(injectedStorage, SYNTHETIC_TARGET);
         const ambientKeysBeforeSnapshot = storage.keys().sort();
 
         const snapshot = withThrowingAmbientLocalStorage(() => createSaveWorldStateSnapshot({

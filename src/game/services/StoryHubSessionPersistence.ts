@@ -247,8 +247,11 @@ function loadDocument(storageAdapter?: StoryHubSessionStorageAdapter): StoryHubS
     return createEmptyDocument();
 }
 
-function saveDocument(document: StoryHubSessionDocument): void {
-    getStorageAdapter().setItem(STORY_HUB_SESSION_STORAGE_KEY, JSON.stringify(document));
+function saveDocument(
+    document: StoryHubSessionDocument,
+    storageAdapter?: StoryHubSessionStorageAdapter,
+): void {
+    getStorageAdapter(storageAdapter).setItem(STORY_HUB_SESSION_STORAGE_KEY, JSON.stringify(document));
 }
 
 export function createStoryRuntimeSessionStorageKey(key: StoryHubSessionKey): string {
@@ -261,44 +264,62 @@ export function loadStoryHubSessionDocumentSnapshot(storage?: StoryHubSessionSto
     return cloneStoryHubSessionDocument(loadDocument(storage));
 }
 
-export function loadHubSessionSnapshot(hubId: string): HubSessionSnapshot | null {
-    const snapshot = loadDocument().hubs[hubId];
+export function loadHubSessionSnapshot(
+    hubId: string,
+    storage?: StoryHubSessionStorageAdapter,
+): HubSessionSnapshot | null {
+    const snapshot = loadDocument(storage).hubs[hubId];
 
     return snapshot ? cloneHubSessionSnapshot(snapshot) : null;
 }
 
-export function saveHubSessionSnapshot(snapshot: HubSessionSnapshot): void {
-    const document = loadDocument();
+export function saveHubSessionSnapshot(
+    snapshot: HubSessionSnapshot,
+    storage?: StoryHubSessionStorageAdapter,
+): void {
+    const document = loadDocument(storage);
 
     document.hubs[snapshot.hubId] = cloneHubSessionSnapshot(snapshot);
-    saveDocument(document);
+    saveDocument(document, storage);
 }
 
-export function loadStoryRuntimeSession(key: StoryHubSessionKey): StoryRuntimeSessionSnapshot | null {
-    const snapshot = loadDocument().stories[createStoryRuntimeSessionStorageKey(key)];
+export function loadStoryRuntimeSession(
+    key: StoryHubSessionKey,
+    storage?: StoryHubSessionStorageAdapter,
+): StoryRuntimeSessionSnapshot | null {
+    const snapshot = loadDocument(storage).stories[createStoryRuntimeSessionStorageKey(key)];
 
     return snapshot ? cloneStoryRuntimeSessionSnapshot(snapshot) : null;
 }
 
-export function saveStoryRuntimeSession(snapshot: StoryRuntimeSessionSnapshot): void {
-    const document = loadDocument();
+export function saveStoryRuntimeSession(
+    snapshot: StoryRuntimeSessionSnapshot,
+    storage?: StoryHubSessionStorageAdapter,
+): void {
+    const document = loadDocument(storage);
 
     document.stories[createStoryRuntimeSessionStorageKey(snapshot)] = cloneStoryRuntimeSessionSnapshot(snapshot);
-    saveDocument(document);
+    saveDocument(document, storage);
 }
 
-export function clearStoryRuntimeSession(key: StoryHubSessionKey): void {
-    const document = loadDocument();
+export function clearStoryRuntimeSession(
+    key: StoryHubSessionKey,
+    storage?: StoryHubSessionStorageAdapter,
+): void {
+    const document = loadDocument(storage);
 
     delete document.stories[createStoryRuntimeSessionStorageKey(key)];
-    saveDocument(document);
+    saveDocument(document, storage);
 }
 
-export function resetStoryHubSessionPersistenceForTests(): void {
+export function resetStoryHubSessionPersistenceForTests(storage?: StoryHubSessionStorageAdapter): void {
     memoryStorage.clear();
-    getStorageAdapter().removeItem(STORY_HUB_SESSION_STORAGE_KEY);
+    getStorageAdapter(storage).removeItem(STORY_HUB_SESSION_STORAGE_KEY);
 }
 
-export function writeRawStoryHubSessionForTests(rawValue: string): void {
-    getStorageAdapter().setItem(STORY_HUB_SESSION_STORAGE_KEY, rawValue);
+export function writeRawStoryHubSessionForTests(
+    rawValue: string,
+    storage?: StoryHubSessionStorageAdapter,
+): void {
+    getStorageAdapter(storage).setItem(STORY_HUB_SESSION_STORAGE_KEY, rawValue);
 }
