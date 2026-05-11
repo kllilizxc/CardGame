@@ -35,6 +35,8 @@ import {
     writeGameWorldStateFromDocuments,
 } from './GameWorldStateWrite';
 import {
+    createItemStack,
+    createRunSnapshot,
     OTHER_EXPEDITION_TARGET,
     SYNTHETIC_EXPEDITION_TARGET,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
@@ -210,7 +212,7 @@ function createPersistentStash(): PersistentStash {
             { id: 'TL_002', count: 1 },
         ],
         items: [
-            { id: 'tool.return-rope', itemType: 'tool', count: 2 },
+            createItemStack('tool.return-rope', 'tool', 2),
         ],
         spiritStones: 108,
         lastRunSummary: {
@@ -237,23 +239,19 @@ function createActiveRun(
     runId = 'run-aggregate-active',
     currentNodeId = 'event.synthetic-cache',
 ): RunSnapshot {
-    return {
+    return createRunSnapshot(targetIdentity, {
         runId,
-        routeKey: createActiveRunRouteKey(targetIdentity),
-        expeditionId: targetIdentity.expeditionId,
-        mapId: targetIdentity.mapId,
-        status: 'inProgress',
         currentNodeId,
         startingLoadout: {
             cards: [{ id: 'AR_001', count: 3 }],
-            items: [{ id: 'tool.return-rope', itemType: 'tool', count: 1 }],
+            items: [createItemStack('tool.return-rope', 'tool', 1)],
             spiritStones: 36,
         },
         carriedDeck: [
             { id: 'AR_001', count: 3 },
             { id: 'TL_002', count: 1 },
         ],
-        carriedItems: [{ id: 'tool.return-rope', itemType: 'tool', count: 1 }],
+        carriedItems: [createItemStack('tool.return-rope', 'tool', 1)],
         spiritStones: 54,
         visitedNodeIds: ['entrance.synthetic', currentNodeId],
         nodeStates: {
@@ -271,7 +269,7 @@ function createActiveRun(
             },
         },
         startedAt: '2026-05-10T00:00:00.000Z',
-    };
+    }) satisfies RunSnapshot;
 }
 
 function readJson<T>(storage: Storage, key: string): T | null {

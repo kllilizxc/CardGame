@@ -14,6 +14,7 @@ import { createGameWorldState } from './GameWorldState';
 import { createPersistentStashFromWorldStateSeed } from './GameWorldStateSeed';
 import {
     createRunSnapshot,
+    createItemStack,
     createTestPersistentStash,
     SYNTHETIC_EXPEDITION_TARGET,
     createItemStacksFromSeed,
@@ -101,8 +102,8 @@ function createStoredStash(): PersistentStash {
             { id: 'TL_002', count: 1 },
         ],
         items: [
-            { id: 'tool.return-rope', itemType: 'tool', count: 2 },
-            { id: 'artifact.fly-sword', itemType: 'artifact', count: 1 },
+            createItemStack('tool.return-rope', 'tool', 2),
+            createItemStack('artifact.fly-sword', 'artifact', 1),
         ],
         spiritStones: 88,
         lastRunSummary: {
@@ -111,7 +112,7 @@ function createStoredStash(): PersistentStash {
             finalNodeId: 'extract.synthetic',
             kept: {
                 cards: [{ id: 'TL_002', count: 1 }],
-                items: [{ id: 'artifact.fly-sword', itemType: 'artifact', count: 1 }],
+                items: [createItemStack('artifact.fly-sword', 'artifact', 1)],
                 spiritStones: 18,
             },
             lost: {
@@ -130,14 +131,14 @@ function createStoredActiveRun(): RunSnapshot {
         currentNodeId: 'event.synthetic-cache',
         startingLoadout: {
             cards: [{ id: 'AR_001', count: 3 }],
-            items: [{ id: 'tool.return-rope', itemType: 'tool', count: 1 }],
+            items: [createItemStack('tool.return-rope', 'tool', 1)],
             spiritStones: 36,
         },
         carriedDeck: [
             { id: 'AR_001', count: 3 },
             { id: 'TL_002', count: 1 },
         ],
-        carriedItems: [{ id: 'tool.return-rope', itemType: 'tool', count: 1 }],
+        carriedItems: [createItemStack('tool.return-rope', 'tool', 1)],
         spiritStones: 54,
         visitedNodeIds: ['entrance.synthetic', 'event.synthetic-cache'],
         nodeStates: {

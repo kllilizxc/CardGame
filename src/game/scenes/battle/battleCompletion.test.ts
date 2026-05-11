@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'bun:test';
 
 import type { BattleLaunchPayload } from '../../types/expedition';
+import { createActiveRunRouteKey } from '../../services/RunPersistence';
 import { createExpeditionBattleCompleteEvent } from './battleCompletion';
+
+const WORLD_MAP_TEST_TARGET_IDENTITY = {
+    expeditionId: 'phase01-first-playable-expedition',
+    mapId: 'phase01-prototype-map',
+};
 
 const battlePayload: BattleLaunchPayload = {
     runId: 'run-test-001',
@@ -12,7 +18,7 @@ const battlePayload: BattleLaunchPayload = {
     encounterFile: 'data/encounters/test-enemy.json',
     runDeck: [{ id: 'SX_YJZ_001', count: 1 }],
     targetConfig: {
-        routeKey: 'expedition:phase01-first-playable-expedition:phase01-prototype-map',
+        routeKey: createActiveRunRouteKey(WORLD_MAP_TEST_TARGET_IDENTITY),
         expeditionId: 'phase01-first-playable-expedition',
         mapId: 'phase01-prototype-map',
         worldStateFile: 'data/world/initial-state.json',

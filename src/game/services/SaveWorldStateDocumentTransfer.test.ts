@@ -19,6 +19,7 @@ import {
 } from './SaveWorldStateDocumentTransfer';
 import {
     createRunSnapshot,
+    createItemStack,
     createTestPersistentStash,
     createTestStoryHubDocument,
     DEFAULT_EXPEDITION_TARGET,
@@ -158,7 +159,7 @@ function seedCompleteWorldState(
         stashId: 'stash.source',
         deckRef: 'deck.source',
         deck: [{ id: 'SRC_CARD', count: 2 }],
-        items: [{ id: 'source-tool', itemType: 'tool', count: 1 }],
+        items: [createItemStack('source-tool', 'tool', 1)],
         spiritStones: 88,
     })));
     storage.seed(createActiveRunStorageKey(identity), JSON.stringify(run));

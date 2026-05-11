@@ -6,7 +6,10 @@ import {
     savePersistentStash,
     STASH_STORAGE_KEY,
 } from './RunPersistence';
-import { createTestPersistentStash } from '../testing/fixtures/expeditionWorldStateFixtures';
+import {
+    createItemStack,
+    createTestPersistentStash,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -40,7 +43,7 @@ const TEST_STASH = createTestPersistentStash({
     stashId: 'test-stash',
     deckRef: 'test-deck',
     deck: [{ id: 'CARD_A', count: 2 }],
-    items: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
+    items: [createItemStack('item.rope', 'tool', 1)],
     spiritStones: 9,
 });
 

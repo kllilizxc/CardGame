@@ -3,6 +3,7 @@ import { describe, expect, it, mock } from 'bun:test';
 import contentCatalogJson from '../../../../public/data/content-catalog.json';
 import prototypeMapJson from '../../../../public/data/mijing/prototype-map.json';
 import worldMapJson from '../../../../public/data/world/world-map.json';
+import { createActiveRunRouteKey } from '../../services/RunPersistence';
 import {
     createWorldMapDestinationIntent,
     type WorldMapDestination,
@@ -12,6 +13,7 @@ import {
 import type { ExpeditionEncounterMapNode, RunSnapshot } from '../../types/expedition';
 import { createExpeditionBattleCompleteEvent } from '../battle/battleCompletion';
 import { createBattleLaunchPayload } from './battleLaunchFlow';
+import { createRunSnapshot as createRunSnapshotFixture } from '../../testing/fixtures/expeditionWorldStateFixtures';
 import {
     DEFAULT_EXPEDITION_ID,
     DEFAULT_EXPEDITION_MAP_ID,
@@ -94,16 +96,34 @@ const worldMapWithSyntheticExpeditionTargets = {
     ],
 };
 
+const DEFAULT_TARGET_IDENTITY = {
+    expeditionId: DEFAULT_EXPEDITION_ID,
+    mapId: DEFAULT_EXPEDITION_MAP_ID,
+};
+const WORLD_MAP_TEST_TARGET_IDENTITY = {
+    expeditionId: 'expedition.test',
+    mapId: 'map.test',
+};
+const WORLD_MAP_CUSTOM_TARGET_IDENTITY = {
+    expeditionId: 'expedition.custom',
+    mapId: 'map.custom',
+};
+const WORLD_MAP_JADE_CAVE_TARGET_IDENTITY = {
+    expeditionId: 'phase01-jade-cave-expedition',
+    mapId: 'phase01-jade-cave-map',
+};
+const WORLD_MAP_OUTER_MOUNTAIN_TARGET_IDENTITY = {
+    expeditionId: 'phase01-first-playable-expedition',
+    mapId: 'phase01-prototype-map',
+};
+
 function isExpeditionDestination(destination: WorldMapDestination): destination is WorldMapExpeditionDestination {
     return destination.kind === 'expedition';
 }
 
 function createRunSnapshot(target: { expeditionId: string; mapId: string }): RunSnapshot {
-    return {
+    return createRunSnapshotFixture(target, {
         runId: 'run-route-identity',
-        expeditionId: target.expeditionId,
-        mapId: target.mapId,
-        status: 'inProgress',
         currentNodeId: 'battle.mist-foxes',
         startingLoadout: {
             cards: [{ id: 'SX_YJZ_001', count: 1 }],
@@ -116,13 +136,13 @@ function createRunSnapshot(target: { expeditionId: string; mapId: string }): Run
         visitedNodeIds: ['entrance.mountain-gate', 'battle.mist-foxes'],
         nodeStates: {},
         startedAt: '2026-05-08T00:00:00.000Z',
-    };
+    });
 }
 
 describe('expeditionSceneLaunch', () => {
     it('provides safe defaults for direct ExpeditionScene starts', () => {
         expect(normalizeExpeditionSceneLaunchData(undefined)).toEqual({
-            routeKey: `expedition:${DEFAULT_EXPEDITION_ID}:${DEFAULT_EXPEDITION_MAP_ID}`,
+            routeKey: createActiveRunRouteKey(DEFAULT_TARGET_IDENTITY),
             expeditionId: DEFAULT_EXPEDITION_ID,
             mapId: DEFAULT_EXPEDITION_MAP_ID,
             ...DEFAULT_EXPEDITION_TARGET_RESOURCE_IDS,
@@ -367,7 +387,7 @@ describe('expeditionSceneLaunch', () => {
         })).toEqual({
             source: 'worldMap',
             destinationId: 'destination.test-expedition',
-            routeKey: 'expedition:expedition.test:map.test',
+            routeKey: createActiveRunRouteKey(WORLD_MAP_TEST_TARGET_IDENTITY),
             expeditionId: 'expedition.test',
             mapId: 'map.test',
             worldStateResourceId: 'world.seed.test-initial-state',
@@ -402,7 +422,7 @@ describe('expeditionSceneLaunch', () => {
         });
 
         expect(createExpeditionTargetConfig(normalizedLaunch)).toEqual({
-            routeKey: 'expedition:expedition.custom:map.custom',
+            routeKey: createActiveRunRouteKey(WORLD_MAP_CUSTOM_TARGET_IDENTITY),
             expeditionId: 'expedition.custom',
             mapId: 'map.custom',
             worldStateResourceId: DEFAULT_EXPEDITION_TARGET_RESOURCE_IDS.worldStateResourceId,
@@ -535,7 +555,7 @@ describe('expeditionSceneLaunch', () => {
                 destinationId: 'destination.qingyun-outer-mountain-trial',
                 expeditionId: 'phase01-first-playable-expedition',
                 mapId: 'phase01-prototype-map',
-                routeKey: 'expedition:phase01-first-playable-expedition:phase01-prototype-map',
+                routeKey: createActiveRunRouteKey(WORLD_MAP_OUTER_MOUNTAIN_TARGET_IDENTITY),
                 worldStateResourceId: 'world.seed.initial-state',
                 starterDeckResourceId: 'deck.starter',
                 mapResourceId: 'phase01-prototype-map',
@@ -549,7 +569,7 @@ describe('expeditionSceneLaunch', () => {
                 destinationId: 'destination.qingyun-jade-cave-trial',
                 expeditionId: 'phase01-jade-cave-expedition',
                 mapId: 'phase01-jade-cave-map',
-                routeKey: 'expedition:phase01-jade-cave-expedition:phase01-jade-cave-map',
+                routeKey: createActiveRunRouteKey(WORLD_MAP_JADE_CAVE_TARGET_IDENTITY),
                 worldStateResourceId: 'world.seed.initial-state',
                 starterDeckResourceId: 'deck.starter',
                 mapResourceId: 'phase01-jade-cave-map',

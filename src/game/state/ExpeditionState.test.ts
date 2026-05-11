@@ -18,7 +18,6 @@ import {
 } from '../services/RunPersistence';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
 import type {
-    ExpeditionItemStack,
     PersistentStash,
     PrototypeEventDefinition,
     PrototypeShopDefinition,
@@ -31,6 +30,7 @@ import {
     SYNTHETIC_EXPEDITION_TARGET,
     SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
     createRunSnapshot as createRunSnapshotFixture,
+    createItemStack,
     createTestPersistentStash,
     createItemStacksFromSeed,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
@@ -109,7 +109,7 @@ function createStoredStash(): PersistentStash {
         stashId: 'player-existing-stash',
         deckRef: 'player-existing-deck',
         deck: [{ id: 'EXISTING_CARD', count: 1 }],
-        items: [{ id: 'tool.existing', itemType: 'tool', count: 3 }],
+        items: [createItemStack('tool.existing', 'tool', 3)],
         spiritStones: 777,
         lastRunSummary: {
             runId: 'run-finished',
@@ -117,7 +117,7 @@ function createStoredStash(): PersistentStash {
             finalNodeId: 'extract.synthetic',
             kept: {
                 cards: [{ id: 'EXISTING_CARD', count: 1 }],
-                items: [{ id: 'tool.existing', itemType: 'tool', count: 1 }],
+                items: [createItemStack('tool.existing', 'tool', 1)],
                 spiritStones: 12,
             },
             lost: {
@@ -140,11 +140,11 @@ function createStoredActiveRun(
         currentNodeId,
         startingLoadout: {
             cards: [{ id: 'EXISTING_CARD', count: 1 }],
-            items: [{ id: 'tool.existing', itemType: 'tool', count: 1 }],
+            items: [createItemStack('tool.existing', 'tool', 1)],
             spiritStones: 12,
         },
         carriedDeck: [{ id: 'EXISTING_CARD', count: 1 }],
-        carriedItems: [{ id: 'tool.existing', itemType: 'tool', count: 1 }],
+        carriedItems: [createItemStack('tool.existing', 'tool', 1)],
         spiritStones: 12,
         visitedNodeIds: [currentNodeId],
         nodeStates: {
@@ -213,7 +213,7 @@ describe('ExpeditionState', () => {
             stashId: 'player-existing-stash',
             deckRef: 'player-existing-deck',
             deck: [{ id: 'EXISTING_CARD', count: 1 }],
-            items: [{ id: 'tool.existing', itemType: 'tool', count: 3 }],
+            items: [createItemStack('tool.existing', 'tool', 3)],
             spiritStones: 777,
         };
         savePersistentStash(existingStash);
@@ -609,7 +609,7 @@ describe('ExpeditionState', () => {
         });
         syntheticState.applyNodeRewardPreview({
             cards: [{ id: 'AR_001', count: 1 }],
-            items: [{ id: 'artifact.synthetic', itemType: 'artifact', count: 1 }],
+            items: [createItemStack('artifact.synthetic', 'artifact', 1)],
             spiritStones: 21,
         });
 
@@ -628,11 +628,7 @@ describe('ExpeditionState', () => {
         expect(directDefaultState.activeRun?.runId).toBe(defaultRun.runId);
         expect(loadActiveRun(DEFAULT_TARGET)?.runId).toBe(defaultRun.runId);
         expect(loadActiveRun(SYNTHETIC_TARGET)?.runId).toBe(syntheticRun.runId);
-        expect(loadActiveRun(SYNTHETIC_TARGET)?.carriedItems).toContainEqual({
-            id: 'artifact.synthetic',
-            itemType: 'artifact',
-            count: 1,
-        });
+        expect(loadActiveRun(SYNTHETIC_TARGET)?.carriedItems).toContainEqual(createItemStack('artifact.synthetic', 'artifact', 1));
     });
 
     it('loads and persists active runs independently for checked-in world-map Expedition destinations', () => {

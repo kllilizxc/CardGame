@@ -11,6 +11,7 @@ import {
     subtractStartingLoadoutFromStash,
 } from './GameWorldStateStashOperations';
 import {
+    createItemStack,
     createRunSnapshot as createRunSnapshotFixture,
     createTestRewardBundle,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
@@ -24,8 +25,8 @@ function createPersistentStash(overrides: Partial<PersistentStash> = {}): Persis
             { id: 'CARD_B', count: 1 },
         ],
         items: [
-            { id: 'item.rope', itemType: 'tool', count: 1 },
-            { id: 'item.salve', itemType: 'consumable', count: 2 },
+            createItemStack('item.rope', 'tool', 1),
+            createItemStack('item.salve', 'consumable', 2),
         ],
         spiritStones: 5,
         lastRunSummary: null,
@@ -41,7 +42,7 @@ function createRunSnapshot(overrides: Partial<RunSnapshot> = {}): RunSnapshot {
         currentNodeId: 'entrance',
         startingLoadout: {
             cards: [{ id: 'CARD_A', count: 2 }],
-            items: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
+            items: [createItemStack('item.rope', 'tool', 1)],
             spiritStones: 5,
         },
         carriedDeck: [
@@ -49,8 +50,8 @@ function createRunSnapshot(overrides: Partial<RunSnapshot> = {}): RunSnapshot {
             { id: 'CARD_C', count: 1 },
         ],
         carriedItems: [
-            { id: 'item.rope', itemType: 'tool', count: 1 },
-            { id: 'item.charm', itemType: 'artifact', count: 1 },
+            createItemStack('item.rope', 'tool', 1),
+            createItemStack('item.charm', 'artifact', 1),
         ],
         spiritStones: 8,
         nodeStates: {
@@ -120,22 +121,22 @@ describe('GameWorldStateStashOperations', () => {
 
         expect(mergeItemStacks(
             [
-                { id: 'shared', itemType: 'artifact', count: 2 },
-                { id: 'shared', itemType: 'artifact', count: 1 },
-                { id: 'shared', itemType: 'tool', count: 5 },
-                { id: 'stale', itemType: 'quest', count: 0 },
+                createItemStack('shared', 'artifact', 2),
+                createItemStack('shared', 'artifact', 1),
+                createItemStack('shared', 'tool', 5),
+                createItemStack('stale', 'quest', 0),
             ],
             [
-                { id: 'shared', itemType: 'artifact', count: 3 },
-                { id: 'shared', itemType: 'tool', count: 1 },
-                { id: 'salve', itemType: 'consumable', count: 2 },
-                { id: 'salve', itemType: 'consumable', count: 1 },
-                { id: 'ignored', itemType: 'quest', count: -1 },
+                createItemStack('shared', 'artifact', 3),
+                createItemStack('shared', 'tool', 1),
+                createItemStack('salve', 'consumable', 2),
+                createItemStack('salve', 'consumable', 1),
+                createItemStack('ignored', 'quest', -1),
             ],
         )).toEqual([
-            { id: 'shared', itemType: 'artifact', count: 6 },
-            { id: 'shared', itemType: 'tool', count: 6 },
-            { id: 'salve', itemType: 'consumable', count: 3 },
+            createItemStack('shared', 'artifact', 6),
+            createItemStack('shared', 'tool', 6),
+            createItemStack('salve', 'consumable', 3),
         ]);
     });
 
@@ -148,8 +149,8 @@ describe('GameWorldStateStashOperations', () => {
                 { id: 'CARD_NEGATIVE', count: -1 },
             ],
             items: [
-                { id: 'item.rope', itemType: 'tool', count: 1 },
-                { id: 'item.salve', itemType: 'consumable', count: 2 },
+                createItemStack('item.rope', 'tool', 1),
+                createItemStack('item.salve', 'consumable', 2),
             ],
             spiritStones: 5,
         });
@@ -161,10 +162,10 @@ describe('GameWorldStateStashOperations', () => {
                 { id: 'CARD_NEGATIVE', count: -1 },
             ],
             items: [
-                { id: 'item.rope', itemType: 'tool', count: 3 },
-                { id: 'item.salve', itemType: 'consumable', count: 1 },
-                { id: 'item.missing', itemType: 'quest', count: 1 },
-                { id: 'item.ignored', itemType: 'quest', count: -1 },
+                createItemStack('item.rope', 'tool', 3),
+                createItemStack('item.salve', 'consumable', 1),
+                createItemStack('item.missing', 'quest', 1),
+                createItemStack('item.ignored', 'quest', -1),
             ],
             spiritStones: 9,
         });
@@ -174,7 +175,7 @@ describe('GameWorldStateStashOperations', () => {
         expect(updatedStash).toEqual({
             ...stash,
             deck: [],
-            items: [{ id: 'item.salve', itemType: 'consumable', count: 1 }],
+            items: [createItemStack('item.salve', 'consumable', 1)],
             spiritStones: 0,
         });
         expect(stash.deck).toEqual([
@@ -191,7 +192,7 @@ describe('GameWorldStateStashOperations', () => {
                 { id: 'CARD_A', count: 2 },
                 { id: 'CARD_ZERO', count: 0 },
             ],
-            items: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
+            items: [createItemStack('item.rope', 'tool', 1)],
             spiritStones: 5,
         });
         const rewards: RunRewardBundle = createTestRewardBundle({
@@ -201,15 +202,15 @@ describe('GameWorldStateStashOperations', () => {
                 { id: 'CARD_B', count: 2 },
             ],
             items: [
-                { id: 'item.rope', itemType: 'tool', count: 1 },
-                { id: 'item.charm', itemType: 'artifact', count: 1 },
+                createItemStack('item.rope', 'tool', 1),
+                createItemStack('item.charm', 'artifact', 1),
             ],
             spiritStones: 3,
         });
         const rewardedCarried = addRewardBundleToCarriedBundle(carried, rewards);
         const stash = createPersistentStash({
             deck: [{ id: 'CARD_A', count: 1 }],
-            items: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
+            items: [createItemStack('item.rope', 'tool', 1)],
             spiritStones: 7,
         });
 
@@ -221,8 +222,8 @@ describe('GameWorldStateStashOperations', () => {
                 { id: 'CARD_B', count: 3 },
             ],
             items: [
-                { id: 'item.rope', itemType: 'tool', count: 2 },
-                { id: 'item.charm', itemType: 'artifact', count: 1 },
+                createItemStack('item.rope', 'tool', 2),
+                createItemStack('item.charm', 'artifact', 1),
             ],
             spiritStones: 8,
         });
@@ -233,8 +234,8 @@ describe('GameWorldStateStashOperations', () => {
                 { id: 'CARD_B', count: 3 },
             ],
             items: [
-                { id: 'item.rope', itemType: 'tool', count: 3 },
-                { id: 'item.charm', itemType: 'artifact', count: 1 },
+                createItemStack('item.rope', 'tool', 3),
+                createItemStack('item.charm', 'artifact', 1),
             ],
             spiritStones: 15,
         });

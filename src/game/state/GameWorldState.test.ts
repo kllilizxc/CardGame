@@ -33,6 +33,7 @@ import { createGameWorldState } from './GameWorldState';
 import { createPersistentStashFromWorldStateSeed } from './GameWorldStateSeed';
 import {
     DEFAULT_EXPEDITION_TARGET,
+    createItemStack,
     SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
     SYNTHETIC_EXPEDITION_TARGET,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
@@ -168,7 +169,7 @@ function createRunForTarget(
 
     state.applyNodeRewardPreview({
         cards: [{ id: targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'TL_002' : 'AR_001', count: 1 }],
-        items: [{ id: 'tool.synthetic-marker', itemType: 'tool', count: 1 }],
+        items: [createItemStack('tool.synthetic-marker', 'tool', 1)],
         spiritStones: 7,
     });
 
@@ -180,7 +181,7 @@ function createRunForTarget(
         ],
         carriedItems: [
             ...run.carriedItems,
-            { id: 'tool.synthetic-marker', itemType: 'tool', count: 1 },
+            createItemStack('tool.synthetic-marker', 'tool', 1),
         ],
         spiritStones: run.spiritStones + 7,
     };

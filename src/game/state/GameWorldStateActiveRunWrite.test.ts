@@ -20,6 +20,7 @@ import {
     writeGameWorldStateActiveRunPlan,
 } from './GameWorldStateActiveRunWrite';
 import {
+    createItemStack,
     createRunSnapshot as createRunSnapshotFixture,
     OTHER_EXPEDITION_TARGET,
     SYNTHETIC_EXPEDITION_TARGET,
@@ -103,14 +104,14 @@ function createStoredActiveRun(
         currentNodeId,
         startingLoadout: {
             cards: [{ id: 'AR_001', count: 3 }],
-            items: [{ id: 'tool.return-rope', itemType: 'tool', count: 1 }],
+            items: [createItemStack('tool.return-rope', 'tool', 1)],
             spiritStones: 36,
         },
         carriedDeck: [
             { id: 'AR_001', count: 3 },
             { id: 'TL_002', count: 1 },
         ],
-        carriedItems: [{ id: 'tool.return-rope', itemType: 'tool', count: 1 }],
+        carriedItems: [createItemStack('tool.return-rope', 'tool', 1)],
         spiritStones: 54,
         visitedNodeIds: ['entrance.synthetic', currentNodeId],
         nodeStates: {
