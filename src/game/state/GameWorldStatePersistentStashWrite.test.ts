@@ -9,7 +9,7 @@ import {
     type RunPersistenceStorageAdapter,
     STASH_STORAGE_KEY,
 } from '../services/RunPersistence';
-import type { ExpeditionItemStack, PersistentStash, RunSnapshot } from '../types/expedition';
+import type { PersistentStash, RunSnapshot } from '../types/expedition';
 import { createGameWorldState } from './GameWorldState';
 import { createPersistentStashFromWorldStateSeed } from './GameWorldStateSeed';
 import {

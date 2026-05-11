@@ -4,7 +4,6 @@ import initialWorldState from '../../../public/data/world/initial-state.json';
 import starterDeckJson from '../../../public/data/decks/starter-deck.json';
 
 import { ExpeditionState } from '../state/ExpeditionState';
-import type { ExpeditionItemStack } from '../types/expedition';
 import type { StoryState } from '../types/story';
 import {
     createActiveRunCompatibilityKeys,
