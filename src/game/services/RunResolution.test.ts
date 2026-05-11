@@ -6,11 +6,7 @@ import worldMapJson from '../../../public/data/world/world-map.json';
 
 import { ExpeditionState } from '../state/ExpeditionState';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
-import type {
-    ExpeditionItemStack,
-    PersistentStash,
-    RunSnapshot,
-} from '../types/expedition';
+import type { PersistentStash, RunSnapshot } from '../types/expedition';
 import {
     ACTIVE_RUN_STORAGE_KEY,
     createActiveRunStorageKey,
@@ -30,6 +26,7 @@ import {
     DEFAULT_EXPEDITION_TARGET,
     SYNTHETIC_EXPEDITION_TARGET,
     SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
+    createItemStack,
     createItemStacksFromSeed,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 
@@ -122,7 +119,7 @@ function startRewardedRun(
 
     state.applyNodeRewardPreview({
         cards: [{ id: rewardCardId, count: 1 }],
-        items: [{ id: 'tool_talisman_basic', itemType: 'tool', count: 1 }],
+        items: [createItemStack('tool_talisman_basic', 'tool', 1)],
         spiritStones: 18,
     });
 
@@ -187,7 +184,7 @@ describe('RunResolution', () => {
         expect(summary.finalNodeId).toBe('battle.mist-foxes');
         expect(summary.kept).toEqual({ cards: [], items: [], spiritStones: 0 });
         expect(summary.lost.cards).toContainEqual({ id: 'TL_002', count: 1 });
-        expect(summary.lost.items).toContainEqual({ id: 'tool_talisman_basic', itemType: 'tool', count: 1 });
+        expect(summary.lost.items).toContainEqual(createItemStack('tool_talisman_basic', 'tool', 1));
         expect(summary.lost.spiritStones).toBe(54);
         expect(updatedStash?.lastRunSummary).toEqual(summary);
     });
@@ -202,12 +199,12 @@ describe('RunResolution', () => {
         expect(updatedStash?.deck).toEqual([...starterDeckJson.cards, { id: 'TL_002', count: 1 }]);
         expect(updatedStash?.items).toEqual([
             ...initialWorldStateStashItems,
-            { id: 'tool_talisman_basic', itemType: 'tool', count: 1 },
+            createItemStack('tool_talisman_basic', 'tool', 1),
         ]);
         expect(updatedStash?.spiritStones).toBe(54);
         expect(summary.outcome).toBe('extract');
         expect(summary.kept.cards).toContainEqual({ id: 'TL_002', count: 1 });
-        expect(summary.kept.items).toContainEqual({ id: 'tool_talisman_basic', itemType: 'tool', count: 1 });
+        expect(summary.kept.items).toContainEqual(createItemStack('tool_talisman_basic', 'tool', 1));
         expect(summary.kept.spiritStones).toBe(54);
         expect(summary.lost).toEqual({ cards: [], items: [], spiritStones: 0 });
         expect(updatedStash?.lastRunSummary).toEqual(summary);
@@ -228,7 +225,7 @@ describe('RunResolution', () => {
         expect(loadActiveRun()?.runId).toBe(freshRun.runId);
         expect(freshRun.runId).not.toBe(summary.runId);
         expect(freshRun.carriedDeck).toContainEqual({ id: 'TL_002', count: 1 });
-        expect(freshRun.carriedItems).toContainEqual({ id: 'tool_talisman_basic', itemType: 'tool', count: 1 });
+        expect(freshRun.carriedItems).toContainEqual(createItemStack('tool_talisman_basic', 'tool', 1));
         expect(freshRun.spiritStones).toBe(54);
     });
 
@@ -376,14 +373,14 @@ describe('RunResolution', () => {
                 expect(storedStash.spiritStones).toBe(0);
                 expect(summary.kept).toEqual({ cards: [], items: [], spiritStones: 0 });
                 expect(summary.lost.cards).toContainEqual({ id: 'AR_001', count: 4 });
-                expect(summary.lost.items).toContainEqual({ id: 'tool_talisman_basic', itemType: 'tool', count: 1 });
+                expect(summary.lost.items).toContainEqual(createItemStack('tool_talisman_basic', 'tool', 1));
                 expect(summary.lost.spiritStones).toBe(54);
             } else {
                 expect(storedStash.deck).toContainEqual({ id: 'AR_001', count: 4 });
-                expect(storedStash.items).toContainEqual({ id: 'tool_talisman_basic', itemType: 'tool', count: 1 });
+                expect(storedStash.items).toContainEqual(createItemStack('tool_talisman_basic', 'tool', 1));
                 expect(storedStash.spiritStones).toBe(54);
                 expect(summary.kept.cards).toContainEqual({ id: 'AR_001', count: 4 });
-                expect(summary.kept.items).toContainEqual({ id: 'tool_talisman_basic', itemType: 'tool', count: 1 });
+                expect(summary.kept.items).toContainEqual(createItemStack('tool_talisman_basic', 'tool', 1));
                 expect(summary.kept.spiritStones).toBe(54);
                 expect(summary.lost).toEqual({ cards: [], items: [], spiritStones: 0 });
             }

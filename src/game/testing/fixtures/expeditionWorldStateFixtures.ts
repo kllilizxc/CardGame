@@ -14,6 +14,24 @@ import type {
 } from '../../types/expedition';
 import type { WorldStateItemStackSeed } from '../../state/GameWorldStateSeed';
 
+const STASH_ITEM_TYPES = ['artifact', 'tool', 'consumable', 'quest'] as const satisfies readonly ExpeditionItemType[];
+
+function isExpeditionItemType(value: string): value is ExpeditionItemType {
+    return (STASH_ITEM_TYPES as readonly string[]).includes(value);
+}
+
+function parseExpeditionItemType(value: string): ExpeditionItemType {
+    if (!isExpeditionItemType(value)) {
+        throw new Error(`Invalid expedition item type: ${value}`);
+    }
+
+    return value;
+}
+
+type UnknownWorldStateItemStack = Omit<WorldStateItemStackSeed, 'itemType'> & {
+    itemType: string;
+};
+
 export const DEFAULT_EXPEDITION_TARGET: ExpeditionRouteIdentity = {
     expeditionId: 'phase01-first-playable-expedition',
     mapId: 'phase01-prototype-map',
@@ -47,10 +65,10 @@ export function createItemStack(
     return { id, itemType, count };
 }
 
-export function createItemStacksFromSeed(stacks: readonly WorldStateItemStackSeed[]): ExpeditionItemStack[] {
+export function createItemStacksFromSeed(stacks: readonly UnknownWorldStateItemStack[]): ExpeditionItemStack[] {
     return stacks.map((stack) => createItemStack(
         stack.id,
-        stack.itemType,
+        parseExpeditionItemType(stack.itemType),
         stack.count,
     ));
 }

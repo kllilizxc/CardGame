@@ -17,6 +17,7 @@ import {
 import type { StoryState } from '../types/story';
 import type { ExpeditionWorldStateSeed, StarterDeckSeed } from './GameWorldStateSeed';
 import { createGameWorldState } from './GameWorldState';
+import { createItemStacksFromSeed } from '../testing/fixtures/expeditionWorldStateFixtures';
 import {
     applyGameWorldStateStoryHubSessionPlan,
     clearGameWorldStateStoryRuntimeSessionWithFallbackStorage,
@@ -120,8 +121,20 @@ function createSeedSources(): {
     worldState: ExpeditionWorldStateSeed;
     starterDeck: StarterDeckSeed;
 } {
+    const worldState = structuredClone(initialWorldState);
+
+    const normalizedWorldState: ExpeditionWorldStateSeed = {
+        ...worldState,
+        stash: worldState.stash
+            ? {
+                ...worldState.stash,
+                items: worldState.stash.items ? createItemStacksFromSeed(worldState.stash.items) : undefined,
+            }
+            : undefined,
+    };
+
     return {
-        worldState: structuredClone(initialWorldState) as unknown as ExpeditionWorldStateSeed,
+        worldState: normalizedWorldState,
         starterDeck: structuredClone(starterDeckJson) as unknown as StarterDeckSeed,
     };
 }
