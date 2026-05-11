@@ -246,7 +246,7 @@ export class ExpeditionScene extends Scene {
     }
 
     private getNodeLabel(nodeId: string): string {
-        return this.mapDefinition.nodes.find((node) => node.id === nodeId)?.label ?? nodeId;
+        return this.mapDefinition.nodes.find((node) => node.id === nodeId)?.label ?? '当前节点';
     }
 
     private clearMapViews(): void {

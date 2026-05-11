@@ -22,6 +22,8 @@ import {
 } from './worldMap';
 
 export const WORLD_MAP_CACHE_KEY = 'worldMapShell';
+const WORLD_MAP_FALLBACK_STATUS_TEXT = '拖拽地图平移，点击标记前往目的地。';
+const WORLD_MAP_NAVIGATION_STATUS_TEXT = '正在前往目标地。';
 
 export class WorldMapScene extends Scene {
     private worldMap!: WorldMapDefinition;
@@ -145,13 +147,13 @@ export class WorldMapScene extends Scene {
             wordWrap: { width: panelWidth - 120 },
         }));
 
-        this.statusText = this.add.text(contentX, panelTop + 182, '拖拽地图平移，点击标记前往目的地。', {
+        this.statusText = this.add.text(contentX, panelTop + 182, WORLD_MAP_FALLBACK_STATUS_TEXT, {
             fontFamily: 'Arial',
             fontSize: '18px',
             color: '#fde68a',
             wordWrap: { width: panelWidth - 120 },
         });
-        this.statusText.setText(this.returnStatusText ?? '拖拽地图平移，点击标记前往目的地。');
+        this.statusText.setText(this.returnStatusText ?? WORLD_MAP_FALLBACK_STATUS_TEXT);
         container.add(this.statusText);
 
         const mapViewport = {
@@ -382,7 +384,7 @@ export class WorldMapScene extends Scene {
     }
 
     private restoreDefaultStatusText(): void {
-        this.statusText.setText(this.returnStatusText ?? '拖拽地图平移，点击标记前往目的地。');
+        this.statusText.setText(this.returnStatusText ?? WORLD_MAP_FALLBACK_STATUS_TEXT);
     }
 
     private registerMapInputHandlers(): void {
@@ -441,7 +443,9 @@ export class WorldMapScene extends Scene {
         const intent = createWorldMapDestinationIntent(this.worldMap, destinationId);
         const destination = this.worldMap.destinations.find((candidate) => candidate.id === destinationId);
 
-        this.statusText.setText(destination?.statusText ?? `正在前往 ${destinationId}。`);
+        this.statusText.setText(
+            destination?.statusText ?? `${destination?.label ? `正在前往 ${destination.label}。` : WORLD_MAP_NAVIGATION_STATUS_TEXT}`,
+        );
         this.scene.start(intent.sceneKey, intent.payload);
     }
 }

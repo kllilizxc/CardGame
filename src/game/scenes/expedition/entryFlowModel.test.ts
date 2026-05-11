@@ -50,11 +50,11 @@ describe('entryFlowModel', () => {
 
         expect(createRunSummary(run)).toEqual({
             currentNodeId: 'entrance.mountain-gate',
-            currentNodeLabel: 'entrance.mountain-gate',
+            currentNodeLabel: '当前节点',
             carriedDeckCount: 14,
             carriedItemCount: 3,
             spiritStones: 36,
-            statusText: '已继续探索：当前位置 entrance.mountain-gate，携带 14 张卡、3 件道具、36 枚灵石。',
+            statusText: '已继续探索：当前位置 当前节点，携带 14 张卡、3 件道具、36 枚灵石。',
         });
     });
 
@@ -138,7 +138,7 @@ describe('entryFlowModel', () => {
         };
 
         expect(createPostRunEntranceStatus(stash, summary)).toBe(
-            '储物袋已备好：2 张卡、1 件道具、24 枚灵石。\n上次结果：撤离成功（extract.cliff-rope）。可立即开始新的秘境探索。',
+            '储物袋已备好：2 张卡、1 件道具、24 枚灵石。\n上次结果：撤离成功。可立即开始新的秘境探索。',
         );
     });
 });

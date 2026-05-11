@@ -4,6 +4,8 @@ interface CountableStack {
     count: number;
 }
 
+const UNKNOWN_NODE_LABEL = '当前节点';
+
 export interface PreparationSummary {
     deckCount: number;
     itemCount: number;
@@ -60,7 +62,7 @@ export function createRunSummary(run: RunSnapshot, options: RunSummaryOptions = 
     const carriedDeckCount = countStacks(run.carriedDeck);
     const carriedItemCount = countStacks(run.carriedItems);
     const runVerb = options.mode === 'started' ? '已进入秘境' : '已继续探索';
-    const currentNodeLabel = options.currentNodeLabel ?? run.currentNodeId;
+    const currentNodeLabel = options.currentNodeLabel ?? UNKNOWN_NODE_LABEL;
 
     return {
         currentNodeId: run.currentNodeId,
@@ -112,7 +114,7 @@ export function createPostRunEntranceStatus(
     summary: RunResolutionSummary,
 ): string {
     return `${createPreparationSummary(stash).statusText}\n` +
-        `上次结果：${getEntranceOutcomeLabel(summary.outcome)}（${summary.finalNodeId}）。可立即开始新的秘境探索。`;
+        `上次结果：${getEntranceOutcomeLabel(summary.outcome)}。可立即开始新的秘境探索。`;
 }
 
 export function createRunResolutionSummaryView(summary: RunResolutionSummary): RunResolutionSummaryView {
