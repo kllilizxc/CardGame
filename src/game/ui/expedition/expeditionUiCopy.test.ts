@@ -29,7 +29,6 @@ describe('expedition UI Chinese copy', () => {
         expect(hud).toContain('携带卡牌：0');
         expect(hud).toContain('携带道具：0');
         expect(hud).toContain('灵石：0');
-        expect(hud).toContain('终点节点：');
         expect(hud).not.toContain("'carriedDeck: 0'");
         expect(hud).not.toContain("'carriedItems: 0'");
         expect(hud).not.toContain("'spiritStones: 0'");

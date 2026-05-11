@@ -108,13 +108,7 @@ export class RunHud extends GameObjects.Container {
             wordWrap: { width: panelWidth - 112 },
         });
 
-        const nodeText = this.scene.add.text(leftX, subtitle.y + 44, `终点节点：${view.finalNodeId}`, {
-            fontFamily: 'Arial',
-            fontSize: '18px',
-            color: '#93c5fd',
-        });
-
-        const keptHeading = this.scene.add.text(leftX, nodeText.y + 58, '保留 / 存入永久仓库', {
+        const keptHeading = this.scene.add.text(leftX, subtitle.y + 58, '保留 / 存入永久仓库', {
             fontFamily: 'Arial',
             fontSize: '24px',
             color: '#86efac',
@@ -171,7 +165,6 @@ export class RunHud extends GameObjects.Container {
             panel,
             title,
             subtitle,
-            nodeText,
             keptHeading,
             keptText,
             lostHeading,
