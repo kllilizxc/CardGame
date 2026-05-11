@@ -46,6 +46,10 @@ function isHubTownStartStoryAction(action: HubTownAction): action is HubTownStar
     return action.kind === 'startStory';
 }
 
+function unsupportedHubActionIntent(intent: never): never {
+    throw new Error(`Hub action intent has unsupported kind: ${JSON.stringify(intent)}`);
+}
+
 export class HubScene extends Scene {
     private launchData: NormalizedHubSceneLaunchData = normalizeHubSceneLaunchData();
     private hubResource?: ResolvedHubSceneCatalogResource;
@@ -635,14 +639,18 @@ export class HubScene extends Scene {
     private handleAction(action: HubTownAction): void {
         const intent = this.createActionIntent(action);
 
-        if (intent.kind === 'navigateLocation') {
-            this.navigationState = applyHubNavigationIntent(this.town, this.navigationState, intent);
-            this.persistHubNavigationState();
-            this.renderShell();
-            return;
+        switch (intent.kind) {
+            case 'navigateLocation':
+                this.navigationState = applyHubNavigationIntent(this.town, this.navigationState, intent);
+                this.persistHubNavigationState();
+                this.renderShell();
+                break;
+            case 'startScene':
+                this.scene.start(intent.sceneKey, intent.payload);
+                break;
+            default:
+                unsupportedHubActionIntent(intent);
         }
-
-        this.scene.start(intent.sceneKey, intent.payload);
     }
 
     private returnToWorldMap(): void {

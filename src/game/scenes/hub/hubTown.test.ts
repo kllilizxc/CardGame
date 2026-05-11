@@ -670,4 +670,39 @@ describe('hub town shell content', () => {
             'Hub action action.start-qingyun-entry-story uses unsupported kind: startBattle',
         );
     });
+
+    it('throws for unsupported Hub action kinds in action intent dispatch', () => {
+        expect(() => createHubActionIntent({
+            id: 'action.unsupported',
+            kind: 'startBattle',
+            label: '未知行动',
+            description: '不受支持的行动类型',
+            hubId: 'hub.qingyun-town',
+            storyGraphFile: 'data/story/story-graph.json',
+        } as never)).toThrow(
+            'Hub action action.unsupported has unsupported kind: startBattle',
+        );
+    });
+
+    it('throws for unsupported hub navigation intents instead of silently ignoring them', () => {
+        const town = validateHubTownDefinition(townShellJson);
+
+        expect(() => applyHubNavigationIntent(
+            town,
+            {
+                currentLocationId: 'location.qingyun-town.gate-market',
+            },
+            {
+                kind: 'startScene',
+                sceneKey: 'StoryScene',
+                payload: {
+                    source: 'hub',
+                    hubId: 'hub.qingyun-town',
+                    actionId: 'action.start-qingyun-entry-story',
+                    storyResourceId: 'story.qingyun-entry',
+                    storyGraphFile: 'data/story/story-graph.json',
+                },
+            } as never,
+        )).toThrow('Hub navigation intent has unsupported kind: startScene');
+    });
 });
