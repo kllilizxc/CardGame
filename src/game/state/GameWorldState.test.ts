@@ -327,7 +327,7 @@ describe('GameWorldState', () => {
         expect(secondRead.activeRun.keys.legacyRouteStorageKeys).toEqual([]);
         expect(secondRead.runResolution.terminalOutcomes).toEqual(RUN_RESOLUTION_TERMINAL_OUTCOMES);
         expect(seedSources.starterDeck.cards[0].count).toBe(starterDeckJson.cards[0].count);
-        expect(seedSources.worldState.stash.items[0].count).toBe(initialWorldState.stash.items[0].count);
+        expect(seedSources.worldState.stash?.items?.[0]?.count).toBe(initialWorldState.stash.items[0].count);
     });
 
     it('reads injected slices and seed fallback without touching ambient globalThis.localStorage', () => {
