@@ -78,6 +78,15 @@ function formatStacks<T extends { id: string; count: number }>(stacks: T[]): str
     return stacks.length > 0 ? stacks.map((stack) => `${stack.id} ×${stack.count}`) : ['无'];
 }
 
+function getDisplayNodeId(finalNodeId: string): string {
+    const withoutPath = finalNodeId.split(/[\\/]/).at(-1) ?? finalNodeId;
+    const withoutQuery = withoutPath.split('?')[0];
+    const withoutFragment = withoutQuery.split('#').at(-1) ?? withoutQuery;
+    const withoutPrefix = withoutFragment.split(':').at(-1) ?? withoutFragment;
+
+    return withoutPrefix.endsWith('.json') ? withoutPrefix.replace(/\.json$/i, '') : withoutPrefix;
+}
+
 function getResolutionCopy(outcome: RunResolutionSummary['outcome']): { title: string; subtitle: string } {
     switch (outcome) {
         case 'defeat':
@@ -127,7 +136,7 @@ export function createRunResolutionSummaryView(summary: RunResolutionSummary): R
         outcome: summary.outcome,
         title: copy.title,
         subtitle: copy.subtitle,
-        finalNodeId: summary.finalNodeId,
+        finalNodeId: getDisplayNodeId(summary.finalNodeId),
         keptCards: formatStacks(kept.cards),
         keptItems: formatStacks(kept.items),
         keptSpiritStones: String(kept.spiritStones),

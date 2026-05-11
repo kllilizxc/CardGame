@@ -119,6 +119,62 @@ describe('entryFlowModel', () => {
         );
     });
 
+    it('sanitizes settlement final node text for non-combat terminal summaries', () => {
+        const baseSummary = {
+            runId: 'run-summary-test',
+            finalNodeId: 'public/data/mijing/prototype-map.json#extract.cliff-rope',
+            endedAt: '2026-05-08T12:00:00.000Z',
+            kept: {
+                cards: [{ id: 'AR_001', count: 1 }],
+                items: [createItemStack('artifact_fly_sword_basic', 'artifact', 1)],
+                spiritStones: 12,
+            },
+            lost: {
+                cards: [{ id: 'TL_002', count: 1 }],
+                items: [createItemStack('tool_talisman_basic', 'tool', 1)],
+                spiritStones: 6,
+            },
+        };
+        const view = createRunResolutionSummaryView({ ...baseSummary, outcome: 'extract' });
+
+        expect(view.finalNodeId).toBe('extract.cliff-rope');
+        expect(view.finalNodeId).not.toContain('public/data');
+        expect(view.finalNodeId).not.toContain('nodeId');
+        expect(view.finalNodeId).not.toContain('dialogueId');
+        expect(view.finalNodeId).not.toContain('.json');
+    });
+
+    it('sanitizes settlement final node text for combat terminal summaries', () => {
+        const baseSummary = {
+            runId: 'run-summary-test',
+            finalNodeId: 'public/data/mijing/prototype-events.json:encounter/boss.sealed-guardian',
+            endedAt: '2026-05-08T12:00:00.000Z',
+            kept: {
+                cards: [{ id: 'AR_001', count: 1 }],
+                items: [createItemStack('artifact_fly_sword_basic', 'artifact', 1)],
+                spiritStones: 12,
+            },
+            lost: {
+                cards: [{ id: 'TL_002', count: 1 }],
+                items: [createItemStack('tool_talisman_basic', 'tool', 1)],
+                spiritStones: 6,
+            },
+        };
+        const defeat = createRunResolutionSummaryView({ ...baseSummary, outcome: 'defeat' });
+        const bossClear = createRunResolutionSummaryView({ ...baseSummary, outcome: 'boss-clear' });
+
+        expect(defeat.finalNodeId).toBe('boss.sealed-guardian');
+        expect(defeat.finalNodeId).not.toContain('public/data');
+        expect(defeat.finalNodeId).not.toContain('nodeId');
+        expect(defeat.finalNodeId).not.toContain('dialogueId');
+        expect(defeat.finalNodeId).not.toContain('.json');
+        expect(bossClear.finalNodeId).toBe('boss.sealed-guardian');
+        expect(bossClear.finalNodeId).not.toContain('public/data');
+        expect(bossClear.finalNodeId).not.toContain('nodeId');
+        expect(bossClear.finalNodeId).not.toContain('dialogueId');
+        expect(bossClear.finalNodeId).not.toContain('.json');
+    });
+
     it('summarizes the entrance state after acknowledging a terminal run result', () => {
         const stash = {
             stashId: 'phase01.starter-stash',
