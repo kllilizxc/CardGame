@@ -106,16 +106,10 @@ export interface HubSceneLocationSelectionIntent {
 }
 
 export type HubTownActionIntent = HubSceneStoryLaunchIntent | HubSceneNavigationIntent;
-export type HubSceneActionIntent =
-    | HubTownActionIntent
-    | HubSceneLocationSelectionIntent;
+export type HubSceneActionIntent = HubSceneNavigationIntent | HubSceneLocationSelectionIntent;
 
 function isHubTownNavigateAction(action: HubTownAction): action is HubTownNavigateAction {
     return action.kind === 'navigate';
-}
-
-function isHubTownStartStoryAction(action: HubTownAction): action is HubTownStartStoryAction {
-    return action.kind === 'startStory';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -457,7 +451,6 @@ export function createHubLocationSelectionIntent(
 
 export function applyHubNavigationIntent(
     town: HubTownDefinition,
-    state: HubNavigationState,
     intent: HubSceneActionIntent,
 ): HubNavigationState {
     switch (intent.kind) {

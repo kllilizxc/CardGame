@@ -264,6 +264,7 @@ describe('hub town shell content', () => {
         const town = validateHubTownDefinition(townShellJson);
         const initialState = createInitialHubNavigationState(town);
         const navigateForward = town.locations[0].actions[1];
+        const teahouseIntent = createHubActionIntent(navigateForward);
 
         expect(initialState).toEqual({
             currentLocationId: 'location.qingyun-town.gate-market',
@@ -274,11 +275,11 @@ describe('hub town shell content', () => {
             statusText: '你穿过集市，来到茶棚边听散修议论今日试炼。',
         });
 
-        const teahouseState = applyHubNavigationIntent(
-            town,
-            initialState,
-            createHubActionIntent(navigateForward),
-        );
+        expect(navigateForward).toEqual(expect.objectContaining({ kind: 'navigate' }));
+        if (teahouseIntent.kind !== 'navigateLocation') {
+            throw new Error('Expected a navigation intent.');
+        }
+        const teahouseState = applyHubNavigationIntent(town, teahouseIntent);
 
         expect(teahouseState).toEqual({
             currentLocationId: 'location.qingyun-town.teahouse',
@@ -286,7 +287,11 @@ describe('hub town shell content', () => {
         });
 
         const navigateBack = town.locations[1].actions[0];
-        expect(applyHubNavigationIntent(town, teahouseState, createHubActionIntent(navigateBack))).toEqual({
+        const backIntent = createHubActionIntent(navigateBack);
+        if (backIntent.kind !== 'navigateLocation') {
+            throw new Error('Expected a navigation intent.');
+        }
+        expect(applyHubNavigationIntent(town, backIntent)).toEqual({
             currentLocationId: 'location.qingyun-town.gate-market',
             statusText: '你回到山门集市，试炼告示仍贴在茶棚旁。',
         });
@@ -603,9 +608,7 @@ describe('hub town shell content', () => {
             targetLocationId: 'location.qingyun-town.teahouse',
             statusText: '已在 Hub 子地图选择集市茶棚。',
         });
-        expect(applyHubNavigationIntent(town, {
-            currentLocationId: 'location.qingyun-town.gate-market',
-        }, markerIntent)).toEqual({
+        expect(applyHubNavigationIntent(town, markerIntent)).toEqual({
             currentLocationId: 'location.qingyun-town.teahouse',
             statusText: '已在 Hub 子地图选择集市茶棚。',
         });
@@ -689,9 +692,6 @@ describe('hub town shell content', () => {
 
         expect(() => applyHubNavigationIntent(
             town,
-            {
-                currentLocationId: 'location.qingyun-town.gate-market',
-            },
             {
                 kind: 'startScene',
                 sceneKey: 'StoryScene',
