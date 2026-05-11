@@ -475,7 +475,7 @@ export class BattleScene extends Scene {
     /**
      * 初始化丹药系统
      */
-    private setupPillSystem(pillsData: PillCard[]): void {
+    private setupPillSystem(pillsData: readonly PillCard[]): void {
         const pillConfig = this.layout.pillSlots;
         
         // 创建丹药槽位UI
@@ -533,7 +533,7 @@ export class BattleScene extends Scene {
     /**
      * 初始化技能系统
      */
-    private setupSkillSystem(skillsData: SkillCard[]): void {
+    private setupSkillSystem(skillsData: readonly SkillCard[]): void {
         // 初始化技能管理器
         this.skillManager = new SkillManager(this, this.battleLog);
         
@@ -573,7 +573,7 @@ export class BattleScene extends Scene {
         );
 
         // 给玩家装备初始技能（只装备第一个技能：注定一抽）
-        const playerSkills = skillsData.slice(0, 1);
+        const playerSkills: SkillCard[] = skillsData.slice(0, 1);
         this.skillManager.initializeSkills(playerSkills);
         this.skillUI.createSkills(this.skillManager.getSkills());
     }
