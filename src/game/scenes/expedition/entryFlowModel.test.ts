@@ -17,6 +17,12 @@ import {
 } from './entryFlowModel';
 
 const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
+const expectNoDebugIdentifiers = (text: string) => {
+    expect(text).not.toContain('public/data');
+    expect(text).not.toContain('dialogueId');
+    expect(text).not.toContain('nodeId');
+    expect(text).not.toContain('.json');
+};
 
 describe('entryFlowModel', () => {
     beforeEach(() => {
@@ -173,6 +179,39 @@ describe('entryFlowModel', () => {
         expect(bossClear.finalNodeId).not.toContain('nodeId');
         expect(bossClear.finalNodeId).not.toContain('dialogueId');
         expect(bossClear.finalNodeId).not.toContain('.json');
+    });
+
+    it('returns settlement summary copy that is safe for HUD and player-visible text', () => {
+        const baseSummary = {
+            runId: 'run-summary-test',
+            finalNodeId:
+                'public/data/mijing/prototype-events.json#dialogueId:encounter/boss.sealed-guardian?nodeId=extract.cliff-rope',
+            endedAt: '2026-05-08T12:00:00.000Z',
+            kept: {
+                cards: [{ id: 'AR_001', count: 1 }],
+                items: [createItemStack('artifact_fly_sword_basic', 'artifact', 1)],
+                spiritStones: 12,
+            },
+            lost: {
+                cards: [{ id: 'TL_002', count: 1 }],
+                items: [createItemStack('tool_talisman_basic', 'tool', 1)],
+                spiritStones: 6,
+            },
+        };
+
+        const extractSummary = createRunResolutionSummaryView({ ...baseSummary, outcome: 'extract' });
+        const defeatSummary = createRunResolutionSummaryView({ ...baseSummary, outcome: 'defeat' });
+        const bossClearSummary = createRunResolutionSummaryView({ ...baseSummary, outcome: 'boss-clear' });
+        const settlementLine = (summary: typeof extractSummary) =>
+            `结算终点：${summary.finalNodeId}`;
+
+        [extractSummary, defeatSummary, bossClearSummary].forEach((summary) => {
+            expect(summary.finalNodeId).toBe('boss.sealed-guardian');
+            expectNoDebugIdentifiers(summary.finalNodeId);
+            expectNoDebugIdentifiers(summary.subtitle);
+            expectNoDebugIdentifiers(summary.title);
+            expectNoDebugIdentifiers(settlementLine(summary));
+        });
     });
 
     it('summarizes the entrance state after acknowledging a terminal run result', () => {

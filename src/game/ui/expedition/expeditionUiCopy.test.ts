@@ -2,6 +2,12 @@ import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 
 const read = (path: string) => readFileSync(path, 'utf8');
+const expectNoDebugIdentifiers = (text: string) => {
+    expect(text).not.toContain('public/data');
+    expect(text).not.toContain('dialogueId');
+    expect(text).not.toContain('nodeId');
+    expect(text).not.toContain('.json');
+};
 
 describe('expedition UI Chinese copy', () => {
     it('uses Chinese player-facing labels in the expedition entry scene', () => {
@@ -26,6 +32,7 @@ describe('expedition UI Chinese copy', () => {
     it('uses Chinese run HUD labels', () => {
         const hud = read('src/game/ui/expedition/RunHud.ts');
 
+        expect(hud).toContain('当前节点：');
         expect(hud).toContain('携带卡牌：0');
         expect(hud).toContain('携带道具：0');
         expect(hud).toContain('灵石：0');
@@ -35,9 +42,6 @@ describe('expedition UI Chinese copy', () => {
         expect(hud).not.toContain('`carriedDeck: ${carriedDeckCount}`');
         expect(hud).not.toContain('`carriedItems: ${carriedItemCount}`');
         expect(hud).not.toContain('`spiritStones: ${spiritStones}`');
-        expect(hud).not.toContain('public/data');
-        expect(hud).not.toContain('dialogueId');
-        expect(hud).not.toContain('nodeId');
-        expect(hud).not.toContain('.json');
+        expectNoDebugIdentifiers(hud);
     });
 });
