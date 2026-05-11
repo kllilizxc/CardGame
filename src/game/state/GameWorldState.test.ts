@@ -34,6 +34,7 @@ import { createPersistentStashFromWorldStateSeed } from './GameWorldStateSeed';
 import {
     DEFAULT_EXPEDITION_TARGET,
     createItemStack,
+    normalizeExpeditionWorldStateSeed,
     SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
     SYNTHETIC_EXPEDITION_TARGET,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
@@ -158,7 +159,7 @@ function createRunForTarget(
     entryNodeId = targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'entrance.mountain-gate' : 'entrance.synthetic',
 ): RunSnapshot {
     const state = ExpeditionState.bootstrap({
-        worldState: structuredClone(initialWorldState),
+        worldState: normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState)),
         starterDeck: structuredClone(starterDeckJson),
         targetIdentity,
     });
@@ -189,7 +190,7 @@ function createRunForTarget(
 
 function createSeedSources() {
     return {
-        worldState: structuredClone(initialWorldState),
+        worldState: normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState)),
         starterDeck: structuredClone(starterDeckJson),
     };
 }

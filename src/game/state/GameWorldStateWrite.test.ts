@@ -39,6 +39,7 @@ import {
     createRunSnapshot,
     OTHER_EXPEDITION_TARGET,
     SYNTHETIC_EXPEDITION_TARGET,
+    normalizeExpeditionWorldStateSeed,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 
 const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
@@ -151,7 +152,7 @@ function withThrowingAmbientLocalStorage<T>(callback: () => T): T {
 
 function createSeedSources() {
     return {
-        worldState: structuredClone(initialWorldState),
+        worldState: normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState)),
         starterDeck: structuredClone(starterDeckJson),
     };
 }

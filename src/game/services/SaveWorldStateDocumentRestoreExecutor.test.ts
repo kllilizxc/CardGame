@@ -30,10 +30,12 @@ import {
 import {
     DEFAULT_EXPEDITION_TARGET,
     SYNTHETIC_EXPEDITION_TARGET,
+    normalizeExpeditionWorldStateSeed,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 
 const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
 const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 type StorageCall =
     | readonly ['setItem', string, string]
@@ -167,7 +169,7 @@ function startRun(
     entryNodeId = targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'entrance.mountain-gate' : 'entrance.synthetic',
 ): string {
     const state = ExpeditionState.bootstrap({
-        worldState: structuredClone(initialWorldState),
+        worldState: createWorldStateSeed(),
         starterDeck: structuredClone(starterDeckJson),
         targetIdentity,
         storage: runStorage,

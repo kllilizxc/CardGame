@@ -32,6 +32,7 @@ import {
     createRunSnapshot as createRunSnapshotFixture,
     createItemStack,
     createTestPersistentStash,
+    normalizeExpeditionWorldStateSeed,
     createItemStacksFromSeed,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 
@@ -40,6 +41,7 @@ const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
 const LEGACY_ROUTE_LOOKUP = 'worldMap:destination.synthetic-expedition';
 const LEGACY_ROUTE_STORAGE_KEY = `${ACTIVE_RUN_STORAGE_KEY}:${LEGACY_ROUTE_LOOKUP}`;
 const initialWorldStateStashItems = createItemStacksFromSeed(initialWorldState.stash.items);
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -188,7 +190,7 @@ describe('ExpeditionState', () => {
 
     it('seeds the persistent starter stash from the world bootstrap data', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
 
@@ -202,7 +204,7 @@ describe('ExpeditionState', () => {
 
     it('saves the seeded stash once and reuses an existing persistent stash on bootstrap', () => {
         const seededState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
 
@@ -240,7 +242,7 @@ describe('ExpeditionState', () => {
         const injectedStorage = new MemoryStorage();
 
         const state = withThrowingAmbientLocalStorage(() => ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: SYNTHETIC_TARGET,
             storage: injectedStorage,
@@ -337,7 +339,7 @@ describe('ExpeditionState', () => {
         const injectedStorage = new MemoryStorage();
 
         const state = withThrowingAmbientLocalStorage(() => ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             storage: injectedStorage,
         }));
@@ -367,7 +369,7 @@ describe('ExpeditionState', () => {
         injectedStorage.setItem(otherActiveRunKey, JSON.stringify(defaultRun));
 
         const state = withThrowingAmbientLocalStorage(() => ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: SYNTHETIC_TARGET,
             storage: injectedStorage,
@@ -382,7 +384,7 @@ describe('ExpeditionState', () => {
 
     it('creates and persists a run snapshot from the current stash loadout', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
 
@@ -413,7 +415,7 @@ describe('ExpeditionState', () => {
             mapId: 'phase01-jade-cave-map',
         };
         const outerMountainState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             activeRunRouteKey: 'worldMap:destination.qingyun-outer-mountain-trial',
             activeRunIdentity: outerMountainTarget,
@@ -424,7 +426,7 @@ describe('ExpeditionState', () => {
             entryNodeId: 'entrance.mountain-gate',
         });
         const jadeCaveState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             activeRunRouteKey: 'worldMap:destination.jade-cave-trial',
             activeRunIdentity: jadeCaveTarget,
@@ -438,13 +440,13 @@ describe('ExpeditionState', () => {
             entryNodeId: 'entrance.jade-cave',
         });
         const restoredOuterMountainState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             activeRunRouteKey: 'worldMap:destination.qingyun-outer-mountain-trial',
             activeRunIdentity: outerMountainTarget,
         });
         const restoredJadeCaveState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             activeRunRouteKey: 'worldMap:destination.jade-cave-trial',
             activeRunIdentity: jadeCaveTarget,
@@ -459,7 +461,7 @@ describe('ExpeditionState', () => {
 
     it('claims one prototype event reward, persists the run, and blocks duplicate claims', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
         state.createRunSnapshot({
@@ -494,7 +496,7 @@ describe('ExpeditionState', () => {
 
     it('purchases prototype shop offers with run spiritStones and blocks duplicate or unaffordable purchases', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
         state.createRunSnapshot({
@@ -547,7 +549,7 @@ describe('ExpeditionState', () => {
 
     it('records an extract intent for terminal resolution without resolving the run immediately', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
         state.createRunSnapshot({
@@ -584,7 +586,7 @@ describe('ExpeditionState', () => {
 
     it('loads and persists active runs independently by expeditionId and mapId', () => {
         const defaultState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: DEFAULT_TARGET,
         });
@@ -599,7 +601,7 @@ describe('ExpeditionState', () => {
         });
 
         const syntheticState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: SYNTHETIC_TARGET,
         });
@@ -614,12 +616,12 @@ describe('ExpeditionState', () => {
         });
 
         const resumedDefaultState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: DEFAULT_TARGET,
         });
         const directDefaultState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
 
@@ -635,7 +637,7 @@ describe('ExpeditionState', () => {
         const outerMountainTarget = getCheckedInExpeditionTarget('destination.qingyun-outer-mountain-trial');
         const jadeCaveTarget = getCheckedInExpeditionTarget('destination.qingyun-jade-cave-trial');
         const outerMountainState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: outerMountainTarget,
         });
@@ -644,7 +646,7 @@ describe('ExpeditionState', () => {
             entryNodeId: 'entrance.mountain-gate',
         });
         const jadeCaveState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: jadeCaveTarget,
         });
@@ -654,12 +656,12 @@ describe('ExpeditionState', () => {
         });
 
         const restoredOuterMountainState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: outerMountainTarget,
         });
         const restoredJadeCaveState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: jadeCaveTarget,
         });
@@ -674,7 +676,7 @@ describe('ExpeditionState', () => {
 
     it('clears only the current target active run when returning to the entrance', () => {
         const defaultState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: DEFAULT_TARGET,
         });
@@ -683,7 +685,7 @@ describe('ExpeditionState', () => {
             entryNodeId: 'entrance.mountain-gate',
         });
         const syntheticState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: SYNTHETIC_TARGET,
         });

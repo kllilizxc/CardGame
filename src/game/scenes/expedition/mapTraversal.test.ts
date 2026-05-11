@@ -8,12 +8,14 @@ import { resetRunPersistenceForTests, loadActiveRun } from '../../services/RunPe
 import { ExpeditionState } from '../../state/ExpeditionState';
 import type { ExpeditionMapDefinition } from '../../types/expedition';
 import { getVisibleNodes, isReachableNode } from './mapTraversal';
+import { normalizeExpeditionWorldStateSeed } from '../../testing/fixtures/expeditionWorldStateFixtures';
 
 const prototypeMap = prototypeMapJson as ExpeditionMapDefinition;
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 function createStartedRun(): ExpeditionState {
     const expeditionState = ExpeditionState.bootstrap({
-        worldState: structuredClone(initialWorldState),
+        worldState: createWorldStateSeed(),
         starterDeck: structuredClone(starterDeckJson),
     });
 

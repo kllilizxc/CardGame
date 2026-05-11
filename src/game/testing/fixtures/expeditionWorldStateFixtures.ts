@@ -12,7 +12,11 @@ import type {
     RunRewardBundle,
     RunSnapshot,
 } from '../../types/expedition';
-import type { WorldStateItemStackSeed } from '../../state/GameWorldStateSeed';
+import type {
+    ExpeditionWorldStateSeed,
+    WorldStateItemStackSeed,
+    WorldStateStashSeed,
+} from '../../state/GameWorldStateSeed';
 
 const STASH_ITEM_TYPES = ['artifact', 'tool', 'consumable', 'quest'] as const satisfies readonly ExpeditionItemType[];
 
@@ -30,6 +34,11 @@ function parseExpeditionItemType(value: string): ExpeditionItemType {
 
 type UnknownWorldStateItemStack = Omit<WorldStateItemStackSeed, 'itemType'> & {
     itemType: string;
+};
+type UnknownWorldStateSeed = Omit<ExpeditionWorldStateSeed, 'stash'> & {
+    stash?: Omit<WorldStateStashSeed, 'items'> & {
+        items?: readonly UnknownWorldStateItemStack[];
+    };
 };
 
 export const DEFAULT_EXPEDITION_TARGET: ExpeditionRouteIdentity = {
@@ -71,6 +80,22 @@ export function createItemStacksFromSeed(stacks: readonly UnknownWorldStateItemS
         parseExpeditionItemType(stack.itemType),
         stack.count,
     ));
+}
+
+export function normalizeExpeditionWorldStateSeed(
+    worldState: UnknownWorldStateSeed,
+): ExpeditionWorldStateSeed {
+    return {
+        ...worldState,
+        stash: worldState.stash
+            ? {
+                ...worldState.stash,
+                items: worldState.stash.items
+                    ? createItemStacksFromSeed(worldState.stash.items)
+                    : undefined,
+            }
+            : undefined,
+    };
 }
 
 export function createTestStoryHubDocument(

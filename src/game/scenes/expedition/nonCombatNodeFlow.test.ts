@@ -10,15 +10,18 @@ import type {
     PrototypeEventDefinition,
     PrototypeShopDefinition,
 } from '../../types/expedition';
+import { normalizeExpeditionWorldStateSeed } from '../../testing/fixtures/expeditionWorldStateFixtures';
 import {
     createEventNodeView,
     createExtractNodeView,
     createShopNodeView,
 } from './nonCombatNodeFlow';
 
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
+
 function createStartedRun() {
     const state = ExpeditionState.bootstrap({
-        worldState: structuredClone(initialWorldState),
+        worldState: createWorldStateSeed(),
         starterDeck: structuredClone(starterDeckJson),
     });
 

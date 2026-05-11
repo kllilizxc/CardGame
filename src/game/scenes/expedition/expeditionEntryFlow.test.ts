@@ -10,6 +10,9 @@ import {
     confirmExpeditionLoadout,
     getInitialExpeditionEntryView,
 } from './expeditionEntryFlow';
+import { normalizeExpeditionWorldStateSeed } from '../../testing/fixtures/expeditionWorldStateFixtures';
+
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 describe('expeditionEntryFlow', () => {
     beforeEach(() => {
@@ -18,7 +21,7 @@ describe('expeditionEntryFlow', () => {
 
     it('returns preparation mode when no active run exists yet', () => {
         const expeditionState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
 
@@ -31,7 +34,7 @@ describe('expeditionEntryFlow', () => {
 
     it('returns active-run mode when a run is already in progress', () => {
         const expeditionState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
         const existingRun = expeditionState.createRunSnapshot({
@@ -49,7 +52,7 @@ describe('expeditionEntryFlow', () => {
 
     it('confirms the starter stash into a new active run and returns HUD mode', () => {
         const expeditionState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
 

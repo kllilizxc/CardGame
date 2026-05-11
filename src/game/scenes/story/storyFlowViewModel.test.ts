@@ -11,6 +11,9 @@ import {
     createStoryFlowViewModel,
     type StoryGraphDefinition,
 } from './storyFlowViewModel';
+import { normalizeExpeditionWorldStateSeed } from '../../testing/fixtures/expeditionWorldStateFixtures';
+
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 describe('storyFlowViewModel', () => {
     it('creates an entry-node view with readable StoryState-backed story context and outgoing choices', () => {
@@ -52,7 +55,7 @@ describe('storyFlowViewModel', () => {
     it('marks structured attribute-gated choices as recommended and disables them when unmet', () => {
         const graph = validatePlayableStoryGraph(storyGraphJson);
         const recommendedView = createStoryFlowViewModel(graph, {
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
         });
         const helpGirlChoice = recommendedView.choices.find((choice) => choice.id === 'sect_entry_001_choice_help_girl');
 
@@ -112,7 +115,7 @@ describe('storyFlowViewModel', () => {
             ],
         };
         const view = createStoryFlowViewModel(brokenGraph, {
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
         });
 
         expect(view.choices.every((choice) => choice.visible)).toBe(true);
@@ -170,7 +173,7 @@ describe('storyFlowViewModel', () => {
             currentNodeId: 'start',
             visitedNodeIds: ['start'],
             selectedChoiceIds: [],
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
         });
 
         expect(view.currentNode.id).toBe('start');
@@ -260,7 +263,7 @@ describe('storyFlowViewModel', () => {
             currentNodeId: 'start',
             visitedNodeIds: ['start'],
             selectedChoiceIds: [],
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
         });
         const transition = createStoryChoiceTransition(view, 'start_to_duel');
 

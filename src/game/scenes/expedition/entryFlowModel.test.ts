@@ -5,13 +5,18 @@ import starterDeckJson from '../../../../public/data/decks/starter-deck.json';
 
 import { resetRunPersistenceForTests } from '../../services/RunPersistence';
 import { ExpeditionState } from '../../state/ExpeditionState';
-import { createItemStack } from '../../testing/fixtures/expeditionWorldStateFixtures';
+import {
+    createItemStack,
+    normalizeExpeditionWorldStateSeed,
+} from '../../testing/fixtures/expeditionWorldStateFixtures';
 import {
     createPostRunEntranceStatus,
     createPreparationSummary,
     createRunResolutionSummaryView,
     createRunSummary,
 } from './entryFlowModel';
+
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 describe('entryFlowModel', () => {
     beforeEach(() => {
@@ -20,7 +25,7 @@ describe('entryFlowModel', () => {
 
     it('summarizes the starter stash for the preparation panel', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
 
@@ -34,7 +39,7 @@ describe('entryFlowModel', () => {
 
     it('summarizes an active run for the HUD and resume status copy', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
         const run = state.createRunSnapshot({
@@ -55,7 +60,7 @@ describe('entryFlowModel', () => {
 
     it('uses a readable node label when the expedition scene provides one', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
         const run = state.createRunSnapshot({

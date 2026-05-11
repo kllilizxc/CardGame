@@ -26,6 +26,7 @@ import {
     DEFAULT_EXPEDITION_TARGET,
     SYNTHETIC_EXPEDITION_TARGET,
     SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
+    normalizeExpeditionWorldStateSeed,
     createItemStack,
     createItemStacksFromSeed,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
@@ -35,6 +36,7 @@ const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
 const LEGACY_ROUTE_LOOKUP = 'worldMap:destination.synthetic-expedition';
 const LEGACY_ROUTE_STORAGE_KEY = `${ACTIVE_RUN_STORAGE_KEY}:${LEGACY_ROUTE_LOOKUP}`;
 const initialWorldStateStashItems = createItemStacksFromSeed(initialWorldState.stash.items);
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -106,7 +108,7 @@ function startRewardedRun(
     storage?: Storage,
 ): ExpeditionState {
     const state = ExpeditionState.bootstrap({
-        worldState: structuredClone(initialWorldState),
+        worldState: createWorldStateSeed(),
         starterDeck: structuredClone(starterDeckJson),
         targetIdentity,
         storage,

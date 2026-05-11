@@ -17,6 +17,7 @@ import {
     createItemStack,
     createTestPersistentStash,
     SYNTHETIC_EXPEDITION_TARGET,
+    normalizeExpeditionWorldStateSeed,
     createItemStacksFromSeed,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 import {
@@ -28,6 +29,7 @@ import {
 
 const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
 const initialWorldStateStashItems = createItemStacksFromSeed(initialWorldState.stash.items);
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -88,7 +90,7 @@ function restoreLocalStorage(): void {
 
 function createSeedSources() {
     return {
-        worldState: structuredClone(initialWorldState),
+        worldState: createWorldStateSeed(),
         starterDeck: structuredClone(starterDeckJson),
     };
 }

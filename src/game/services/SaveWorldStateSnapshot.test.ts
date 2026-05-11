@@ -37,12 +37,14 @@ import {
     DEFAULT_EXPEDITION_TARGET_ROUTE_KEY,
     SYNTHETIC_EXPEDITION_TARGET,
     SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
+    normalizeExpeditionWorldStateSeed,
     createItemStacksFromSeed,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 
 const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
 const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
 const initialWorldStateStashItems = createItemStacksFromSeed(initialWorldState.stash.items);
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -144,7 +146,7 @@ function startRun(
     runStorage?: MemoryStorage,
 ): { state: ExpeditionState; run: RunSnapshot } {
     const state = ExpeditionState.bootstrap({
-        worldState: structuredClone(initialWorldState),
+        worldState: createWorldStateSeed(),
         starterDeck: structuredClone(starterDeckJson),
         targetIdentity,
         storage: runStorage,
@@ -313,7 +315,7 @@ describe('SaveWorldStateSnapshot', () => {
 
     it('runs the compatibility migration hook chain on loaded snapshot documents without writing storage', () => {
         ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: DEFAULT_TARGET,
         });

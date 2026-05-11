@@ -5,16 +5,18 @@ import starterDeckJson from '../../../public/data/decks/starter-deck.json';
 
 import {
     createItemStack,
+    normalizeExpeditionWorldStateSeed,
     createItemStacksFromSeed,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 import { createPersistentStashFromWorldStateSeed } from './GameWorldStateSeed';
 
 const initialWorldStateStashItems = createItemStacksFromSeed(initialWorldState.stash.items);
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 describe('GameWorldStateSeed', () => {
     it('creates a persistent stash from the checked-in world seed and starter deck', () => {
         const stash = createPersistentStashFromWorldStateSeed({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
 
