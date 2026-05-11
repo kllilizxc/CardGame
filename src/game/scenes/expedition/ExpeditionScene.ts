@@ -245,8 +245,8 @@ export class ExpeditionScene extends Scene {
         this.renderNodeMenu(activeRun);
     }
 
-    private getNodeLabel(nodeId: string): string {
-        return this.mapDefinition.nodes.find((node) => node.id === nodeId)?.label ?? '当前节点';
+    private getNodeLabel(nodeId: string, fallback = '当前节点'): string {
+        return this.mapDefinition.nodes.find((node) => node.id === nodeId)?.label ?? fallback;
     }
 
     private clearMapViews(): void {
@@ -533,7 +533,7 @@ export class ExpeditionScene extends Scene {
         this.destroyActiveNodePanel();
 
         const view = createEventNodeView(eventDefinition, activeRun, () => 0);
-        const { container, contentX, panelY, panelHeight } = this.createModalPanel(view.title, eventDefinition.nodeId);
+        const { container, contentX, panelY, panelHeight } = this.createModalPanel(view.title, this.getNodeLabel(eventDefinition.nodeId, '事件'));
         const description = this.add.text(contentX, panelY - panelHeight / 2 + 120, view.description, {
             fontFamily: 'Arial',
             fontSize: '20px',
@@ -598,7 +598,7 @@ export class ExpeditionScene extends Scene {
         this.destroyActiveNodePanel();
 
         const view = createShopNodeView(shopDefinition, activeRun);
-        const { container, contentX, panelY, panelHeight } = this.createModalPanel(view.title, shopDefinition.nodeId);
+        const { container, contentX, panelY, panelHeight } = this.createModalPanel(view.title, this.getNodeLabel(shopDefinition.nodeId, '商店'));
         const description = this.add.text(contentX, panelY - panelHeight / 2 + 116, `${view.description}\n当前 run spiritStones：${view.spiritStones}`, {
             fontFamily: 'Arial',
             fontSize: '20px',
@@ -668,7 +668,7 @@ export class ExpeditionScene extends Scene {
         this.destroyActiveNodePanel();
 
         const view = createExtractNodeView(node.id, activeRun);
-        const { container, contentX, panelY, panelHeight } = this.createModalPanel(node.label, node.id);
+        const { container, contentX, panelY, panelHeight } = this.createModalPanel(node.label, this.getNodeLabel(node.id, '撤离'));
         const description = this.add.text(contentX, panelY - panelHeight / 2 + 126, '确认后会立刻结束本次秘境探索，并将当前携带的卡牌、道具与 spiritStones 存入永久仓库。', {
             fontFamily: 'Arial',
             fontSize: '21px',
