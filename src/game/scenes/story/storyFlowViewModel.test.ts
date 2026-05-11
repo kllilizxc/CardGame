@@ -9,11 +9,17 @@ import {
     createInitialStoryRuntime,
     createStoryChoiceTransition,
     createStoryFlowViewModel,
+    type StoryWorldState,
     type StoryGraphDefinition,
 } from './storyFlowViewModel';
-import { normalizeExpeditionWorldStateSeed } from '../../testing/fixtures/expeditionWorldStateFixtures';
-
-const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
+const createWorldStateSeed = (): StoryWorldState => ({
+    player: {
+        attributes: {
+            ...(initialWorldState.player?.attributes ?? {}),
+        },
+    },
+    flags: [...(initialWorldState.flags ?? [])],
+});
 
 describe('storyFlowViewModel', () => {
     it('creates an entry-node view with readable StoryState-backed story context and outgoing choices', () => {
