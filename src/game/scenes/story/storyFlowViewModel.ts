@@ -385,7 +385,7 @@ function createDisabledReason(params: {
     storyState: StoryState;
 }): string | null {
     if (!params.targetExists) {
-        return `后续剧情节点未配置：${params.choice.to}`;
+        return '后续剧情节点未配置，无法继续';
     }
 
     if (!params.visible && params.choice.visibleWhen) {
@@ -419,12 +419,12 @@ function describeStructuredCondition(condition: StoryCondition, storyState: Stor
                 : `需要标记 ${condition.flag}`;
         case 'visitedNode':
             return condition.expected === false
-                ? `未访问节点 ${condition.nodeId}`
-                : `需要访问节点 ${condition.nodeId}`;
+                ? '该剧情节点应保持未访问状态'
+                : '需要先访问相关剧情节点';
         case 'triggeredDialogue':
             return condition.expected === false
-                ? `未触发对话 ${condition.dialogueId}`
-                : `需要触发对话 ${condition.dialogueId}`;
+                ? '该对话应保持未触发状态'
+                : '需要先触发相关对话';
         case 'all':
             return '需要所有条件满足';
         case 'any':
@@ -576,7 +576,7 @@ export function createStoryFlowViewModel(
 
     const warnings = requestedNode
         ? []
-        : [`当前剧情节点未配置：${requestedNodeId}，已回退到入口节点 ${currentNode.id}。`];
+        : ['当前剧情节点配置异常，已回退到入口节点。'];
     const storyState = createRuntimeStoryState(graph, state, requestedNodeId);
     const currentStoryState = storyState.currentNodeId === currentNode.id
         ? storyState
@@ -587,7 +587,7 @@ export function createStoryFlowViewModel(
             const targetNode = nodesById.get(choice.to);
 
             if (!targetNode) {
-                warnings.push(`选项 ${choice.id} 指向未配置节点 ${choice.to}。`);
+                warnings.push(`选项 ${choice.id} 的目标剧情节点未配置。`);
             }
 
             return createChoiceView(choice, targetNode, currentStoryState);
@@ -625,7 +625,7 @@ export function createStoryChoiceTransition(
         return {
             status: 'blocked',
             choiceId,
-            reason: `选项当前不可见：${choiceId}`,
+            reason: choice.disabledReason ?? `选项当前不可见：${choiceId}`,
         };
     }
 

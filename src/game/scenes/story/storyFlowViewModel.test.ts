@@ -127,18 +127,119 @@ describe('storyFlowViewModel', () => {
         expect(view.choices.every((choice) => choice.visible)).toBe(true);
         expect(view.choices.every((choice) => choice.selectable === false)).toBe(true);
         expect(view.choices.map((choice) => choice.disabledReason)).toEqual([
-            '后续剧情节点未配置：missing_story_node_1',
-            '后续剧情节点未配置：missing_story_node_2',
+            '后续剧情节点未配置，无法继续',
+            '后续剧情节点未配置，无法继续',
         ]);
         expect(view.warnings).toEqual([
-            '选项 draft_choice_1 指向未配置节点 missing_story_node_1。',
-            '选项 draft_choice_2 指向未配置节点 missing_story_node_2。',
+            '选项 draft_choice_1 的目标剧情节点未配置。',
+            '选项 draft_choice_2 的目标剧情节点未配置。',
         ]);
         expect(createStoryChoiceTransition(view, 'draft_choice_1')).toEqual({
             status: 'blocked',
             choiceId: 'draft_choice_1',
-            reason: '后续剧情节点未配置：missing_story_node_1',
+            reason: '后续剧情节点未配置，无法继续',
         });
+    });
+
+    it('在访问/对话条件提示中隐藏原始节点与对话 id，保留可读条件语义', () => {
+        const graph: StoryGraphDefinition = {
+            entryNodeId: 'start',
+            nodes: [
+                {
+                    id: 'start',
+                    type: 'story',
+                    title: '测试起点',
+                    summary: '用于验证条件文案。',
+                    detail: '起点节点。',
+                    tags: ['测试'],
+                    chapter: '测试',
+                },
+                {
+                    id: 'next',
+                    type: 'story',
+                    title: '测试目标',
+                    summary: '验证目标节点。',
+                    detail: '目标节点。',
+                    tags: ['测试'],
+                    chapter: '测试',
+                },
+            ],
+            choices: [
+                {
+                    id: 'start_to_hidden_node',
+                    from: 'start',
+                    to: 'next',
+                    text: '访问条件选项',
+                    visibleWhen: {
+                        kind: 'visitedNode',
+                        nodeId: 'internal.hidden.node',
+                        expected: true,
+                    },
+                },
+                {
+                    id: 'start_to_hidden_dialogue',
+                    from: 'start',
+                    to: 'next',
+                    text: '对话条件选项',
+                    enabledWhen: {
+                        kind: 'triggeredDialogue',
+                        dialogueId: 'dialogue.hidden.test',
+                        expected: true,
+                    },
+                },
+            ],
+        };
+
+        const view = createStoryFlowViewModel(graph, { worldState: createWorldStateSeed() });
+
+        const hiddenNodeChoice = view.choices.find((choice) => choice.id === 'start_to_hidden_node');
+        const hiddenDialogueChoice = view.choices.find((choice) => choice.id === 'start_to_hidden_dialogue');
+
+        expect(hiddenNodeChoice?.selectable).toBe(false);
+        expect(hiddenNodeChoice?.conditionSummary).toBe('需要先访问相关剧情节点');
+        expect(hiddenNodeChoice?.disabledReason).toBe('条件未满足：需要先访问相关剧情节点');
+        const nodeTransitionBlocked = createStoryChoiceTransition(view, 'start_to_hidden_node');
+        expect(nodeTransitionBlocked).toEqual({
+            status: 'blocked',
+            choiceId: 'start_to_hidden_node',
+            reason: '条件未满足：需要先访问相关剧情节点',
+        });
+
+        expect(hiddenDialogueChoice?.selectable).toBe(false);
+        expect(hiddenDialogueChoice?.conditionSummary).toBe('需要先触发相关对话');
+        expect(hiddenDialogueChoice?.disabledReason).toBe('条件未满足：需要先触发相关对话');
+
+        expect(createStoryChoiceTransition(view, 'start_to_hidden_dialogue')).toEqual({
+            status: 'blocked',
+            choiceId: 'start_to_hidden_dialogue',
+            reason: '条件未满足：需要先触发相关对话',
+        });
+        expect(view.warnings.every((warning) => !/internal\.|dialogue\.hidden\.test|missing_story_node_/.test(warning))).toBe(true);
+    });
+
+    it('回退到入口节点提示不显示具体节点 id，仅提示配置异常', () => {
+        const graph: StoryGraphDefinition = {
+            entryNodeId: 'entry',
+            nodes: [
+                {
+                    id: 'entry',
+                    type: 'story',
+                    title: '入口',
+                    summary: '入口故事节点。',
+                    detail: '可回退的节点。',
+                    tags: ['测试'],
+                },
+            ],
+            choices: [],
+        };
+
+        const view = createStoryFlowViewModel(graph, {
+            currentNodeId: 'nonexistent.current.node',
+        });
+
+        expect(view.currentNode.id).toBe('entry');
+        expect(view.warnings).toEqual(['当前剧情节点配置异常，已回退到入口节点。']);
+        expect(view.warnings.join('').includes('nonexistent.current.node')).toBe(false);
     });
 
     it('uses runtime story state to render a resumed node and create a selectable transition', () => {
