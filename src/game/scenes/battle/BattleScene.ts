@@ -36,6 +36,8 @@ import type { SkillCard } from '@data/types/cards/skill';
 import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import { BattleState } from '../../state/BattleState';
 import { BattleUIManager } from '../../ui/battle/BattleUIManager';
+import { TutorialOverlayController } from '../../ui/battle/TutorialOverlayController';
+import type { TutorialStepDefinition, TutorialPlayerAction } from '../../ui/battle/TutorialOverlayController';
 import { CardPreviewManager } from '../../managers/common/CardPreviewManager';
 import { PillTooltipUI } from '../../ui/common/PillTooltipUI';
 import type { AnyCard } from '@data/types/cards/all';
@@ -132,6 +134,10 @@ export class BattleScene extends Scene {
     private deckCacheKey = 'starterDeck';
     private battleEndHandled = false;
 
+    // 教程覆盖层
+    private tutorialController?: TutorialOverlayController;
+    private isTutorialMode = false;
+
     constructor() {
         super('BattleScene');
     }
@@ -148,6 +154,7 @@ export class BattleScene extends Scene {
         this.encounterCacheKey = getEncounterCacheKey(this.launchPayload, this.storyLaunchPayload);
         this.deckCacheKey = getBattleDeckCacheKey(this.storyLaunchPayload);
         this.battleEndHandled = false;
+        this.isTutorialMode = TutorialOverlayController.hasTutorialSource(data);
     }
 
     // ===== Getter 方法，用于兼容现有代码 =====
@@ -415,6 +422,11 @@ export class BattleScene extends Scene {
         
         // 设置符箓使用逻辑
         this.setupTalismanUsageLogic();
+
+        // 初始化教程覆盖层（仅教程模式激活）
+        if (this.isTutorialMode) {
+            this.tutorialController = new TutorialOverlayController(this);
+        }
 
         this.battleLog.addLog('战斗开始！');
         
@@ -746,7 +758,8 @@ export class BattleScene extends Scene {
             this.playerField = result.playerField;
             this.cardManager.arrangePlayerField(this.playerField);
             this.cardManager.arrangeHand(this.hand);
-            
+            this.notifyTutorialAction('card_played');
+
             // 触发召唤效果
             this.unitEffectManager.applyOnSummonEffects(card, {
                 playerField: this.playerField,
@@ -799,7 +812,8 @@ export class BattleScene extends Scene {
                     this.playerField = result.playerField;
                     this.cardManager.arrangePlayerField(this.playerField);
                     this.cardManager.arrangeHand(this.hand);
-                    
+                    this.notifyTutorialAction('card_played');
+
                     // 触发召唤效果
                     this.unitEffectManager.applyOnSummonEffects(card, {
                         playerField: this.playerField,
@@ -851,6 +865,7 @@ export class BattleScene extends Scene {
 
                 const artifactData = artifact.getCardData() as ArtifactCard;
                 this.recordArtifactUsage(artifactData.weaponType);
+                this.notifyTutorialAction('equip_artifact');
                 return true;
             }
         }
@@ -929,7 +944,7 @@ export class BattleScene extends Scene {
         this.deck = result.deck;
         this.hand = result.hand;
         this.cardManager.arrangeHand(this.hand);
-        
+        this.notifyTutorialAction('card_drawn');
         // UI 会自动更新，无需手动调用
     }
 
@@ -1024,7 +1039,8 @@ export class BattleScene extends Scene {
             isPlayerTurn: this.isPlayerTurn,
             isProcessingTurn: this.isProcessingTurn
         });
-        
+
+        this.notifyTutorialAction('end_turn');
         // 委托给 TurnManager（TurnManager 会设置 isProcessingTurn）
         this.turnManager.endTurn(this.getTurnContext());
     }
@@ -1077,6 +1093,28 @@ export class BattleScene extends Scene {
                 this.enemyField.splice(index, 1);
             }
         }
+    }
+
+    // ===== 教程覆盖层 =====
+
+    /** 获取教程控制器（仅教程模式可用） */
+    getTutorialController(): TutorialOverlayController | undefined {
+        return this.tutorialController;
+    }
+
+    /**
+     * 加载教程步骤并启动覆盖层。
+     * 仅在 isTutorialMode 时有效。
+     */
+    loadTutorialSteps(steps: TutorialStepDefinition[], onComplete?: () => void): void {
+        if (!this.tutorialController) return;
+        this.tutorialController.loadSteps(steps);
+        this.tutorialController.start(onComplete);
+    }
+
+    /** 通知教程控制器玩家操作 */
+    private notifyTutorialAction(action: TutorialPlayerAction): void {
+        this.tutorialController?.notifyPlayerAction(action);
     }
 
     public handleBattleEnd(victory: boolean): void {
