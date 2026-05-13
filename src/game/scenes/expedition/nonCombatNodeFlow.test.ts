@@ -47,6 +47,60 @@ describe('nonCombatNodeFlow', () => {
         expect(claimedView.claimed).toBe(true);
     });
 
+    it('keeps weighted random event outcome selection when no fixed outcome is requested', () => {
+        const { run } = createStartedRun();
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+
+        const view = createEventNodeView(event, run, () => 0.76);
+
+        expect(view.outcome.id).toBe('cache.wandering-sword');
+        expect(view.rewardSummary).toBe('AR_001 +1 · artifact_fly_sword_basic +1');
+    });
+
+    it('uses an opt-in fixed event outcome and keeps reward and claimed state derived from that outcome', () => {
+        const { state, run } = createStartedRun();
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+
+        const unclaimedView = createEventNodeView(event, run, () => {
+            throw new Error('fixed event outcome selection should not call random');
+        }, {
+            outcomeSelection: {
+                kind: 'fixedOutcome',
+                outcomeId: 'cache.talisman-roll',
+            },
+        });
+
+        expect(unclaimedView.outcome.id).toBe('cache.talisman-roll');
+        expect(unclaimedView.rewardSummary).toBe('TL_002 +1 · tool_talisman_basic +1 · spiritStones +6');
+        expect(unclaimedView.claimed).toBe(false);
+
+        state.claimEventNodeReward(event.nodeId, structuredClone(unclaimedView.outcome.rewards));
+
+        const claimedView = createEventNodeView(event, state.activeRun!, () => {
+            throw new Error('fixed event outcome selection should not call random');
+        }, {
+            outcomeSelection: {
+                kind: 'fixedOutcome',
+                outcomeId: 'cache.talisman-roll',
+            },
+        });
+
+        expect(claimedView.outcome.id).toBe('cache.talisman-roll');
+        expect(claimedView.claimed).toBe(true);
+    });
+
+    it('fails actionably instead of falling back to random when a fixed event outcome is missing', () => {
+        const { run } = createStartedRun();
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+
+        expect(() => createEventNodeView(event, run, () => 0, {
+            outcomeSelection: {
+                kind: 'fixedOutcome',
+                outcomeId: 'cache.missing-outcome',
+            },
+        })).toThrow('Missing fixed expedition event outcome: nodeId=event.abandoned-cache outcomeId=cache.missing-outcome');
+    });
+
     it('creates shop offer views that expose affordability and purchased state', () => {
         const { state } = createStartedRun();
         const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'];

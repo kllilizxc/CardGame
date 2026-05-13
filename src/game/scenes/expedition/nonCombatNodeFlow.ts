@@ -1,4 +1,5 @@
 import type {
+    ExpeditionEventOutcomeSelection,
     PrototypeEventDefinition,
     PrototypeEventOutcome,
     PrototypeShopDefinition,
@@ -13,6 +14,22 @@ export interface EventNodeView {
     outcome: PrototypeEventOutcome;
     rewardSummary: string;
     claimed: boolean;
+}
+
+export interface CreateEventNodeViewOptions {
+    outcomeSelection?: ExpeditionEventOutcomeSelection;
+}
+
+export class MissingFixedEventOutcomeError extends Error {
+    readonly nodeId: string;
+    readonly outcomeId: string;
+
+    constructor(nodeId: string, outcomeId: string) {
+        super(`Missing fixed expedition event outcome: nodeId=${nodeId} outcomeId=${outcomeId}`);
+        this.name = 'MissingFixedEventOutcomeError';
+        this.nodeId = nodeId;
+        this.outcomeId = outcomeId;
+    }
 }
 
 export type ShopOfferViewState = 'available' | 'purchased' | 'unaffordable';
@@ -69,12 +86,35 @@ function selectWeightedOutcome(definition: PrototypeEventDefinition, random: () 
     return definition.pool[definition.pool.length - 1];
 }
 
+function selectFixedOutcome(definition: PrototypeEventDefinition, outcomeId: string): PrototypeEventOutcome {
+    const outcome = definition.pool.find((candidate) => candidate.id === outcomeId);
+
+    if (!outcome) {
+        throw new MissingFixedEventOutcomeError(definition.nodeId, outcomeId);
+    }
+
+    return outcome;
+}
+
+function selectEventOutcome(
+    definition: PrototypeEventDefinition,
+    random: () => number,
+    selection?: ExpeditionEventOutcomeSelection,
+): PrototypeEventOutcome {
+    if (!selection || selection.kind === 'weightedRandom') {
+        return selectWeightedOutcome(definition, random);
+    }
+
+    return selectFixedOutcome(definition, selection.outcomeId);
+}
+
 export function createEventNodeView(
     definition: PrototypeEventDefinition,
     run: RunSnapshot,
     random: () => number = Math.random,
+    options: CreateEventNodeViewOptions = {},
 ): EventNodeView {
-    const outcome = selectWeightedOutcome(definition, random);
+    const outcome = selectEventOutcome(definition, random, options.outcomeSelection);
 
     return {
         title: definition.title,

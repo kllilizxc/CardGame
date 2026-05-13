@@ -1,0 +1,80 @@
+{
+  "id": "tutorial.qingyun-expedition-outer-mountain-map",
+  "name": "教程 · 青云外山试炼",
+  "description": "一条短小固定的教程秘境路线：先完成雾狐战斗，再领取固定补给、理解商店取舍，并在撤离或问心回响之间做出教学选择。",
+  "entryNodeId": "entrance.tutorial-qingyun-outer-mountain",
+  "nodes": [
+    {
+      "id": "entrance.tutorial-qingyun-outer-mountain",
+      "type": "entrance",
+      "layer": 0,
+      "label": "外山入口",
+      "outgoingNodeIds": ["battle.tutorial-qingyun-mist-fox"],
+      "payloadRef": {
+        "kind": "entrance",
+        "ref": "tutorial.qingyun.starter-stash"
+      }
+    },
+    {
+      "id": "battle.tutorial-qingyun-mist-fox",
+      "type": "battle",
+      "layer": 1,
+      "label": "雾狐试招",
+      "outgoingNodeIds": ["event.tutorial-qingyun-first-cache"],
+      "payloadRef": {
+        "kind": "encounter",
+        "ref": "tutorial.qingyun-encounter-mist-fox",
+        "encounterResourceId": "tutorial.qingyun-encounter-mist-fox",
+        "encounterFile": "data/encounters/tutorial-qingyun-mist-fox.json"
+      }
+    },
+    {
+      "id": "event.tutorial-qingyun-first-cache",
+      "type": "event",
+      "layer": 2,
+      "label": "守山补给匣",
+      "outgoingNodeIds": ["shop.tutorial-qingyun-wayfarer"],
+      "payloadRef": {
+        "kind": "event",
+        "ref": "event.tutorial-qingyun-first-cache",
+        "contentFile": "data/mijing/tutorial-qingyun-events.json"
+      }
+    },
+    {
+      "id": "shop.tutorial-qingyun-wayfarer",
+      "type": "shop",
+      "layer": 3,
+      "label": "引路散修",
+      "outgoingNodeIds": ["boss.tutorial-qingyun-mind-echo", "extract.tutorial-qingyun-rope-bridge"],
+      "payloadRef": {
+        "kind": "shop",
+        "ref": "shop.tutorial-qingyun-wayfarer",
+        "contentFile": "data/mijing/tutorial-qingyun-shop.json"
+      }
+    },
+    {
+      "id": "boss.tutorial-qingyun-mind-echo",
+      "type": "boss",
+      "layer": 4,
+      "label": "问心回响",
+      "outgoingNodeIds": [],
+      "payloadRef": {
+        "kind": "encounter",
+        "ref": "tutorial.qingyun-encounter-mind-echo",
+        "encounterResourceId": "tutorial.qingyun-encounter-mind-echo",
+        "encounterFile": "data/encounters/tutorial-qingyun-mind-echo.json"
+      }
+    },
+    {
+      "id": "extract.tutorial-qingyun-rope-bridge",
+      "type": "extract",
+      "layer": 4,
+      "label": "索桥撤离点",
+      "outgoingNodeIds": [],
+      "payloadRef": {
+        "kind": "extract",
+        "ref": "extract.tutorial-qingyun-rope-bridge"
+      }
+    }
+  ]
+}

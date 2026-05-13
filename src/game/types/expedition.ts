@@ -203,6 +203,10 @@ export interface PrototypeEventOutcome {
     rewards: RunRewardBundle;
 }
 
+export type ExpeditionEventOutcomeSelection =
+    | { kind: 'weightedRandom' }
+    | { kind: 'fixedOutcome'; outcomeId: string };
+
 export interface PrototypeEventDefinition {
     nodeId: string;
     title: string;

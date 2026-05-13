@@ -1,0 +1,12 @@
+{
+  "id": "tutorial.qingyun-encounter-mind-echo",
+  "name": "问心回响",
+  "description": "教程外山的第二场战斗兼终点节点，复用已登记单位卡以验证 boss/encounter 引用与返回闭环。",
+  "difficulty": 1,
+  "enemies": [
+    {
+      "cardId": "CR_001",
+      "position": 1
+    }
+  ]
+}

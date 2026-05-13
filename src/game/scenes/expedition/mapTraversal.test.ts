@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import prototypeMapJson from '../../../../public/data/mijing/prototype-map.json';
 import initialWorldState from '../../../../public/data/world/initial-state.json';
@@ -6,8 +8,21 @@ import starterDeckJson from '../../../../public/data/decks/starter-deck.json';
 
 import { resetRunPersistenceForTests, loadActiveRun } from '../../services/RunPersistence';
 import { ExpeditionState } from '../../state/ExpeditionState';
-import type { ExpeditionMapDefinition } from '../../types/expedition';
-import { getVisibleNodes, isReachableNode } from './mapTraversal';
+import type {
+    ExpeditionBattleCompleteEvent,
+    ExpeditionMapDefinition,
+    ExpeditionTargetConfig,
+    PrototypeEventCollection,
+    PrototypeShopCollection,
+} from '../../types/expedition';
+import { validatePrototypeExpeditionContent } from '../../types/prototypeExpeditionContent';
+import {
+    createEventNodeView,
+    createExtractNodeView,
+    createShopNodeView,
+} from './nonCombatNodeFlow';
+import { createRunAfterBattleVictory } from './runResultFlow';
+import { enterReachableNode, getVisibleNodes, isReachableNode } from './mapTraversal';
 
 const prototypeMap = prototypeMapJson as ExpeditionMapDefinition;
 
@@ -25,6 +40,44 @@ function createStartedRun(): ExpeditionState {
 
     return expeditionState;
 }
+
+function readPublicJson<T>(publicPath: string): T {
+    const filePath = join('public', publicPath);
+
+    expect(existsSync(filePath)).toBe(true);
+
+    return JSON.parse(readFileSync(filePath, 'utf8')) as T;
+}
+
+function createMemoryStorage(): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> {
+    const values = new Map<string, string>();
+
+    return {
+        getItem: (key: string) => values.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+            values.set(key, value);
+        },
+        removeItem: (key: string) => {
+            values.delete(key);
+        },
+    };
+}
+
+const tutorialTargetConfig: ExpeditionTargetConfig = {
+    routeKey: 'expedition:tutorial.qingyun-expedition:tutorial.qingyun-expedition-outer-mountain-map',
+    expeditionId: 'tutorial.qingyun-expedition',
+    mapId: 'tutorial.qingyun-expedition-outer-mountain-map',
+    worldStateResourceId: 'tutorial.qingyun-world-seed',
+    worldStateFile: 'data/world/tutorial-qingyun-initial-state.json',
+    starterDeckResourceId: 'tutorial.qingyun-deck-casket-starter',
+    starterDeckFile: 'data/decks/tutorial-qingyun-casket-starter.json',
+    mapResourceId: 'tutorial.qingyun-expedition-outer-mountain-map',
+    mapFile: 'data/mijing/tutorial-qingyun-outer-mountain-map.json',
+    eventsResourceId: 'tutorial.qingyun-events-outer-mountain',
+    eventsFile: 'data/mijing/tutorial-qingyun-events.json',
+    shopResourceId: 'tutorial.qingyun-shop-wayfarer',
+    shopFile: 'data/mijing/tutorial-qingyun-shop.json',
+};
 
 describe('mapTraversal', () => {
     beforeEach(() => {
@@ -133,5 +186,140 @@ describe('mapTraversal', () => {
 
         expect(eventNode?.visibility).toBe('cleared');
         expect(eventNode?.selectable).toBe(true);
+    });
+
+    it('walks the tutorial outer-mountain route through battle return, fixed event reward, shop purchase, and extract intent', () => {
+        const storage = createMemoryStorage();
+        const tutorialMap = readPublicJson<ExpeditionMapDefinition>('data/mijing/tutorial-qingyun-outer-mountain-map.json');
+        const tutorialEvents = readPublicJson<PrototypeEventCollection>('data/mijing/tutorial-qingyun-events.json');
+        const tutorialShop = readPublicJson<PrototypeShopCollection>('data/mijing/tutorial-qingyun-shop.json');
+        const tutorialWorldState = readPublicJson<typeof initialWorldState>('data/world/tutorial-qingyun-initial-state.json');
+        const tutorialStarterDeck = readPublicJson<typeof starterDeckJson>('data/decks/tutorial-qingyun-casket-starter.json');
+        const validated = validatePrototypeExpeditionContent({
+            map: tutorialMap,
+            events: tutorialEvents,
+            shops: tutorialShop,
+        });
+        const expeditionState = ExpeditionState.bootstrap({
+            worldState: tutorialWorldState,
+            starterDeck: tutorialStarterDeck,
+            targetIdentity: tutorialTargetConfig,
+            activeRunRouteKey: tutorialTargetConfig.routeKey,
+            storage,
+        });
+        const startedRun = expeditionState.createRunSnapshot({
+            expeditionId: tutorialTargetConfig.expeditionId,
+            mapId: tutorialTargetConfig.mapId,
+            entryNodeId: validated.map.entryNodeId,
+        });
+
+        expect(getVisibleNodes(validated.map, startedRun).filter((node) => node.selectable).map((node) => node.id)).toEqual([
+            'battle.tutorial-qingyun-mist-fox',
+        ]);
+
+        const battleRun = expeditionState.enterReachableNode(
+            validated.map,
+            'battle.tutorial-qingyun-mist-fox',
+            tutorialTargetConfig,
+        );
+
+        expect(battleRun?.pendingEncounter).toMatchObject({
+            nodeId: 'battle.tutorial-qingyun-mist-fox',
+            nodeType: 'battle',
+            encounterId: 'tutorial.qingyun-encounter-mist-fox',
+            encounterResourceId: 'tutorial.qingyun-encounter-mist-fox',
+            encounterFile: 'data/encounters/tutorial-qingyun-mist-fox.json',
+            targetConfig: tutorialTargetConfig,
+        });
+
+        const battleResult: ExpeditionBattleCompleteEvent = {
+            runId: battleRun!.runId,
+            nodeId: 'battle.tutorial-qingyun-mist-fox',
+            nodeType: 'battle',
+            encounterId: 'tutorial.qingyun-encounter-mist-fox',
+            encounterResourceId: 'tutorial.qingyun-encounter-mist-fox',
+            encounterFile: 'data/encounters/tutorial-qingyun-mist-fox.json',
+            victory: true,
+            outcome: 'battle-victory',
+            completedAt: '2026-05-14T00:00:00.000Z',
+            targetConfig: tutorialTargetConfig,
+        };
+        const afterBattleRun = createRunAfterBattleVictory(battleRun!, battleResult);
+
+        expect(afterBattleRun.currentNodeId).toBe('battle.tutorial-qingyun-mist-fox');
+        expect(afterBattleRun.pendingEncounter).toBeNull();
+        expect(isReachableNode(validated.map, afterBattleRun, 'event.tutorial-qingyun-first-cache')).toBe(true);
+
+        const eventRun = enterReachableNode(validated.map, afterBattleRun, 'event.tutorial-qingyun-first-cache');
+        const eventDefinition = tutorialEvents.eventsByNodeId['event.tutorial-qingyun-first-cache'];
+        const fixedEventView = createEventNodeView(eventDefinition, eventRun!, () => {
+            throw new Error('tutorial fixed outcome should not roll weighted random');
+        }, {
+            outcomeSelection: {
+                kind: 'fixedOutcome',
+                outcomeId: 'outcome.tutorial.qingyun.guard-talisman-cache',
+            },
+        });
+        const eventState = new ExpeditionState(
+            expeditionState.persistentStash,
+            eventRun,
+            tutorialTargetConfig,
+            tutorialTargetConfig.routeKey,
+            storage,
+        );
+
+        expect(fixedEventView.rewardSummary).toBe('TL_002 +1 · tool_talisman_basic +1 · spiritStones +12');
+
+        const claimed = eventState.claimEventNodeReward(eventDefinition.nodeId, fixedEventView.outcome.rewards);
+
+        expect(claimed.status).toBe('claimed');
+        expect(claimed.activeRun?.spiritStones).toBe(12);
+        expect(isReachableNode(validated.map, claimed.activeRun!, 'shop.tutorial-qingyun-wayfarer')).toBe(true);
+
+        const shopRun = eventState.enterReachableNode(validated.map, 'shop.tutorial-qingyun-wayfarer');
+        const shopDefinition = tutorialShop.shopsByNodeId['shop.tutorial-qingyun-wayfarer'];
+        const shopView = createShopNodeView(shopDefinition, shopRun!);
+
+        expect(shopView.offers.map((offer) => [offer.id, offer.state])).toEqual([
+            ['offer.tutorial.qingyun.guard-talisman', 'available'],
+            ['offer.tutorial.qingyun.fly-sword-keepsake', 'unaffordable'],
+        ]);
+
+        const purchase = eventState.purchaseShopOffer(
+            shopDefinition.nodeId,
+            'offer.tutorial.qingyun.guard-talisman',
+            shopDefinition.offers[0].cost,
+            shopDefinition.offers[0].rewards,
+        );
+
+        expect(purchase.status).toBe('purchased');
+        expect(purchase.activeRun?.spiritStones).toBe(4);
+        expect(isReachableNode(validated.map, purchase.activeRun!, 'boss.tutorial-qingyun-mind-echo')).toBe(true);
+
+        const bossRun = enterReachableNode(
+            validated.map,
+            purchase.activeRun!,
+            'boss.tutorial-qingyun-mind-echo',
+            tutorialTargetConfig,
+        );
+
+        expect(bossRun?.pendingEncounter).toMatchObject({
+            nodeId: 'boss.tutorial-qingyun-mind-echo',
+            nodeType: 'boss',
+            encounterId: 'tutorial.qingyun-encounter-mind-echo',
+            encounterResourceId: 'tutorial.qingyun-encounter-mind-echo',
+            encounterFile: 'data/encounters/tutorial-qingyun-mind-echo.json',
+            targetConfig: tutorialTargetConfig,
+        });
+
+        const extractRun = eventState.enterReachableNode(validated.map, 'extract.tutorial-qingyun-rope-bridge');
+
+        expect(extractRun?.currentNodeId).toBe('extract.tutorial-qingyun-rope-bridge');
+        expect(createExtractNodeView('extract.tutorial-qingyun-rope-bridge', extractRun!).recorded).toBe(false);
+
+        const extractIntent = eventState.recordExtractIntent('extract.tutorial-qingyun-rope-bridge', '2026-05-14T00:05:00.000Z');
+
+        expect(extractIntent.status).toBe('recorded');
+        expect(createExtractNodeView('extract.tutorial-qingyun-rope-bridge', extractIntent.activeRun!).recorded).toBe(true);
     });
 });

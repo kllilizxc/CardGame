@@ -1,0 +1,45 @@
+{
+  "id": "tutorial.qingyun-events-outer-mountain",
+  "eventsByNodeId": {
+    "event.tutorial-qingyun-first-cache": {
+      "nodeId": "event.tutorial-qingyun-first-cache",
+      "title": "守山补给匣",
+      "description": "石阶旁留着一只青云外门补给匣。教程会固定选中护符补给，确保玩家第一次秘境事件能稳定理解奖励领取。",
+      "pool": [
+        {
+          "id": "outcome.tutorial.qingyun.guard-talisman-cache",
+          "weight": 1,
+          "label": "取走护身补给",
+          "description": "匣内压着一张护体符、一份基础符箓材料，以及足够你试一次商店取舍的灵石。",
+          "rewards": {
+            "cards": [
+              {
+                "id": "TL_002",
+                "count": 1
+              }
+            ],
+            "items": [
+              {
+                "id": "tool_talisman_basic",
+                "itemType": "tool",
+                "count": 1
+              }
+            ],
+            "spiritStones": 12
+          }
+        },
+        {
+          "id": "outcome.tutorial.qingyun.spare-spirit-stones",
+          "weight": 1,
+          "label": "只拿应急灵石",
+          "description": "如果不启用教程固定 outcome，普通事件池仍可随机到另一份较简单的灵石补给。",
+          "rewards": {
+            "cards": [],
+            "items": [],
+            "spiritStones": 10
+          }
+        }
+      ]
+    }
+  }
+}

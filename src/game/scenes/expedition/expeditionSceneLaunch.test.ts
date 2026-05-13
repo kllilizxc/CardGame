@@ -169,6 +169,72 @@ describe('expeditionSceneLaunch', () => {
         });
     });
 
+    it('normalizes and resolves the tutorial outer-mountain Expedition target without changing direct/default targets', () => {
+        const launch = normalizeExpeditionSceneLaunchData({
+            source: 'worldMap',
+            destinationId: 'destination.tutorial-qingyun-outer-mountain',
+            expeditionId: 'tutorial.qingyun-expedition',
+            mapId: 'tutorial.qingyun-expedition-outer-mountain-map',
+            worldStateResourceId: 'tutorial.qingyun-world-seed',
+            worldStateFile: 'data/world/tutorial-qingyun-initial-state.json',
+            starterDeckResourceId: 'tutorial.qingyun-deck-casket-starter',
+            starterDeckFile: 'data/decks/tutorial-qingyun-casket-starter.json',
+            mapResourceId: 'tutorial.qingyun-expedition-outer-mountain-map',
+            mapFile: 'data/mijing/tutorial-qingyun-outer-mountain-map.json',
+            eventsResourceId: 'tutorial.qingyun-events-outer-mountain',
+            eventsFile: 'data/mijing/tutorial-qingyun-events.json',
+            shopResourceId: 'tutorial.qingyun-shop-wayfarer',
+            shopFile: 'data/mijing/tutorial-qingyun-shop.json',
+            statusText: '进入青云外山教学试炼。',
+        });
+
+        expect(launch).toMatchObject({
+            source: 'worldMap',
+            destinationId: 'destination.tutorial-qingyun-outer-mountain',
+            routeKey: 'expedition:tutorial.qingyun-expedition:tutorial.qingyun-expedition-outer-mountain-map',
+            expeditionId: 'tutorial.qingyun-expedition',
+            mapId: 'tutorial.qingyun-expedition-outer-mountain-map',
+            worldStateResourceId: 'tutorial.qingyun-world-seed',
+            starterDeckResourceId: 'tutorial.qingyun-deck-casket-starter',
+            mapResourceId: 'tutorial.qingyun-expedition-outer-mountain-map',
+            eventsResourceId: 'tutorial.qingyun-events-outer-mountain',
+            shopResourceId: 'tutorial.qingyun-shop-wayfarer',
+            statusText: '进入青云外山教学试炼。',
+        });
+        expect(resolveExpeditionSceneCatalogResources(contentCatalogJson, launch)).toEqual({
+            worldState: {
+                resourceId: 'tutorial.qingyun-world-seed',
+                publicPath: 'data/world/tutorial-qingyun-initial-state.json',
+                cacheKey: 'expeditionInitialState:data/world/tutorial-qingyun-initial-state.json',
+            },
+            starterDeck: {
+                resourceId: 'tutorial.qingyun-deck-casket-starter',
+                publicPath: 'data/decks/tutorial-qingyun-casket-starter.json',
+                cacheKey: 'expeditionStarterDeck:data/decks/tutorial-qingyun-casket-starter.json',
+            },
+            map: {
+                resourceId: 'tutorial.qingyun-expedition-outer-mountain-map',
+                publicPath: 'data/mijing/tutorial-qingyun-outer-mountain-map.json',
+                cacheKey: 'expeditionPrototypeMap:data/mijing/tutorial-qingyun-outer-mountain-map.json',
+            },
+            events: {
+                resourceId: 'tutorial.qingyun-events-outer-mountain',
+                publicPath: 'data/mijing/tutorial-qingyun-events.json',
+                cacheKey: 'expeditionPrototypeEvents:data/mijing/tutorial-qingyun-events.json',
+            },
+            shop: {
+                resourceId: 'tutorial.qingyun-shop-wayfarer',
+                publicPath: 'data/mijing/tutorial-qingyun-shop.json',
+                cacheKey: 'expeditionPrototypeShop:data/mijing/tutorial-qingyun-shop.json',
+            },
+        });
+        expect(normalizeExpeditionSceneLaunchData(undefined)).toMatchObject({
+            routeKey: `expedition:${DEFAULT_EXPEDITION_ID}:${DEFAULT_EXPEDITION_MAP_ID}`,
+            mapResourceId: DEFAULT_EXPEDITION_TARGET_RESOURCE_IDS.mapResourceId,
+            mapFile: DEFAULT_EXPEDITION_TARGET_FILES.mapFile,
+        });
+    });
+
     it('rejects catalog resource ids whose public paths do not match Expedition compatibility file aliases', () => {
         const launch = normalizeExpeditionSceneLaunchData({
             worldStateResourceId: 'world.seed.initial-state',

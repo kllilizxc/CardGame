@@ -1,0 +1,33 @@
+{
+  "time": "教程 · 青云入门前",
+  "location": "青云外山入口",
+  "player": {
+    "name": "教学玩家",
+    "realm": "凡人",
+    "attributes": {
+      "悟性": 60,
+      "心性": 55,
+      "机缘": 50
+    },
+    "tags": ["教程", "初入青云"]
+  },
+  "stash": {
+    "stashId": "tutorial.qingyun.starter-stash",
+    "deckRef": "tutorial.qingyun-deck-casket-starter",
+    "items": [
+      {
+        "id": "tool.return-rope",
+        "itemType": "tool",
+        "count": 1
+      },
+      {
+        "id": "consumable.spirit-salve",
+        "itemType": "consumable",
+        "count": 1
+      }
+    ],
+    "spiritStones": 0
+  },
+  "npcs": [],
+  "flags": ["tutorial.qingyun.seed"]
+}

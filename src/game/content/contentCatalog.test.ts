@@ -28,12 +28,18 @@ const expectedCheckedInResources = [
     ['story', 'data/story/story-graph.json'],
     ['expeditionMap', 'data/mijing/jade-cave-map.json'],
     ['expeditionMap', 'data/mijing/prototype-map.json'],
+    ['expeditionMap', 'data/mijing/tutorial-qingyun-outer-mountain-map.json'],
     ['expeditionEvents', 'data/mijing/prototype-events.json'],
+    ['expeditionEvents', 'data/mijing/tutorial-qingyun-events.json'],
     ['expeditionShop', 'data/mijing/prototype-shop.json'],
+    ['expeditionShop', 'data/mijing/tutorial-qingyun-shop.json'],
     ['deck', 'data/decks/starter-deck.json'],
+    ['deck', 'data/decks/tutorial-qingyun-casket-starter.json'],
     ['encounter', 'data/encounters/medium-enemy.json'],
     ['encounter', 'data/encounters/mijing-boss.json'],
     ['encounter', 'data/encounters/test-enemy.json'],
+    ['encounter', 'data/encounters/tutorial-qingyun-mind-echo.json'],
+    ['encounter', 'data/encounters/tutorial-qingyun-mist-fox.json'],
     ['card', 'data/cards/artifacts.json'],
     ['card', 'data/cards/fields.json'],
     ['card', 'data/cards/pills.json'],
@@ -47,6 +53,7 @@ const expectedCheckedInResources = [
     ['config', 'data/config/realm-presets.json'],
     ['worldSeed', 'data/world/factions.json'],
     ['worldSeed', 'data/world/initial-state.json'],
+    ['worldSeed', 'data/world/tutorial-qingyun-initial-state.json'],
     ['worldSeed', 'data/world/items.artifacts.json'],
     ['worldSeed', 'data/world/meta.json'],
     ['worldSeed', 'data/world/npcs.json'],
@@ -738,6 +745,87 @@ describe('content catalog', () => {
                 kind: 'expeditionShop',
                 schemaVersion: 1,
                 publicPath: 'data/mijing/prototype-shop.json',
+            },
+        ]);
+    });
+
+    it('resolves checked-in tutorial Expedition resources by stable catalog ids', () => {
+        const resolver = createContentCatalogResolver(readCatalogJson(), {
+            context: 'ExpeditionScene',
+            sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+        });
+
+        expect([
+            resolver.resolveJsonResource({
+                resourceId: 'tutorial.qingyun-world-seed',
+                expectedKind: 'worldSeed',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'tutorial.qingyun-deck-casket-starter',
+                expectedKind: 'deck',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'tutorial.qingyun-expedition-outer-mountain-map',
+                expectedKind: 'expeditionMap',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'tutorial.qingyun-events-outer-mountain',
+                expectedKind: 'expeditionEvents',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'tutorial.qingyun-shop-wayfarer',
+                expectedKind: 'expeditionShop',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'tutorial.qingyun-encounter-mist-fox',
+                expectedKind: 'encounter',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'tutorial.qingyun-encounter-mind-echo',
+                expectedKind: 'encounter',
+            }),
+        ]).toEqual([
+            {
+                resourceId: 'tutorial.qingyun-world-seed',
+                kind: 'worldSeed',
+                schemaVersion: 1,
+                publicPath: 'data/world/tutorial-qingyun-initial-state.json',
+            },
+            {
+                resourceId: 'tutorial.qingyun-deck-casket-starter',
+                kind: 'deck',
+                schemaVersion: 1,
+                publicPath: 'data/decks/tutorial-qingyun-casket-starter.json',
+            },
+            {
+                resourceId: 'tutorial.qingyun-expedition-outer-mountain-map',
+                kind: 'expeditionMap',
+                schemaVersion: 1,
+                publicPath: 'data/mijing/tutorial-qingyun-outer-mountain-map.json',
+            },
+            {
+                resourceId: 'tutorial.qingyun-events-outer-mountain',
+                kind: 'expeditionEvents',
+                schemaVersion: 1,
+                publicPath: 'data/mijing/tutorial-qingyun-events.json',
+            },
+            {
+                resourceId: 'tutorial.qingyun-shop-wayfarer',
+                kind: 'expeditionShop',
+                schemaVersion: 1,
+                publicPath: 'data/mijing/tutorial-qingyun-shop.json',
+            },
+            {
+                resourceId: 'tutorial.qingyun-encounter-mist-fox',
+                kind: 'encounter',
+                schemaVersion: 1,
+                publicPath: 'data/encounters/tutorial-qingyun-mist-fox.json',
+            },
+            {
+                resourceId: 'tutorial.qingyun-encounter-mind-echo',
+                kind: 'encounter',
+                schemaVersion: 1,
+                publicPath: 'data/encounters/tutorial-qingyun-mind-echo.json',
             },
         ]);
     });
