@@ -6,6 +6,7 @@ import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import {
     BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
     BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
+    createBattleDeckStartupPlan,
     getBattleDeckCacheKey,
     getBattleDeckFile,
     getBattleDeckStacks,
@@ -109,12 +110,96 @@ describe('battleSceneLaunch', () => {
         expect(normalizeBattleLaunchPayload({})).toBeNull();
     });
 
+    it('normalizes Expedition battle launch nested payload fields without sharing mutable references', () => {
+        const richPayload: BattleLaunchPayload = {
+            ...payload,
+            carriedDeck: [{ id: 'AR_001', count: 1 }],
+            rewardPreview: {
+                cards: [{ id: 'TL_002', count: 1 }],
+                items: [{ id: 'artifact.test', itemType: 'artifact', count: 1 }],
+                spiritStones: 5,
+            },
+            targetConfig: {
+                routeKey: 'expedition:expedition.test:map.test',
+                expeditionId: 'expedition.test',
+                mapId: 'map.test',
+                worldStateFile: 'data/world/initial-state.json',
+                starterDeckFile: 'data/decks/starter-deck.json',
+                mapFile: 'data/mijing/prototype-map.json',
+                eventsFile: 'data/mijing/prototype-events.json',
+                shopFile: 'data/mijing/prototype-shop.json',
+            },
+            deterministicBattleSetup: {
+                deckOrder: 'preserve-json-order',
+            },
+        };
+
+        const normalized = normalizeBattleLaunchPayload(richPayload);
+
+        expect(normalized).toEqual(richPayload);
+        expect(normalized?.runDeck).not.toBe(richPayload.runDeck);
+        expect(normalized?.carriedDeck).not.toBe(richPayload.carriedDeck);
+        expect(normalized?.rewardPreview).not.toBe(richPayload.rewardPreview);
+        expect(normalized?.rewardPreview?.cards).not.toBe(richPayload.rewardPreview?.cards);
+        expect(normalized?.rewardPreview?.items).not.toBe(richPayload.rewardPreview?.items);
+        expect(normalized?.targetConfig).not.toBe(richPayload.targetConfig);
+        expect(normalized?.deterministicBattleSetup).not.toBe(richPayload.deterministicBattleSetup);
+    });
+
     it('falls back to starter deck and default encounter when no payload exists', () => {
         const starterDeck = { cards: [{ id: 'AR_001', count: 3 }] };
 
         expect(getBattleDeckStacks(null, starterDeck)).toEqual([{ id: 'AR_001', count: 3 }]);
         expect(getEncounterCacheKey(null)).toBe('currentEncounter');
         expect(getEncounterFile(null)).toBe('data/encounters/medium-enemy.json');
+    });
+
+    it('keeps direct/default, Expedition, and ordinary Story battle deck starts shuffled by default', () => {
+        const starterDeck = {
+            cards: [
+                { id: 'SX_YJZ_001', count: 1 },
+                { id: 'AR_001', count: 2 },
+            ],
+        };
+        const storyPayload = createStoryPayload();
+
+        expect(createBattleDeckStartupPlan(null, null, starterDeck)).toEqual({
+            stacks: starterDeck.cards,
+            shouldShuffle: true,
+        });
+        expect(createBattleDeckStartupPlan(payload, null, starterDeck)).toEqual({
+            stacks: payload.runDeck,
+            shouldShuffle: true,
+        });
+        expect(createBattleDeckStartupPlan(null, storyPayload, starterDeck)).toEqual({
+            stacks: starterDeck.cards,
+            shouldShuffle: true,
+        });
+    });
+
+    it('lets tutorial Story battles opt in to preserving deck JSON stack order for predictable initial draws', () => {
+        const starterDeck = {
+            cards: [
+                { id: 'SX_YJZ_001', count: 2 },
+                { id: 'AR_001', count: 1 },
+                { id: 'TL_002', count: 2 },
+            ],
+        };
+        const tutorialStoryPayload = createStoryPayload();
+        tutorialStoryPayload.battleLaunch.deterministicBattleSetup = {
+            deckOrder: 'preserve-json-order',
+        };
+
+        const plan = createBattleDeckStartupPlan(null, tutorialStoryPayload, starterDeck);
+        const initialDrawIds = plan.stacks.flatMap((stack) => Array.from(
+            { length: stack.count },
+            () => stack.id,
+        )).slice(0, 5);
+
+        expect(plan.shouldShuffle).toBe(false);
+        expect(plan.stacks).toEqual(starterDeck.cards);
+        expect(plan.stacks).not.toBe(starterDeck.cards);
+        expect(initialDrawIds).toEqual(['SX_YJZ_001', 'SX_YJZ_001', 'AR_001', 'TL_002', 'TL_002']);
     });
 
     it('resolves direct/default Battle encounter and starter deck through catalog resource ids while preserving cache keys', () => {
@@ -432,6 +517,38 @@ describe('battleSceneLaunch', () => {
         expect(getEncounterCacheKey(null, normalized)).toBe('storyEncounter:story.test-battle:story.test-battle.first-duel');
         expect(getBattleDeckFile(normalized)).toBe('data/decks/starter-deck.json');
         expect(getBattleDeckCacheKey(normalized)).toBe('storyDeck:story.test-battle:story.test-battle.first-duel');
+    });
+
+    it('normalizes tutorial deterministic battle setup without sharing mutable payload references', () => {
+        const storyPayload = createStoryPayload();
+        storyPayload.battleLaunch.deterministicBattleSetup = {
+            deckOrder: 'preserve-json-order',
+        };
+
+        const normalized = normalizeStoryBattleLaunchPayload(storyPayload);
+
+        expect(normalized?.battleLaunch.deterministicBattleSetup).toEqual({
+            deckOrder: 'preserve-json-order',
+        });
+        expect(normalized?.battleLaunch.deterministicBattleSetup)
+            .not.toBe(storyPayload.battleLaunch.deterministicBattleSetup);
+
+        if (!normalized?.battleLaunch.deterministicBattleSetup) {
+            throw new Error('Expected deterministic battle setup to normalize.');
+        }
+
+        normalized.battleLaunch.deterministicBattleSetup.deckOrder = 'mutated' as never;
+
+        expect(storyPayload.battleLaunch.deterministicBattleSetup?.deckOrder).toBe('preserve-json-order');
+    });
+
+    it('rejects story battle launch payloads with unsupported deterministic deck setup values', () => {
+        const storyPayload = createStoryPayload();
+        storyPayload.battleLaunch.deterministicBattleSetup = {
+            deckOrder: 'debug-no-shuffle' as never,
+        };
+
+        expect(normalizeStoryBattleLaunchPayload(storyPayload)).toBeNull();
     });
 
     it('resolves Story-sourced battle encounter and deck files through catalog resource ids while keeping cache keys and file aliases stable', () => {

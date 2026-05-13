@@ -73,6 +73,7 @@ describe('createBattleLaunchPayload', () => {
     it('starts BattleScene with an isolated copy of the pending battle payload', () => {
         const battleNode = prototypeMapJson.nodes.find((node) => node.id === 'battle.mist-foxes') as ExpeditionEncounterMapNode;
         const payload = createBattleLaunchPayload(createRunSnapshot(), battleNode);
+        payload.deterministicBattleSetup = { deckOrder: 'preserve-json-order' };
         const calls: Array<{ sceneKey: string; data: unknown }> = [];
 
         startBattleSceneFromPayload({
@@ -82,6 +83,8 @@ describe('createBattleLaunchPayload', () => {
         expect(calls).toEqual([{ sceneKey: 'BattleScene', data: payload }]);
         expect(calls[0].data).not.toBe(payload);
         expect((calls[0].data as typeof payload).runDeck).not.toBe(payload.runDeck);
+        expect((calls[0].data as typeof payload).deterministicBattleSetup)
+            .not.toBe(payload.deterministicBattleSetup);
     });
 
     it('builds the BattleScene payload for the prototype boss encounter file', () => {

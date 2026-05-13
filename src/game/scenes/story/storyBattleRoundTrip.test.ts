@@ -131,6 +131,37 @@ describe('storyBattleRoundTrip', () => {
         expect(intent.payload.selectedChoiceIds).not.toBe(transition.nextSelectedChoiceIds);
     });
 
+    it('preserves tutorial deterministic battle setup through StoryScene launch without sharing nested references', () => {
+        const { transition } = createBattleTransition();
+        transition.battleLaunch.deterministicBattleSetup = {
+            deckOrder: 'preserve-json-order',
+        };
+
+        const startPayload = createStoryBattleSceneStartPayload(
+            transition.battleLaunch,
+            transition.nextStoryState,
+            transition.nextSelectedChoiceIds,
+        );
+        const intent = createStorySceneTransitionIntent(transition, '以卡匣应战');
+
+        expect(startPayload.battleLaunch.deterministicBattleSetup).toEqual({
+            deckOrder: 'preserve-json-order',
+        });
+        expect(startPayload.battleLaunch.deterministicBattleSetup)
+            .not.toBe(transition.battleLaunch.deterministicBattleSetup);
+
+        expect(intent.kind).toBe('startBattleScene');
+        if (intent.kind !== 'startBattleScene') {
+            throw new Error('Expected battle scene start intent.');
+        }
+
+        expect(intent.payload.battleLaunch.deterministicBattleSetup).toEqual({
+            deckOrder: 'preserve-json-order',
+        });
+        expect(intent.payload.battleLaunch.deterministicBattleSetup)
+            .not.toBe(transition.battleLaunch.deterministicBattleSetup);
+    });
+
     it('routes story battle results to the declared victory or defeat continuation nodes', () => {
         const { graph, transition } = createBattleTransition();
         const startPayload = createStoryBattleSceneStartPayload(

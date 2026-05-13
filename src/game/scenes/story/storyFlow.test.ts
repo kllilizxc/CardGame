@@ -168,6 +168,9 @@ describe('storyFlow', () => {
                     encounterFile: 'data/encounters/test-enemy.json',
                     deckResourceId: 'deck.starter',
                     deckFile: 'data/decks/starter-deck.json',
+                    deterministicBattleSetup: {
+                        deckOrder: 'preserve-json-order',
+                    },
                     onVictoryNodeId: 'duel_victory',
                     onDefeatNodeId: 'duel_defeat',
                     launchText: '执事示意你以卡匣应战。',
@@ -187,6 +190,9 @@ describe('storyFlow', () => {
                     encounterFile: 'data/encounters/test-enemy.json',
                     deckResourceId: 'deck.starter',
                     deckFile: 'data/decks/starter-deck.json',
+                    deterministicBattleSetup: {
+                        deckOrder: 'preserve-json-order',
+                    },
                     onVictoryNodeId: 'duel_victory',
                     onDefeatNodeId: 'duel_defeat',
                     launchText: '执事示意你以卡匣应战。',
@@ -199,6 +205,13 @@ describe('storyFlow', () => {
 
         expect(() => validatePlayableStoryGraph(brokenGraph)).toThrow(
             'Story graph choices[0].effects[0].battle.onVictoryNodeId must reference an existing node: missing_victory_node',
+        );
+
+        const brokenSetupGraph = structuredClone(battleGraph);
+        brokenSetupGraph.choices[0].effects[0].battle.deterministicBattleSetup.deckOrder = 'debug-no-shuffle';
+
+        expect(() => validatePlayableStoryGraph(brokenSetupGraph)).toThrow(
+            'Story graph choices[0].effects[0].battle.deterministicBattleSetup.deckOrder must be preserve-json-order when deterministic battle setup is provided.',
         );
     });
 

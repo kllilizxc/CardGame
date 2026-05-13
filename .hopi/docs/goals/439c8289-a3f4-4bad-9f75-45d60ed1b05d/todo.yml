@@ -1,0 +1,8 @@
+version: 1
+goals:
+  - goalKey: 439c8289-a3f4-4bad-9f75-45d60ed1b05d
+    items:
+      - ref: tutorial-deterministic-battle-order
+        status: done
+        title: 为教程战斗添加确定性牌序启动边界
+        taskId: b39da02b-8c6e-43af-8ad4-a3e27658c922

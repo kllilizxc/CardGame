@@ -35,6 +35,9 @@ export interface BattleSceneStarter {
 
 export function createBattleSceneStartPayload(payload: BattleLaunchPayload): BattleLaunchPayload {
     const targetConfig = cloneTargetConfig(payload.targetConfig);
+    const deterministicBattleSetup = payload.deterministicBattleSetup
+        ? { ...payload.deterministicBattleSetup }
+        : undefined;
 
     return {
         ...payload,
@@ -48,6 +51,7 @@ export function createBattleSceneStartPayload(payload: BattleLaunchPayload): Bat
             }
             : undefined,
         ...(targetConfig ? { targetConfig } : {}),
+        ...(deterministicBattleSetup ? { deterministicBattleSetup } : {}),
     };
 }
 

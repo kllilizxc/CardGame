@@ -52,9 +52,9 @@ import {
     BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
     BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
     BATTLE_STATUS_DEFINITIONS_CACHE_KEY,
+    createBattleDeckStartupPlan,
     getBattleDeckCacheKey,
     getBattleDeckFile,
-    getBattleDeckStacks,
     getEncounterCacheKey,
     getEncounterFile,
     getEncounterUnits,
@@ -330,6 +330,11 @@ export class BattleScene extends Scene {
         const pillCardsData = this.getRequiredSharedRuntimeJson('pillCards') as { pills: any[] };
         const skillCardsData = this.getRequiredSharedRuntimeJson('skillCards') as { skills: SkillCard[] };
         const starterDeckData = this.cache.json.get(this.deckCacheKey) as { cards: Array<{ id: string; count: number }> };
+        const deckStartupPlan = createBattleDeckStartupPlan(
+            this.launchPayload,
+            this.storyLaunchPayload,
+            starterDeckData,
+        );
 
         // 创建卡牌索引
         const allCards = new Map<string, any>();
@@ -341,7 +346,7 @@ export class BattleScene extends Scene {
 
         // 根据初始卡组配置构建牌库（支持 UnitCard 和 ArtifactCard）
         this.deck = [];
-        getBattleDeckStacks(this.launchPayload, starterDeckData).forEach(({ id, count }) => {
+        deckStartupPlan.stacks.forEach(({ id, count }) => {
             const cardDataTemplate = allCards.get(id);
             if (cardDataTemplate) {
                 for (let i = 0; i < count; i++) {
@@ -355,7 +360,9 @@ export class BattleScene extends Scene {
         });
         
         console.log(`初始卡组加载完成，共 ${this.deck.length} 张卡牌`);
-        Phaser.Utils.Array.Shuffle(this.deck);
+        if (deckStartupPlan.shouldShuffle) {
+            Phaser.Utils.Array.Shuffle(this.deck);
+        }
 
         // 创建场地区域
         this.createFieldZones();

@@ -24,7 +24,12 @@ function cloneFlagMap(values: Record<string, boolean> | undefined): Record<strin
 }
 
 function cloneStoryBattleTrigger(battle: StoryBattleTrigger): StoryBattleTrigger {
-    return { ...battle };
+    return {
+        ...battle,
+        ...(battle.deterministicBattleSetup
+            ? { deterministicBattleSetup: { ...battle.deterministicBattleSetup } }
+            : {}),
+    };
 }
 
 function compareNumber(left: number, operator: StoryAttributeOperator, right: number): boolean {

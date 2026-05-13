@@ -1,8 +1,11 @@
 import type {
     BattleLaunchPayload,
     ExpeditionCardStack,
+    ExpeditionItemStack,
     ExpeditionTargetConfig,
+    RunRewardBundle,
 } from '../../types/expedition';
+import type { DeterministicBattleSetup } from '../../types/battle';
 import {
     CONTENT_CATALOG_PUBLIC_PATH,
     createContentCatalogResolver,
@@ -158,6 +161,8 @@ const BATTLE_OPTIONAL_SHARED_RUNTIME_CONFIG_REQUESTS: BattleSharedRuntimeResourc
     },
 ];
 
+const EXPEDITION_ITEM_TYPES: ExpeditionItemStack['itemType'][] = ['artifact', 'tool', 'consumable', 'quest'];
+
 function isRunDeck(value: unknown): value is ExpeditionCardStack[] {
     return Array.isArray(value)
         && value.every((stack) => {
@@ -168,6 +173,41 @@ function isRunDeck(value: unknown): value is ExpeditionCardStack[] {
             const candidate = stack as Partial<ExpeditionCardStack>;
             return typeof candidate.id === 'string' && typeof candidate.count === 'number';
         });
+}
+
+function isExpeditionItemStack(value: unknown): value is ExpeditionItemStack {
+    if (typeof value !== 'object' || value === null) {
+        return false;
+    }
+
+    const candidate = value as Partial<ExpeditionItemStack>;
+
+    return typeof candidate.id === 'string'
+        && EXPEDITION_ITEM_TYPES.includes(candidate.itemType as ExpeditionItemStack['itemType'])
+        && typeof candidate.count === 'number';
+}
+
+function isRunRewardBundle(value: unknown): value is RunRewardBundle {
+    if (typeof value !== 'object' || value === null) {
+        return false;
+    }
+
+    const candidate = value as Partial<RunRewardBundle>;
+
+    return isRunDeck(candidate.cards)
+        && Array.isArray(candidate.items)
+        && candidate.items.every(isExpeditionItemStack)
+        && typeof candidate.spiritStones === 'number';
+}
+
+function isDeterministicBattleSetup(value: unknown): value is DeterministicBattleSetup {
+    if (typeof value !== 'object' || value === null) {
+        return false;
+    }
+
+    const candidate = value as Partial<DeterministicBattleSetup>;
+
+    return candidate.deckOrder === 'preserve-json-order';
 }
 
 function isBattleLaunchPayload(value: unknown): value is BattleLaunchPayload {
@@ -183,7 +223,11 @@ function isBattleLaunchPayload(value: unknown): value is BattleLaunchPayload {
         && typeof candidate.encounterId === 'string'
         && (candidate.encounterResourceId === undefined || typeof candidate.encounterResourceId === 'string')
         && typeof candidate.encounterFile === 'string'
-        && isRunDeck(candidate.runDeck);
+        && (candidate.carriedDeck === undefined || isRunDeck(candidate.carriedDeck))
+        && isRunDeck(candidate.runDeck)
+        && (candidate.rewardPreview === undefined || isRunRewardBundle(candidate.rewardPreview))
+        && (candidate.deterministicBattleSetup === undefined
+            || isDeterministicBattleSetup(candidate.deterministicBattleSetup));
 }
 
 function isExpeditionTargetConfig(value: unknown): value is ExpeditionTargetConfig {
@@ -286,7 +330,9 @@ function isStoryBattleLaunchMetadata(value: unknown): value is StoryBattleLaunch
         && typeof candidate.deckFile === 'string'
         && typeof candidate.onVictoryNodeId === 'string'
         && typeof candidate.onDefeatNodeId === 'string'
-        && (candidate.launchText === undefined || typeof candidate.launchText === 'string');
+        && (candidate.launchText === undefined || typeof candidate.launchText === 'string')
+        && (candidate.deterministicBattleSetup === undefined
+            || isDeterministicBattleSetup(candidate.deterministicBattleSetup));
 }
 
 function isStoryHubSessionKey(value: unknown): value is StoryHubSessionKey {
@@ -328,6 +374,37 @@ function cloneStoryState(state: StoryState): StoryState {
     };
 }
 
+function cloneDeterministicBattleSetup(
+    setup: DeterministicBattleSetup | undefined,
+): DeterministicBattleSetup | undefined {
+    return setup ? { deckOrder: setup.deckOrder } : undefined;
+}
+
+function cloneRunDeck(stacks: ExpeditionCardStack[] | undefined): ExpeditionCardStack[] | undefined {
+    return stacks?.map((stack) => ({ ...stack }));
+}
+
+function cloneRewardBundle(reward: RunRewardBundle | undefined): RunRewardBundle | undefined {
+    return reward
+        ? {
+            cards: reward.cards.map((stack) => ({ ...stack })),
+            items: reward.items.map((stack) => ({ ...stack })),
+            spiritStones: reward.spiritStones,
+        }
+        : undefined;
+}
+
+function cloneStoryBattleLaunchMetadata(
+    battleLaunch: StoryBattleLaunchMetadata,
+): StoryBattleLaunchMetadata {
+    const deterministicBattleSetup = cloneDeterministicBattleSetup(battleLaunch.deterministicBattleSetup);
+
+    return {
+        ...battleLaunch,
+        ...(deterministicBattleSetup ? { deterministicBattleSetup } : {}),
+    };
+}
+
 export function normalizeBattleLaunchPayload(data: unknown): BattleLaunchPayload | null {
     if (!isBattleLaunchPayload(data)) {
         return null;
@@ -335,6 +412,9 @@ export function normalizeBattleLaunchPayload(data: unknown): BattleLaunchPayload
     const targetConfig = isExpeditionTargetConfig(data.targetConfig)
         ? cloneExpeditionTargetConfig(data.targetConfig)
         : undefined;
+    const carriedDeck = cloneRunDeck(data.carriedDeck);
+    const rewardPreview = cloneRewardBundle(data.rewardPreview);
+    const deterministicBattleSetup = cloneDeterministicBattleSetup(data.deterministicBattleSetup);
 
     return {
         runId: data.runId,
@@ -343,9 +423,11 @@ export function normalizeBattleLaunchPayload(data: unknown): BattleLaunchPayload
         encounterId: data.encounterId,
         ...(data.encounterResourceId ? { encounterResourceId: data.encounterResourceId } : {}),
         encounterFile: data.encounterFile,
+        ...(carriedDeck ? { carriedDeck } : {}),
         runDeck: data.runDeck.map((stack) => ({ ...stack })),
-        ...(data.rewardPreview ? { rewardPreview: data.rewardPreview } : {}),
+        ...(rewardPreview ? { rewardPreview } : {}),
         ...(targetConfig ? { targetConfig } : {}),
+        ...(deterministicBattleSetup ? { deterministicBattleSetup } : {}),
     };
 }
 
@@ -357,7 +439,7 @@ export function normalizeStoryBattleLaunchPayload(data: unknown): StoryBattleSce
     return {
         source: 'story',
         ...(data.storyResourceId ? { storyResourceId: data.storyResourceId } : {}),
-        battleLaunch: { ...data.battleLaunch },
+        battleLaunch: cloneStoryBattleLaunchMetadata(data.battleLaunch),
         storyState: cloneStoryState(data.storyState),
         selectedChoiceIds: [...data.selectedChoiceIds],
         ...(data.storyGraphFile ? { storyGraphFile: data.storyGraphFile } : {}),
@@ -370,6 +452,32 @@ export function getBattleDeckStacks(
     starterDeck: StarterDeckData,
 ): ExpeditionCardStack[] {
     return (payload?.runDeck ?? starterDeck.cards).map((stack) => ({ ...stack }));
+}
+
+export interface BattleDeckStartupPlan {
+    stacks: ExpeditionCardStack[];
+    shouldShuffle: boolean;
+}
+
+export function shouldShuffleBattleDeck(
+    payload: BattleLaunchPayload | null,
+    storyPayload: StoryBattleSceneLaunchPayload | null = null,
+): boolean {
+    const deterministicBattleSetup = storyPayload?.battleLaunch.deterministicBattleSetup
+        ?? payload?.deterministicBattleSetup;
+
+    return deterministicBattleSetup?.deckOrder !== 'preserve-json-order';
+}
+
+export function createBattleDeckStartupPlan(
+    payload: BattleLaunchPayload | null,
+    storyPayload: StoryBattleSceneLaunchPayload | null,
+    starterDeck: StarterDeckData,
+): BattleDeckStartupPlan {
+    return {
+        stacks: getBattleDeckStacks(payload, starterDeck),
+        shouldShuffle: shouldShuffleBattleDeck(payload, storyPayload),
+    };
 }
 
 export function getEncounterCacheKey(

@@ -8,6 +8,7 @@ import type {
     StoryEffect,
     StoryInitialStateSeed,
 } from '../../types/story';
+import type { DeterministicBattleSetup } from '../../types/battle';
 
 export interface StoryAiHints {
     tone?: string;
@@ -248,11 +249,33 @@ function parseOptionalStoryCondition(value: unknown, label: string): StoryCondit
     return parseStoryCondition(value, label);
 }
 
+function parseDeterministicBattleSetup(value: unknown, label: string): DeterministicBattleSetup | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    assertRecord(value, label);
+
+    const deckOrder = readRequiredString(value, 'deckOrder', label);
+
+    if (deckOrder !== 'preserve-json-order') {
+        throw new Error(
+            `Story graph ${label}.deckOrder must be preserve-json-order when deterministic battle setup is provided.`,
+        );
+    }
+
+    return { deckOrder };
+}
+
 function parseStoryBattleTrigger(value: unknown, label: string): StoryBattleTrigger {
     assertRecord(value, label);
 
     const encounterResourceId = readOptionalString(value, 'encounterResourceId', label);
     const deckResourceId = readOptionalString(value, 'deckResourceId', label);
+    const deterministicBattleSetup = parseDeterministicBattleSetup(
+        value.deterministicBattleSetup,
+        `${label}.deterministicBattleSetup`,
+    );
     const trigger: StoryBattleTrigger = {
         battleId: readRequiredString(value, 'battleId', label),
         ...(encounterResourceId ? { encounterResourceId } : {}),
@@ -260,6 +283,7 @@ function parseStoryBattleTrigger(value: unknown, label: string): StoryBattleTrig
         encounterFile: readRequiredString(value, 'encounterFile', label),
         ...(deckResourceId ? { deckResourceId } : {}),
         deckFile: readRequiredString(value, 'deckFile', label),
+        ...(deterministicBattleSetup ? { deterministicBattleSetup } : {}),
         onVictoryNodeId: readRequiredString(value, 'onVictoryNodeId', label),
         onDefeatNodeId: readRequiredString(value, 'onDefeatNodeId', label),
     };

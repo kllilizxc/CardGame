@@ -218,10 +218,19 @@ function getChoiceStoryEffects(choice: StoryChoiceDefinition): StoryEffect[] {
     return Array.isArray(choice.effects) ? [...choice.effects] : [];
 }
 
+function cloneStoryBattleTrigger(battle: StoryBattleTrigger): StoryBattleTrigger {
+    return {
+        ...battle,
+        ...(battle.deterministicBattleSetup
+            ? { deterministicBattleSetup: { ...battle.deterministicBattleSetup } }
+            : {}),
+    };
+}
+
 function findStoryBattleTrigger(effects: StoryEffect[]): StoryBattleTrigger | null {
     const battleEffect = effects.find((effect) => effect.kind === 'startBattle');
 
-    return battleEffect?.kind === 'startBattle' ? { ...battleEffect.battle } : null;
+    return battleEffect?.kind === 'startBattle' ? cloneStoryBattleTrigger(battleEffect.battle) : null;
 }
 
 function createStoryBattleLaunchMetadata(params: {
@@ -237,7 +246,7 @@ function createStoryBattleLaunchMetadata(params: {
         sourceNodeId: params.sourceNodeId,
         sourceChoiceId: params.sourceChoiceId,
         targetNodeId: params.targetNodeId,
-        ...params.battle,
+        ...cloneStoryBattleTrigger(params.battle),
     };
 }
 

@@ -1,3 +1,5 @@
+import type { DeterministicBattleSetup } from './battle';
+
 export type ExpeditionNodeType = 'entrance' | 'battle' | 'event' | 'shop' | 'extract' | 'boss';
 export type ExpeditionEncounterNodeType = Extract<ExpeditionNodeType, 'battle' | 'boss'>;
 export type ExpeditionContentNodeType = Extract<ExpeditionNodeType, 'event' | 'shop'>;
@@ -95,6 +97,7 @@ export interface BattleLaunchPayload {
     runDeck: ExpeditionCardStack[];
     rewardPreview?: RunRewardBundle;
     targetConfig?: ExpeditionTargetConfig;
+    deterministicBattleSetup?: DeterministicBattleSetup;
 }
 
 export type ExpeditionBattleOutcome = 'battle-victory' | 'boss-clear' | 'defeat';
