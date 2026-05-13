@@ -97,7 +97,7 @@ export class TutorialOverlayController {
                 return true;
             }
         }
-        return false;
+        return record.tutorial === true;
     }
 
     constructor(scene: Scene) {
