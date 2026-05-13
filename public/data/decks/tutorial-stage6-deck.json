@@ -1,0 +1,18 @@
+{
+  "name": "教学第六阶段卡组",
+  "description": "问心终试：综合运用所有卡牌类型和战斗机制。初始手牌包含单位、法宝、符箓、场地、丹药全部五种类型。",
+  "cards": [
+    { "id": "SX_YJZ_001", "count": 1 },
+    { "id": "TL_001", "count": 1 },
+    { "id": "AR_001", "count": 1 },
+    { "id": "PL_001", "count": 1 },
+    { "id": "FD_005", "count": 1 },
+    { "id": "SX_TY_001", "count": 1 },
+    { "id": "SX_YJS_001", "count": 1 },
+    { "id": "TL_004", "count": 1 },
+    { "id": "AR_004", "count": 1 },
+    { "id": "SX_JXTM_001", "count": 1 },
+    { "id": "PL_005", "count": 1 },
+    { "id": "SX_JYNX_001", "count": 1 }
+  ]
+}

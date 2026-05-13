@@ -1,0 +1,16 @@
+{
+  "name": "教学第四阶段卡组",
+  "description": "状态试炼：应对灼烧等持续状态效果。初始手牌包含符箓卡和丹药卡以应对和解除状态。",
+  "cards": [
+    { "id": "TL_001", "count": 1 },
+    { "id": "PL_001", "count": 1 },
+    { "id": "SX_TY_001", "count": 1 },
+    { "id": "TL_004", "count": 1 },
+    { "id": "PL_005", "count": 1 },
+    { "id": "SX_YJS_001", "count": 1 },
+    { "id": "SX_YJZ_001", "count": 1 },
+    { "id": "TL_TEST_BURN", "count": 1 },
+    { "id": "PL_004", "count": 1 },
+    { "id": "AR_001", "count": 1 }
+  ]
+}

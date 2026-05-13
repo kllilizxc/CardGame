@@ -387,7 +387,9 @@ export class BattleScene extends Scene {
         });
         
         console.log(`初始卡组加载完成，共 ${this.deck.length} 张卡牌`);
-        Phaser.Utils.Array.Shuffle(this.deck);
+        if (!this.isTutorialMode) {
+            Phaser.Utils.Array.Shuffle(this.deck);
+        }
 
         // 创建场地区域
         this.createFieldZones();

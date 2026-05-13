@@ -1,0 +1,14 @@
+{
+  "name": "教学第三阶段卡组",
+  "description": "献祭试炼：通过献祭低阶单位召唤高阶卡牌取胜。初始手牌包含献祭所需的高费单位和可供献祭的普通单位。",
+  "cards": [
+    { "id": "SX_YJS_001", "count": 1 },
+    { "id": "SX_JYNX_001", "count": 1 },
+    { "id": "SX_YJZ_001", "count": 1 },
+    { "id": "SX_TY_001", "count": 1 },
+    { "id": "SX_JXTM_001", "count": 1 },
+    { "id": "AR_001", "count": 1 },
+    { "id": "FD_001", "count": 1 },
+    { "id": "TL_001", "count": 1 }
+  ]
+}

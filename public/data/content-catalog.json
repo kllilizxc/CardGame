@@ -80,6 +80,42 @@
       "publicPath": "data/decks/starter-deck.json"
     },
     {
+      "resourceId": "deck.tutorial.stage1",
+      "kind": "deck",
+      "schemaVersion": 1,
+      "publicPath": "data/decks/tutorial-stage1-deck.json"
+    },
+    {
+      "resourceId": "deck.tutorial.stage2",
+      "kind": "deck",
+      "schemaVersion": 1,
+      "publicPath": "data/decks/tutorial-stage2-deck.json"
+    },
+    {
+      "resourceId": "deck.tutorial.stage3",
+      "kind": "deck",
+      "schemaVersion": 1,
+      "publicPath": "data/decks/tutorial-stage3-deck.json"
+    },
+    {
+      "resourceId": "deck.tutorial.stage4",
+      "kind": "deck",
+      "schemaVersion": 1,
+      "publicPath": "data/decks/tutorial-stage4-deck.json"
+    },
+    {
+      "resourceId": "deck.tutorial.stage5",
+      "kind": "deck",
+      "schemaVersion": 1,
+      "publicPath": "data/decks/tutorial-stage5-deck.json"
+    },
+    {
+      "resourceId": "deck.tutorial.stage6",
+      "kind": "deck",
+      "schemaVersion": 1,
+      "publicPath": "data/decks/tutorial-stage6-deck.json"
+    },
+    {
       "resourceId": "test_encounter_02",
       "kind": "encounter",
       "schemaVersion": 1,

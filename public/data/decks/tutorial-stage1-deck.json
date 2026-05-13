@@ -1,0 +1,13 @@
+{
+  "name": "教学第一阶段卡组",
+  "description": "基础试炼：学习抽牌、召唤、攻击、结束回合。初始手牌确保有可召唤的单位卡。",
+  "cards": [
+    { "id": "SX_YJZ_001", "count": 1 },
+    { "id": "SX_TY_001", "count": 1 },
+    { "id": "AR_001", "count": 1 },
+    { "id": "SX_YJS_001", "count": 1 },
+    { "id": "SX_JXTM_001", "count": 1 },
+    { "id": "AR_004", "count": 1 },
+    { "id": "FD_001", "count": 1 }
+  ]
+}
