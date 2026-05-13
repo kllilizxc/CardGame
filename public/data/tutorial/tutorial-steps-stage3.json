@@ -1,0 +1,38 @@
+[
+  {
+    "id": "stage3_step1_summon_fodder",
+    "guideText": "从手牌中召唤一张低星单位卡牌到己方场地上——这些单位将作为献祭召唤所需的祭品材料。",
+    "textPosition": "top",
+    "showArrow": true,
+    "arrowFromPctX": 50,
+    "arrowFromPctY": 8,
+    "arrowToPctX": 50,
+    "arrowToPctY": 90,
+    "__zoneRef": "handZone",
+    "__completesOn": "card_played"
+  },
+  {
+    "id": "stage3_step2_sacrifice",
+    "guideText": "选中手牌中带有献祭需求的高阶卡牌，将场上已召唤的低星祭品献祭，以此召唤高阶单位入场！\n（点击高阶卡牌后，选择场上低星单位作为祭品即可完成献祭）",
+    "textPosition": "top",
+    "showArrow": true,
+    "arrowFromPctX": 50,
+    "arrowFromPctY": 8,
+    "arrowToPctX": 50,
+    "arrowToPctY": 90,
+    "__zoneRef": "handZone",
+    "__completesOn": "sacrifice"
+  },
+  {
+    "id": "stage3_step3_endturn",
+    "guideText": "献祭成功，高阶单位已登场！点击右侧「结束回合」按钮，让高阶单位发起攻击，一举击溃强敌。",
+    "textPosition": "top",
+    "showArrow": true,
+    "arrowFromPctX": 50,
+    "arrowFromPctY": 8,
+    "arrowToPctX": 93,
+    "arrowToPctY": 9,
+    "__zoneRef": "endTurnButton",
+    "__completesOn": "end_turn"
+  }
+]
