@@ -37,7 +37,7 @@ import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import { BattleState } from '../../state/BattleState';
 import { BattleUIManager } from '../../ui/battle/BattleUIManager';
 import { TutorialOverlayController } from '../../ui/battle/TutorialOverlayController';
-import type { TutorialStepDefinition, TutorialPlayerAction } from '../../ui/battle/TutorialOverlayController';
+import type { TutorialStepDefinition, TutorialPlayerAction, TutorialHighlightZone } from '../../ui/battle/TutorialOverlayController';
 import { CardPreviewManager } from '../../managers/common/CardPreviewManager';
 import { PillTooltipUI } from '../../ui/common/PillTooltipUI';
 import { getStage2TutorialSteps } from '../../data/tutorial/stage2Steps';
@@ -138,6 +138,7 @@ export class BattleScene extends Scene {
     // 教程覆盖层
     private tutorialController?: TutorialOverlayController;
     private isTutorialMode = false;
+    private tutorialStepsCacheKey: string | null = null;
 
     constructor() {
         super('BattleScene');
@@ -157,6 +158,7 @@ export class BattleScene extends Scene {
         this.battleEndHandled = false;
         this.isTutorialMode = TutorialOverlayController.hasTutorialSource(data)
             || this.isTutorialEncounter();
+        this.tutorialStepsCacheKey = this.resolveTutorialStepsCacheKey();
     }
 
     /** 通过故事战斗的 encounterId 前缀检测是否为教程战斗 */
@@ -300,6 +302,10 @@ export class BattleScene extends Scene {
             this.expeditionRuntimeResources,
             this.defaultRuntimeResources,
         ));
+
+        if (this.tutorialStepsCacheKey) {
+            this.load.json(this.tutorialStepsCacheKey, this.getTutorialStepsPublicPath());
+        }
     }
 
     async create() {
@@ -433,7 +439,11 @@ export class BattleScene extends Scene {
         // 初始化教程覆盖层（仅教程模式激活）
         if (this.isTutorialMode) {
             this.tutorialController = new TutorialOverlayController(this);
-            this.loadTutorialStepsForEncounter();
+            if (this.tutorialStepsCacheKey) {
+                this.loadAndStartTutorialSteps();
+            } else {
+                this.loadTutorialStepsForEncounter();
+            }
         }
 
         this.battleLog.addLog('战斗开始！');
@@ -534,6 +544,8 @@ export class BattleScene extends Scene {
             return;
         }
 
+        this.notifyTutorialAction('use_pill');
+
         // 根据丹药目标类型决定使用方式
         if (pill.target === 'player') {
             // 直接使用（作用于玩家）
@@ -603,6 +615,7 @@ export class BattleScene extends Scene {
      * 使用技能
      */
     private useSkill(skillIndex: number): void {
+        this.notifyTutorialAction('use_skill');
         this.skillManager.useSkill(skillIndex, (skill, onCancel) => {
             // 使用技能效果处理器执行技能效果，传入取消回调
             this.skillEffectHandler.applySkillEffect(skill, onCancel);
@@ -792,12 +805,14 @@ export class BattleScene extends Scene {
      * 执行献祭并召唤单位
      */
     private performSacrificeAndSummon(card: CardSprite, sacrificeTargets: CardSprite[]): void {
+        this.notifyTutorialAction('sacrifice');
+
         // 先将被献祭的单位加入弃牌堆
         sacrificeTargets.forEach(unit => {
             const unitData = unit.getCardData();
             this.addToDiscardPile(unitData);
         });
-        
+
         // 执行献祭
         this.sacrificeManager.performSacrifice(
             sacrificeTargets,
@@ -1134,6 +1149,96 @@ export class BattleScene extends Scene {
     /** 通知教程控制器玩家操作 */
     private notifyTutorialAction(action: TutorialPlayerAction): void {
         this.tutorialController?.notifyPlayerAction(action);
+    }
+
+    /**
+     * 根据 storyLaunchPayload 的 battleId 解析教程步骤 JSON 的缓存键。
+     * 仅 isTutorialMode 时有意义。
+     */
+    private resolveTutorialStepsCacheKey(): string | null {
+        if (!this.isTutorialMode) return null;
+        const battleId = this.storyLaunchPayload?.battleLaunch.battleId;
+        if (!battleId) return null;
+        const match = battleId.match(/^tutorial\.(stage\d+)\./);
+        return match ? `tutorialSteps_${match[1]}` : null;
+    }
+
+    /** 获取教程步骤 JSON 文件的 public 路径 */
+    private getTutorialStepsPublicPath(): string {
+        const cacheKey = this.tutorialStepsCacheKey;
+        if (!cacheKey) throw new Error('tutorialStepsCacheKey not set');
+        const stage = cacheKey.replace('tutorialSteps_', '');
+        return `data/tutorial/tutorial-steps-${stage}.json`;
+    }
+
+    /** 加载教程步骤 JSON 并补充 completionCheck 与动态高亮区域 */
+    private loadAndStartTutorialSteps(): void {
+        if (!this.tutorialController || !this.tutorialStepsCacheKey) return;
+        const rawSteps = this.cache.json.get(this.tutorialStepsCacheKey);
+        if (!rawSteps || !Array.isArray(rawSteps)) {
+            console.warn(`教程步骤数据缺失: ${this.tutorialStepsCacheKey}`);
+            return;
+        }
+        const enriched = this.enrichTutorialSteps(rawSteps);
+        this.loadTutorialSteps(enriched);
+    }
+
+    /** 将原始 JSON 数据填充为完整的 TutorialStepDefinition[] */
+    private enrichTutorialSteps(rawSteps: unknown[]): TutorialStepDefinition[] {
+        const { width, height } = this.scale;
+        return rawSteps.map((raw) => {
+            const record = raw as Record<string, unknown>;
+            const completesOn = record.__completesOn as TutorialPlayerAction | undefined;
+            const zoneRef = record.__zoneRef as string | undefined;
+            return {
+                id: record.id as string,
+                guideText: record.guideText as string,
+                textPosition: (record.textPosition ?? 'top') as TutorialStepDefinition['textPosition'],
+                highlightZones: zoneRef
+                    ? this.computeHighlightZones(zoneRef, width, height)
+                    : (record.highlightZones as TutorialStepDefinition['highlightZones'] ?? []),
+                showArrow: record.showArrow as boolean | undefined,
+                arrowFromX: this.computeArrowCoord(record.arrowFromPctX, width),
+                arrowFromY: this.computeArrowCoord(record.arrowFromPctY, height),
+                arrowToX: this.computeArrowCoord(record.arrowToPctX, width),
+                arrowToY: this.computeArrowCoord(record.arrowToPctY, height),
+                completionCheck: completesOn
+                    ? (action: TutorialPlayerAction) => action === completesOn
+                    : undefined,
+            };
+        });
+    }
+
+    /** 根据 zoneRef 字符串计算高亮区域像素坐标 */
+    private computeHighlightZones(zoneRef: string, width: number, height: number): TutorialHighlightZone[] {
+        const z = this.layout;
+        let zoneCfg: { x: number; y: number; w: number; h: number } | null = null;
+        switch (zoneRef) {
+            case 'handZone':
+                zoneCfg = { x: z.handZone.x, y: z.handZone.y, w: z.handZone.width, h: z.handZone.height };
+                break;
+            case 'playerFieldZone':
+                zoneCfg = { x: z.playerFieldZone.x, y: z.playerFieldZone.y, w: z.playerFieldZone.width, h: z.playerFieldZone.height };
+                break;
+            case 'enemyFieldZone':
+                zoneCfg = { x: z.enemyFieldZone.x, y: z.enemyFieldZone.y, w: z.enemyFieldZone.width, h: z.enemyFieldZone.height };
+                break;
+            case 'endTurnButton':
+                zoneCfg = { x: width * 0.93, y: height * 0.09, w: width * 0.075, h: height * 0.045 };
+                break;
+            case 'drawButton':
+                zoneCfg = { x: width * 0.93, y: height * 0.03, w: width * 0.075, h: height * 0.045 };
+                break;
+            default:
+                return [];
+        }
+        return [{ x: zoneCfg.x, y: zoneCfg.y, width: zoneCfg.w, height: zoneCfg.h }];
+    }
+
+    /** 将百分比坐标转换为像素值（百分比值以 0-100 范围表示） */
+    private computeArrowCoord(pctValue: unknown, screenSize: number): number | undefined {
+        if (typeof pctValue !== 'number') return undefined;
+        return (pctValue / 100) * screenSize;
     }
 
     public handleBattleEnd(victory: boolean): void {
