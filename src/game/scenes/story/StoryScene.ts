@@ -331,6 +331,10 @@ export class StoryScene extends Scene {
         return [button, label];
     }
 
+    private isTutorialStory(): boolean {
+        return this.storyGraph.storyId.startsWith('story.tutorial-');
+    }
+
     private handleChoice(choiceId: string): void {
         const currentView = createStoryFlowViewModel(this.storyGraph, {
             storyState: this.storyState,
@@ -353,6 +357,7 @@ export class StoryScene extends Scene {
             this.launchData.storyGraphFile,
             this.launchData.hubSession,
             this.launchData.storyResourceId,
+            this.isTutorialStory() ? true : undefined,
         );
 
         if (intent.kind === 'startBattleScene') {

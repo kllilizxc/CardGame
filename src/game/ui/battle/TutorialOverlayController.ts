@@ -89,8 +89,9 @@ export class TutorialOverlayController {
      */
     static hasTutorialSource(data: unknown): boolean {
         if (typeof data !== 'object' || data === null) return false;
-        const source = (data as Record<string, unknown>).source;
-        return source === 'tutorial';
+        const record = data as Record<string, unknown>;
+        if (record.source === 'tutorial') return true;
+        return record.tutorial === true;
     }
 
     constructor(scene: Scene) {

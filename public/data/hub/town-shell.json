@@ -21,6 +21,15 @@
           "statusText": "从青云镇出发，主线故事已开启。"
         },
         {
+          "id": "action.start-tutorial-qingyun",
+          "kind": "startStory",
+          "label": "序章·青云问道",
+          "description": "初入仙门的新手教学。熟悉卡牌战斗的基本规则，完成外门试炼。",
+          "storyResourceId": "story.tutorial-qingyun",
+          "storyGraphFile": "data/story/tutorial-story-graph.json",
+          "statusText": "序章·青云问道已开启，愿你在试炼中悟得仙缘。"
+        },
+        {
           "id": "action.visit-town-teahouse",
           "kind": "navigate",
           "label": "去茶棚打听消息",

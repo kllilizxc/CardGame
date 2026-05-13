@@ -397,6 +397,7 @@ export function normalizeStoryBattleLaunchPayload(data: unknown): StoryBattleSce
         selectedChoiceIds: [...data.selectedChoiceIds],
         ...(data.storyGraphFile ? { storyGraphFile: data.storyGraphFile } : {}),
         ...(data.hubSession ? { hubSession: { ...data.hubSession } } : {}),
+        ...(data.tutorial === true ? { tutorial: true } : {}),
     };
 }
 
