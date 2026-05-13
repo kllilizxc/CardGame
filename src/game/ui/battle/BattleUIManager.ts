@@ -450,6 +450,38 @@ export class BattleUIManager {
     }
 
     /**
+     * 启用/禁用抽卡按钮
+     */
+    public setDrawButtonEnabled(enabled: boolean): void {
+        if (!this.drawButton) return;
+        if (enabled) {
+            this.drawButton.setInteractive({ useHandCursor: true });
+            this.drawButton.setFillStyle(0xf39c12);
+            this.drawButton.setAlpha(1);
+        } else {
+            this.drawButton.disableInteractive();
+            this.drawButton.setFillStyle(0x666666);
+            this.drawButton.setAlpha(0.5);
+        }
+    }
+
+    /**
+     * 启用/禁用结束回合按钮
+     */
+    public setEndTurnButtonEnabled(enabled: boolean): void {
+        if (!this.endTurnButton) return;
+        if (enabled) {
+            this.endTurnButton.setInteractive({ useHandCursor: true });
+            this.endTurnButton.setFillStyle(0xe74c3c);
+            this.endTurnButton.setAlpha(1);
+        } else {
+            this.endTurnButton.disableInteractive();
+            this.endTurnButton.setFillStyle(0x666666);
+            this.endTurnButton.setAlpha(0.5);
+        }
+    }
+
+    /**
      * 销毁所有 UI 元素
      */
     public destroy(): void {

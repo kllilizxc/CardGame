@@ -441,6 +441,7 @@ export class BattleScene extends Scene {
         // 初始化教程覆盖层（仅教程模式激活）
         if (this.isTutorialMode) {
             this.tutorialController = new TutorialOverlayController(this);
+            this.tutorialController.setOnStepChange(() => this.syncTutorialInteractionState());
             if (this.tutorialStepsCacheKey) {
                 this.loadAndStartTutorialSteps();
             } else {
@@ -469,6 +470,10 @@ export class BattleScene extends Scene {
             target: CardSprite,
             targetSide: 'ally' | 'enemy'
         ) => {
+            if (!this.isTutorialActionAllowed('use_skill')) {
+                this.battleLog.addLog('当前步骤不允许使用符箓');
+                return;
+            }
             // 先启动符箓选择状态
             this.talismanManager.startUseTalisman(talisman);
             
@@ -541,6 +546,10 @@ export class BattleScene extends Scene {
      * 使用指定槽位的丹药
      */
     private usePillFromSlot(slotIndex: number): void {
+        if (!this.isTutorialActionAllowed('use_pill')) {
+            this.battleLog.addLog('当前步骤不允许使用丹药');
+            return;
+        }
         const pill = this.pillManager.getPillAt(slotIndex);
         if (!pill) {
             return;
@@ -617,6 +626,10 @@ export class BattleScene extends Scene {
      * 使用技能
      */
     private useSkill(skillIndex: number): void {
+        if (!this.isTutorialActionAllowed('use_skill')) {
+            this.battleLog.addLog('当前步骤不允许使用技能');
+            return;
+        }
         this.notifyTutorialAction('use_skill');
         this.skillManager.useSkill(skillIndex, (skill, onCancel) => {
             // 使用技能效果处理器执行技能效果，传入取消回调
@@ -745,6 +758,12 @@ export class BattleScene extends Scene {
             return false;
         }
 
+        // 教程白名单检查：允许 card_played 或 sacrifice 操作
+        if (!this.isTutorialActionAllowed('card_played') && !this.isTutorialActionAllowed('sacrifice')) {
+            this.battleLog.addLog('当前步骤不允许打出卡牌');
+            return false;
+        }
+
         const cardData = card.getCardData();
         
         // 检查是否需要献祭
@@ -807,6 +826,10 @@ export class BattleScene extends Scene {
      * 执行献祭并召唤单位
      */
     private performSacrificeAndSummon(card: CardSprite, sacrificeTargets: CardSprite[]): void {
+        if (!this.isTutorialActionAllowed('sacrifice')) {
+            this.battleLog.addLog('当前步骤不允许献祭');
+            return;
+        }
         this.notifyTutorialAction('sacrifice');
 
         // 先将被献祭的单位加入弃牌堆
@@ -866,6 +889,10 @@ export class BattleScene extends Scene {
     }
 
     public tryEquipArtifact(artifact: ArtifactSprite): boolean {
+        if (!this.isTutorialActionAllowed('equip_artifact')) {
+            this.battleLog.addLog('当前步骤不允许装备法宝');
+            return false;
+        }
         // 检查是否拖到某个场上单位附近
         let targetUnit: CardSprite | null = null;
         let minDistance = 150; // 最大装备距离
@@ -966,6 +993,10 @@ export class BattleScene extends Scene {
     }
 
     private drawCard() {
+        if (!this.isTutorialActionAllowed('card_drawn')) {
+            this.battleLog.addLog('当前步骤不允许抽卡');
+            return;
+        }
         const result = this.cardManager.drawCard(this.deck, this.hand);
         this.deck = result.deck;
         this.hand = result.hand;
@@ -1001,13 +1032,16 @@ export class BattleScene extends Scene {
                 card.input.enabled = true;
             }
         });
-        
+
         // 启用场上单位交互
         this.playerField.forEach(unit => {
             if (unit.input) {
                 unit.input.enabled = true;
             }
         });
+
+        // 教程模式下根据步骤白名单进一步限制交互
+        this.syncTutorialInteractionState();
     }
 
     /**
@@ -1065,6 +1099,11 @@ export class BattleScene extends Scene {
             isPlayerTurn: this.isPlayerTurn,
             isProcessingTurn: this.isProcessingTurn
         });
+
+        if (!this.isTutorialActionAllowed('end_turn')) {
+            this.battleLog.addLog('当前步骤不允许结束回合');
+            return;
+        }
 
         this.notifyTutorialAction('end_turn');
         // 委托给 TurnManager（TurnManager 会设置 isProcessingTurn）
@@ -1153,6 +1192,42 @@ export class BattleScene extends Scene {
         this.tutorialController?.notifyPlayerAction(action);
     }
 
+    /** 检查当前教程步骤是否允许指定操作 */
+    private isTutorialActionAllowed(action: TutorialPlayerAction): boolean {
+        if (!this.tutorialController) return true;
+        return this.tutorialController.isActionAllowed(action);
+    }
+
+    /** 根据当前教程步骤的白名单同步卡片交互和 UI 按钮状态 */
+    private syncTutorialInteractionState(): void {
+        if (!this.isTutorialMode || !this.tutorialController) return;
+
+        const allowed = this.tutorialController.getAllowedActions();
+        const hasRestrictions = allowed.length > 0;
+
+        // 需要卡片交互的操作类型
+        const cardActions: TutorialPlayerAction[] = ['card_played', 'equip_artifact', 'use_skill', 'sacrifice'];
+        const needsCardInteraction = !hasRestrictions || allowed.some(a => cardActions.includes(a));
+
+        if (hasRestrictions && !needsCardInteraction) {
+            this.disablePlayerInteraction();
+        } else if (needsCardInteraction && this.isPlayerTurn) {
+            // 直接启用卡片输入（避免 enablePlayerInteraction → syncTutorialInteractionState 递归）
+            this.hand.forEach(card => {
+                if (card.input) card.input.enabled = true;
+            });
+            this.playerField.forEach(unit => {
+                if (unit.input) unit.input.enabled = true;
+            });
+        }
+
+        // 同步 UI 按钮状态
+        if (this.uiManager) {
+            this.uiManager.setDrawButtonEnabled(!hasRestrictions || allowed.includes('card_drawn'));
+            this.uiManager.setEndTurnButtonEnabled(!hasRestrictions || allowed.includes('end_turn'));
+        }
+    }
+
     /**
      * 根据 storyLaunchPayload 的 battleId 解析教程步骤 JSON 的缓存键。
      * 仅 isTutorialMode 时有意义。
@@ -1204,6 +1279,7 @@ export class BattleScene extends Scene {
                 arrowFromY: this.computeArrowCoord(record.arrowFromPctY, height),
                 arrowToX: this.computeArrowCoord(record.arrowToPctX, width),
                 arrowToY: this.computeArrowCoord(record.arrowToPctY, height),
+                allowedActions: completesOn ? [completesOn] : undefined,
                 completionCheck: completesOn
                     ? (action: TutorialPlayerAction) => action === completesOn
                     : undefined,

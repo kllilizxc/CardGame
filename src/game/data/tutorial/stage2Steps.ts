@@ -46,6 +46,7 @@ const STEP_IDENTIFY_UNIT: TutorialStepDefinition = {
     guideText: '这些发光的灵兽图案便是「御兽卡」——御兽匣的核心力量。\n将任意御兽卡拖入下方我方场地，召唤灵兽为你而战！',
     textPosition: 'bottom',
     showArrow: false,
+    allowedActions: ['card_played'],
     completionCheck: isUnitPlayed,
 };
 
@@ -59,6 +60,7 @@ const STEP_EQUIP_ARTIFACT: TutorialStepDefinition = {
     arrowFromY: 86,
     arrowToX: 960,
     arrowToY: 702,
+    allowedActions: ['equip_artifact'],
     completionCheck: isArtifactEquipped,
 };
 
@@ -72,6 +74,7 @@ const STEP_USE_TALISMAN: TutorialStepDefinition = {
     arrowFromY: 86,
     arrowToX: 960,
     arrowToY: 270,
+    allowedActions: ['use_skill', 'end_turn'],
     completionCheck: (action: TutorialPlayerAction) => isTalismanUsed(action) || isTurnEnded(action),
 };
 
@@ -81,6 +84,7 @@ const STEP_CARD_TYPES_OVERVIEW: TutorialStepDefinition = {
     guideText: '此外，「丹药卡」可瞬间恢复生命、「功法卡」则为灵兽赋予特殊的被动效果。\n这两类卡牌将在后续试炼中陆续登场。\n\n现在，运用你手头的卡牌，击败山贼与灵禽吧！',
     textPosition: 'center',
     showArrow: false,
+    allowedActions: ['end_turn'],
     completionCheck: isTurnEnded,
 };
 

@@ -52,6 +52,8 @@ export interface TutorialStepDefinition {
     onEnter?: () => void;
     /** 检测此步骤是否完成。返回 true 推进到下一步。 */
     completionCheck?: (action: TutorialPlayerAction) => boolean;
+    /** 当前步骤允许的操作白名单。undefined 表示允许所有操作。 */
+    allowedActions?: TutorialPlayerAction[];
 }
 
 /**
@@ -78,6 +80,7 @@ export class TutorialOverlayController {
     private dimBg: Phaser.GameObjects.Rectangle | null = null;
 
     private onComplete: (() => void) | null = null;
+    private onStepChange: (() => void) | null = null;
 
     private static readonly OVERLAY_DEPTH = 5000;
     private static readonly HIGHLIGHT_COLOR = 0xf1c40f;
@@ -154,6 +157,28 @@ export class TutorialOverlayController {
         }
     }
 
+    /** 设置步骤变更回调（用于同步 UI 交互状态） */
+    setOnStepChange(callback: () => void): void {
+        this.onStepChange = callback;
+    }
+
+    /**
+     * 检查指定操作在当前步骤是否被允许。
+     * 非激活状态或步骤无白名单时默认放行所有操作。
+     */
+    isActionAllowed(action: TutorialPlayerAction): boolean {
+        if (!this.active) return true;
+        const allowed = this.currentStep?.allowedActions;
+        if (!allowed || allowed.length === 0) return true;
+        return allowed.includes(action);
+    }
+
+    /** 获取当前步骤允许的操作列表。空数组表示无限制。 */
+    getAllowedActions(): TutorialPlayerAction[] {
+        if (!this.active) return [];
+        return this.currentStep?.allowedActions ?? [];
+    }
+
     /** 销毁覆盖层并释放资源 */
     destroy(): void {
         this.clearOverlay();
@@ -170,6 +195,7 @@ export class TutorialOverlayController {
 
         step.onEnter?.();
         this.drawOverlay(step);
+        this.onStepChange?.();
     }
 
     private drawOverlay(step: TutorialStepDefinition): void {
@@ -271,5 +297,6 @@ export class TutorialOverlayController {
         this.active = false;
         this.currentStepIndex = -1;
         this.onComplete?.();
+        this.onStepChange?.();
     }
 }
