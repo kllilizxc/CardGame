@@ -85,12 +85,19 @@ export class TutorialOverlayController {
 
     /**
      * 类型安全地检测传入数据是否标记为教程战斗。
-     * 无需修改 StoryBattleSceneLaunchPayload 类型即可安全区分。
+     * 检查 source 字段或 story 加载中 battleLaunch.battleId 的 tutorial. 前缀。
      */
     static hasTutorialSource(data: unknown): boolean {
         if (typeof data !== 'object' || data === null) return false;
-        const source = (data as Record<string, unknown>).source;
-        return source === 'tutorial';
+        const record = data as Record<string, unknown>;
+        if (record.source === 'tutorial') return true;
+        if (record.source === 'story') {
+            const battleLaunch = record.battleLaunch as Record<string, unknown> | undefined;
+            if (typeof battleLaunch?.battleId === 'string' && battleLaunch.battleId.startsWith('tutorial.')) {
+                return true;
+            }
+        }
+        return false;
     }
 
     constructor(scene: Scene) {
