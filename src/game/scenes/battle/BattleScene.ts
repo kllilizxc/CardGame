@@ -1272,7 +1272,7 @@ export class BattleScene extends Scene {
                 guideText: record.guideText as string,
                 textPosition: (record.textPosition ?? 'top') as TutorialStepDefinition['textPosition'],
                 highlightZones: zoneRef
-                    ? this.computeHighlightZones(zoneRef, width, height)
+                    ? this.computeHighlightZones(zoneRef)
                     : (record.highlightZones as TutorialStepDefinition['highlightZones'] ?? []),
                 showArrow: record.showArrow as boolean | undefined,
                 arrowFromX: this.computeArrowCoord(record.arrowFromPctX, width),
@@ -1287,8 +1287,8 @@ export class BattleScene extends Scene {
         });
     }
 
-    /** 根据 zoneRef 字符串计算高亮区域像素坐标 */
-    private computeHighlightZones(zoneRef: string, width: number, height: number): TutorialHighlightZone[] {
+    /** 根据 zoneRef 字符串从 LayoutConfig 查找高亮区域坐标 */
+    private computeHighlightZones(zoneRef: string): TutorialHighlightZone[] {
         const z = this.layout;
         let zoneCfg: { x: number; y: number; w: number; h: number } | null = null;
         switch (zoneRef) {
@@ -1302,10 +1302,10 @@ export class BattleScene extends Scene {
                 zoneCfg = { x: z.enemyFieldZone.x, y: z.enemyFieldZone.y, w: z.enemyFieldZone.width, h: z.enemyFieldZone.height };
                 break;
             case 'endTurnButton':
-                zoneCfg = { x: width * 0.93, y: height * 0.09, w: width * 0.075, h: height * 0.045 };
+                zoneCfg = { x: z.endTurnButton.x, y: z.endTurnButton.y, w: z.endTurnButton.width, h: z.endTurnButton.height };
                 break;
             case 'drawButton':
-                zoneCfg = { x: width * 0.93, y: height * 0.03, w: width * 0.075, h: height * 0.045 };
+                zoneCfg = { x: z.drawButton.x, y: z.drawButton.y, w: z.drawButton.width, h: z.drawButton.height };
                 break;
             default:
                 return [];

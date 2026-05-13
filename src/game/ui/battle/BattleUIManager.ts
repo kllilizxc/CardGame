@@ -166,23 +166,19 @@ export class BattleUIManager {
      * 创建操作按钮（抽卡、结束回合、速度切换）
      */
     private createActionButtons(): void {
-        const { width, height } = this.scene.scale;
-        const buttonWidth = width * 0.075;
-        const buttonHeight = height * 0.045;
-        const buttonX = width * 0.93;
+        const { height } = this.scene.scale;
         const fontSize = Math.floor(height * 0.016) + 'px';
+        const drawCfg = this.layout.drawButton;
+        const endTurnCfg = this.layout.endTurnButton;
+        const speedCfg = this.layout.speedButton;
 
         // 抽卡按钮
         this.drawButton = this.scene.add.rectangle(
-            buttonX,
-            height * 0.03,
-            buttonWidth,
-            buttonHeight,
-            0xf39c12
+            drawCfg.x, drawCfg.y, drawCfg.width, drawCfg.height, 0xf39c12
         ).setInteractive({ useHandCursor: true });
         this.drawButton.setDepth(this.layout.depth.uiButtons);
 
-        const drawText = this.scene.add.text(buttonX, height * 0.03, '抽一张卡', {
+        const drawText = this.scene.add.text(drawCfg.x, drawCfg.y, '抽一张卡', {
             fontSize: fontSize,
             color: '#ffffff',
             fontStyle: 'bold'
@@ -197,15 +193,11 @@ export class BattleUIManager {
 
         // 结束回合按钮
         this.endTurnButton = this.scene.add.rectangle(
-            buttonX,
-            height * 0.09,
-            buttonWidth,
-            buttonHeight,
-            0xe74c3c
+            endTurnCfg.x, endTurnCfg.y, endTurnCfg.width, endTurnCfg.height, 0xe74c3c
         ).setInteractive({ useHandCursor: true });
         this.endTurnButton.setDepth(this.layout.depth.uiButtons);
 
-        const endTurnText = this.scene.add.text(buttonX, height * 0.09, '结束回合', {
+        const endTurnText = this.scene.add.text(endTurnCfg.x, endTurnCfg.y, '结束回合', {
             fontSize: fontSize,
             color: '#ffffff',
             fontStyle: 'bold'
@@ -220,15 +212,11 @@ export class BattleUIManager {
 
         // 速度切换按钮
         this.speedButton = this.scene.add.rectangle(
-            buttonX,
-            height * 0.15,
-            buttonWidth,
-            buttonHeight,
-            0x3498db
+            speedCfg.x, speedCfg.y, speedCfg.width, speedCfg.height, 0x3498db
         ).setInteractive({ useHandCursor: true });
         this.speedButton.setDepth(this.layout.depth.uiButtons);
 
-        this.speedText = this.scene.add.text(buttonX, height * 0.15, '速度 x1', {
+        this.speedText = this.scene.add.text(speedCfg.x, speedCfg.y, '速度 x1', {
             fontSize: fontSize,
             color: '#ffffff',
             fontStyle: 'bold'

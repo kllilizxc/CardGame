@@ -38,9 +38,14 @@ export interface BattleLayoutConfig {
     
     // 卡组按钮
     deckButton: { x: number; y: number; width: number; height: number };
-    
+
     // 弃牌堆按钮
     discardPileButton: { x: number; y: number; width: number; height: number };
+
+    // 右侧操作按钮
+    drawButton: { x: number; y: number; width: number; height: number };
+    endTurnButton: { x: number; y: number; width: number; height: number };
+    speedButton: { x: number; y: number; width: number; height: number };
     
     // 丹药槽位UI
     pillSlots: { x: number; y: number };
@@ -136,6 +141,26 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
             y: height - height * 0.08,
             width: 120,
             height: 100
+        },
+
+        // 右侧操作按钮
+        drawButton: {
+            x: width * 0.93,
+            y: height * 0.03,
+            width: width * 0.075,
+            height: height * 0.045
+        },
+        endTurnButton: {
+            x: width * 0.93,
+            y: height * 0.09,
+            width: width * 0.075,
+            height: height * 0.045
+        },
+        speedButton: {
+            x: width * 0.93,
+            y: height * 0.15,
+            width: width * 0.075,
+            height: height * 0.045
         },
         
         // 丹药槽位 - 左下角，卡组按钮上方
