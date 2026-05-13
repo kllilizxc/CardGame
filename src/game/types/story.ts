@@ -164,6 +164,7 @@ export interface StoryBattleSceneLaunchPayload {
     selectedChoiceIds: string[];
     storyGraphFile?: string;
     hubSession?: StoryHubSessionKey;
+    tutorial?: boolean;
 }
 
 export type StoryBattleOutcome = 'victory' | 'defeat';

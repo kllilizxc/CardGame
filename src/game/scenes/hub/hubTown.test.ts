@@ -151,6 +151,13 @@ describe('hub town shell content', () => {
                 storyGraphFile: 'data/story/story-graph.json',
             }),
             expect.objectContaining({
+                id: 'action.start-tutorial-qingyun',
+                kind: 'startStory',
+                label: '序章·青云问道',
+                storyResourceId: 'story.tutorial-qingyun',
+                storyGraphFile: 'data/story/tutorial-story-graph.json',
+            }),
+            expect.objectContaining({
                 id: 'action.visit-town-teahouse',
                 kind: 'navigate',
                 label: '去茶棚打听消息',
@@ -189,6 +196,11 @@ describe('hub town shell content', () => {
                 storyGraphFile: 'data/story/story-graph.json',
             },
             {
+                id: 'action.start-tutorial-qingyun',
+                storyResourceId: 'story.tutorial-qingyun',
+                storyGraphFile: 'data/story/tutorial-story-graph.json',
+            },
+            {
                 id: 'action.start-teahouse-rumors-story',
                 storyResourceId: 'story.qingyun-teahouse-rumors',
                 storyGraphFile: 'data/story/qingyun-teahouse-rumors.json',
@@ -201,6 +213,7 @@ describe('hub town shell content', () => {
 
         expect(graphs.map((graph) => graph.storyId)).toEqual([
             'story.qingyun-entry',
+            'story.tutorial-qingyun',
             'story.qingyun-teahouse-rumors',
         ]);
     });
@@ -263,7 +276,7 @@ describe('hub town shell content', () => {
     it('creates navigation intents and applies in-memory location state transitions', () => {
         const town = validateHubTownDefinition(townShellJson);
         const initialState = createInitialHubNavigationState(town);
-        const navigateForward = town.locations[0].actions[1];
+        const navigateForward = town.locations[0].actions[2];
         const teahouseIntent = createHubActionIntent(navigateForward);
 
         expect(initialState).toEqual({
@@ -646,13 +659,13 @@ describe('hub town shell content', () => {
 
     it('rejects navigation actions that point to missing town locations', () => {
         const brokenTown = validateHubTownDefinition(townShellJson);
-        const navigationAction = brokenTown.locations[0].actions[1];
+        const navigationAction = brokenTown.locations[0].actions[2];
 
         if (navigationAction.kind !== 'navigate') {
-            throw new Error('Expected the second gate-market action to be a navigate action.');
+            throw new Error('Expected the third gate-market action to be a navigate action.');
         }
 
-        brokenTown.locations[0].actions[1] = {
+        brokenTown.locations[0].actions[2] = {
             ...navigationAction,
             targetLocationId: 'location.qingyun-town.missing',
         };

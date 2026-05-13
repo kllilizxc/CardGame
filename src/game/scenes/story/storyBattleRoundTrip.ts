@@ -62,6 +62,7 @@ export function createStoryBattleSceneStartPayload(
     storyGraphFile?: string,
     hubSession?: StoryHubSessionKey | null,
     storyResourceId?: string,
+    tutorial?: boolean,
 ): StoryBattleSceneLaunchPayload {
     return {
         source: 'story',
@@ -71,6 +72,7 @@ export function createStoryBattleSceneStartPayload(
         selectedChoiceIds: cloneStringArray(selectedChoiceIds),
         ...(storyGraphFile ? { storyGraphFile } : {}),
         ...(hubSession ? { hubSession: { ...hubSession } } : {}),
+        ...(tutorial === true ? { tutorial: true } : {}),
     };
 }
 
@@ -149,6 +151,7 @@ export function createStorySceneTransitionIntent(
     storyGraphFile?: string,
     hubSession?: StoryHubSessionKey | null,
     storyResourceId?: string,
+    tutorial?: boolean,
 ): StorySceneTransitionIntent {
     if (!transition.battleLaunch) {
         return {
@@ -168,6 +171,7 @@ export function createStorySceneTransitionIntent(
             storyGraphFile,
             hubSession,
             storyResourceId,
+            tutorial,
         ),
     };
 }
