@@ -176,10 +176,10 @@ export class TutorialOverlayController {
         const { width, height } = this.scene.scale;
         const d = TutorialOverlayController.OVERLAY_DEPTH;
 
-        // 半透明遮罩
+        // 半透明遮罩（纯视觉层，不拦截输入）
         this.dimBg = this.scene.add.rectangle(
             width / 2, height / 2, width, height, 0x000000, 0.4
-        ).setDepth(d).setInteractive();
+        ).setDepth(d);
 
         // 高亮区域
         this.highlightGfx = this.scene.add.graphics().setDepth(d + 1);
