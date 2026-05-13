@@ -40,6 +40,7 @@ import { TutorialOverlayController } from '../../ui/battle/TutorialOverlayContro
 import type { TutorialStepDefinition, TutorialPlayerAction } from '../../ui/battle/TutorialOverlayController';
 import { CardPreviewManager } from '../../managers/common/CardPreviewManager';
 import { PillTooltipUI } from '../../ui/common/PillTooltipUI';
+import { getStage2TutorialSteps } from '../../data/tutorial/stage2Steps';
 import type { AnyCard } from '@data/types/cards/all';
 import type { BattleLaunchPayload } from '../../types/expedition';
 import type { StoryBattleSceneLaunchPayload } from '../../types/story';
@@ -154,7 +155,13 @@ export class BattleScene extends Scene {
         this.encounterCacheKey = getEncounterCacheKey(this.launchPayload, this.storyLaunchPayload);
         this.deckCacheKey = getBattleDeckCacheKey(this.storyLaunchPayload);
         this.battleEndHandled = false;
-        this.isTutorialMode = TutorialOverlayController.hasTutorialSource(data);
+        this.isTutorialMode = TutorialOverlayController.hasTutorialSource(data)
+            || this.isTutorialEncounter();
+    }
+
+    /** 通过故事战斗的 encounterId 前缀检测是否为教程战斗 */
+    private isTutorialEncounter(): boolean {
+        return this.storyLaunchPayload?.battleLaunch?.encounterId?.startsWith('tutorial_encounter_') ?? false;
     }
 
     // ===== Getter 方法，用于兼容现有代码 =====
@@ -426,6 +433,7 @@ export class BattleScene extends Scene {
         // 初始化教程覆盖层（仅教程模式激活）
         if (this.isTutorialMode) {
             this.tutorialController = new TutorialOverlayController(this);
+            this.loadTutorialStepsForEncounter();
         }
 
         this.battleLog.addLog('战斗开始！');
@@ -468,6 +476,7 @@ export class BattleScene extends Scene {
                 
                 // 重新排列手牌
                 this.cardManager.arrangeHand(this.hand);
+                this.notifyTutorialAction('use_skill');
                 
                 // 等待动画和死亡处理完成后，播放符箓飞向弃牌堆的动画
                 this.time.delayedCall(900, () => {
@@ -1110,6 +1119,16 @@ export class BattleScene extends Scene {
         if (!this.tutorialController) return;
         this.tutorialController.loadSteps(steps);
         this.tutorialController.start(onComplete);
+    }
+
+    /**
+     * 根据遭遇战 ID 加载对应的教程步骤。
+     */
+    private loadTutorialStepsForEncounter(): void {
+        const encounterId = this.storyLaunchPayload?.battleLaunch?.encounterId;
+        if (encounterId === 'tutorial_encounter_stage2') {
+            this.loadTutorialSteps(getStage2TutorialSteps());
+        }
     }
 
     /** 通知教程控制器玩家操作 */
