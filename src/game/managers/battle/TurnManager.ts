@@ -115,7 +115,12 @@ export class TurnManager {
             context.enemyField
         );
 
-        // 2. 等待状态动画完成后进入战斗阶段
+        // 2. 触发场地回合结束效果
+        this.triggerFieldTurnEnd(context);
+        // 处理丹药持续时间到期
+        this.triggerPillTurnEnd(context);
+
+        // 3. 等待状态动画完成后进入战斗阶段
         this.battleContext.battleLog.addLog('═══ 战斗阶段 ═══');
         context.onApplyPlayerTurnEndEffects();
         this.executePlayerTurn(context);
@@ -158,7 +163,10 @@ export class TurnManager {
             context.enemyField
         );
 
-        // 2. 等待状态动画完成后进入战斗
+        // 2. 触发场地回合开始效果
+        this.triggerFieldTurnStart(context, false);
+
+        // 3. 等待状态动画完成后进入战斗
         this.scene.time.delayedCall(800, () => {
             this.executeEnemyTurn(context);
         });
@@ -186,6 +194,10 @@ export class TurnManager {
                         context.enemyField
                     );
 
+                    // 触发场地回合结束 + 丹药持续时间处理
+                    this.triggerFieldTurnEnd(context);
+                    this.triggerPillTurnEnd(context);
+
                     // 等待状态动画完成后切换到玩家回合
                     this.scene.time.delayedCall(800, () => {
                         this.showTurnAnimation(`回合 ${context.turnNumber + 1}`, 0x2ecc71, () => {
@@ -195,6 +207,41 @@ export class TurnManager {
                 });
             }
         );
+    }
+
+    /**
+     * 触发场地回合开始效果
+     */
+    private triggerFieldTurnStart(context: TurnManagerContext, isPlayerTurn: boolean): void {
+        if (this.battleContext.fieldManager) {
+            this.battleContext.fieldManager.onTurnStart(
+                isPlayerTurn,
+                context.playerField,
+                context.enemyField,
+            );
+        }
+    }
+
+    /**
+     * 触发场地回合结束效果
+     */
+    private triggerFieldTurnEnd(context: TurnManagerContext): void {
+        if (this.battleContext.fieldManager) {
+            this.battleContext.fieldManager.onTurnEnd(
+                context.isPlayerTurn,
+                context.playerField,
+                context.enemyField,
+            );
+        }
+    }
+
+    /**
+     * 处理丹药持续时间到期
+     */
+    private triggerPillTurnEnd(context: TurnManagerContext): void {
+        if (this.battleContext.pillManager) {
+            this.battleContext.pillManager.onTurnEnd(context.playerField, context.enemyField);
+        }
     }
 
     /**
@@ -214,7 +261,10 @@ export class TurnManager {
             context.enemyField
         );
 
-        // 2. 抽卡（立即执行，不再等待）
+        // 2. 触发场地回合开始效果
+        this.triggerFieldTurnStart(context, context.isPlayerTurn);
+
+        // 3. 抽卡（立即执行，不再等待）
         context.onDrawCard();
     }
 }

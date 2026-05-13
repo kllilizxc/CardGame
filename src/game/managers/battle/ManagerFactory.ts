@@ -11,6 +11,7 @@ import { UnitEffectManager } from './UnitEffectManager';
 import { TurnManager } from './TurnManager';
 import { BattleStateChecker } from './BattleStateChecker';
 import { BattleTickManager } from './BattleTickManager';
+import { EffectResolver } from './EffectResolver';
 import { ArtifactManager } from './ArtifactManager';
 import { TalismanManager } from './TalismanManager';
 import { FieldManager } from './FieldManager';
@@ -116,13 +117,21 @@ export class ManagerFactory {
         );
         battleContext.setBattleTickManager(battleTickManager);
 
-        // 11. 初始化其他管理器
-        const artifactManager = new ArtifactManager(scene, battleContext);
+        // 12. 初始化 EffectResolver
+        const effectResolver = new EffectResolver(battleContext);
+        battleContext.setEffectResolver(effectResolver);
+
+        // 13. 初始化其他管理器
+        const artifactManager = new ArtifactManager(scene, battleContext, effectResolver);
         artifactManager.setUnitEffectManager(unitEffectManager);
 
         const talismanManager = new TalismanManager(battleContext);
-        const fieldManager = new FieldManager(scene, battleContext);
-        const pillManager = new PillManager(scene, battleContext, 3);
+        const fieldManager = new FieldManager(scene, battleContext, effectResolver);
+        battleContext.setFieldManager(fieldManager);
+
+        const pillManager = new PillManager(scene, battleContext, 3, effectResolver);
+        battleContext.setPillManager(pillManager);
+
         const sacrificeManager = new SacrificeManager(battleContext);
 
         const eventManager = new BattleEventManager(

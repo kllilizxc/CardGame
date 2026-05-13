@@ -51,8 +51,14 @@ export class CombatManager {
                     `【${attacker.getCardData().name}】攻击【${targetCard.name}】，造成${attackValue}点伤害`,
                     [attacker, target]
                 );
-                
-                // 复用 performSingleAttack
+
+                // 触发攻击者法器 onAttack 效果
+                const battleScene = this.battleContext.scene as any;
+                if (battleScene.artifactManager) {
+                    battleScene.artifactManager.onUnitAttack(attacker, target);
+                }
+
+                // 复用 performSingleAttack（内部会触发 onUnitDamaged）
                 this.performSingleAttack(attacker, target, attackValue, delay, false);
                 delay += 600; // 每个攻击间隔600ms
             } else {
@@ -138,6 +144,8 @@ export class CombatManager {
         delay: number = 0,
         isAOE: boolean = false
     ): void {
+        const battleScene = this.battleContext.scene as any;
+
         if (isAOE && Array.isArray(target)) {
             // AOE攻击：攻击所有目标
             target.forEach((t, index) => {
@@ -148,20 +156,39 @@ export class CombatManager {
                         t,
                         damage,
                         delay + index * 200, // 每个目标间隔200ms
-                        (unit, dmg) => this.damageUnit(unit, dmg)
+                        (unit, dmg) => {
+                            this.damageUnit(unit, dmg);
+                            if (battleScene.artifactManager) {
+                                battleScene.artifactManager.onUnitDamaged(unit, attacker);
+                            }
+                        }
                     );
                 }
             });
+            // 触发攻击者法器 onAttack 效果（AOE 仅触发一次）
+            if (battleScene.artifactManager) {
+                battleScene.artifactManager.onUnitAttack(attacker);
+            }
         } else if (!Array.isArray(target)) {
             // 单体攻击
             const targetData = target.getCardData();
             if (targetData.health > 0) {
+                // 触发攻击者法器 onAttack 效果
+                if (battleScene.artifactManager) {
+                    battleScene.artifactManager.onUnitAttack(attacker, target);
+                }
+
                 this.battleContext.animationManager.addAttackAnimation(
                     attacker,
                     target,
                     damage,
                     delay,
-                    (unit, dmg) => this.damageUnit(unit, dmg)
+                    (unit, dmg) => {
+                        this.damageUnit(unit, dmg);
+                        if (battleScene.artifactManager) {
+                            battleScene.artifactManager.onUnitDamaged(unit, attacker);
+                        }
+                    }
                 );
             }
         }

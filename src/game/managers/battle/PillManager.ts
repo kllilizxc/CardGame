@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import type { PillCard } from '@data/types/cards/pill';
 import { CardSprite } from '../../objects/CardSprite';
 import type { BattleContext } from '../../context/BattleContext';
+import type { EffectResolver, EffectExecutionContext } from './EffectResolver';
 
 /**
  * 丹药槽位信息
@@ -12,6 +13,14 @@ export interface PillSlot {
     isEmpty: boolean;        // 是否为空
 }
 
+interface TimedPillEffect {
+    unitId: string;
+    attackDelta: number;
+    healthDelta: number;
+    remainingTurns: number;
+    sourceName: string;
+}
+
 /**
  * 丹药管理器
  * 管理丹药槽位系统（类似杀戮尖塔的药水瓶）
@@ -19,14 +28,17 @@ export interface PillSlot {
 export class PillManager {
     private scene: Scene;
     private battleContext: BattleContext;
+    private effectResolver: EffectResolver;
     private slots: PillSlot[] = [];     // 丹药槽位数组
     private maxSlots: number = 3;       // 默认最大槽位数
+    private timedEffects: Map<string, TimedPillEffect[]> = new Map(); // unitId -> timed effects
 
-    constructor(scene: Scene, battleContext: BattleContext, maxSlots: number = 3) {
+    constructor(scene: Scene, battleContext: BattleContext, maxSlots: number = 3, effectResolver: EffectResolver) {
         this.scene = scene;
         this.battleContext = battleContext;
+        this.effectResolver = effectResolver;
         this.maxSlots = Math.min(maxSlots, 5); // 最多5个槽位
-        
+
         // 初始化槽位
         this.initializeSlots();
     }
@@ -152,107 +164,118 @@ export class PillManager {
             return;
         }
 
-        pillData.effects.forEach(effect => {
-            if (!effect.actions) return;
+        const battleScene = this.scene as any;
+        const playerField: CardSprite[] = battleScene.playerField || [];
+        const enemyField: CardSprite[] = battleScene.enemyField || [];
 
-            effect.actions.forEach(action => {
-                switch (action.type) {
-                    case 'healPlayer':
-                        this.healPlayer(action.value || 0);
-                        break;
+        for (const effect of pillData.effects) {
+            if (!effect.actions) continue;
 
-                    case 'modifyHealth':
-                        if (target && target !== 'player' && target instanceof CardSprite) {
-                            this.modifyUnitHealth(target, action.value || 0);
-                        }
-                        break;
+            const scope = effect.target?.scope;
+            let targets: CardSprite[] = [];
 
-                    case 'modifyAttack':
-                        if (target && target !== 'player' && target instanceof CardSprite) {
-                            this.modifyUnitAttack(target, action.value || 0, pillData.duration || 0);
-                        }
-                        break;
-
-                    case 'drawCards':
-                        this.drawCards(action.value || 1);
-                        break;
-
-                    case 'applyStatus':
-                        // 状态效果暂时简化处理
-                        this.battleContext.battleLog.addLog(`施加状态效果`);
-                        break;
-
-                    default:
-                        console.log(`未处理的丹药效果类型: ${action.type}`);
+            if (scope === 'ownerPlayer') {
+                targets = [];
+            } else if (scope === 'singleAlly' || scope === 'singleEnemy') {
+                if (target && target !== 'player' && target instanceof CardSprite) {
+                    targets = [target];
                 }
-            });
+            } else if (scope) {
+                const ctx: EffectExecutionContext = {
+                    playerField,
+                    enemyField,
+                    sourceName: pillData.name,
+                };
+                targets = this.effectResolver.resolveTargets(scope, ctx);
+            } else {
+                // no scope specified, default to target if available
+                if (target && target !== 'player' && target instanceof CardSprite) {
+                    targets = [target];
+                }
+            }
 
-            // 显示效果文本
+            const ctx: EffectExecutionContext = {
+                playerField,
+                enemyField,
+                sourceName: pillData.name,
+            };
+
+            for (const action of effect.actions) {
+                // For player-targeted actions or ownerPlayer scope
+                if (scope === 'ownerPlayer' || (targets.length === 0 && (
+                    action.type === 'healPlayer'
+                    || action.type === 'damagePlayer'
+                    || action.type === 'drawCards'
+                ))) {
+                    this.effectResolver.executeAction(action, [], ctx);
+                } else if (targets.length > 0) {
+                    this.effectResolver.executeAction(action, targets, ctx);
+
+                    // Track duration-based effects
+                    const duration = pillData.duration || 0;
+                    if (duration > 0 && (action.type === 'modifyAttack' || action.type === 'modifyHealth')) {
+                        for (const unit of targets) {
+                            const unitId = unit.getCardData().id;
+                            let unitEffects = this.timedEffects.get(unitId);
+                            if (!unitEffects) {
+                                unitEffects = [];
+                                this.timedEffects.set(unitId, unitEffects);
+                            }
+                            unitEffects.push({
+                                unitId,
+                                attackDelta: action.type === 'modifyAttack' ? (action.value ?? 0) : 0,
+                                healthDelta: action.type === 'modifyHealth' ? (action.value ?? 0) : 0,
+                                remainingTurns: duration,
+                                sourceName: pillData.name,
+                            });
+                        }
+                    }
+                }
+            }
+
             if (effect.text) {
                 this.battleContext.battleLog.addLog(effect.text);
             }
-        });
-    }
-
-    /**
-     * 回复玩家生命值
-     */
-    private healPlayer(amount: number): void {
-        if (amount <= 0) return;
-
-        // 通知场景更新玩家生命值
-        this.scene.events.emit('healPlayer', amount);
-        this.battleContext.battleLog.addLog(`玩家回复了${amount}点生命值`);
-
-        // 显示治疗特效
-        this.battleContext.effectManager.showHealEffect();
-    }
-
-    /**
-     * 修改单位生命值
-     */
-    private modifyUnitHealth(unit: CardSprite, value: number): void {
-        const cardData = unit.getCardData();
-        cardData.health += value;
-
-        if (value > 0) {
-            this.battleContext.battleLog.addLog(`【${cardData.name}】回复了${value}点生命`);
-            this.battleContext.effectManager.showHealEffect(unit.x, unit.y);
-        } else {
-            this.battleContext.battleLog.addLog(`【${cardData.name}】受到${-value}点伤害`);
-            this.battleContext.effectManager.showDamageEffect(unit);
         }
-
-        unit.updateStats();
     }
 
     /**
-     * 修改单位攻击力
+     * 回合结束时处理丹药持续时间效果
+     * 减少剩余回合数，到期后回退效果
      */
-    private modifyUnitAttack(unit: CardSprite, value: number, duration: number): void {
-        const cardData = unit.getCardData();
-        cardData.attack += value;
+    public onTurnEnd(playerField: CardSprite[], enemyField: CardSprite[]): void {
+        const allUnits = [...playerField, ...enemyField];
 
-        const durationText = duration > 0 ? `（持续${duration}回合）` : '';
-        this.battleContext.battleLog.addLog(`【${cardData.name}】攻击力${value > 0 ? '+' : ''}${value}${durationText}`);
+        for (const unit of allUnits) {
+            const unitData = unit.getCardData();
+            const effects = this.timedEffects.get(unitData.id);
+            if (!effects || effects.length === 0) continue;
 
-        // 显示增益/减益特效
-        if (value > 0) {
-            this.battleContext.effectManager.showBuffEffect(unit);
-        } else {
-            this.battleContext.effectManager.showDebuffEffect(unit);
+            const remaining: TimedPillEffect[] = [];
+
+            for (const timed of effects) {
+                timed.remainingTurns--;
+
+                if (timed.remainingTurns <= 0) {
+                    // 回退效果
+                    unitData.attack -= timed.attackDelta;
+                    unitData.health -= timed.healthDelta;
+                    if (unitData.health < 0) unitData.health = 0;
+                    unit.updateStats();
+
+                    this.battleContext.battleLog.addLog(
+                        `【${unitData.name}】的【${timed.sourceName}】效果已到期`,
+                    );
+                } else {
+                    remaining.push(timed);
+                }
+            }
+
+            if (remaining.length > 0) {
+                this.timedEffects.set(unitData.id, remaining);
+            } else {
+                this.timedEffects.delete(unitData.id);
+            }
         }
-
-        unit.updateStats();
-
-        // TODO: 如果有duration，需要在回合结束后移除效果
-    }
-
-    /**
-     * 抽卡
-     */
-    private drawCards(count: number): void {
-        this.scene.events.emit('drawCardsFromPill', count);
-        this.battleContext.battleLog.addLog(`抽取${count}张卡牌`);
     }
 }

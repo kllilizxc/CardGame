@@ -3,6 +3,8 @@ import type { BattleContext } from '../../context/BattleContext';
 import type { CardSprite } from '../../objects/CardSprite';
 import type { ArtifactSprite } from '../../objects/ArtifactSprite';
 import type { UnitEffectManager } from './UnitEffectManager';
+import type { EffectResolver, EffectExecutionContext } from './EffectResolver';
+import type { LegacyCardEffect } from '@data/types/cards/effects';
 
 interface EquippedArtifact {
     artifact: ArtifactSprite;
@@ -16,12 +18,14 @@ interface EquippedArtifact {
 export class ArtifactManager {
     private scene: Scene;
     private battleContext: BattleContext;
+    private effectResolver: EffectResolver;
     private equippedArtifacts: Map<string, EquippedArtifact> = new Map(); // artifactId -> equipped info
     private unitEffectManager?: UnitEffectManager;
 
-    constructor(scene: Scene, battleContext: BattleContext) {
+    constructor(scene: Scene, battleContext: BattleContext, effectResolver: EffectResolver) {
         this.scene = scene;
         this.battleContext = battleContext;
+        this.effectResolver = effectResolver;
     }
 
     public setUnitEffectManager(unitEffectManager: UnitEffectManager): void {
@@ -234,24 +238,36 @@ export class ArtifactManager {
     /**
      * 攻击时触发法器效果
      */
-    public onUnitAttack(unit: CardSprite) {
-        // 找到装备在该单位上的所有法器
+    public onUnitAttack(unit: CardSprite, attackTarget?: CardSprite): void {
+        const battleScene = this.scene as any;
+        const playerField: CardSprite[] = battleScene.playerField || [];
+        const enemyField: CardSprite[] = battleScene.enemyField || [];
+
         this.equippedArtifacts.forEach((equipped, artifactId) => {
             if (equipped.target === unit) {
                 const { artifact } = equipped;
                 const artifactData = artifact.getCardData();
 
-                // 触发 onAttack 效果
                 if (artifactData.effects) {
-                    artifactData.effects.forEach(effect => {
+                    const ctx: EffectExecutionContext = {
+                        playerField,
+                        enemyField,
+                        triggerUnit: unit,
+                        sourceCard: artifact,
+                        sourceName: artifactData.name,
+                        attackTarget,
+                    };
+
+                    for (const effect of artifactData.effects) {
                         if (effect.timing === 'onAttack') {
-                            // TODO: 实现效果系统
-                            console.log(`触发法器效果: ${effect.text}`);
+                            this.effectResolver.executeEffect(
+                                effect as LegacyCardEffect,
+                                ctx,
+                            );
                         }
-                    });
+                    }
                 }
 
-                // 检查耐久度
                 if (artifactData.durability) {
                     this.checkDurability(artifactId);
                 }
@@ -262,20 +278,34 @@ export class ArtifactManager {
     /**
      * 受伤时触发法器效果
      */
-    public onUnitDamaged(unit: CardSprite) {
+    public onUnitDamaged(unit: CardSprite, damageSource?: CardSprite): void {
+        const battleScene = this.scene as any;
+        const playerField: CardSprite[] = battleScene.playerField || [];
+        const enemyField: CardSprite[] = battleScene.enemyField || [];
+
         this.equippedArtifacts.forEach((equipped, _artifactId) => {
             if (equipped.target === unit) {
                 const { artifact } = equipped;
                 const artifactData = artifact.getCardData();
 
-                // 触发 onDamaged 效果
                 if (artifactData.effects) {
-                    artifactData.effects.forEach(effect => {
+                    const ctx: EffectExecutionContext = {
+                        playerField,
+                        enemyField,
+                        triggerUnit: unit,
+                        sourceCard: artifact,
+                        sourceName: artifactData.name,
+                        damageSource,
+                    };
+
+                    for (const effect of artifactData.effects) {
                         if (effect.timing === 'onDamaged') {
-                            // TODO: 实现效果系统
-                            console.log(`触发法器效果: ${effect.text}`);
+                            this.effectResolver.executeEffect(
+                                effect as LegacyCardEffect,
+                                ctx,
+                            );
                         }
-                    });
+                    }
                 }
             }
         });

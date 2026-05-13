@@ -8,6 +8,9 @@ import type { BattleStatusController } from '../managers/battle/BattleStatusCont
 import type { BattleTickManager } from '../managers/battle/BattleTickManager';
 import type { BattleStateChecker } from '../managers/battle/BattleStateChecker';
 import type { TurnManager } from '../managers/battle/TurnManager';
+import type { EffectResolver } from '../managers/battle/EffectResolver';
+import type { FieldManager } from '../managers/battle/FieldManager';
+import type { PillManager } from '../managers/battle/PillManager';
 import type { EffectManager } from '../managers/battle/EffectManager';
 
 /**
@@ -31,6 +34,13 @@ export class BattleContext {
     public statusManager!: StatusManager;
     public battleStatusController!: BattleStatusController;
     
+    // 效果引擎
+    public effectResolver!: EffectResolver;
+
+    // 领域管理器
+    public fieldManager!: FieldManager;
+    public pillManager!: PillManager;
+
     // 战斗流程管理器
     public battleTickManager!: BattleTickManager;
     public battleStateChecker!: BattleStateChecker;
@@ -104,6 +114,27 @@ export class BattleContext {
     }
 
     /**
+     * 设置效果引擎
+     */
+    public setEffectResolver(effectResolver: EffectResolver): void {
+        this.effectResolver = effectResolver;
+    }
+
+    /**
+     * 设置场地管理器
+     */
+    public setFieldManager(fieldManager: FieldManager): void {
+        this.fieldManager = fieldManager;
+    }
+
+    /**
+     * 设置丹药管理器
+     */
+    public setPillManager(pillManager: PillManager): void {
+        this.pillManager = pillManager;
+    }
+
+    /**
      * 设置回合管理器
      */
     public setTurnManager(turnManager: TurnManager): void {
@@ -115,6 +146,7 @@ export class BattleContext {
      */
     public isInitialized(): boolean {
         return !!(
+            this.effectResolver &&
             this.battleLog &&
             this.animationManager &&
             this.effectManager &&

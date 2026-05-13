@@ -2,8 +2,9 @@ import type { Scene } from 'phaser';
 import type { BattleContext } from '../../context/BattleContext';
 import { FieldSprite } from '../../objects/FieldSprite';
 import type { FieldCard } from '@data/types/cards/field';
-import type { CardEffect, LegacyEffectAction } from '@data/types/cards/effects';
+import type { CardEffect, LegacyCardEffect, LegacyEffectAction } from '@data/types/cards/effects';
 import type { CardSprite } from '../../objects/CardSprite';
+import type { EffectResolver, EffectExecutionContext } from './EffectResolver';
 
 /**
  * 场地卡管理器
@@ -12,11 +13,13 @@ import type { CardSprite } from '../../objects/CardSprite';
 export class FieldManager {
     private scene: Scene;
     private battleContext: BattleContext;
+    private effectResolver: EffectResolver;
     private currentField: FieldSprite | null = null;
 
-    constructor(scene: Scene, battleContext: BattleContext) {
+    constructor(scene: Scene, battleContext: BattleContext, effectResolver: EffectResolver) {
         this.scene = scene;
         this.battleContext = battleContext;
+        this.effectResolver = effectResolver;
     }
 
     /**
@@ -97,32 +100,58 @@ export class FieldManager {
     }
 
     /**
+     * 构建场地效果执行上下文
+     */
+    private buildFieldContext(): EffectExecutionContext | null {
+        if (!this.currentField) return null;
+
+        const battleScene = this.scene as any;
+        const playerField: CardSprite[] = battleScene.playerField || [];
+        const enemyField: CardSprite[] = battleScene.enemyField || [];
+        const fieldData = this.currentField.getCardData();
+
+        return {
+            playerField,
+            enemyField,
+            sourceCard: this.currentField,
+            sourceName: fieldData.name,
+        };
+    }
+
+    /**
      * 应用场地的永续效果
-     * @private
      */
     private applyFieldPermanentEffects(): void {
         if (!this.currentField) return;
 
+        const ctx = this.buildFieldContext();
+        if (!ctx) return;
+
         const fieldData = this.currentField.getCardData();
-        const permanentEffects = fieldData.effects?.filter((e: CardEffect) => e.timing === 'permanent') || [];
+        const permanentEffects = (fieldData.effects?.filter(
+            (e: CardEffect) => e.timing === 'permanent',
+        ) || []) as LegacyCardEffect[];
 
         if (permanentEffects.length > 0) {
-            console.log(`应用场地【${fieldData.name}】的永续效果`);
-            // TODO: 实际应用效果到场上单位
-            // 这需要访问 BattleScene 的单位数组
+            this.battleContext.battleLog.addLog(
+                `应用场地【${fieldData.name}】的永续效果`,
+            );
+            this.effectResolver.applyFieldPermanentEffects(permanentEffects, ctx);
         }
     }
 
     /**
      * 移除场地的永续效果
-     * @private
      */
     private removeFieldPermanentEffects(): void {
         if (!this.currentField) return;
 
+        const ctx = this.buildFieldContext();
+        if (!ctx) return;
+
         const fieldData = this.currentField.getCardData();
-        console.log(`移除场地【${fieldData.name}】的效果`);
-        // TODO: 移除效果
+        this.battleContext.battleLog.addLog(`移除场地【${fieldData.name}】的效果`);
+        this.effectResolver.removeFieldPermanentEffects(ctx);
     }
 
     /**
@@ -168,8 +197,7 @@ export class FieldManager {
     }
 
     /**
-     * 应用场地效果
-     * @private
+     * 应用场地效果（turnStart / turnEnd）
      */
     private applyFieldEffect(
         effect: CardEffect,
@@ -202,38 +230,18 @@ export class FieldManager {
             targetUnits = [...playerUnits, ...enemyUnits];
         }
 
-        // 应用效果动作
+        if (targetUnits.length === 0) return;
+
+        const ctx: EffectExecutionContext = {
+            playerField: playerUnits,
+            enemyField: enemyUnits,
+            sourceCard: this.currentField!,
+            sourceName: fieldData.name,
+        };
+
+        // 委托给 EffectResolver 执行每个动作
         effect.actions?.forEach((action: LegacyEffectAction) => {
-            targetUnits.forEach(unit => {
-                this.applyAction(action, unit);
-            });
+            this.effectResolver.executeAction(action, targetUnits, ctx);
         });
-    }
-
-    /**
-     * 应用单个动作到单位
-     * @private
-     */
-    private applyAction(action: LegacyEffectAction, unit: CardSprite): void {
-        const unitData = unit.getCardData();
-
-        switch (action.type) {
-            case 'modifyAttack':
-                unitData.attack += action.value || 0;
-                unit.updateStats();
-                break;
-            case 'modifyHealth':
-            case 'heal':
-                unitData.health += action.value || 0;
-                unit.updateStats();
-                break;
-            case 'dealDamage':
-                unitData.health -= action.value || 0;
-                if (unitData.health < 0) unitData.health = 0;
-                unit.updateStats();
-                break;
-        }
-
-        this.battleContext.battleTickManager.tick();
     }
 }
