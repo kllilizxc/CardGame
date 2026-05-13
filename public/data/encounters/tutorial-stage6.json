@@ -1,0 +1,16 @@
+{
+  "id": "tutorial_encounter_stage6",
+  "name": "剑阵长老与烈焰狼·问心终试",
+  "description": "教学第六阶段（最终）：剑阵长老每回合为全部同伴施加强力增益，烈焰狼施加灼烧持续消耗，综合考验抽牌/召唤/攻击/卡牌类型/献祭/丹符/功法/场地的全面掌握。",
+  "difficulty": 3,
+  "enemies": [
+    {
+      "cardId": "CR_009",
+      "position": 1
+    },
+    {
+      "cardId": "CR_007",
+      "position": 2
+    }
+  ]
+}

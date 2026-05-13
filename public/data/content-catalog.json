@@ -38,6 +38,12 @@
       "publicPath": "data/story/story-graph.executable.json"
     },
     {
+      "resourceId": "story.tutorial-qingyun",
+      "kind": "story",
+      "schemaVersion": 1,
+      "publicPath": "data/story/tutorial-story-graph.json"
+    },
+    {
       "resourceId": "story.qingyun-entry",
       "kind": "story",
       "schemaVersion": 1,
@@ -90,6 +96,42 @@
       "kind": "encounter",
       "schemaVersion": 1,
       "publicPath": "data/encounters/test-enemy.json"
+    },
+    {
+      "resourceId": "tutorial_encounter_stage1",
+      "kind": "encounter",
+      "schemaVersion": 1,
+      "publicPath": "data/encounters/tutorial-stage1.json"
+    },
+    {
+      "resourceId": "tutorial_encounter_stage2",
+      "kind": "encounter",
+      "schemaVersion": 1,
+      "publicPath": "data/encounters/tutorial-stage2.json"
+    },
+    {
+      "resourceId": "tutorial_encounter_stage3",
+      "kind": "encounter",
+      "schemaVersion": 1,
+      "publicPath": "data/encounters/tutorial-stage3.json"
+    },
+    {
+      "resourceId": "tutorial_encounter_stage4",
+      "kind": "encounter",
+      "schemaVersion": 1,
+      "publicPath": "data/encounters/tutorial-stage4.json"
+    },
+    {
+      "resourceId": "tutorial_encounter_stage5",
+      "kind": "encounter",
+      "schemaVersion": 1,
+      "publicPath": "data/encounters/tutorial-stage5.json"
+    },
+    {
+      "resourceId": "tutorial_encounter_stage6",
+      "kind": "encounter",
+      "schemaVersion": 1,
+      "publicPath": "data/encounters/tutorial-stage6.json"
     },
     {
       "resourceId": "cards.artifacts",

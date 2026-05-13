@@ -1,0 +1,16 @@
+{
+  "id": "tutorial_encounter_stage5",
+  "name": "玄冰龟与师兄·功法试炼",
+  "description": "教学第五阶段：玄冰龟具备反伤效果（受伤时对攻击者造成伤害），外门师兄每回合为同伴施加增益，考验功法协同与场地战术。",
+  "difficulty": 2,
+  "enemies": [
+    {
+      "cardId": "CR_005",
+      "position": 1
+    },
+    {
+      "cardId": "CR_002",
+      "position": 2
+    }
+  ]
+}

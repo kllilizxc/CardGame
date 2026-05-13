@@ -1,0 +1,16 @@
+{
+  "id": "tutorial_encounter_stage4",
+  "name": "烈焰狼与药童·状态试炼",
+  "description": "教学第四阶段：烈焰狼施加灼烧状态（每回合持续扣血），药童持续治疗同伴，考验状态应对与丹符使用时机的判断。",
+  "difficulty": 2,
+  "enemies": [
+    {
+      "cardId": "CR_007",
+      "position": 1
+    },
+    {
+      "cardId": "CR_008",
+      "position": 2
+    }
+  ]
+}

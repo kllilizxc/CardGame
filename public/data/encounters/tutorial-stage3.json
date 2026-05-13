@@ -1,0 +1,12 @@
+{
+  "id": "tutorial_encounter_stage3",
+  "name": "内门弟子幻象·献祭试炼",
+  "description": "教学第三阶段：内门弟子幻象实力远超普通单位，必须通过献祭低阶单位召唤高阶卡牌才能取胜。",
+  "difficulty": 2,
+  "enemies": [
+    {
+      "cardId": "CR_004",
+      "position": 1
+    }
+  ]
+}

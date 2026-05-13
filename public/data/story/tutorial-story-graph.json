@@ -1,0 +1,1194 @@
+{
+  "storyId": "story.tutorial-qingyun",
+  "title": "序章·青云问道",
+  "entryNodeId": "tut_001_arrival",
+  "initialState": {
+    "locationId": "location.qingyun-outer-camp",
+    "sublocationId": "sublocation.qingyun.outer-camp.entrance",
+    "attributes": {
+      "悟性": 50,
+      "心性": 50,
+      "机缘": 50
+    },
+    "relations": {
+      "npc.qingyun-outer-elder": 0
+    },
+    "flags": {}
+  },
+  "nodes": [
+    {
+      "id": "tut_001_arrival",
+      "type": "story",
+      "title": "外门演武场",
+      "summary": "你随引路人来到青云宗外门演武场，四周石柱上刻满御兽符纹，空气中弥漫着淡淡的灵力波动。",
+      "detail": "青石铺就的演武场宽阔而肃穆，数百根石柱环绕四周，每根柱身上都刻着繁复的御兽符纹。你握紧怀中那枚祖传的古旧卡匣，感受到它微微发热——仿佛在这片灵力的浸润下，卡匣终于苏醒了。",
+      "tags": ["教学", "入门", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.entrance",
+      "timeHint": "清晨",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage1.arrived"
+        },
+        {
+          "kind": "moveTo",
+          "locationId": "location.qingyun-outer-camp",
+          "sublocationId": "sublocation.qingyun.outer-camp.entrance"
+        }
+      ],
+      "aiHints": {
+        "tone": "初入仙门的敬畏与好奇",
+        "theme": ["初入仙门", "卡匣觉醒"],
+        "forbid": ["直接让玩家拥有强大实力", "跳过任何教学引导"]
+      }
+    },
+    {
+      "id": "tut_001_steward_intro",
+      "type": "story",
+      "title": "执事的目光",
+      "summary": "一名青袍执事注意到你手中的古旧卡匣，眼中闪过一丝惊讶，示意你上前。",
+      "detail": "青袍执事缓步走近，目光在你怀中的卡匣上停留了片刻。‘古御兽匣？此物在凡间可不常见。’他顿了顿，‘既然你带着它来我青云宗，想必是天意。我可以教你这卡匣最基本的用法——但能不能悟透，还得看你自己。’",
+      "tags": ["教学", "入门", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.entrance",
+      "timeHint": "清晨",
+      "onEnter": [
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.qingyun-outer-elder",
+          "delta": 2
+        },
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage1.met_steward"
+        }
+      ],
+      "aiHints": {
+        "tone": "温和中带着审视，前辈对后辈的考验感",
+        "theme": ["机缘初现", "引路人登场"],
+        "forbid": ["直接揭示卡匣的全部秘密", "跳过战斗教学"]
+      }
+    },
+    {
+      "id": "tut_001_battle",
+      "type": "story",
+      "title": "初试卡匣——抽牌·召唤·攻击",
+      "summary": "执事抬手轻点，演武场石柱亮起微光，一只木傀儡缓缓凝形。他让你用卡匣应战，从最基础的操作开始。",
+      "detail": "执事退到一旁：‘卡匣之道，始于四步——抽牌以聚灵、召唤以显形、攻击以制敌、合回以蓄力。记住，每一回合结束前，你的场上单位会自动攻击正前方的敌人。现在，凝神聚气，用你的灵识去感受卡匣中的灵兽呼唤。’",
+      "tags": ["教学", "战斗", "主线", "抽牌", "召唤", "攻击", "结束回合"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场中央",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.arena",
+      "timeHint": "晨光初照",
+      "onEnter": [
+        {
+          "kind": "moveTo",
+          "locationId": "location.qingyun-outer-camp",
+          "sublocationId": "sublocation.qingyun.outer-camp.arena"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage1.battle_started"
+        },
+        {
+          "kind": "startBattle",
+          "battle": {
+            "battleId": "tutorial.stage1.basic-flow",
+            "encounterResourceId": "tutorial_encounter_stage1",
+            "encounterId": "tutorial_encounter_stage1",
+            "encounterFile": "data/encounters/tutorial-stage1.json",
+            "deckResourceId": "deck.starter",
+            "deckFile": "data/decks/starter-deck.json",
+            "onVictoryNodeId": "tut_001_victory",
+            "onDefeatNodeId": "tut_001_defeat",
+            "launchText": "执事抬手一点，演武场石柱灵光亮起，一只木傀儡缓缓凝形，等待你以卡匣应战。"
+          }
+        }
+      ],
+      "aiHints": {
+        "tone": "教导式的温和严肃，让玩家感到被引导",
+        "theme": ["初战", "基础操作教学"],
+        "forbid": ["让战斗过于困难", "在失败时惩罚玩家"]
+      }
+    },
+    {
+      "id": "tut_001_victory",
+      "type": "story",
+      "title": "卡匣初鸣",
+      "summary": "木傀儡在灵光中消散，卡匣微微震颤，仿佛在回应你的灵力——你成功完成了第一次御兽召唤。",
+      "detail": "灵光散去，木傀儡化为点点荧光飘入石柱。卡匣在你手中轻轻一震，像是一声低沉的认可。执事微微颔首：‘不错，能在第一次接触时就成功召唤并击败对手，你对灵力的感知比寻常凡人敏锐得多。但这才只是开始。’",
+      "tags": ["教学", "战斗胜利", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场中央",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.arena",
+      "timeHint": "晨光渐亮",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage1.completed"
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.qingyun-outer-elder",
+          "delta": 3
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "悟性",
+          "delta": 2
+        }
+      ],
+      "aiHints": {
+        "tone": "肯定但不过分夸赞，保留继续考验的悬念",
+        "theme": ["初战告捷", "潜力初显"],
+        "forbid": ["过度夸大玩家天赋", "跳过后续教学"]
+      }
+    },
+    {
+      "id": "tut_001_defeat",
+      "type": "story",
+      "title": "力有未逮",
+      "summary": "木傀儡的攻击让你措手不及，但执事并未责备，反而用灵力稳住了你的卡匣。",
+      "detail": "卡匣轻震，灵光散乱。执事拂袖将残余的木傀儡灵力驱散：‘不必气馁。我第一次用御兽匣时，连召唤这一步都做不到。基础四步——抽牌、召唤、攻击、结束回合——记牢于心，重新来过便是。’",
+      "tags": ["教学", "战斗失败", "重试"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场中央",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.arena",
+      "timeHint": "晨光渐亮",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage1.failed_once"
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "心性",
+          "delta": 1
+        }
+      ],
+      "aiHints": {
+        "tone": "温和鼓励，允许失败重来",
+        "theme": ["失败是成长的一部分", "初学者之难"],
+        "forbid": ["永久卡死", "嘲讽玩家", "让失败不可重试"]
+      }
+    },
+    {
+      "id": "tut_002_card_types_intro",
+      "type": "story",
+      "title": "五道之门",
+      "summary": "执事取出一卷古旧帛书，展开后上面以五种颜色描绘着不同的符纹：御兽、法宝、丹药、符箓、功法。",
+      "detail": "执事将帛书悬浮于空中：‘卡匣之中承载的，是修仙界五种力量的显化——御兽卡，召唤灵兽妖兽为你而战；法宝卡，将神兵利器装备于单位之上；丹药卡，瞬间恢复或短时增幅；符箓卡，顷刻释放法术攻击或护佑；功法卡，以秘术运转天地规则。这五道，便是御兽匣最基础的体系。’",
+      "tags": ["教学", "卡牌类型", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.entrance",
+      "timeHint": "上午",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage2.card_types_intro"
+        }
+      ],
+      "aiHints": {
+        "tone": "传道授业的师者语气",
+        "theme": ["知识传授", "系统概览"],
+        "forbid": ["一次性灌输过多细节"]
+      }
+    },
+    {
+      "id": "tut_002_battle",
+      "type": "story",
+      "title": "五道试炼",
+      "summary": "执事召出两个不同类型的敌人——一个近身缠斗的山贼和一只盘旋的灵禽——让你在实践中区分卡牌类型并灵活运用。",
+      "detail": "执事后退两步：‘方才讲了五道，现在你亲手试一试。这次对手不止一个——地上的山贼会用蛮力硬碰，空中的灵禽则会用雷击干扰。看看你的手牌里，哪些是御兽卡、哪些是法宝和符箓，该用的时候用，不要犹豫。’",
+      "tags": ["教学", "战斗", "卡牌类型", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场中央",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.arena",
+      "timeHint": "上午",
+      "onEnter": [
+        {
+          "kind": "moveTo",
+          "locationId": "location.qingyun-outer-camp",
+          "sublocationId": "sublocation.qingyun.outer-camp.arena"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage2.battle_started"
+        },
+        {
+          "kind": "startBattle",
+          "battle": {
+            "battleId": "tutorial.stage2.card-types",
+            "encounterResourceId": "tutorial_encounter_stage2",
+            "encounterId": "tutorial_encounter_stage2",
+            "encounterFile": "data/encounters/tutorial-stage2.json",
+            "deckResourceId": "deck.starter",
+            "deckFile": "data/decks/starter-deck.json",
+            "onVictoryNodeId": "tut_002_victory",
+            "onDefeatNodeId": "tut_002_defeat",
+            "launchText": "执事退后，两个敌人从石柱灵光中凝聚成形——山贼举刀，灵禽盘旋，等待你的应对。"
+          }
+        }
+      ],
+      "aiHints": {
+        "tone": "紧张但不压迫，给予尝试空间",
+        "theme": ["实践检验", "卡牌多样性"],
+        "forbid": ["让战斗过于简单", "不给失败重试机会"]
+      }
+    },
+    {
+      "id": "tut_002_victory",
+      "type": "story",
+      "title": "五道初通",
+      "summary": "你灵活运用了不同类型的卡牌击败了敌人，执事收起帛书，眼中露出赞许。",
+      "detail": "山贼与灵禽先后化为灵光消散。执事将帛书卷起收入袖中：‘能同时在心中分清五道之用，并在战斗中灵活切换，你的悟性确实不错。不过，接下来要学的才是御兽匣真正的核心——献祭低阶灵兽，召唤高阶存在。’",
+      "tags": ["教学", "战斗胜利", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场中央",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.arena",
+      "timeHint": "午前",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage2.completed"
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.qingyun-outer-elder",
+          "delta": 3
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "悟性",
+          "delta": 2
+        }
+      ],
+      "aiHints": {
+        "tone": "赞赏且期待",
+        "theme": ["学以致用", "预告更强挑战"],
+        "forbid": ["直接跳过献祭教学"]
+      }
+    },
+    {
+      "id": "tut_002_defeat",
+      "type": "story",
+      "title": "五道未熟",
+      "summary": "敌人趁你手忙脚乱时击溃了你的防线，执事出手驱散敌人后，重新为你讲解牌型区分的关键。",
+      "detail": "执事抬手将残余的灵光驱散：‘不必急。五道之间各有妙用，御兽为主力，法宝加攻防，丹药救急，符箓瞬发，功法调天地。逐个熟悉，慢慢来。’",
+      "tags": ["教学", "战斗失败", "重试"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场中央",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.arena",
+      "timeHint": "午前",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage2.failed_once"
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "心性",
+          "delta": 1
+        }
+      ],
+      "aiHints": {
+        "tone": "温和纠正，引导思考",
+        "theme": ["学习需要时间", "失败后的指导"],
+        "forbid": ["让失败显得无法挽回"]
+      }
+    },
+    {
+      "id": "tut_003_sacrifice_intro",
+      "type": "story",
+      "title": "献祭之仪",
+      "summary": "执事带你来到演武场深处一座小型祭坛前，祭坛上雕刻着灵兽献祭的古老图案。",
+      "detail": "青石祭坛不大，但上面每一道刻痕都透着古意。执事指着祭坛中心的凹槽：‘御兽匣最强之处不在于召唤普通的灵兽，而在于献祭之道——你可以将场上的低阶灵兽献祭，以此为代价，召唤远超你当前灵力水平的高阶存在。这就是御兽师的真正力量。’",
+      "tags": ["教学", "献祭召唤", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场祭坛",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.sacrificial-altar",
+      "timeHint": "正午",
+      "onEnter": [
+        {
+          "kind": "moveTo",
+          "locationId": "location.qingyun-outer-camp",
+          "sublocationId": "sublocation.qingyun.outer-camp.sacrificial-altar"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage3.sacrifice_intro"
+        }
+      ],
+      "aiHints": {
+        "tone": "庄重、古奥，突出献祭之道的分量",
+        "theme": ["古老的献祭仪式", "御兽师的核心力量"],
+        "forbid": ["将献祭描述得过于血腥", "跳过献祭操作的教学"]
+      }
+    },
+    {
+      "id": "tut_003_battle",
+      "type": "story",
+      "title": "献祭之试",
+      "summary": "祭坛灵光一闪，凝聚出一名实力远超之前的青云内门弟子幻象。执事提醒你——唯有献祭才能与之抗衡。",
+      "detail": "祭坛四周的符纹亮起，一道挺拔的身影从灵光中踏出——那是以灵力凝聚的青云内门弟子幻象，气息远非之前的木傀儡可比。执事沉声道：‘此人实力相当于炼气后期。你那些外门弟子的卡牌虽然不弱，但正面对上毫无胜算。看你的手牌里，是否有一张需要献祭才能召唤的卡？召唤出低阶单位作为祭品，再用它们召唤强者。’",
+      "tags": ["教学", "战斗", "献祭召唤", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场祭坛",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.sacrificial-altar",
+      "timeHint": "正午",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage3.battle_started"
+        },
+        {
+          "kind": "startBattle",
+          "battle": {
+            "battleId": "tutorial.stage3.sacrifice",
+            "encounterResourceId": "tutorial_encounter_stage3",
+            "encounterId": "tutorial_encounter_stage3",
+            "encounterFile": "data/encounters/tutorial-stage3.json",
+            "deckResourceId": "deck.starter",
+            "deckFile": "data/decks/starter-deck.json",
+            "onVictoryNodeId": "tut_003_victory",
+            "onDefeatNodeId": "tut_003_defeat",
+            "launchText": "祭坛灵光大盛，内门弟子的幻象拔剑出鞘——剑意凌厉，唯有献祭高阶卡牌方可应对。"
+          }
+        }
+      ],
+      "aiHints": {
+        "tone": "压迫感，突出正面硬刚不可行的提示",
+        "theme": ["以弱换强", "献祭的策略意义"],
+        "forbid": ["让战斗可以不通过献祭就获胜", "让献祭显得无意义"]
+      }
+    },
+    {
+      "id": "tut_003_victory",
+      "type": "story",
+      "title": "献祭有成",
+      "summary": "你以献祭之术召唤出强大的高阶单位，一举击溃了内门弟子的幻象。祭坛符纹暗淡下来，执事拍掌而笑。",
+      "detail": "高阶灵兽的虚影在祭坛上一闪而过，内门弟子的幻象在那一击之下支离破碎。执事连拍三掌：‘好！献祭之术最考较取舍之道，能在第一战中就做出正确的判断，你在御兽一道上确有天赋。’",
+      "tags": ["教学", "战斗胜利", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场祭坛",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.sacrificial-altar",
+      "timeHint": "午后",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage3.completed"
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.qingyun-outer-elder",
+          "delta": 4
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "悟性",
+          "delta": 3
+        }
+      ],
+      "aiHints": {
+        "tone": "振奋、欣赏",
+        "theme": ["核心能力掌握", "天赋展露"],
+        "forbid": ["跳过后续教学"]
+      }
+    },
+    {
+      "id": "tut_003_defeat",
+      "type": "story",
+      "title": "献祭未通",
+      "summary": "你试图正面硬挡内门弟子的攻势，但对方的实力远超你的普通单位，防线顷刻崩溃。",
+      "detail": "内门弟子的幻象剑光一闪，你的普通单位顷刻间被击飞。执事拂袖散去幻象：‘我说了，正面对抗赢不了。仔细看你的手牌——那张有献祭需求的卡，才是制胜关键。先召唤低阶单位作为祭品，再用它们献祭召唤高阶卡牌。’",
+      "tags": ["教学", "战斗失败", "重试"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场祭坛",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.sacrificial-altar",
+      "timeHint": "午后",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage3.failed_once"
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "心性",
+          "delta": 1
+        }
+      ],
+      "aiHints": {
+        "tone": "严格但耐心",
+        "theme": ["失败后的关键提示", "献祭必要性"],
+        "forbid": ["让玩家不明所以地失败", "不提示献祭的作用"]
+      }
+    },
+    {
+      "id": "tut_004_status_intro",
+      "type": "story",
+      "title": "丹符之术",
+      "summary": "执事从袖中取出一枚丹药和一张符箓，向你展示它们的用法和时机——这是御兽匣中「瞬发」的力量。",
+      "detail": "执事将丹药托在掌心：‘丹药和符箓的妙处在于——它们可以在战斗中瞬间生效。丹药能立刻恢复你或单位的生命力，符箓则能顷刻之间对敌人造成伤害或施加状态。但更重要的是——你要学会识别和应对状态：灼烧会持续扣血，增益能暂时提升攻击，减益则会削弱你的力量。懂得何时用药、何时用符、何时硬扛，才是真正的高手。’",
+      "tags": ["教学", "状态效果", "丹药", "符箓", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.entrance",
+      "timeHint": "午后",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage4.status_intro"
+        }
+      ],
+      "aiHints": {
+        "tone": "实战导向，强调时机与判断",
+        "theme": ["瞬发之力", "状态博弈"],
+        "forbid": ["堆砌术语", "不解释状态的图标或机制"]
+      }
+    },
+    {
+      "id": "tut_004_battle",
+      "type": "story",
+      "title": "灼烧之试",
+      "summary": "执事召出一头浑身缠绕火焰的烈焰狼和一名负责治疗的后排药童——这次敌人会用状态来消耗你。",
+      "detail": "火焰在演武场中央腾起，一头烈焰狼低吼着踏出，身后跟着一名手捧药炉的青云药童。执事袖手旁观：‘烈焰狼的攻击会施加灼烧——每回合结束时持续扣血。药童会不断治疗它们。你要想清楚：是先解决烈焰狼避免烧死自己，还是先除掉药童防止无限续航？丹药和符箓用在对的时机会让你逆转战局。’",
+      "tags": ["教学", "战斗", "状态效果", "灼烧", "治疗", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场中央",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.arena",
+      "timeHint": "午后",
+      "onEnter": [
+        {
+          "kind": "moveTo",
+          "locationId": "location.qingyun-outer-camp",
+          "sublocationId": "sublocation.qingyun.outer-camp.arena"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage4.battle_started"
+        },
+        {
+          "kind": "startBattle",
+          "battle": {
+            "battleId": "tutorial.stage4.status-effects",
+            "encounterResourceId": "tutorial_encounter_stage4",
+            "encounterId": "tutorial_encounter_stage4",
+            "encounterFile": "data/encounters/tutorial-stage4.json",
+            "deckResourceId": "deck.starter",
+            "deckFile": "data/decks/starter-deck.json",
+            "onVictoryNodeId": "tut_004_victory",
+            "onDefeatNodeId": "tut_004_defeat",
+            "launchText": "烈焰狼咆哮着扑来，灼热的气息扑面而至。药童在后方默默升起药炉，准备随时为同伴疗伤。"
+          }
+        }
+      ],
+      "aiHints": {
+        "tone": "紧张焦灼，强调状态效果的紧迫感",
+        "theme": ["状态博弈", "资源管理"],
+        "forbid": ["让状态效果无法被应对", "战斗过于随机"]
+      }
+    },
+    {
+      "id": "tut_004_victory",
+      "type": "story",
+      "title": "丹符有成",
+      "summary": "你在灼烧的威胁下做出了正确的判断——既能应对状态、又能在关键时机用药或符箓逆转。烈焰狼和药童先后化为灵光。",
+      "detail": "最后一枚符箓的灵光闪过，药童的药炉碎裂，烈焰狼也随之消散。执事赞道：‘灼烧之下不慌乱，懂得先断续航再斩主力，这份冷静在实战中比任何术法都珍贵。’",
+      "tags": ["教学", "战斗胜利", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场中央",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.arena",
+      "timeHint": "下午",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage4.completed"
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.qingyun-outer-elder",
+          "delta": 3
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "心性",
+          "delta": 3
+        }
+      ],
+      "aiHints": {
+        "tone": "赞赏冷静的判断力",
+        "theme": ["临危不乱", "战术思维"],
+        "forbid": []
+      }
+    },
+    {
+      "id": "tut_004_defeat",
+      "type": "story",
+      "title": "状态未辨",
+      "summary": "灼烧的持续伤害逐渐拖垮了你，执事在你倒下前驱散了敌人，重新讲解状态的应对之道。",
+      "detail": "烈焰狼的灼烧一层叠一层，你发现自己的生命值在回合结束时飞速下降。执事驱散火焰后摇头道：‘灼烧状态会在回合结束时造成伤害——看到状态图标就要提前想好对策。是先用丹药治疗自己硬扛，还是用符箓速杀烈焰狼？时机比什么都重要。’",
+      "tags": ["教学", "战斗失败", "重试"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场中央",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.arena",
+      "timeHint": "下午",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage4.failed_once"
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "心性",
+          "delta": 1
+        }
+      ],
+      "aiHints": {
+        "tone": "分析式指导，指出战术失误",
+        "theme": ["状态认知", "时机判断"],
+        "forbid": ["让玩家觉得状态不可应对"]
+      }
+    },
+    {
+      "id": "tut_005_gongfa_intro",
+      "type": "story",
+      "title": "功法与场地",
+      "summary": "执事带你走到演武场另一侧，这里的石柱上雕刻的不是灵兽图纹，而是复杂的功法和场地符阵。",
+      "detail": "这一侧的演武场地面以深色石板铺就，每一块石板上都镌刻着微缩的符阵。执事踩了踩脚下的石板：‘御兽匣中还有两道不可忽视的力量——第一是功法卡，每个单位可能自带功法，在特定时机自动触发，例如登场时搜寻卡牌、回合结束时回复生命；第二是场地卡，改变整个战场的规则，所有单位都会受到影响。掌握这两道，你就不是在孤军作战，而是在调动天地之力。’",
+      "tags": ["教学", "功法", "场地卡", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场符阵区",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.rune-area",
+      "timeHint": "下午",
+      "onEnter": [
+        {
+          "kind": "moveTo",
+          "locationId": "location.qingyun-outer-camp",
+          "sublocationId": "sublocation.qingyun.outer-camp.rune-area"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage5.gongfa_intro"
+        }
+      ],
+      "aiHints": {
+        "tone": "进阶知识的庄重感",
+        "theme": ["天地之力", "功法与场地的协同"],
+        "forbid": ["让功法机制显得过于复杂"]
+      }
+    },
+    {
+      "id": "tut_005_battle",
+      "type": "story",
+      "title": "功法与场地之试",
+      "summary": "执事激活了地上的符阵，召唤出的敌人不仅自身具备功法效果，还占据了场地优势。",
+      "detail": "深色石板上的符阵亮起，整个区域的灵气流动明显改变。执事负手而立：‘这次你面对的是玄冰龟——它能以寒冰甲反伤攻击者，坚硬无比；旁边还有一名外门师兄，每回合都会激励同伴。你要用你单位自带的功法去创造优势，如果你的手牌中有场地卡，现在正是释放的好时机。’",
+      "tags": ["教学", "战斗", "功法", "场地卡", "反伤", "增益", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场符阵区",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.rune-area",
+      "timeHint": "下午",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage5.battle_started"
+        },
+        {
+          "kind": "startBattle",
+          "battle": {
+            "battleId": "tutorial.stage5.gongfa-field",
+            "encounterResourceId": "tutorial_encounter_stage5",
+            "encounterId": "tutorial_encounter_stage5",
+            "encounterFile": "data/encounters/tutorial-stage5.json",
+            "deckResourceId": "deck.starter",
+            "deckFile": "data/decks/starter-deck.json",
+            "onVictoryNodeId": "tut_005_victory",
+            "onDefeatNodeId": "tut_005_defeat",
+            "launchText": "符阵激活，地面的灵气纹路如水波般荡漾。玄冰龟缓缓浮出，外门师兄持剑立于其侧，蓄势待发。"
+          }
+        }
+      ],
+      "aiHints": {
+        "tone": "沉稳、强调战术配合的重要性",
+        "theme": ["功法协同", "场地战略", "攻防博弈"],
+        "forbid": ["让战斗过于简单不需要功法就能赢"]
+      }
+    },
+    {
+      "id": "tut_005_victory",
+      "type": "story",
+      "title": "功法贯通",
+      "summary": "你利用单位自带的功法效果和场地优势击败了敌人，执事满意地点头——五道之中你已掌握了四道。",
+      "detail": "符阵缓缓暗淡，玄冰龟的寒甲碎裂消散。执事抚须而笑：‘功法与场地，是御兽匣中的「势」。懂得借天地之势、借单位之势，比单纯的攻防数值重要十倍。现在，你只剩下最后一道关卡了。’",
+      "tags": ["教学", "战斗胜利", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场符阵区",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.rune-area",
+      "timeHint": "傍晚",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage5.completed"
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.qingyun-outer-elder",
+          "delta": 4
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "悟性",
+          "delta": 3
+        }
+      ],
+      "aiHints": {
+        "tone": "欣慰、期待最终关",
+        "theme": ["融会贯通", "预告最终考验"],
+        "forbid": ["提前泄露最终战的内容"]
+      }
+    },
+    {
+      "id": "tut_005_defeat",
+      "type": "story",
+      "title": "功法未悟",
+      "summary": "玄冰龟的反伤和同伴的增益让你陷入了苦战，执事再次为你指点功法与场地的配合之道。",
+      "detail": "玄冰龟的寒冰甲让你每次攻击都伤敌一千自损八百，而外门师兄的增益让敌人越战越强。执事收起符阵，耐心说道：‘注意你单位身上的功法效果——有的登场时就能触发，有的在特定时机自动生效。善用功法之间的协同，而不是一味蛮攻。反伤的敌人，可以用符箓远程解决，也可以用功法效果绕过。’",
+      "tags": ["教学", "战斗失败", "重试"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场符阵区",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.rune-area",
+      "timeHint": "傍晚",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage5.failed_once"
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "心性",
+          "delta": 1
+        }
+      ],
+      "aiHints": {
+        "tone": "耐心分析战术错误",
+        "theme": ["功法认知", "攻防策略"],
+        "forbid": []
+      }
+    },
+    {
+      "id": "tut_006_final_intro",
+      "type": "story",
+      "title": "问心终试",
+      "summary": "夕阳西下，执事将你带到演武场正中央最大的符阵前。这是青云宗外门的入宗终试——问心阵。",
+      "detail": "演武场最中央的符阵不同于其他——它由五层嵌套的灵纹构成，每一层对应一个卡牌体系：御兽、法宝、丹药、符箓、功法。执事罕见地收起了随和的表情：‘这是问心阵，青云宗外门弟子的入宗终试。它会扫描你对五道的掌握——你之前所学的每一种技巧，都可能在这里被考验。你没有克制或逃避的余地……唯有倾尽全力。不过记住，这一战的胜负本身，也是修行的一部分。’",
+      "tags": ["教学", "终试", "主线", "胜负结算"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场问心阵",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.heart-trial",
+      "timeHint": "黄昏",
+      "onEnter": [
+        {
+          "kind": "moveTo",
+          "locationId": "location.qingyun-outer-camp",
+          "sublocationId": "sublocation.qingyun.outer-camp.heart-trial"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage6.final_intro"
+        }
+      ],
+      "aiHints": {
+        "tone": "庄严肃穆，终战的重量感",
+        "theme": ["最终考验", "全部所学融会贯通", "胜负皆为修行"],
+        "forbid": ["让玩家觉得输了就全盘皆输", "渲染过多恐惧而非尊重"]
+      }
+    },
+    {
+      "id": "tut_006_battle",
+      "type": "story",
+      "title": "问心之战",
+      "summary": "问心阵灵光大盛，一名青云剑阵长老的幻象持剑而立，身旁烈焰狼低伏——这是涵盖五道全部要素的终极考验。",
+      "detail": "五层符阵同时亮起——金色的剑阵长老幻象立于最中心，烈焰狼在其脚下低伏。剑阵长老每回合都会为同伴施加强大的增益，烈焰狼的灼烧效果更是致命的持续威胁。执事的声音从阵外传来：‘记住——抽牌、召唤、攻击是基础；卡牌类型是武器库；献祭是以弱换强；丹药符箓是破局关键；功法与场地是你的势。这一切，现在都必须在你心中融为一体！’",
+      "tags": ["教学", "战斗", "终试", "全面检验", "主线"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场问心阵",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.heart-trial",
+      "timeHint": "黄昏",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage6.battle_started"
+        },
+        {
+          "kind": "startBattle",
+          "battle": {
+            "battleId": "tutorial.stage6.final-trial",
+            "encounterResourceId": "tutorial_encounter_stage6",
+            "encounterId": "tutorial_encounter_stage6",
+            "encounterFile": "data/encounters/tutorial-stage6.json",
+            "deckResourceId": "deck.starter",
+            "deckFile": "data/decks/starter-deck.json",
+            "onVictoryNodeId": "tut_006_victory",
+            "onDefeatNodeId": "tut_006_defeat",
+            "launchText": "五层符阵同时亮起——剑阵长老横剑而立，烈焰狼咆哮着冲出——问心终试，倾尽全力吧！"
+          }
+        }
+      ],
+      "aiHints": {
+        "tone": "终极挑战的紧张与庄严",
+        "theme": ["全力以赴", "融会贯通", "最终考验"],
+        "forbid": ["让战斗不公平", "失败时不留余地"]
+      }
+    },
+    {
+      "id": "tut_006_victory",
+      "type": "story",
+      "title": "青云问道——外门弟子",
+      "summary": "问心阵的五层符纹逐一暗去，你的最后一击击溃了剑阵长老的幻象——入宗终试，通过。",
+      "detail": "五层符纹从外向内依次熄灭，最后一丝灵光在剑阵长老消散的幻象中飘入你的卡匣。问心阵轻轻一震，地面上的所有符纹永久地沉寂下来。\n\n执事缓缓走进阵中，将一枚青色的外门弟子令牌双手递给你：‘抽牌、召唤、攻击——你从此不再是凡人。卡牌五道，献祭之术，丹符之功，场地之谋——你都已初窥门径。从今日起，你便是我青云宗外门正式弟子。’\n\n他顿了顿，抬头望了望暮色中的青云群山：‘当然，外门弟子之上还有内门、真传、峰主；炼气之上还有筑基、金丹、元婴。你的御兽之道才刚刚开始。但今天，你已经证明了——这块令牌，你配得上。’",
+      "tags": ["教学", "战斗胜利", "主线", "完结", "入宗", "胜负结算"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场问心阵",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.heart-trial",
+      "timeHint": "暮色",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.completed"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "story.qingyun.outer_disciple"
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.qingyun-outer-elder",
+          "delta": 5
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "悟性",
+          "delta": 5
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "心性",
+          "delta": 5
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "机缘",
+          "delta": 3
+        },
+        {
+          "kind": "recordDialogue",
+          "dialogueId": "dialogue.tutorial.completion"
+        }
+      ],
+      "aiHints": {
+        "tone": "庄重温和的欢迎仪式，新篇章的开启感",
+        "theme": ["入宗仪式", "成长的认可", "新征程的开始"],
+        "forbid": ["让主角获得远超外门弟子的待遇", "直接跳到高境界"]
+      }
+    },
+    {
+      "id": "tut_006_defeat",
+      "type": "story",
+      "title": "问心未过——修行不辍",
+      "summary": "问心阵的灵光散去，你力竭倒下。但执事并未收回令牌，而是扶你起身——胜负只是修行的一部分。",
+      "detail": "五层符纹缓缓暗淡，问心阵无声地沉寂。执事走进阵中，没有责备，没有失望。他扶你起来，沉声说道：‘胜败乃兵家常事。问心阵考验的不只是你的实力，更是你面对失败的态度。你知道这一战中你哪些地方还不够——剑阵长老的增益你没有及时应对，烈焰狼的灼烧你也让它们叠了太多层。记住了这些，再回来便是。青云宗的门，不因为你输了一场就问关上。’\n\n他将一枚青色的外门弟子令牌放在你手中——令牌暂时没有激活，但他说：‘带着它，继续修炼。等你能自如运用今天所学的全部五道——抽牌、召唤、攻击、献祭、丹符、功法——再来问心阵找我。’",
+      "tags": ["教学", "战斗失败", "重试", "胜负结算"],
+      "chapter": "序章·青云问道",
+      "location": "青云宗外门",
+      "sublocation": "演武场问心阵",
+      "locationId": "location.qingyun-outer-camp",
+      "sublocationId": "sublocation.qingyun.outer-camp.heart-trial",
+      "timeHint": "暮色",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage6.failed_once"
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "心性",
+          "delta": 3
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "悟性",
+          "delta": 1
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.qingyun-outer-elder",
+          "delta": 2
+        }
+      ],
+      "aiHints": {
+        "tone": "温暖而坚定，强调失败是修行的一部分",
+        "theme": ["败而不馁", "胜负皆修行", "成长之路"],
+        "forbid": ["让失败成为永久卡死", "剥夺玩家重试的权利", "让失败显得耻辱"]
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "tut_001_choice_steward",
+      "from": "tut_001_arrival",
+      "to": "tut_001_steward_intro",
+      "text": "走向青袍执事，让他看看你怀中的古旧卡匣",
+      "description": "与引路人互动，开启教学之旅。",
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage1.approached_steward"
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.qingyun-outer-elder",
+          "delta": 1
+        }
+      ],
+      "flags": ["主线", "教学"]
+    },
+    {
+      "id": "tut_001_choice_battle",
+      "from": "tut_001_steward_intro",
+      "to": "tut_001_battle",
+      "text": "按执事的指导，凝神聚气，用灵识感受卡匣中的灵兽呼唤",
+      "description": "进入第一场教学战斗——抽牌·召唤·攻击·结束回合。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage1.met_steward"
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage1.ready_for_battle"
+        }
+      ],
+      "flags": ["主线", "教学", "战斗"]
+    },
+    {
+      "id": "tut_001_choice_retry",
+      "from": "tut_001_defeat",
+      "to": "tut_001_battle",
+      "text": "凝神静气，重新尝试基础四步",
+      "description": "失败后的重试——执事允许你反复练习基础操作。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage1.failed_once"
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage1.retrying"
+        }
+      ],
+      "flags": ["重试", "教学"]
+    },
+    {
+      "id": "tut_001_choice_card_types",
+      "from": "tut_001_victory",
+      "to": "tut_002_card_types_intro",
+      "text": "跟随执事学习卡匣中的五种卡牌类型",
+      "description": "进入第二阶段——卡牌类型教学。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage1.completed"
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage2.entering"
+        }
+      ],
+      "flags": ["主线", "教学"]
+    },
+    {
+      "id": "tut_002_choice_battle",
+      "from": "tut_002_card_types_intro",
+      "to": "tut_002_battle",
+      "text": "仔细分辨手牌中的五种卡牌类型，准备迎战",
+      "description": "进入教学战斗——五道试炼，灵活运用不同类型的卡牌。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage2.card_types_intro"
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage2.ready_for_battle"
+        }
+      ],
+      "flags": ["主线", "教学", "战斗"]
+    },
+    {
+      "id": "tut_002_choice_retry",
+      "from": "tut_002_defeat",
+      "to": "tut_002_battle",
+      "text": "重新整理思路，再次挑战五道试炼",
+      "description": "失败后的重试——执事会再次为你讲解牌型区分。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage2.failed_once"
+      },
+      "effects": [],
+      "flags": ["重试", "教学"]
+    },
+    {
+      "id": "tut_002_choice_sacrifice",
+      "from": "tut_002_victory",
+      "to": "tut_003_sacrifice_intro",
+      "text": "跟随执事前往演武场深处的献祭祭坛",
+      "description": "进入第三阶段——学习献祭召唤之术。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage2.completed"
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage3.entering"
+        }
+      ],
+      "flags": ["主线", "教学"]
+    },
+    {
+      "id": "tut_003_choice_battle",
+      "from": "tut_003_sacrifice_intro",
+      "to": "tut_003_battle",
+      "text": "面向祭坛，准备尝试献祭召唤",
+      "description": "进入教学战斗——献祭之试，以弱换强。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage3.sacrifice_intro"
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage3.ready_for_battle"
+        }
+      ],
+      "flags": ["主线", "教学", "战斗"]
+    },
+    {
+      "id": "tut_003_choice_retry",
+      "from": "tut_003_defeat",
+      "to": "tut_003_battle",
+      "text": "明白了——先召唤低阶单位，再以它们为祭品召唤高阶卡牌",
+      "description": "失败后的重试——这次一定要用献祭来应对强敌。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage3.failed_once"
+      },
+      "effects": [],
+      "flags": ["重试", "教学"]
+    },
+    {
+      "id": "tut_003_choice_status",
+      "from": "tut_003_victory",
+      "to": "tut_004_status_intro",
+      "text": "跟随执事学习丹药和符箓的瞬发技巧与状态应对",
+      "description": "进入第四阶段——状态效果与丹符之术。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage3.completed"
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage4.entering"
+        }
+      ],
+      "flags": ["主线", "教学"]
+    },
+    {
+      "id": "tut_004_choice_battle",
+      "from": "tut_004_status_intro",
+      "to": "tut_004_battle",
+      "text": "准备好应对灼烧状态和敌人的治疗——这将是状态的博弈",
+      "description": "进入教学战斗——灼烧之试，学习状态效果的处理时机。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage4.status_intro"
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage4.ready_for_battle"
+        }
+      ],
+      "flags": ["主线", "教学", "战斗"]
+    },
+    {
+      "id": "tut_004_choice_retry",
+      "from": "tut_004_defeat",
+      "to": "tut_004_battle",
+      "text": "这次会注意状态图标，把握丹药和符箓的使用时机",
+      "description": "失败后的重试——执事重新强调了状态机制的应对策略。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage4.failed_once"
+      },
+      "effects": [],
+      "flags": ["重试", "教学"]
+    },
+    {
+      "id": "tut_004_choice_gongfa",
+      "from": "tut_004_victory",
+      "to": "tut_005_gongfa_intro",
+      "text": "跟随执事前往符阵区，学习功法和场地卡",
+      "description": "进入第五阶段——功法与场地卡。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage4.completed"
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage5.entering"
+        }
+      ],
+      "flags": ["主线", "教学"]
+    },
+    {
+      "id": "tut_005_choice_battle",
+      "from": "tut_005_gongfa_intro",
+      "to": "tut_005_battle",
+      "text": "记住功法与场地的协同——让天地之力为你所用",
+      "description": "进入教学战斗——功法与场地之试。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage5.gongfa_intro"
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage5.ready_for_battle"
+        }
+      ],
+      "flags": ["主线", "教学", "战斗"]
+    },
+    {
+      "id": "tut_005_choice_retry",
+      "from": "tut_005_defeat",
+      "to": "tut_005_battle",
+      "text": "重新调整战术——用符箓破反伤，用功法效果获取优势",
+      "description": "失败后的重试——执事再次分析了功法与场地的配合关键。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage5.failed_once"
+      },
+      "effects": [],
+      "flags": ["重试", "教学"]
+    },
+    {
+      "id": "tut_005_choice_final",
+      "from": "tut_005_victory",
+      "to": "tut_006_final_intro",
+      "text": "走向演武场中央的问心阵——迎接最终试炼",
+      "description": "进入第六阶段——问心终试，综合考验全部所学。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage5.completed"
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage6.entering"
+        }
+      ],
+      "flags": ["主线", "教学", "终试"]
+    },
+    {
+      "id": "tut_006_choice_battle",
+      "from": "tut_006_final_intro",
+      "to": "tut_006_battle",
+      "text": "深吸一口气，踏入问心阵——倾尽所学，全力一战",
+      "description": "最终考验——融合抽牌/召唤/攻击/卡牌类型/献祭/丹符/功法/场地的全面战斗。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage6.final_intro"
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage6.ready_for_battle"
+        }
+      ],
+      "flags": ["主线", "教学", "战斗", "终试"]
+    },
+    {
+      "id": "tut_006_choice_retry",
+      "from": "tut_006_defeat",
+      "to": "tut_006_battle",
+      "text": "记住失败中的教训，再次踏入问心阵",
+      "description": "失败后的重试——问心阵允许反复挑战，执事建议你反思战术。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.stage6.failed_once"
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.stage6.retrying"
+        }
+      ],
+      "flags": ["重试", "教学", "终试"]
+    }
+  ]
+}

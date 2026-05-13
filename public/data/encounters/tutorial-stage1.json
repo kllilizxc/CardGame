@@ -1,0 +1,12 @@
+{
+  "id": "tutorial_encounter_stage1",
+  "name": "木傀儡·基础试炼",
+  "description": "教学第一阶段：单只木傀儡，用于学习抽牌、召唤、攻击、结束回合的基础战斗流程。",
+  "difficulty": 1,
+  "enemies": [
+    {
+      "cardId": "CR_010",
+      "position": 1
+    }
+  ]
+}

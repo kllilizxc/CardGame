@@ -1,0 +1,16 @@
+{
+  "id": "tutorial_encounter_stage2",
+  "name": "山贼与灵禽·五道试炼",
+  "description": "教学第二阶段：山贼与雷鸣幼鹰的组合，近战+远程，用于学习区分并灵活运用五种卡牌类型。",
+  "difficulty": 1,
+  "enemies": [
+    {
+      "cardId": "CR_010",
+      "position": 1
+    },
+    {
+      "cardId": "CR_003",
+      "position": 2
+    }
+  ]
+}
