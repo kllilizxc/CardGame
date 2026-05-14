@@ -9,6 +9,8 @@ import {
 } from '../../content/contentCatalog';
 import {
     clampWorldMapSurfacePosition,
+    createWorldMapDestinationPreviewText,
+    createWorldMapDestinationSelectionStatusText,
     createWorldMapInitialSurfacePosition,
     createWorldMapDestinationIntent,
     getWorldMapDestinationSurfacePosition,
@@ -376,11 +378,7 @@ export class WorldMapScene extends Scene {
     }
 
     private previewDestination(destination: WorldMapDestination): void {
-        const sceneLabel = destination.kind === 'hub' ? 'HubScene' : 'ExpeditionScene';
-
-        this.statusText.setText(
-            `${destination.presentation.regionLabel} · ${destination.label}（${sceneLabel}）\n${destination.description}`,
-        );
+        this.statusText.setText(createWorldMapDestinationPreviewText(destination));
     }
 
     private restoreDefaultStatusText(): void {
