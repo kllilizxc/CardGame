@@ -1,0 +1,87 @@
+{
+  "storyId": "tutorial.qingyun-story-teahouse-rumor",
+  "title": "教学青云镇茶棚传闻",
+  "entryNodeId": "tutorial_teahouse_001_arrive",
+  "initialState": {
+    "locationId": "location.tutorial-qingyun-town",
+    "sublocationId": "sublocation.tutorial-qingyun-town.teahouse",
+    "attributes": {
+      "心性": 55,
+      "机缘": 50
+    },
+    "relations": {},
+    "flags": {}
+  },
+  "nodes": [
+    {
+      "id": "tutorial_teahouse_001_arrive",
+      "type": "story",
+      "title": "茶棚里的问心传闻",
+      "summary": "你在教学茶棚旁停下，听见散修提起问心阶的钟声。",
+      "detail": "这段故事只保留教程传闻的资源骨架，避免在本批次扩写完整教学文案。",
+      "tags": ["教程", "青云镇", "茶棚"],
+      "chapter": "教程 · 青云入门",
+      "location": "教学青云镇",
+      "sublocation": "教学茶棚",
+      "locationId": "location.tutorial-qingyun-town",
+      "sublocationId": "sublocation.tutorial-qingyun-town.teahouse",
+      "timeHint": "试炼前",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.teahouse.arrived"
+        }
+      ],
+      "aiHints": {
+        "tone": "简洁、克制、教学前置",
+        "theme": ["教程", "问心阶", "传闻"],
+        "forbid": ["发放正式奖励", "跳过教程战斗"]
+      }
+    },
+    {
+      "id": "tutorial_teahouse_002_listen",
+      "type": "story",
+      "title": "记下钟声提醒",
+      "summary": "你记下传闻：钟声会映出心中杂念，稳住心神才能继续登阶。",
+      "detail": "后续教程文案批次可以把这里扩写为战斗前提示；当前只写入可验证的状态变化。",
+      "tags": ["教程", "线索"],
+      "chapter": "教程 · 青云入门",
+      "location": "教学青云镇",
+      "sublocation": "教学茶棚",
+      "locationId": "location.tutorial-qingyun-town",
+      "sublocationId": "sublocation.tutorial-qingyun-town.teahouse",
+      "timeHint": "试炼前",
+      "onEnter": [
+        {
+          "kind": "recordDialogue",
+          "dialogueId": "dialogue.tutorial-qingyun.teahouse.mind-step"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.teahouse.heard_mind_step"
+        }
+      ],
+      "aiHints": {
+        "tone": "提示但不说教",
+        "theme": ["教程线索", "问心"],
+        "forbid": ["新增教程 UI", "声明固定奖励"]
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "tutorial_teahouse_001_choice_listen",
+      "from": "tutorial_teahouse_001_arrive",
+      "to": "tutorial_teahouse_002_listen",
+      "text": "听完关于问心阶的传闻",
+      "description": "验证教程茶棚故事可以从 Hub action 进入并推进到第二个节点。",
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.teahouse.chose_to_listen"
+        }
+      ],
+      "flags": ["教程", "传闻"]
+    }
+  ]
+}

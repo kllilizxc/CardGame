@@ -1,0 +1,80 @@
+{
+  "id": "tutorial.qingyun-worldmap",
+  "title": "青云入门教学路线",
+  "subtitle": "教程资源骨架 · 第一层入口",
+  "description": "教学专用大地图骨架，只登记教程 Hub、教程山门和教程外山秘境的资源身份；不接主菜单入口、不承担解锁或 UI 提示。",
+  "defaultDestinationId": "destination.tutorial-qingyun-town",
+  "presentation": {
+    "mapWidth": 1200,
+    "mapHeight": 720,
+    "initialCenter": {
+      "x": 0.5,
+      "y": 0.55
+    }
+  },
+  "destinations": [
+    {
+      "id": "destination.tutorial-qingyun-town",
+      "kind": "hub",
+      "label": "教学青云镇",
+      "description": "教程资源骨架中的城镇 Hub，用来承载主线教程入口和茶棚传闻入口。",
+      "presentation": {
+        "position": {
+          "x": 0.28,
+          "y": 0.64
+        },
+        "icon": "tutorial-town",
+        "regionLabel": "教学城镇"
+      },
+      "hubId": "tutorial.qingyun-hub-town",
+      "hubResourceId": "tutorial.qingyun-hub-town",
+      "hubFile": "data/hub/tutorial-qingyun-town.json",
+      "statusText": "进入教学青云镇资源骨架。"
+    },
+    {
+      "id": "destination.tutorial-qingyun-sect-gate",
+      "kind": "hub",
+      "label": "教学青云山门",
+      "description": "教程资源骨架中的山门 Hub，用独立 Hub 身份引用同一段教程入门故事。",
+      "presentation": {
+        "position": {
+          "x": 0.55,
+          "y": 0.28
+        },
+        "icon": "tutorial-sect-gate",
+        "regionLabel": "教学山门"
+      },
+      "hubId": "tutorial.qingyun-hub-sect-gate",
+      "hubResourceId": "tutorial.qingyun-hub-sect-gate",
+      "hubFile": "data/hub/tutorial-qingyun-sect-gate.json",
+      "statusText": "进入教学青云山门资源骨架。"
+    },
+    {
+      "id": "destination.tutorial-qingyun-outer-mountain",
+      "kind": "expedition",
+      "label": "教学外山秘境",
+      "description": "教程资源骨架中的外山秘境目标，用于后续批次接入固定战斗牌序、固定事件结果和教学检查点。",
+      "presentation": {
+        "position": {
+          "x": 0.75,
+          "y": 0.58
+        },
+        "icon": "tutorial-trial",
+        "regionLabel": "教学秘境"
+      },
+      "expeditionId": "tutorial.qingyun-expedition",
+      "mapId": "tutorial.qingyun-expedition-outer-mountain-map",
+      "worldStateResourceId": "tutorial.qingyun-world-seed",
+      "worldStateFile": "data/world/tutorial-qingyun-initial-state.json",
+      "starterDeckResourceId": "tutorial.qingyun-deck-casket-starter",
+      "starterDeckFile": "data/decks/tutorial-qingyun-casket-starter.json",
+      "mapResourceId": "tutorial.qingyun-expedition-outer-mountain-map",
+      "mapFile": "data/mijing/tutorial-qingyun-outer-mountain-map.json",
+      "eventsResourceId": "tutorial.qingyun-events-outer-mountain",
+      "eventsFile": "data/mijing/tutorial-qingyun-events.json",
+      "shopResourceId": "tutorial.qingyun-shop-wayfarer",
+      "shopFile": "data/mijing/tutorial-qingyun-shop.json",
+      "statusText": "进入教学外山秘境资源骨架。"
+    }
+  ]
+}

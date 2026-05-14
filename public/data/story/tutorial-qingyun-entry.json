@@ -1,0 +1,158 @@
+{
+  "storyId": "tutorial.qingyun-story-entry",
+  "title": "教学青云入门",
+  "entryNodeId": "tutorial_entry_001_notice",
+  "initialState": {
+    "locationId": "location.tutorial-qingyun-sect-gate",
+    "sublocationId": "sublocation.tutorial-qingyun-sect-gate.archway",
+    "attributes": {
+      "悟性": 60,
+      "心性": 55,
+      "机缘": 50
+    },
+    "relations": {},
+    "flags": {}
+  },
+  "nodes": [
+    {
+      "id": "tutorial_entry_001_notice",
+      "type": "story",
+      "title": "读过入门试炼告示",
+      "summary": "教程主线从青云试炼告示开始，先确认卡匣和山门方向。",
+      "detail": "这段节点是教程主线的首层骨架，后续批次可以补充更完整的台词、检查点和引导。",
+      "tags": ["教程", "主线", "青云入门"],
+      "chapter": "教程 · 青云入门",
+      "location": "教学青云山门",
+      "sublocation": "试炼告示",
+      "locationId": "location.tutorial-qingyun-sect-gate",
+      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.notice",
+      "timeHint": "试炼前",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.notice_read"
+        }
+      ],
+      "aiHints": {
+        "tone": "清晰、短句、教学起点",
+        "theme": ["教程", "山门", "卡匣"],
+        "forbid": ["连接 MainMenu", "发放正式奖励"]
+      }
+    },
+    {
+      "id": "tutorial_entry_002_mind_echo",
+      "type": "story",
+      "title": "问心回响",
+      "summary": "山门钟声映出第一道心念回响，教程战斗将在这里接入。",
+      "detail": "当前只登记 Story -> Battle 所需的教程 deck 与 encounter 资源身份；固定牌序运行时选项由后续批次接入。",
+      "tags": ["教程", "战斗", "问心"],
+      "chapter": "教程 · 青云入门",
+      "location": "教学青云山门",
+      "sublocation": "问心阶",
+      "locationId": "location.tutorial-qingyun-sect-gate",
+      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.mind-step",
+      "timeHint": "钟声初响",
+      "onEnter": [
+        {
+          "kind": "moveTo",
+          "locationId": "location.tutorial-qingyun-sect-gate",
+          "sublocationId": "sublocation.tutorial-qingyun-sect-gate.mind-step"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.mind_echo_started"
+        },
+        {
+          "kind": "startBattle",
+          "battle": {
+            "battleId": "tutorial.qingyun.battle.mind-echo",
+            "encounterResourceId": "tutorial.qingyun-encounter-mind-echo",
+            "encounterId": "tutorial.qingyun-encounter-mind-echo",
+            "encounterFile": "data/encounters/tutorial-qingyun-mind-echo.json",
+            "deckResourceId": "tutorial.qingyun-deck-casket-starter",
+            "deckFile": "data/decks/tutorial-qingyun-casket-starter.json",
+            "onVictoryNodeId": "tutorial_entry_003_mind_echo_clear",
+            "onDefeatNodeId": "tutorial_entry_003_mind_echo_retry",
+            "launchText": "钟声中的心念回响凝成对手，卡匣随之亮起。"
+          }
+        }
+      ],
+      "aiHints": {
+        "tone": "庄重、明确、低复杂度",
+        "theme": ["教程战斗", "问心"],
+        "forbid": ["新增战斗规则", "承诺固定牌序字段名"]
+      }
+    },
+    {
+      "id": "tutorial_entry_003_mind_echo_clear",
+      "type": "story",
+      "title": "稳住心神",
+      "summary": "你压下心念回响，问心阶向前亮起一段。",
+      "detail": "胜利分支只记录教程状态，正式奖励、解锁和 UI 引导留给后续批次。",
+      "tags": ["教程", "胜利"],
+      "chapter": "教程 · 青云入门",
+      "location": "教学青云山门",
+      "sublocation": "问心阶",
+      "locationId": "location.tutorial-qingyun-sect-gate",
+      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.mind-step",
+      "timeHint": "钟声后",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.mind_echo_cleared"
+        }
+      ],
+      "aiHints": {
+        "tone": "简洁、确认进展",
+        "theme": ["教程检查点", "胜利"],
+        "forbid": ["写入正式奖励", "跳到非教程资源"]
+      }
+    },
+    {
+      "id": "tutorial_entry_003_mind_echo_retry",
+      "type": "story",
+      "title": "回响未散",
+      "summary": "心念回响尚未散去，但教程可以在后续批次选择如何重试。",
+      "detail": "失败分支保留可校验节点身份，避免本批次定义重试 UI 或教学重置策略。",
+      "tags": ["教程", "失败"],
+      "chapter": "教程 · 青云入门",
+      "location": "教学青云山门",
+      "sublocation": "问心阶",
+      "locationId": "location.tutorial-qingyun-sect-gate",
+      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.mind-step",
+      "timeHint": "钟声后",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.mind_echo_failed"
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "心性",
+          "delta": 1
+        }
+      ],
+      "aiHints": {
+        "tone": "保留希望、不给惩罚",
+        "theme": ["教程重试", "失败反馈"],
+        "forbid": ["永久失败", "自动重置存档"]
+      }
+    }
+  ],
+  "choices": [
+    {
+      "id": "tutorial_entry_001_choice_step_forward",
+      "from": "tutorial_entry_001_notice",
+      "to": "tutorial_entry_002_mind_echo",
+      "text": "握紧卡匣，踏上问心阶",
+      "description": "推进到教程战斗资源骨架节点。",
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.stepped_on_mind_step"
+        }
+      ],
+      "flags": ["教程", "主线", "战斗入口"]
+    }
+  ]
+}

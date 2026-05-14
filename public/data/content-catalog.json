@@ -8,6 +8,12 @@
       "publicPath": "data/world/world-map.json"
     },
     {
+      "resourceId": "tutorial.qingyun-worldmap",
+      "kind": "worldMap",
+      "schemaVersion": 1,
+      "publicPath": "data/world/tutorial-qingyun-world-map.json"
+    },
+    {
       "resourceId": "hub.qingyun-sect-gate",
       "kind": "hub",
       "schemaVersion": 1,
@@ -18,6 +24,18 @@
       "kind": "hub",
       "schemaVersion": 1,
       "publicPath": "data/hub/town-shell.json"
+    },
+    {
+      "resourceId": "tutorial.qingyun-hub-town",
+      "kind": "hub",
+      "schemaVersion": 1,
+      "publicPath": "data/hub/tutorial-qingyun-town.json"
+    },
+    {
+      "resourceId": "tutorial.qingyun-hub-sect-gate",
+      "kind": "hub",
+      "schemaVersion": 1,
+      "publicPath": "data/hub/tutorial-qingyun-sect-gate.json"
     },
     {
       "resourceId": "story.qingyun-teahouse-rumors",
@@ -42,6 +60,18 @@
       "kind": "story",
       "schemaVersion": 1,
       "publicPath": "data/story/story-graph.json"
+    },
+    {
+      "resourceId": "tutorial.qingyun-story-teahouse-rumor",
+      "kind": "story",
+      "schemaVersion": 1,
+      "publicPath": "data/story/tutorial-qingyun-teahouse-rumor.json"
+    },
+    {
+      "resourceId": "tutorial.qingyun-story-entry",
+      "kind": "story",
+      "schemaVersion": 1,
+      "publicPath": "data/story/tutorial-qingyun-entry.json"
     },
     {
       "resourceId": "phase01-jade-cave-map",
