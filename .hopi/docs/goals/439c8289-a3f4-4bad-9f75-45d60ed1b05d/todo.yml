@@ -2,6 +2,10 @@ version: 1
 goals:
   - goalKey: 439c8289-a3f4-4bad-9f75-45d60ed1b05d
     items:
+      - ref: tutorial-deterministic-expedition-events
+        status: done
+        title: 为教程秘境事件添加确定性结果选择边界
+        taskId: a09cfd41-d530-458f-bdec-e9476958f27d
       - ref: tutorial-deterministic-battle-order
         status: done
         title: 为教程战斗添加确定性牌序启动边界
