@@ -17,10 +17,14 @@
     {
       "id": "tutorial_entry_001_notice",
       "type": "story",
-      "title": "读过入门试炼告示",
-      "summary": "教程主线从青云试炼告示开始，先确认卡匣和山门方向。",
-      "detail": "这段节点是教程主线的首层骨架，后续批次可以补充更完整的台词、检查点和引导。",
-      "tags": ["教程", "主线", "青云入门"],
+      "title": "山门前的相遇",
+      "summary": "在山门牌坊前，人群拥挤，一位体弱少女被挤到边缘。",
+      "detail": "玩家可以选择老实排队，或在心性条件满足时帮助她。",
+      "tags": [
+        "教程",
+        "主线",
+        "青云入门"
+      ],
       "chapter": "教程 · 青云入门",
       "location": "教学青云山门",
       "sublocation": "试炼告示",
@@ -35,9 +39,34 @@
       ],
       "aiHints": {
         "tone": "清晰、短句、教学起点",
-        "theme": ["教程", "山门", "卡匣"],
-        "forbid": ["连接 MainMenu", "发放正式奖励"]
-      }
+        "theme": [
+          "教程",
+          "山门",
+          "卡匣"
+        ],
+        "forbid": [
+          "连接 MainMenu",
+          "发放正式奖励"
+        ]
+      },
+      "choices": [
+        {
+          "id": "choice_help_girl",
+          "text": "帮助体弱少女",
+          "nextNodeId": "tutorial_entry_001_help_girl",
+          "condition": {
+            "kind": "attribute",
+            "attribute": "心性",
+            "operator": "gte",
+            "value": 50
+          }
+        },
+        {
+          "id": "choice_wait_line",
+          "text": "老实排队",
+          "nextNodeId": "tutorial_entry_001_wait_line"
+        }
+      ]
     },
     {
       "id": "tutorial_entry_002_mind_echo",
@@ -45,7 +74,11 @@
       "title": "问心回响",
       "summary": "山门钟声映出第一道心念回响，教程战斗将在这里接入。",
       "detail": "当前只登记 Story -> Battle 所需的教程 deck 与 encounter 资源身份；固定牌序运行时选项由后续批次接入。",
-      "tags": ["教程", "战斗", "问心"],
+      "tags": [
+        "教程",
+        "战斗",
+        "问心"
+      ],
       "chapter": "教程 · 青云入门",
       "location": "教学青云山门",
       "sublocation": "问心阶",
@@ -79,8 +112,14 @@
       ],
       "aiHints": {
         "tone": "庄重、明确、低复杂度",
-        "theme": ["教程战斗", "问心"],
-        "forbid": ["新增战斗规则", "承诺固定牌序字段名"]
+        "theme": [
+          "教程战斗",
+          "问心"
+        ],
+        "forbid": [
+          "新增战斗规则",
+          "承诺固定牌序字段名"
+        ]
       }
     },
     {
@@ -89,7 +128,10 @@
       "title": "稳住心神",
       "summary": "你压下心念回响，问心阶向前亮起一段。",
       "detail": "胜利分支只记录教程状态，正式奖励、解锁和 UI 引导留给后续批次。",
-      "tags": ["教程", "胜利"],
+      "tags": [
+        "教程",
+        "胜利"
+      ],
       "chapter": "教程 · 青云入门",
       "location": "教学青云山门",
       "sublocation": "问心阶",
@@ -104,8 +146,14 @@
       ],
       "aiHints": {
         "tone": "简洁、确认进展",
-        "theme": ["教程检查点", "胜利"],
-        "forbid": ["写入正式奖励", "跳到非教程资源"]
+        "theme": [
+          "教程检查点",
+          "胜利"
+        ],
+        "forbid": [
+          "写入正式奖励",
+          "跳到非教程资源"
+        ]
       }
     },
     {
@@ -114,7 +162,10 @@
       "title": "回响未散",
       "summary": "心念回响尚未散去，但教程可以在后续批次选择如何重试。",
       "detail": "失败分支保留可校验节点身份，避免本批次定义重试 UI 或教学重置策略。",
-      "tags": ["教程", "失败"],
+      "tags": [
+        "教程",
+        "失败"
+      ],
       "chapter": "教程 · 青云入门",
       "location": "教学青云山门",
       "sublocation": "问心阶",
@@ -134,8 +185,88 @@
       ],
       "aiHints": {
         "tone": "保留希望、不给惩罚",
-        "theme": ["教程重试", "失败反馈"],
-        "forbid": ["永久失败", "自动重置存档"]
+        "theme": [
+          "教程重试",
+          "失败反馈"
+        ],
+        "forbid": [
+          "永久失败",
+          "自动重置存档"
+        ]
+      }
+    },
+    {
+      "id": "tutorial_entry_001_help_girl",
+      "type": "story",
+      "title": "青玉铃的线索",
+      "summary": "你扶住了少女，她向你道谢，你注意到她腰间的青玉铃。",
+      "detail": "触发青玉铃线索 flag，随后钟声响起，进入问心阶测试。",
+      "tags": [
+        "教程",
+        "选择分支"
+      ],
+      "chapter": "教程 · 青云入门",
+      "location": "教学青云山门",
+      "sublocation": "山门牌坊",
+      "locationId": "location.tutorial-qingyun-sect-gate",
+      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.archway",
+      "timeHint": "试炼前",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.helped_girl"
+        }
+      ],
+      "choices": [
+        {
+          "id": "choice_continue_bell_1",
+          "text": "随人流踏上问心阶",
+          "nextNodeId": "tutorial_entry_002_mind_echo"
+        }
+      ],
+      "aiHints": {
+        "tone": "温和",
+        "theme": [
+          "线索",
+          "帮助"
+        ]
+      }
+    },
+    {
+      "id": "tutorial_entry_001_wait_line",
+      "type": "story",
+      "title": "秩序的认可",
+      "summary": "你安静地排队，执事对你的守序微微点头。",
+      "detail": "得到执事的秩序认可，随后钟声响起，进入问心阶测试。",
+      "tags": [
+        "教程",
+        "选择分支"
+      ],
+      "chapter": "教程 · 青云入门",
+      "location": "教学青云山门",
+      "sublocation": "山门牌坊",
+      "locationId": "location.tutorial-qingyun-sect-gate",
+      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.archway",
+      "timeHint": "试炼前",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.waited_in_line"
+        }
+      ],
+      "choices": [
+        {
+          "id": "choice_continue_bell_2",
+          "text": "踏上问心阶",
+          "nextNodeId": "tutorial_entry_002_mind_echo"
+        }
+      ],
+      "aiHints": {
+        "tone": "平淡",
+        "theme": [
+          "秩序",
+          "排队"
+        ]
       }
     }
   ],
@@ -152,7 +283,11 @@
           "flag": "tutorial.qingyun.entry.stepped_on_mind_step"
         }
       ],
-      "flags": ["教程", "主线", "战斗入口"]
+      "flags": [
+        "教程",
+        "主线",
+        "战斗入口"
+      ]
     }
   ]
 }

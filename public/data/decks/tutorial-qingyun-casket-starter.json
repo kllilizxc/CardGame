@@ -1,11 +1,19 @@
 {
-  "name": "教程卡匣起始牌组",
-  "description": "教程外山试炼专用的短卡组，复用已登记的基础单位、法器、符箓和丹药卡以保持战斗与 catalog 校验稳定。",
+  "deckId": "tutorial.qingyun-deck-casket-starter",
+  "name": "古旧卡匣（初醒）",
+  "description": "古旧卡匣首次展开时提供的基础牌组，包含最基础的剑诀与护身符。",
   "cards": [
-    { "id": "SX_YJZ_001", "count": 1 },
-    { "id": "SX_TY_001", "count": 1 },
-    { "id": "AR_001", "count": 2 },
-    { "id": "TL_002", "count": 1 },
-    { "id": "PL_001", "count": 1 }
+    {
+      "id": "SK_001",
+      "count": 3
+    },
+    {
+      "id": "TL_TEST_ARMOR",
+      "count": 2
+    },
+    {
+      "id": "TL_004",
+      "count": 1
+    }
   ]
 }

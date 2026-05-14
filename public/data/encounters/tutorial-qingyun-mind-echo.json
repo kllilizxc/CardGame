@@ -1,12 +1,25 @@
 {
-  "id": "tutorial.qingyun-encounter-mind-echo",
-  "name": "问心回响",
-  "description": "教程外山的第二场战斗兼终点节点，复用已登记单位卡以验证 boss/encounter 引用与返回闭环。",
+  "encounterId": "tutorial.qingyun-encounter-mind-echo",
+  "title": "问心阶残影",
+  "description": "这是你在问心阶上面对的第一道幻象残影，用以熟悉卡匣。它的动作缓慢，不会造成真正的伤害。",
   "difficulty": 1,
   "enemies": [
     {
-      "cardId": "CR_001",
-      "position": 1
+      "id": "enemy.tutorial.phantom-1",
+      "name": "问心残影",
+      "hp": 20,
+      "maxHp": 20,
+      "deck": [],
+      "intentPattern": "tutorial_phantom_basic",
+      "sprite": "phantom_fox",
+      "position": 1,
+      "cardId": "CR_001"
     }
-  ]
+  ],
+  "environment": "mind_step_illusion",
+  "rewards": {
+    "exp": 10,
+    "drops": []
+  },
+  "id": "tutorial.qingyun-encounter-mind-echo"
 }

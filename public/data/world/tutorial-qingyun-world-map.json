@@ -76,5 +76,40 @@
       "shopFile": "data/mijing/tutorial-qingyun-shop.json",
       "statusText": "进入教学外山秘境资源骨架。"
     }
+  ],
+  "nodes": [
+    {
+      "id": "node.tutorial-qingyun-town",
+      "type": "hub",
+      "title": "青云镇",
+      "description": "山麓下的凡人集镇。",
+      "targetId": "tutorial.qingyun-hub-town",
+      "position": {
+        "x": 0.3,
+        "y": 0.6
+      }
+    },
+    {
+      "id": "node.tutorial-qingyun-sect-gate",
+      "type": "hub",
+      "title": "青云宗山门",
+      "description": "青云宗入门试炼的起点。",
+      "targetId": "tutorial.qingyun-hub-sect-gate",
+      "position": {
+        "x": 0.5,
+        "y": 0.4
+      }
+    },
+    {
+      "id": "node.tutorial-qingyun-expedition-outer-mountain",
+      "type": "expedition",
+      "title": "青云外山教学试炼",
+      "description": "完成问心阶后的实战秘境。",
+      "targetId": "tutorial.qingyun-expedition-outer-mountain-map",
+      "position": {
+        "x": 0.7,
+        "y": 0.3
+      }
+    }
   ]
 }
