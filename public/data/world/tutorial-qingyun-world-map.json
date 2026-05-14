@@ -1,8 +1,8 @@
 {
   "id": "tutorial.qingyun-worldmap",
   "title": "青云入门教学路线",
-  "subtitle": "教程资源骨架 · 第一层入口",
-  "description": "教学专用大地图骨架，只登记教程 Hub、教程山门和教程外山秘境的资源身份；不接主菜单入口、不承担解锁或 UI 提示。",
+  "subtitle": "教程入口 · 青云入门前半段",
+  "description": "教学专用大地图，承载青云镇传闻、青云山门问心和外山秘境三段教程路线；当前仍不接主菜单入口，也不承担解锁或 UI 提示。",
   "defaultDestinationId": "destination.tutorial-qingyun-town",
   "presentation": {
     "mapWidth": 1200,
@@ -17,7 +17,7 @@
       "id": "destination.tutorial-qingyun-town",
       "kind": "hub",
       "label": "教学青云镇",
-      "description": "教程资源骨架中的城镇 Hub，用来承载主线教程入口和茶棚传闻入口。",
+      "description": "青云镇教学 Hub，用来承载山脚告示和茶棚问心传闻。",
       "presentation": {
         "position": {
           "x": 0.28,
@@ -29,13 +29,13 @@
       "hubId": "tutorial.qingyun-hub-town",
       "hubResourceId": "tutorial.qingyun-hub-town",
       "hubFile": "data/hub/tutorial-qingyun-town.json",
-      "statusText": "进入教学青云镇资源骨架。"
+      "statusText": "进入教学青云镇，先查看告示或去茶棚打听问心传闻。"
     },
     {
       "id": "destination.tutorial-qingyun-sect-gate",
       "kind": "hub",
       "label": "教学青云山门",
-      "description": "教程资源骨架中的山门 Hub，用独立 Hub 身份引用同一段教程入门故事。",
+      "description": "青云山门教学 Hub，用独立 Hub 身份进入山门问心故事。",
       "presentation": {
         "position": {
           "x": 0.55,
@@ -47,13 +47,13 @@
       "hubId": "tutorial.qingyun-hub-sect-gate",
       "hubResourceId": "tutorial.qingyun-hub-sect-gate",
       "hubFile": "data/hub/tutorial-qingyun-sect-gate.json",
-      "statusText": "进入教学青云山门资源骨架。"
+      "statusText": "进入教学青云山门，准备叩问山门并踏上问心阶。"
     },
     {
       "id": "destination.tutorial-qingyun-outer-mountain",
       "kind": "expedition",
       "label": "教学外山秘境",
-      "description": "教程资源骨架中的外山秘境目标，用于后续批次接入固定战斗牌序、固定事件结果和教学检查点。",
+      "description": "青云外山教学秘境目标，用于承接问心演武后的探索、事件、商店与撤离教学。",
       "presentation": {
         "position": {
           "x": 0.75,
@@ -74,7 +74,7 @@
       "eventsFile": "data/mijing/tutorial-qingyun-events.json",
       "shopResourceId": "tutorial.qingyun-shop-wayfarer",
       "shopFile": "data/mijing/tutorial-qingyun-shop.json",
-      "statusText": "进入教学外山秘境资源骨架。"
+      "statusText": "进入教学外山秘境，开始固定路线的探索教学。"
     }
   ],
   "nodes": [

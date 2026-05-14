@@ -2,6 +2,8 @@ import { describe, expect, it } from 'bun:test';
 
 import compactStoryGraphJson from '../../../../public/data/story/story-graph.compact.example.json';
 import storyGraphJson from '../../../../public/data/story/story-graph.json';
+import tutorialEntryStoryJson from '../../../../public/data/story/tutorial-qingyun-entry.json';
+import tutorialTeahouseStoryJson from '../../../../public/data/story/tutorial-qingyun-teahouse-rumor.json';
 
 import { validatePlayableStoryGraph } from './storyFlow';
 
@@ -72,6 +74,95 @@ describe('storyFlow', () => {
             'sect_entry_004_trial_bell',
             'sect_entry_004_trial_bell',
         ]);
+    });
+
+    it('validates the tutorial Qingyun entry front half with choices, deterministic duel, and continuation', () => {
+        const graph = validatePlayableStoryGraph(tutorialEntryStoryJson);
+        const nodeIds = graph.nodes.map((node) => node.id);
+
+        expect(graph.storyId).toBe('tutorial.qingyun-story-entry');
+        expect(graph.entryNodeId).toBe('tutorial_entry_001_foothill_notice');
+        expect(nodeIds).toEqual([
+            'tutorial_entry_001_foothill_notice',
+            'tutorial_entry_002_waiting_queue',
+            'tutorial_entry_003_patient_line',
+            'tutorial_entry_003_help_frail_girl',
+            'tutorial_entry_004_bell_secret',
+            'tutorial_entry_005_mind_bell_duel',
+            'tutorial_entry_006_mind_duel_victory',
+            'tutorial_entry_006_mind_duel_defeat',
+            'tutorial_entry_007_outer_mountain_lead',
+        ]);
+        expect(JSON.stringify(tutorialEntryStoryJson)).not.toContain('骨架');
+        expect(JSON.stringify(tutorialEntryStoryJson)).not.toContain('后续批次');
+
+        expect(graph.choices.find((choice) => choice.id === 'tutorial_entry_002_choice_help_frail_girl')?.enabledWhen).toEqual({
+            kind: 'attribute',
+            attribute: '心性',
+            operator: '>=',
+            value: 50,
+        });
+        expect(graph.choices.map((choice) => choice.to)).toEqual([
+            'tutorial_entry_002_waiting_queue',
+            'tutorial_entry_003_patient_line',
+            'tutorial_entry_003_help_frail_girl',
+            'tutorial_entry_005_mind_bell_duel',
+            'tutorial_entry_004_bell_secret',
+            'tutorial_entry_005_mind_bell_duel',
+            'tutorial_entry_005_mind_bell_duel',
+            'tutorial_entry_007_outer_mountain_lead',
+            'tutorial_entry_007_outer_mountain_lead',
+        ]);
+
+        const battleNode = graph.nodes.find((node) => node.id === 'tutorial_entry_005_mind_bell_duel');
+        const battleEffect = battleNode?.onEnter.find((effect) => effect.kind === 'startBattle');
+
+        expect(battleEffect).toEqual({
+            kind: 'startBattle',
+            battle: {
+                battleId: 'tutorial.qingyun.battle.mind-echo',
+                encounterResourceId: 'tutorial.qingyun-encounter-mind-echo',
+                encounterId: 'tutorial.qingyun-encounter-mind-echo',
+                encounterFile: 'data/encounters/tutorial-qingyun-mind-echo.json',
+                deckResourceId: 'tutorial.qingyun-deck-casket-starter',
+                deckFile: 'data/decks/tutorial-qingyun-casket-starter.json',
+                deterministicBattleSetup: {
+                    deckOrder: 'preserve-json-order',
+                },
+                onVictoryNodeId: 'tutorial_entry_006_mind_duel_victory',
+                onDefeatNodeId: 'tutorial_entry_006_mind_duel_defeat',
+                launchText: '问心钟声中的狐影压低身形，执事提醒你按卡匣显现的顺序完成第一轮演武。',
+            },
+        });
+    });
+
+    it('validates the tutorial teahouse rumor as story-choice setup instead of a placeholder', () => {
+        const graph = validatePlayableStoryGraph(tutorialTeahouseStoryJson);
+
+        expect(graph.storyId).toBe('tutorial.qingyun-story-teahouse-rumor');
+        expect(graph.entryNodeId).toBe('tutorial_teahouse_001_arrive');
+        expect(graph.nodes.map((node) => node.id)).toEqual([
+            'tutorial_teahouse_001_arrive',
+            'tutorial_teahouse_002_listen',
+            'tutorial_teahouse_003_depart_for_gate',
+        ]);
+        expect(JSON.stringify(tutorialTeahouseStoryJson)).not.toContain('骨架');
+        expect(JSON.stringify(tutorialTeahouseStoryJson)).not.toContain('后续批次');
+        expect(graph.choices.map((choice) => choice.id)).toEqual([
+            'tutorial_teahouse_001_choice_listen',
+            'tutorial_teahouse_002_choice_depart',
+        ]);
+        expect(graph.nodes[1].onEnter).toEqual(expect.arrayContaining([
+            {
+                kind: 'setFlag',
+                flag: 'tutorial.qingyun.teahouse.heard_mind_step',
+            },
+            {
+                kind: 'adjustAttribute',
+                attribute: '悟性',
+                delta: 1,
+            },
+        ]));
     });
 
     it('rejects a synthetic broken graph with a missing target node', () => {

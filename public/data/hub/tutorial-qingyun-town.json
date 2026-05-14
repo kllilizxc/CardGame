@@ -1,24 +1,24 @@
 {
   "hubId": "tutorial.qingyun-hub-town",
   "title": "教学青云镇",
-  "subtitle": "教程主线的城镇入口骨架",
-  "description": "教学青云镇只登记教程故事入口和地点关系，供后续教程内容批次填充；当前不接入正式入口或提示 UI。",
+  "subtitle": "教程主线的城镇入口",
+  "description": "教学青云镇承载山脚告示、集市茶棚和进入山门前的传闻铺垫；当前不接入正式入口或提示 UI。",
   "defaultLocationId": "location.tutorial-qingyun-town.notice-board",
   "locations": [
     {
       "id": "location.tutorial-qingyun-town.notice-board",
       "title": "试炼告示牌",
-      "summary": "山门试炼告示旁，教程主线从这里确认第一步目标。",
-      "detail": "这处地点负责引用教程入门故事资源，并保留到茶棚传闻地点的导航关系。",
+      "summary": "山门试炼告示旁，教程主线从这里确认问心规则和山门方向。",
+      "detail": "这处地点既能启动青云入门故事，也能导航到茶棚听取问心传闻。",
       "actions": [
         {
           "id": "action.tutorial-qingyun-town.start-entry-story",
           "kind": "startStory",
           "label": "阅读入门试炼告示",
-          "description": "启动教程入门故事骨架，后续批次会在其中接入固定教程战斗。",
+          "description": "启动青云入门故事，进入山脚告示、山门问心和首场固定牌序演武。",
           "storyResourceId": "tutorial.qingyun-story-entry",
           "storyGraphFile": "data/story/tutorial-qingyun-entry.json",
-          "statusText": "教程入门故事资源已被选中。"
+          "statusText": "你读完告示，准备沿云阶前往山门问心。"
         },
         {
           "id": "action.tutorial-qingyun-town.visit-teahouse",
@@ -41,8 +41,8 @@
     {
       "id": "location.tutorial-qingyun-town.teahouse",
       "title": "教学茶棚",
-      "summary": "散修低声谈论问心阶，作为教程传闻故事的轻量入口。",
-      "detail": "这里引用教程茶棚传闻故事资源，保持与教程入门故事分离，便于后续分批扩写。",
+      "summary": "散修低声谈论问心阶，是进入首场演武前的传闻铺垫。",
+      "detail": "这里启动独立的茶棚传闻故事，验证 Story 选择与问心线索反馈。",
       "actions": [
         {
           "id": "action.tutorial-qingyun-town.return-notice-board",
@@ -56,10 +56,10 @@
           "id": "action.tutorial-qingyun-town.start-teahouse-rumor",
           "kind": "startStory",
           "label": "听问心阶传闻",
-          "description": "启动教程茶棚传闻故事骨架，后续批次可扩写为教学前置提示。",
+          "description": "启动茶棚传闻故事，听掌柜说明问心钟和基础出牌顺序。",
           "storyResourceId": "tutorial.qingyun-story-teahouse-rumor",
           "storyGraphFile": "data/story/tutorial-qingyun-teahouse-rumor.json",
-          "statusText": "教程茶棚传闻资源已被选中。"
+          "statusText": "你在茶棚坐下，准备听掌柜讲问心阶旧事。"
         }
       ],
       "presentation": {

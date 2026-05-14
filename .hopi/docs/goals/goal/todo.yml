@@ -1,0 +1,48 @@
+version: 1
+goals:
+  - goalKey: goal
+    goalId: 439c8289-a3f4-4bad-9f75-45d60ed1b05d
+    title: 新建教学关
+    items:
+      - ref: tutorial-resource-catalog-skeleton
+        status: done
+        title: 登记教程资源身份与可校验内容骨架
+        taskId: e5ec20c9-7018-44d2-9311-90a648779896
+      - ref: tutorial-script-matrix
+        status: done
+        title: 固化教学关剧本大纲与教学矩阵
+        taskId: 0d629aae-5708-4298-8e50-e831ac45c352
+      - ref: tutorial-deterministic-expedition-events
+        status: done
+        title: 为教程秘境事件添加确定性结果选择边界
+        taskId: a09cfd41-d530-458f-bdec-e9476958f27d
+      - ref: tutorial-worldmap-hub-routing
+        status: promoted
+        title: 落地教程大地图与 Hub 路由内容
+        dependencyTaskList:
+          - ref: tutorial-resource-catalog-skeleton
+          - ref: tutorial-script-matrix
+      - ref: tutorial-story-battle-content
+        status: done
+        taskId: 2ce8c8a1-eeee-4890-ac28-801f069d476d
+        title: 落地教程故事与首场演武战斗内容
+        dependencyTaskList:
+          - ref: tutorial-resource-catalog-skeleton
+          - ref: tutorial-script-matrix
+      - ref: tutorial-mainmenu-entry
+        status: promoted
+        title: 实现 MainMenu 教学入口与教程 Session/Reset 逻辑
+        dependencyTaskList:
+          - ref: tutorial-worldmap-hub-routing
+          - ref: tutorial-story-battle-content
+      - ref: tutorial-hint-ui
+        status: candidate
+        title: 实现教学关卡中嵌入的提示 UI 逻辑
+        dependencyTaskList:
+          - ref: tutorial-mainmenu-entry
+      - ref: tutorial-e2e-smoke
+        status: candidate
+        title: 教学关前端到端 Smoke Test 验证
+        dependencyTaskList:
+          - ref: tutorial-mainmenu-entry
+          - ref: tutorial-hint-ui

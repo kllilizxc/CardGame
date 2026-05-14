@@ -1,25 +1,12 @@
 {
-  "encounterId": "tutorial.qingyun-encounter-mind-echo",
-  "title": "问心阶残影",
-  "description": "这是你在问心阶上面对的第一道幻象残影，用以熟悉卡匣。它的动作缓慢，不会造成真正的伤害。",
+  "id": "tutorial.qingyun-encounter-mind-echo",
+  "name": "问心狐影",
+  "description": "首场 Story-sourced 问心演武遭遇。钟声借青云山灵狐的影子凝成低阶幻象，用固定敌方位置配合教程卡组的固定起手，教学基础召唤、法器和符箓顺序。",
   "difficulty": 1,
   "enemies": [
     {
-      "id": "enemy.tutorial.phantom-1",
-      "name": "问心残影",
-      "hp": 20,
-      "maxHp": 20,
-      "deck": [],
-      "intentPattern": "tutorial_phantom_basic",
-      "sprite": "phantom_fox",
-      "position": 1,
-      "cardId": "CR_001"
+      "cardId": "CR_001",
+      "position": 1
     }
-  ],
-  "environment": "mind_step_illusion",
-  "rewards": {
-    "exp": 10,
-    "drops": []
-  },
-  "id": "tutorial.qingyun-encounter-mind-echo"
+  ]
 }

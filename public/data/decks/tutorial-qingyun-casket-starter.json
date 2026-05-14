@@ -1,19 +1,12 @@
 {
-  "deckId": "tutorial.qingyun-deck-casket-starter",
-  "name": "古旧卡匣（初醒）",
-  "description": "古旧卡匣首次展开时提供的基础牌组，包含最基础的剑诀与护身符。",
+  "name": "教程卡匣起始牌组",
+  "description": "问心演武和外山教学共用的短卡组。Story 教程战斗会显式声明 deterministicBattleSetup.deckOrder = preserve-json-order，因此初始抽牌按这里的 JSON 顺序展开：先单位，再法器，再符箓，随后补充守备单位和丹药。",
   "cards": [
-    {
-      "id": "SK_001",
-      "count": 3
-    },
-    {
-      "id": "TL_TEST_ARMOR",
-      "count": 2
-    },
-    {
-      "id": "TL_004",
-      "count": 1
-    }
+    { "id": "SX_YJZ_001", "count": 1 },
+    { "id": "AR_001", "count": 1 },
+    { "id": "TL_002", "count": 1 },
+    { "id": "SX_TY_001", "count": 1 },
+    { "id": "PL_001", "count": 1 },
+    { "id": "AR_001", "count": 1 }
   ]
 }

@@ -1,24 +1,24 @@
 {
   "hubId": "tutorial.qingyun-hub-sect-gate",
   "title": "教学青云山门",
-  "subtitle": "教程主线的山门入口骨架",
-  "description": "教学山门作为独立 Hub 资源引用教程入门故事，证明同一教程故事可由多个教程 Hub 首层入口持有。",
+  "subtitle": "教程主线的山门入口",
+  "description": "教学山门作为独立 Hub 资源引用青云入门故事，证明山门路线有自己的 Hub session，不污染普通主线。",
   "defaultLocationId": "location.tutorial-qingyun-sect-gate.archway",
   "locations": [
     {
       "id": "location.tutorial-qingyun-sect-gate.archway",
       "title": "教学山门牌坊",
-      "summary": "云阶前的牌坊保持空壳骨架，只负责指向教程入门故事。",
-      "detail": "后续教程批次可以在这里接入正式山门叙事、检查点或入口提示；本批次只登记稳定资源关系。",
+      "summary": "云阶前的牌坊直通问心队伍，是从大地图进入山门问心的入口。",
+      "detail": "这里启动青云入门故事，进入排队、选择反馈和首场问心演武。",
       "actions": [
         {
           "id": "action.tutorial-qingyun-sect-gate.start-entry-story",
           "kind": "startStory",
           "label": "叩问教学山门",
-          "description": "从教学山门 Hub 启动教程入门故事骨架。",
+          "description": "从教学山门 Hub 启动青云入门故事。",
           "storyResourceId": "tutorial.qingyun-story-entry",
           "storyGraphFile": "data/story/tutorial-qingyun-entry.json",
-          "statusText": "教学山门已指向教程入门故事资源。"
+          "statusText": "你叩问教学山门，准备踏上问心阶。"
         }
       ],
       "presentation": {

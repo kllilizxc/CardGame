@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 
+import tutorialEntryStoryJson from '../../../../public/data/story/tutorial-qingyun-entry.json';
+import { validatePlayableStoryGraph } from './storyFlow';
 import { createInitialStoryRuntime, createStoryChoiceTransition, createStoryFlowViewModel, type StoryGraphDefinition } from './storyFlowViewModel';
 import {
     applyStoryBattleResultToRuntime,
@@ -255,5 +257,96 @@ describe('storyBattleRoundTrip', () => {
             deckResourceId: 'deck.starter',
             deckFile: 'data/decks/starter-deck.json',
         });
+    });
+
+    it('round-trips the tutorial Qingyun mind-duel battle payload and resumes at explicit result nodes', () => {
+        const graph = validatePlayableStoryGraph(tutorialEntryStoryJson);
+        let storyState = createInitialStoryRuntime(graph);
+        let selectedChoiceIds: string[] = [];
+
+        function choose(choiceId: string) {
+            const view = createStoryFlowViewModel(graph, {
+                storyState,
+                selectedChoiceIds,
+            });
+            const transition = createStoryChoiceTransition(view, choiceId);
+
+            expect(transition.status).toBe('selected');
+            if (transition.status !== 'selected') {
+                throw new Error(`Expected tutorial choice ${choiceId} to advance.`);
+            }
+
+            storyState = transition.nextStoryState;
+            selectedChoiceIds = transition.nextSelectedChoiceIds;
+
+            return transition;
+        }
+
+        choose('tutorial_entry_001_choice_join_queue');
+        choose('tutorial_entry_002_choice_patient_line');
+        const battleTransition = choose('tutorial_entry_003_patient_choice_mind_bell');
+
+        expect(battleTransition.battleLaunch).toMatchObject({
+            sceneKey: 'BattleScene',
+            storyId: 'tutorial.qingyun-story-entry',
+            sourceNodeId: 'tutorial_entry_003_patient_line',
+            sourceChoiceId: 'tutorial_entry_003_patient_choice_mind_bell',
+            targetNodeId: 'tutorial_entry_005_mind_bell_duel',
+            battleId: 'tutorial.qingyun.battle.mind-echo',
+            encounterResourceId: 'tutorial.qingyun-encounter-mind-echo',
+            encounterId: 'tutorial.qingyun-encounter-mind-echo',
+            encounterFile: 'data/encounters/tutorial-qingyun-mind-echo.json',
+            deckResourceId: 'tutorial.qingyun-deck-casket-starter',
+            deckFile: 'data/decks/tutorial-qingyun-casket-starter.json',
+            deterministicBattleSetup: {
+                deckOrder: 'preserve-json-order',
+            },
+            onVictoryNodeId: 'tutorial_entry_006_mind_duel_victory',
+            onDefeatNodeId: 'tutorial_entry_006_mind_duel_defeat',
+        });
+
+        if (!battleTransition.battleLaunch) {
+            throw new Error('Expected tutorial mind-duel choice to produce battle launch metadata.');
+        }
+
+        const hubSession = {
+            hubId: 'tutorial.qingyun-hub-sect-gate',
+            actionId: 'action.tutorial-qingyun-sect-gate.start-entry-story',
+            storyGraphFile: 'data/story/tutorial-qingyun-entry.json',
+        };
+        const startPayload = createStoryBattleSceneStartPayload(
+            battleTransition.battleLaunch,
+            battleTransition.nextStoryState,
+            battleTransition.nextSelectedChoiceIds,
+            hubSession.storyGraphFile,
+            hubSession,
+            'tutorial.qingyun-story-entry',
+        );
+
+        expect(startPayload.battleLaunch.deterministicBattleSetup).toEqual({
+            deckOrder: 'preserve-json-order',
+        });
+        expect(startPayload.battleLaunch.deterministicBattleSetup)
+            .not.toBe(battleTransition.battleLaunch.deterministicBattleSetup);
+
+        const victoryResult = createStoryBattleCompleteEvent(startPayload, true, '2026-05-14T09:00:00.000Z');
+        const defeatResult = createStoryBattleCompleteEvent(startPayload, false, '2026-05-14T09:05:00.000Z');
+
+        expect(routeStoryBattleResultNodeId(victoryResult)).toBe('tutorial_entry_006_mind_duel_victory');
+        expect(routeStoryBattleResultNodeId(defeatResult)).toBe('tutorial_entry_006_mind_duel_defeat');
+        expect(victoryResult).toMatchObject({
+            storyResourceId: 'tutorial.qingyun-story-entry',
+            storyGraphFile: 'data/story/tutorial-qingyun-entry.json',
+            hubSession,
+            resultNodeId: 'tutorial_entry_006_mind_duel_victory',
+        });
+
+        const victoryResume = applyStoryBattleResultToRuntime(graph, victoryResult);
+        const defeatResume = applyStoryBattleResultToRuntime(graph, defeatResult);
+
+        expect(victoryResume.storyState.currentNodeId).toBe('tutorial_entry_006_mind_duel_victory');
+        expect(victoryResume.storyState.flags['tutorial.qingyun.entry.mind_echo_cleared']).toBe(true);
+        expect(defeatResume.storyState.currentNodeId).toBe('tutorial_entry_006_mind_duel_defeat');
+        expect(defeatResume.storyState.flags['tutorial.qingyun.entry.mind_echo_failed']).toBe(true);
     });
 });

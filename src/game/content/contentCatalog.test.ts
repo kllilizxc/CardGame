@@ -1085,7 +1085,7 @@ describe('content catalog', () => {
         ]);
     });
 
-    it('registers tutorial Qingyun skeleton resources and validates their first-level resource graph', () => {
+    it('registers tutorial Qingyun resources and validates their first-level resource graph', () => {
         const catalog = parseContentCatalogDefinition(readCatalogJson());
 
         for (const expectedEntry of expectedTutorialCatalogEntries) {
@@ -1154,8 +1154,21 @@ describe('content catalog', () => {
         ]));
 
         const entryStory = expectRecord(readPublicJson('data/story/tutorial-qingyun-entry.json'), 'tutorial entry story JSON exists');
+        expect(JSON.stringify(entryStory)).not.toContain('骨架');
+        expect(JSON.stringify(entryStory)).not.toContain('后续批次');
         const entryNodes = expectRecordArray(entryStory.nodes, 'tutorial entry story nodes');
-        const battleNode = findRecordById(entryNodes, 'tutorial_entry_002_mind_echo', 'tutorial entry battle node');
+        expect(entryNodes.map((node) => node.id)).toEqual([
+            'tutorial_entry_001_foothill_notice',
+            'tutorial_entry_002_waiting_queue',
+            'tutorial_entry_003_patient_line',
+            'tutorial_entry_003_help_frail_girl',
+            'tutorial_entry_004_bell_secret',
+            'tutorial_entry_005_mind_bell_duel',
+            'tutorial_entry_006_mind_duel_victory',
+            'tutorial_entry_006_mind_duel_defeat',
+            'tutorial_entry_007_outer_mountain_lead',
+        ]);
+        const battleNode = findRecordById(entryNodes, 'tutorial_entry_005_mind_bell_duel', 'tutorial entry battle node');
         const battleEffects = expectRecordArray(battleNode.onEnter, 'tutorial entry battle node onEnter');
         expect(battleEffects).toEqual(expect.arrayContaining([
             expect.objectContaining({
@@ -1165,9 +1178,37 @@ describe('content catalog', () => {
                     encounterFile: 'data/encounters/tutorial-qingyun-mind-echo.json',
                     deckResourceId: 'tutorial.qingyun-deck-casket-starter',
                     deckFile: 'data/decks/tutorial-qingyun-casket-starter.json',
+                    deterministicBattleSetup: {
+                        deckOrder: 'preserve-json-order',
+                    },
+                    onVictoryNodeId: 'tutorial_entry_006_mind_duel_victory',
+                    onDefeatNodeId: 'tutorial_entry_006_mind_duel_defeat',
                 }),
             }),
         ]));
+
+        const tutorialDeck = expectRecord(
+            readPublicJson('data/decks/tutorial-qingyun-casket-starter.json'),
+            'tutorial deck JSON exists',
+        );
+        const tutorialDeckCards = expectRecordArray(tutorialDeck.cards, 'tutorial deck cards');
+        expect(tutorialDeckCards.slice(0, 5)).toEqual([
+            { id: 'SX_YJZ_001', count: 1 },
+            { id: 'AR_001', count: 1 },
+            { id: 'TL_002', count: 1 },
+            { id: 'SX_TY_001', count: 1 },
+            { id: 'PL_001', count: 1 },
+        ]);
+
+        const mindEchoEncounter = expectRecord(
+            readPublicJson('data/encounters/tutorial-qingyun-mind-echo.json'),
+            'tutorial mind-echo encounter JSON exists',
+        );
+        expect(mindEchoEncounter).toMatchObject({
+            id: 'tutorial.qingyun-encounter-mind-echo',
+            name: '问心狐影',
+            difficulty: 1,
+        });
 
         const expeditionMap = expectRecord(
             readPublicJson('data/mijing/tutorial-qingyun-outer-mountain-map.json'),

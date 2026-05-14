@@ -1,86 +1,178 @@
 {
   "storyId": "tutorial.qingyun-story-entry",
-  "title": "教学青云入门",
-  "entryNodeId": "tutorial_entry_001_notice",
+  "title": "教学青云入门 · 山门问心",
+  "entryNodeId": "tutorial_entry_001_foothill_notice",
   "initialState": {
     "locationId": "location.tutorial-qingyun-sect-gate",
-    "sublocationId": "sublocation.tutorial-qingyun-sect-gate.archway",
+    "sublocationId": "sublocation.tutorial-qingyun-sect-gate.foothill-notice",
     "attributes": {
       "悟性": 60,
       "心性": 55,
       "机缘": 50
     },
-    "relations": {},
+    "relations": {
+      "npc.tutorial-qingyun-outer-deacon": 0,
+      "npc.tutorial-qingyun-frail-girl": 0
+    },
     "flags": {}
   },
   "nodes": [
     {
-      "id": "tutorial_entry_001_notice",
+      "id": "tutorial_entry_001_foothill_notice",
       "type": "story",
-      "title": "山门前的相遇",
-      "summary": "在山门牌坊前，人群拥挤，一位体弱少女被挤到边缘。",
-      "detail": "玩家可以选择老实排队，或在心性条件满足时帮助她。",
-      "tags": [
-        "教程",
-        "主线",
-        "青云入门"
-      ],
+      "title": "山脚告示与茶棚余香",
+      "summary": "你从青云镇茶棚出来，带着问心阶的传闻来到山脚告示前。",
+      "detail": "木牌上新贴的试炼告示被山风吹得猎猎作响：今日入门先问心，再登阶，最后才验资质。茶棚掌柜那句‘钟声会照见杂念’还在耳边，你摸了摸怀里的旧卡匣，知道第一步不是逞强，而是看清规则。",
+      "tags": ["教程", "主线", "青云入门", "山脚"],
       "chapter": "教程 · 青云入门",
-      "location": "教学青云山门",
-      "sublocation": "试炼告示",
+      "location": "青云山脚",
+      "sublocation": "试炼告示牌",
       "locationId": "location.tutorial-qingyun-sect-gate",
-      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.notice",
+      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.foothill-notice",
       "timeHint": "试炼前",
       "onEnter": [
         {
           "kind": "setFlag",
-          "flag": "tutorial.qingyun.entry.notice_read"
+          "flag": "tutorial.qingyun.entry.foothill_notice_read"
+        },
+        {
+          "kind": "recordDialogue",
+          "dialogueId": "dialogue.tutorial-qingyun.notice.mind-step-rules"
         }
       ],
       "aiHints": {
-        "tone": "清晰、短句、教学起点",
-        "theme": [
-          "教程",
-          "山门",
-          "卡匣"
-        ],
-        "forbid": [
-          "连接 MainMenu",
-          "发放正式奖励"
-        ]
-      },
-      "choices": [
-        {
-          "id": "choice_help_girl",
-          "text": "帮助体弱少女",
-          "nextNodeId": "tutorial_entry_001_help_girl",
-          "condition": {
-            "kind": "attribute",
-            "attribute": "心性",
-            "operator": "gte",
-            "value": 50
-          }
-        },
-        {
-          "id": "choice_wait_line",
-          "text": "老实排队",
-          "nextNodeId": "tutorial_entry_001_wait_line"
-        }
-      ]
+        "tone": "清晰、克制、带入门前的紧张感",
+        "theme": ["茶棚传闻", "山脚告示", "求道第一步"],
+        "forbid": ["连接 MainMenu", "发放正式奖励", "跳过问心演武"]
+      }
     },
     {
-      "id": "tutorial_entry_002_mind_echo",
+      "id": "tutorial_entry_002_waiting_queue",
       "type": "story",
-      "title": "问心回响",
-      "summary": "山门钟声映出第一道心念回响，教程战斗将在这里接入。",
-      "detail": "当前只登记 Story -> Battle 所需的教程 deck 与 encounter 资源身份；固定牌序运行时选项由后续批次接入。",
-      "tags": [
-        "教程",
-        "战斗",
-        "问心"
-      ],
+      "title": "云阶前的试炼队伍",
+      "summary": "凡人和散修在山门云阶前排成长队，青袍执事宣读问心规矩。",
+      "detail": "钟台尚未鸣响，队伍里却已经安静下来。青袍执事沿阶而下，提醒众人：‘卡匣是心念之器，问心时会按你此刻所持之序显化。莫争先，莫乱手，先看清，再出牌。’你注意到队伍边缘有个脸色苍白的少女，正努力扶着石栏。",
+      "tags": ["教程", "故事选择", "山门"],
       "chapter": "教程 · 青云入门",
-      "location": "教学青云山门",
+      "location": "青云山门",
+      "sublocation": "云阶队伍",
+      "locationId": "location.tutorial-qingyun-sect-gate",
+      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.queue",
+      "timeHint": "钟鸣前",
+      "onEnter": [
+        {
+          "kind": "moveTo",
+          "locationId": "location.tutorial-qingyun-sect-gate",
+          "sublocationId": "sublocation.tutorial-qingyun-sect-gate.queue"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.reached_trial_queue"
+        },
+        {
+          "kind": "recordDialogue",
+          "dialogueId": "dialogue.tutorial-qingyun.deacon.deck-order-rule"
+        }
+      ],
+      "aiHints": {
+        "tone": "庄重但易懂",
+        "theme": ["故事选择", "问心规则", "固定牌序提示"],
+        "forbid": ["解释 UI 按钮细节", "改变普通战斗随机规则"]
+      }
+    },
+    {
+      "id": "tutorial_entry_003_patient_line",
+      "type": "story",
+      "title": "按序候试",
+      "summary": "你留在队伍中听完执事的说明，确认问心演武的第一轮规则。",
+      "detail": "你没有急着出头，只把卡匣放在掌心，一遍遍确认最上层的几张卡。执事看见你没有推搡插队，微微点头：‘入门先学守序。待钟声响起，按显化顺序行事。’",
+      "tags": ["教程", "稳重", "规则反馈"],
+      "chapter": "教程 · 青云入门",
+      "location": "青云山门",
+      "sublocation": "云阶队伍",
+      "locationId": "location.tutorial-qingyun-sect-gate",
+      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.queue",
+      "timeHint": "钟鸣前",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.deacon_noticed_patience"
+        }
+      ],
+      "aiHints": {
+        "tone": "稳妥、简明、有选择反馈",
+        "theme": ["选择后果", "守序", "教学铺垫"],
+        "forbid": ["直接判定通过试炼", "发放永久资源"]
+      }
+    },
+    {
+      "id": "tutorial_entry_003_help_frail_girl",
+      "type": "story",
+      "title": "扶住体弱少女",
+      "summary": "你扶住队伍边缘的少女，她低声提醒你钟声会放大心中杂念。",
+      "detail": "少女险些被后方人潮挤下石阶，你伸手扶了她一把。她缓过气后把袖中的青玉小铃藏好，轻声道谢：‘若等会儿听见钟声，不要急着把所有牌都打出去。先立住人，再借法器和符箓护住心神。’",
+      "tags": ["教程", "善意", "线索反馈"],
+      "chapter": "教程 · 青云入门",
+      "location": "青云山门",
+      "sublocation": "队伍边缘",
+      "locationId": "location.tutorial-qingyun-sect-gate",
+      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.queue-edge",
+      "timeHint": "钟鸣前",
+      "onEnter": [
+        {
+          "kind": "moveTo",
+          "locationId": "location.tutorial-qingyun-sect-gate",
+          "sublocationId": "sublocation.tutorial-qingyun-sect-gate.queue-edge"
+        },
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.met_frail_girl"
+        }
+      ],
+      "aiHints": {
+        "tone": "温和、低声、暗含战斗提示",
+        "theme": ["善意选择", "单位优先", "法器符箓提示"],
+        "forbid": ["揭露少女完整身世", "给高阶法宝"]
+      }
+    },
+    {
+      "id": "tutorial_entry_004_bell_secret",
+      "type": "story",
+      "title": "青玉铃的问心提醒",
+      "summary": "少女说明青玉铃能短暂稳住心神，也印证了茶棚里听来的传闻。",
+      "detail": "她看了看钟台，又把声音压得更低：‘青玉铃不是护身宝，只能提醒我别被幻象拖住。真正撑过去，还得靠自己按顺序稳住场面。你若先唤出同伴，再让飞剑护阵，狐影就很难乱你的心。’",
+      "tags": ["教程", "线索", "战斗前提示"],
+      "chapter": "教程 · 青云入门",
+      "location": "青云山门",
+      "sublocation": "队伍边缘",
+      "locationId": "location.tutorial-qingyun-sect-gate",
+      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.queue-edge",
+      "timeHint": "钟鸣前",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.bell_secret_learned"
+        },
+        {
+          "kind": "recordDialogue",
+          "dialogueId": "dialogue.tutorial-qingyun.frail-girl.bell-secret"
+        }
+      ],
+      "aiHints": {
+        "tone": "可信、含蓄、服务教学",
+        "theme": ["问心线索", "固定起手", "基础出牌顺序"],
+        "forbid": ["直接跳过战斗", "写成无代价外挂"]
+      }
+    },
+    {
+      "id": "tutorial_entry_005_mind_bell_duel",
+      "type": "story",
+      "title": "问心钟鸣，狐影成形",
+      "summary": "钟声映出一只低阶狐影，执事令你用卡匣完成第一轮演武。",
+      "detail": "清越钟声落下，石阶上的雾气汇成一只狐影。它不是实兽，却会追着你的慌乱下口。卡匣顶端依次亮起：先立一名引剑者，再借青云剑和护体符稳定阵脚。执事的声音从雾外传来：‘照顺序来，胜负都会回到这里记录。’",
+      "tags": ["教程", "Story-sourced Battle", "问心演武"],
+      "chapter": "教程 · 青云入门",
+      "location": "青云山门",
       "sublocation": "问心阶",
       "locationId": "location.tutorial-qingyun-sect-gate",
       "sublocationId": "sublocation.tutorial-qingyun-sect-gate.mind-step",
@@ -104,36 +196,30 @@
             "encounterFile": "data/encounters/tutorial-qingyun-mind-echo.json",
             "deckResourceId": "tutorial.qingyun-deck-casket-starter",
             "deckFile": "data/decks/tutorial-qingyun-casket-starter.json",
-            "onVictoryNodeId": "tutorial_entry_003_mind_echo_clear",
-            "onDefeatNodeId": "tutorial_entry_003_mind_echo_retry",
-            "launchText": "钟声中的心念回响凝成对手，卡匣随之亮起。"
+            "deterministicBattleSetup": {
+              "deckOrder": "preserve-json-order"
+            },
+            "onVictoryNodeId": "tutorial_entry_006_mind_duel_victory",
+            "onDefeatNodeId": "tutorial_entry_006_mind_duel_defeat",
+            "launchText": "问心钟声中的狐影压低身形，执事提醒你按卡匣显现的顺序完成第一轮演武。"
           }
         }
       ],
       "aiHints": {
-        "tone": "庄重、明确、低复杂度",
-        "theme": [
-          "教程战斗",
-          "问心"
-        ],
-        "forbid": [
-          "新增战斗规则",
-          "承诺固定牌序字段名"
-        ]
+        "tone": "庄重、明确、带操作目标",
+        "theme": ["首场演武", "固定牌序", "胜负回到故事"],
+        "forbid": ["新增战斗规则", "改普通战斗洗牌", "直接判定通过"]
       }
     },
     {
-      "id": "tutorial_entry_003_mind_echo_clear",
+      "id": "tutorial_entry_006_mind_duel_victory",
       "type": "story",
-      "title": "稳住心神",
-      "summary": "你压下心念回响，问心阶向前亮起一段。",
-      "detail": "胜利分支只记录教程状态，正式奖励、解锁和 UI 引导留给后续批次。",
-      "tags": [
-        "教程",
-        "胜利"
-      ],
+      "title": "演武初胜，心神已定",
+      "summary": "狐影被剑光压散，执事确认你已掌握第一轮演武的基础。",
+      "detail": "狐影在护体符的微光中退散，青云剑绕回卡匣上方。执事没有夸耀，只在名册上添了一笔：‘能先立阵，再借器符，不躁进。继续往外山走，那里会教你如何在秘境里取舍。’",
+      "tags": ["教程", "胜利", "剧情承接"],
       "chapter": "教程 · 青云入门",
-      "location": "教学青云山门",
+      "location": "青云山门",
       "sublocation": "问心阶",
       "locationId": "location.tutorial-qingyun-sect-gate",
       "sublocationId": "sublocation.tutorial-qingyun-sect-gate.mind-step",
@@ -142,32 +228,28 @@
         {
           "kind": "setFlag",
           "flag": "tutorial.qingyun.entry.mind_echo_cleared"
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.tutorial-qingyun-outer-deacon",
+          "delta": 2
         }
       ],
       "aiHints": {
-        "tone": "简洁、确认进展",
-        "theme": [
-          "教程检查点",
-          "胜利"
-        ],
-        "forbid": [
-          "写入正式奖励",
-          "跳到非教程资源"
-        ]
+        "tone": "克制、肯定、有下一步方向",
+        "theme": ["战斗胜利反馈", "外山秘境承接"],
+        "forbid": ["直接入宗", "发放正式奖励"]
       }
     },
     {
-      "id": "tutorial_entry_003_mind_echo_retry",
+      "id": "tutorial_entry_006_mind_duel_defeat",
       "type": "story",
-      "title": "回响未散",
-      "summary": "心念回响尚未散去，但教程可以在后续批次选择如何重试。",
-      "detail": "失败分支保留可校验节点身份，避免本批次定义重试 UI 或教学重置策略。",
-      "tags": [
-        "教程",
-        "失败"
-      ],
+      "title": "败中定心，重整卡匣",
+      "summary": "狐影冲散阵脚，但执事把失败也算作问心的一部分。",
+      "detail": "雾气压下时，你的出牌慢了一拍。执事没有让你下山，只把散乱的卡匣推回你手中：‘败在狐影不丢人，乱了顺序才会越陷越深。记住刚才的起手，再往外山走，路上还会给你整理机会。’",
+      "tags": ["教程", "失败", "可恢复"],
       "chapter": "教程 · 青云入门",
-      "location": "教学青云山门",
+      "location": "青云山门",
       "sublocation": "问心阶",
       "locationId": "location.tutorial-qingyun-sect-gate",
       "sublocationId": "sublocation.tutorial-qingyun-sect-gate.mind-step",
@@ -184,110 +266,212 @@
         }
       ],
       "aiHints": {
-        "tone": "保留希望、不给惩罚",
-        "theme": [
-          "教程重试",
-          "失败反馈"
-        ],
-        "forbid": [
-          "永久失败",
-          "自动重置存档"
-        ]
+        "tone": "受挫但不惩罚、明确可继续",
+        "theme": ["失败返回节点", "教程容错", "外山秘境承接"],
+        "forbid": ["永久失败", "自动重置存档", "写成无代价胜利"]
       }
     },
     {
-      "id": "tutorial_entry_001_help_girl",
+      "id": "tutorial_entry_007_outer_mountain_lead",
       "type": "story",
-      "title": "青玉铃的线索",
-      "summary": "你扶住了少女，她向你道谢，你注意到她腰间的青玉铃。",
-      "detail": "触发青玉铃线索 flag，随后钟声响起，进入问心阶测试。",
-      "tags": [
-        "教程",
-        "选择分支"
-      ],
+      "title": "外山试炼在云后展开",
+      "summary": "执事指向山门外侧的雾路，下一段教程将进入外山秘境。",
+      "detail": "钟台后的云门缓缓打开，露出通往外山的狭路。执事把一枚临时木牌递给你：‘入门不止会出牌，还要会在秘境里看路、取物、知进退。沿这条雾路走，遇到狐影、遗落行囊和云游小贩时，都按木牌记下。’你收起卡匣，终于越过山门半步。",
+      "tags": ["教程", "承接", "外山秘境"],
       "chapter": "教程 · 青云入门",
-      "location": "教学青云山门",
-      "sublocation": "山门牌坊",
+      "location": "青云山门",
+      "sublocation": "外山雾路入口",
       "locationId": "location.tutorial-qingyun-sect-gate",
-      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.archway",
-      "timeHint": "试炼前",
+      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.outer-mountain-lead",
+      "timeHint": "钟声后",
       "onEnter": [
         {
-          "kind": "setFlag",
-          "flag": "tutorial.qingyun.entry.helped_girl"
-        }
-      ],
-      "choices": [
+          "kind": "moveTo",
+          "locationId": "location.tutorial-qingyun-sect-gate",
+          "sublocationId": "sublocation.tutorial-qingyun-sect-gate.outer-mountain-lead"
+        },
         {
-          "id": "choice_continue_bell_1",
-          "text": "随人流踏上问心阶",
-          "nextNodeId": "tutorial_entry_002_mind_echo"
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.outer_mountain_trial_ready"
         }
       ],
       "aiHints": {
-        "tone": "温和",
-        "theme": [
-          "线索",
-          "帮助"
-        ]
-      }
-    },
-    {
-      "id": "tutorial_entry_001_wait_line",
-      "type": "story",
-      "title": "秩序的认可",
-      "summary": "你安静地排队，执事对你的守序微微点头。",
-      "detail": "得到执事的秩序认可，随后钟声响起，进入问心阶测试。",
-      "tags": [
-        "教程",
-        "选择分支"
-      ],
-      "chapter": "教程 · 青云入门",
-      "location": "教学青云山门",
-      "sublocation": "山门牌坊",
-      "locationId": "location.tutorial-qingyun-sect-gate",
-      "sublocationId": "sublocation.tutorial-qingyun-sect-gate.archway",
-      "timeHint": "试炼前",
-      "onEnter": [
-        {
-          "kind": "setFlag",
-          "flag": "tutorial.qingyun.entry.waited_in_line"
-        }
-      ],
-      "choices": [
-        {
-          "id": "choice_continue_bell_2",
-          "text": "踏上问心阶",
-          "nextNodeId": "tutorial_entry_002_mind_echo"
-        }
-      ],
-      "aiHints": {
-        "tone": "平淡",
-        "theme": [
-          "秩序",
-          "排队"
-        ]
+        "tone": "收束前半段、指向下一玩法",
+        "theme": ["起承转合", "秘境教学入口", "不落地完整路线"],
+        "forbid": ["启动 ExpeditionScene", "结算教程完成", "新增第二场战斗"]
       }
     }
   ],
   "choices": [
     {
-      "id": "tutorial_entry_001_choice_step_forward",
-      "from": "tutorial_entry_001_notice",
-      "to": "tutorial_entry_002_mind_echo",
-      "text": "握紧卡匣，踏上问心阶",
-      "description": "推进到教程战斗资源骨架节点。",
+      "id": "tutorial_entry_001_choice_join_queue",
+      "from": "tutorial_entry_001_foothill_notice",
+      "to": "tutorial_entry_002_waiting_queue",
+      "text": "读完告示，沿云阶排入试炼队伍",
+      "description": "从山脚传闻进入山门问心，确认教程主线的第一步。",
       "effects": [
         {
           "kind": "setFlag",
-          "flag": "tutorial.qingyun.entry.stepped_on_mind_step"
+          "flag": "tutorial.qingyun.entry.chose_to_join_queue"
+        },
+        {
+          "kind": "adjustAttribute",
+          "attribute": "悟性",
+          "delta": 1
         }
       ],
-      "flags": [
-        "教程",
-        "主线",
-        "战斗入口"
-      ]
+      "flags": ["教程", "主线", "山门问心"]
+    },
+    {
+      "id": "tutorial_entry_002_choice_patient_line",
+      "from": "tutorial_entry_002_waiting_queue",
+      "to": "tutorial_entry_003_patient_line",
+      "text": "按规矩留在队伍里，听执事讲完演武规矩",
+      "description": "稳重路线，获得执事认可并继续进入问心演武。",
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.chose_patient_line"
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.tutorial-qingyun-outer-deacon",
+          "delta": 1
+        }
+      ],
+      "flags": ["教程", "稳重", "选择反馈"]
+    },
+    {
+      "id": "tutorial_entry_002_choice_help_frail_girl",
+      "from": "tutorial_entry_002_waiting_queue",
+      "to": "tutorial_entry_003_help_frail_girl",
+      "text": "扶住队伍边缘的体弱少女，问她是否还能继续",
+      "description": "善意路线。当前初始心性足以选择，用来验证 Story 条件与关系反馈。",
+      "enabledWhen": {
+        "kind": "attribute",
+        "attribute": "心性",
+        "operator": ">=",
+        "value": 50
+      },
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.helped_frail_girl"
+        },
+        {
+          "kind": "recordDialogue",
+          "dialogueId": "dialogue.tutorial-qingyun.frail-girl.intro"
+        },
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.tutorial-qingyun-frail-girl",
+          "delta": 5
+        }
+      ],
+      "flags": ["教程", "善意", "条件选择"]
+    },
+    {
+      "id": "tutorial_entry_003_patient_choice_mind_bell",
+      "from": "tutorial_entry_003_patient_line",
+      "to": "tutorial_entry_005_mind_bell_duel",
+      "text": "按执事所说整理卡匣，等待问心钟声",
+      "description": "从稳重路线进入首场 Story-sourced 演武战斗。",
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.entered_mind_duel_from_patient_line"
+        }
+      ],
+      "flags": ["教程", "战斗入口"]
+    },
+    {
+      "id": "tutorial_entry_003_help_choice_ask_bell",
+      "from": "tutorial_entry_003_help_frail_girl",
+      "to": "tutorial_entry_004_bell_secret",
+      "text": "低声询问她袖中的青玉铃为何会响",
+      "description": "帮助少女后可追问线索，获得战斗前的出牌顺序提示。",
+      "enabledWhen": {
+        "kind": "any",
+        "conditions": [
+          {
+            "kind": "flag",
+            "flag": "tutorial.qingyun.entry.helped_frail_girl"
+          },
+          {
+            "kind": "triggeredDialogue",
+            "dialogueId": "dialogue.tutorial-qingyun.frail-girl.intro"
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "adjustRelation",
+          "relationId": "npc.tutorial-qingyun-frail-girl",
+          "delta": 2
+        }
+      ],
+      "flags": ["教程", "线索", "善意"]
+    },
+    {
+      "id": "tutorial_entry_003_help_choice_mind_bell",
+      "from": "tutorial_entry_003_help_frail_girl",
+      "to": "tutorial_entry_005_mind_bell_duel",
+      "text": "扶她回到队伍，自己先准备问心演武",
+      "description": "不追问青玉铃，也能进入首场演武战斗。",
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.returned_with_frail_girl"
+        }
+      ],
+      "flags": ["教程", "战斗入口", "善意"]
+    },
+    {
+      "id": "tutorial_entry_004_choice_mind_bell",
+      "from": "tutorial_entry_004_bell_secret",
+      "to": "tutorial_entry_005_mind_bell_duel",
+      "text": "记下青玉铃提醒，按顺序整理卡匣",
+      "description": "带着单位、法器、符箓的顺序提示进入问心演武。",
+      "enabledWhen": {
+        "kind": "flag",
+        "flag": "tutorial.qingyun.entry.bell_secret_learned"
+      },
+      "effects": [
+        {
+          "kind": "adjustAttribute",
+          "attribute": "悟性",
+          "delta": 1
+        }
+      ],
+      "flags": ["教程", "线索", "战斗入口"]
+    },
+    {
+      "id": "tutorial_entry_006_victory_choice_outer_mountain",
+      "from": "tutorial_entry_006_mind_duel_victory",
+      "to": "tutorial_entry_007_outer_mountain_lead",
+      "text": "向执事行礼，领取外山试炼木牌",
+      "description": "胜利后承接到下一段秘境教学剧情，但不在本故事内启动完整秘境路线。",
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.accepted_outer_mountain_after_victory"
+        }
+      ],
+      "flags": ["教程", "胜利承接", "外山秘境"]
+    },
+    {
+      "id": "tutorial_entry_006_defeat_choice_outer_mountain",
+      "from": "tutorial_entry_006_mind_duel_defeat",
+      "to": "tutorial_entry_007_outer_mountain_lead",
+      "text": "收好散乱卡匣，按执事指点继续前往外山",
+      "description": "失败后同样回到故事并承接下一段教程，避免首场教学战斗卡死主线。",
+      "effects": [
+        {
+          "kind": "setFlag",
+          "flag": "tutorial.qingyun.entry.accepted_outer_mountain_after_defeat"
+        }
+      ],
+      "flags": ["教程", "失败承接", "外山秘境"]
     }
   ]
 }
