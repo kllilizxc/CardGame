@@ -48,14 +48,17 @@ describe('storyFlowViewModel', () => {
             },
         });
         expect(view.statusText).toBe('当前剧情：初到青云宗山门（第一章·入宗 · 青云宗山门 · 山门广场 · 白日）。可见选项 2 个，推荐 1 个。');
-        expect(view.stateLine).toBe('当前位置：location.qingyun-gate / sublocation.qingyun.gate-plaza');
+        expect(view.stateLine).toBe('身在青云宗山门 · 山门广场（白日）');
         expect(view.warnings).toEqual([]);
         expect(view.choices.map((choice) => choice.text)).toEqual([
             '老老实实排队等待入宗考核',
             '注意到队伍中有一名体弱少女，主动上前搭话。',
         ]);
-        expect(view.choices[0].conditionSummary).toBe('未设置标记 story.sect_entry.disrupted_line');
-        expect(view.choices[0].effectSummary).toBe('setFlag / adjustAttribute / adjustRelation');
+        expect(view.choices[0].conditionSummary).toBe('尚未触发相关前情');
+        expect(view.choices[0].effectSummary).toBe('推进剧情、心性变化、人际关系变化');
+        expect(view.choices[0].conditionSummary).not.toContain('story.sect_entry.disrupted_line');
+        expect(view.stateLine).not.toContain('location.qingyun-gate');
+        expect(view.stateLine).not.toContain('sublocation.qingyun.gate-plaza');
     });
 
     it('marks structured attribute-gated choices as recommended and disables them when unmet', () => {
@@ -80,11 +83,11 @@ describe('storyFlowViewModel', () => {
         expect(notRecommendedChoice?.selectable).toBe(false);
         expect(notRecommendedChoice?.recommended).toBe(false);
         expect(notRecommendedChoice?.recommendationReason).toBe('未满足推荐条件：心性 40 ≥ 50。');
-        expect(notRecommendedChoice?.disabledReason).toBe('条件未满足：心性 40 >= 50');
+        expect(notRecommendedChoice?.disabledReason).toBe('条件未满足：心性 40 ≥ 50');
         expect(createStoryChoiceTransition(notRecommendedView, 'sect_entry_001_choice_help_girl')).toEqual({
             status: 'blocked',
             choiceId: 'sect_entry_001_choice_help_girl',
-            reason: '条件未满足：心性 40 >= 50',
+            reason: '条件未满足：心性 40 ≥ 50',
         });
     });
 
@@ -127,17 +130,14 @@ describe('storyFlowViewModel', () => {
         expect(view.choices.every((choice) => choice.visible)).toBe(true);
         expect(view.choices.every((choice) => choice.selectable === false)).toBe(true);
         expect(view.choices.map((choice) => choice.disabledReason)).toEqual([
-            '后续剧情节点未配置，无法继续',
-            '后续剧情节点未配置，无法继续',
+            '这条后续剧情暂未开放。',
+            '这条后续剧情暂未开放。',
         ]);
-        expect(view.warnings).toEqual([
-            '选项 draft_choice_1 的目标剧情节点未配置。',
-            '选项 draft_choice_2 的目标剧情节点未配置。',
-        ]);
+        expect(view.warnings).toEqual(['有一段后续剧情暂未开放。']);
         expect(createStoryChoiceTransition(view, 'draft_choice_1')).toEqual({
             status: 'blocked',
             choiceId: 'draft_choice_1',
-            reason: '后续剧情节点未配置，无法继续',
+            reason: '这条后续剧情暂未开放。',
         });
     });
 
@@ -196,23 +196,22 @@ describe('storyFlowViewModel', () => {
         const hiddenDialogueChoice = view.choices.find((choice) => choice.id === 'start_to_hidden_dialogue');
 
         expect(hiddenNodeChoice?.selectable).toBe(false);
-        expect(hiddenNodeChoice?.conditionSummary).toBe('需要先访问相关剧情节点');
-        expect(hiddenNodeChoice?.disabledReason).toBe('条件未满足：需要先访问相关剧情节点');
+        expect(hiddenNodeChoice?.conditionSummary).toBe('先经历相关前情');
+        expect(hiddenNodeChoice?.disabledReason).toBe('条件未满足：先经历相关前情');
         const nodeTransitionBlocked = createStoryChoiceTransition(view, 'start_to_hidden_node');
         expect(nodeTransitionBlocked).toEqual({
             status: 'blocked',
             choiceId: 'start_to_hidden_node',
-            reason: '条件未满足：需要先访问相关剧情节点',
+            reason: '当前还无法触发这段行动。',
         });
 
         expect(hiddenDialogueChoice?.selectable).toBe(false);
-        expect(hiddenDialogueChoice?.conditionSummary).toBe('需要先触发相关对话');
-        expect(hiddenDialogueChoice?.disabledReason).toBe('条件未满足：需要先触发相关对话');
-
+        expect(hiddenDialogueChoice?.conditionSummary).toBe('先听过相关消息');
+        expect(hiddenDialogueChoice?.disabledReason).toBe('条件未满足：先听过相关消息');
         expect(createStoryChoiceTransition(view, 'start_to_hidden_dialogue')).toEqual({
             status: 'blocked',
             choiceId: 'start_to_hidden_dialogue',
-            reason: '条件未满足：需要先触发相关对话',
+            reason: '条件未满足：先听过相关消息',
         });
         expect(view.warnings.every((warning) => !/internal\.|dialogue\.hidden\.test|missing_story_node_/.test(warning))).toBe(true);
     });
@@ -238,7 +237,7 @@ describe('storyFlowViewModel', () => {
         });
 
         expect(view.currentNode.id).toBe('entry');
-        expect(view.warnings).toEqual(['当前剧情节点配置异常，已回退到入口节点。']);
+        expect(view.warnings).toEqual(['当前剧情进度出现异常，已回到故事开端。']);
         expect(view.warnings.join('').includes('nonexistent.current.node')).toBe(false);
     });
 
@@ -468,7 +467,9 @@ describe('storyFlowViewModel', () => {
         const lockedBellChoice = lockedView.choices.find((choice) => choice.id === 'sect_entry_003_choice_ask_bell');
 
         expect(lockedBellChoice?.selectable).toBe(false);
-        expect(lockedBellChoice?.disabledReason).toBe('条件未满足：需要任一条件满足');
+        expect(lockedBellChoice?.disabledReason).toBe('条件未满足：需要满足以下任一条件：先完成相关铺垫；先听过相关消息');
+        expect(lockedBellChoice?.disabledReason).not.toContain('story.sect_entry.helped_frail_girl');
+        expect(lockedBellChoice?.disabledReason).not.toContain('dialogue.frail_girl.intro');
 
         const initialView = createStoryFlowViewModel(graph, {
             storyState: initialState,

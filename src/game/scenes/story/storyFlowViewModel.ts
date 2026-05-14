@@ -14,6 +14,10 @@ import type {
     StoryInitialStateSeed,
     StoryState,
 } from '../../types/story';
+import {
+    createStoryStateLine,
+    describeStructuredConditionForPlayer,
+} from './storyPlayerFacingCopy';
 
 export interface StoryAiHints {
     tone?: string;
@@ -218,6 +222,15 @@ function getChoiceStoryEffects(choice: StoryChoiceDefinition): StoryEffect[] {
     return Array.isArray(choice.effects) ? [...choice.effects] : [];
 }
 
+function cloneStoryBattleTrigger(battle: StoryBattleTrigger): StoryBattleTrigger {
+    return {
+        ...battle,
+        ...(battle.deterministicBattleSetup
+            ? { deterministicBattleSetup: { ...battle.deterministicBattleSetup } }
+            : {}),
+    };
+}
+
 function isStartBattleEffect(
     effect: StoryEffect,
 ): effect is Extract<StoryEffect, { kind: 'startBattle' }> {
@@ -231,7 +244,7 @@ function findStoryBattleTrigger(effects: StoryEffect[]): StoryBattleTrigger | nu
         return null;
     }
 
-    return { ...battleEffect.battle };
+    return cloneStoryBattleTrigger(battleEffect.battle);
 }
 
 function createStoryBattleLaunchMetadata(params: {
@@ -247,7 +260,7 @@ function createStoryBattleLaunchMetadata(params: {
         sourceNodeId: params.sourceNodeId,
         sourceChoiceId: params.sourceChoiceId,
         targetNodeId: params.targetNodeId,
-        ...params.battle,
+        ...cloneStoryBattleTrigger(params.battle),
     };
 }
 
@@ -296,14 +309,39 @@ function createChoiceView(
 
 function createEffectSummary(effects: StoryChoiceEffects | StoryEffect[] | undefined): string {
     if (Array.isArray(effects)) {
-        return effects.length > 0
-            ? effects.map((effect) => effect.kind).join(' / ')
-            : '无状态变化。';
+        const readableEffects = Array.from(new Set(
+            effects.map((effect) => describeStoryEffectForPlayer(effect)),
+        ));
+
+        return readableEffects.length > 0
+            ? readableEffects.join('、')
+            : '暂无额外变化。';
     }
 
     const parts = [effects?.worldChangeHint, effects?.relationChangeHint].filter((part): part is string => Boolean(part));
 
     return parts.length > 0 ? parts.join(' · ') : '无明确后果提示。';
+}
+
+function describeStoryEffectForPlayer(effect: StoryEffect): string {
+    switch (effect.kind) {
+        case 'setFlag':
+        case 'clearFlag':
+        case 'recordVisitedNode':
+        case 'recordDialogue':
+        case 'goToNode':
+            return '推进剧情';
+        case 'moveTo':
+            return '前往新地点';
+        case 'setAttribute':
+        case 'adjustAttribute':
+            return `${effect.attribute}变化`;
+        case 'setRelation':
+        case 'adjustRelation':
+            return '人际关系变化';
+        case 'startBattle':
+            return '进入战斗';
+    }
 }
 
 function createFallbackInitialStateSeed(
@@ -385,15 +423,15 @@ function createDisabledReason(params: {
     storyState: StoryState;
 }): string | null {
     if (!params.targetExists) {
-        return '后续剧情节点未配置，无法继续';
+        return '这条后续剧情暂未开放。';
     }
 
     if (!params.visible && params.choice.visibleWhen) {
-        return `条件未满足：${describeStructuredCondition(params.choice.visibleWhen, params.storyState)}`;
+        return `条件未满足：${describeStructuredConditionForPlayer(params.choice.visibleWhen, params.storyState)}`;
     }
 
     if (!params.enabled && params.choice.enabledWhen) {
-        return `条件未满足：${describeStructuredCondition(params.choice.enabledWhen, params.storyState)}`;
+        return `条件未满足：${describeStructuredConditionForPlayer(params.choice.enabledWhen, params.storyState)}`;
     }
 
     return null;
@@ -403,35 +441,10 @@ function createConditionSummary(choice: StoryChoiceDefinition, storyState: Story
     const structuredCondition = choice.enabledWhen ?? choice.visibleWhen;
 
     if (structuredCondition) {
-        return describeStructuredCondition(structuredCondition, storyState);
+        return describeStructuredConditionForPlayer(structuredCondition, storyState);
     }
 
     return choice.condition?.expression ?? '无特殊条件。';
-}
-
-function describeStructuredCondition(condition: StoryCondition, storyState: StoryState): string {
-    switch (condition.kind) {
-        case 'attribute':
-            return `${condition.attribute} ${storyState.attributes[condition.attribute] ?? 0} ${condition.operator} ${condition.value}`;
-        case 'flag':
-            return condition.expected === false
-                ? `未设置标记 ${condition.flag}`
-                : `需要标记 ${condition.flag}`;
-        case 'visitedNode':
-            return condition.expected === false
-                ? '该剧情节点应保持未访问状态'
-                : '需要先访问相关剧情节点';
-        case 'triggeredDialogue':
-            return condition.expected === false
-                ? '该对话应保持未触发状态'
-                : '需要先触发相关对话';
-        case 'all':
-            return '需要所有条件满足';
-        case 'any':
-            return '需要任一条件满足';
-        case 'not':
-            return `不能满足：${describeStructuredCondition(condition.condition, storyState)}`;
-    }
 }
 
 function evaluateRecommendation(
@@ -556,10 +569,6 @@ function createStatusText(currentNode: StoryNodeView, choices: StoryChoiceView[]
     return `当前剧情：${currentNode.title}（${currentNode.subtitle}）。可见选项 ${visibleChoiceCount} 个，推荐 ${recommendedChoiceCount} 个。`;
 }
 
-function createStateLine(storyState: StoryState): string {
-    return `当前位置：${storyState.currentLocationId} / ${storyState.currentSublocationId}`;
-}
-
 export function createStoryFlowViewModel(
     graph: StoryGraphDefinition,
     state: StoryFlowRuntimeState = {},
@@ -576,7 +585,7 @@ export function createStoryFlowViewModel(
 
     const warnings = requestedNode
         ? []
-        : ['当前剧情节点配置异常，已回退到入口节点。'];
+        : ['当前剧情进度出现异常，已回到故事开端。'];
     const storyState = createRuntimeStoryState(graph, state, requestedNodeId);
     const currentStoryState = storyState.currentNodeId === currentNode.id
         ? storyState
@@ -587,7 +596,9 @@ export function createStoryFlowViewModel(
             const targetNode = nodesById.get(choice.to);
 
             if (!targetNode) {
-                warnings.push(`选项 ${choice.id} 的目标剧情节点未配置。`);
+                if (!warnings.includes('有一段后续剧情暂未开放。')) {
+                    warnings.push('有一段后续剧情暂未开放。');
+                }
             }
 
             return createChoiceView(choice, targetNode, currentStoryState);
@@ -603,7 +614,7 @@ export function createStoryFlowViewModel(
         visitedNodeIds: currentStoryState.visitedNodeIds,
         selectedChoiceIds: state.selectedChoiceIds ? [...state.selectedChoiceIds] : [],
         storyState: currentStoryState,
-        stateLine: createStateLine(currentStoryState),
+        stateLine: createStoryStateLine(currentNodeView),
     };
 }
 
@@ -617,7 +628,7 @@ export function createStoryChoiceTransition(
         return {
             status: 'blocked',
             choiceId,
-            reason: `选项不存在：${choiceId}`,
+            reason: '这个选择暂时无法继续。',
         };
     }
 
@@ -625,7 +636,7 @@ export function createStoryChoiceTransition(
         return {
             status: 'blocked',
             choiceId,
-            reason: choice.disabledReason ?? `选项当前不可见：${choiceId}`,
+            reason: '当前还无法触发这段行动。',
         };
     }
 
@@ -633,7 +644,7 @@ export function createStoryChoiceTransition(
         return {
             status: 'blocked',
             choiceId,
-            reason: choice.disabledReason ?? `选项当前不可选择：${choiceId}`,
+            reason: choice.disabledReason ?? '当前不可选择。',
         };
     }
 
@@ -649,8 +660,8 @@ export function createStoryChoiceTransition(
             status: 'blocked',
             choiceId,
             reason: choice.enabledWhen
-                ? `条件未满足：${describeStructuredCondition(choice.enabledWhen, viewModel.storyState)}`
-                : `选项当前不可选择：${choiceId}`,
+                ? `条件未满足：${describeStructuredConditionForPlayer(choice.enabledWhen, viewModel.storyState)}`
+                : '当前不可选择。',
         };
     }
 

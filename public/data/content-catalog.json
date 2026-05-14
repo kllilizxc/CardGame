@@ -8,6 +8,12 @@
       "publicPath": "data/world/world-map.json"
     },
     {
+      "resourceId": "tutorial.qingyun-worldmap",
+      "kind": "worldMap",
+      "schemaVersion": 1,
+      "publicPath": "data/world/tutorial-qingyun-world-map.json"
+    },
+    {
       "resourceId": "hub.qingyun-sect-gate",
       "kind": "hub",
       "schemaVersion": 1,
@@ -18,6 +24,18 @@
       "kind": "hub",
       "schemaVersion": 1,
       "publicPath": "data/hub/town-shell.json"
+    },
+    {
+      "resourceId": "tutorial.qingyun-hub-town",
+      "kind": "hub",
+      "schemaVersion": 1,
+      "publicPath": "data/hub/tutorial-qingyun-town.json"
+    },
+    {
+      "resourceId": "tutorial.qingyun-hub-sect-gate",
+      "kind": "hub",
+      "schemaVersion": 1,
+      "publicPath": "data/hub/tutorial-qingyun-sect-gate.json"
     },
     {
       "resourceId": "story.qingyun-teahouse-rumors",
@@ -50,6 +68,18 @@
       "publicPath": "data/story/story-graph.json"
     },
     {
+      "resourceId": "tutorial.qingyun-story-teahouse-rumor",
+      "kind": "story",
+      "schemaVersion": 1,
+      "publicPath": "data/story/tutorial-qingyun-teahouse-rumor.json"
+    },
+    {
+      "resourceId": "tutorial.qingyun-story-entry",
+      "kind": "story",
+      "schemaVersion": 1,
+      "publicPath": "data/story/tutorial-qingyun-entry.json"
+    },
+    {
       "resourceId": "phase01-jade-cave-map",
       "kind": "expeditionMap",
       "schemaVersion": 1,
@@ -62,10 +92,22 @@
       "publicPath": "data/mijing/prototype-map.json"
     },
     {
+      "resourceId": "tutorial.qingyun-expedition-outer-mountain-map",
+      "kind": "expeditionMap",
+      "schemaVersion": 1,
+      "publicPath": "data/mijing/tutorial-qingyun-outer-mountain-map.json"
+    },
+    {
       "resourceId": "phase01-prototype-events",
       "kind": "expeditionEvents",
       "schemaVersion": 1,
       "publicPath": "data/mijing/prototype-events.json"
+    },
+    {
+      "resourceId": "tutorial.qingyun-events-outer-mountain",
+      "kind": "expeditionEvents",
+      "schemaVersion": 1,
+      "publicPath": "data/mijing/tutorial-qingyun-events.json"
     },
     {
       "resourceId": "phase01-prototype-shop",
@@ -74,10 +116,22 @@
       "publicPath": "data/mijing/prototype-shop.json"
     },
     {
+      "resourceId": "tutorial.qingyun-shop-wayfarer",
+      "kind": "expeditionShop",
+      "schemaVersion": 1,
+      "publicPath": "data/mijing/tutorial-qingyun-shop.json"
+    },
+    {
       "resourceId": "deck.starter",
       "kind": "deck",
       "schemaVersion": 1,
       "publicPath": "data/decks/starter-deck.json"
+    },
+    {
+      "resourceId": "tutorial.qingyun-deck-casket-starter",
+      "kind": "deck",
+      "schemaVersion": 1,
+      "publicPath": "data/decks/tutorial-qingyun-casket-starter.json"
     },
     {
       "resourceId": "deck.tutorial.stage1",
@@ -132,6 +186,18 @@
       "kind": "encounter",
       "schemaVersion": 1,
       "publicPath": "data/encounters/test-enemy.json"
+    },
+    {
+      "resourceId": "tutorial.qingyun-encounter-mind-echo",
+      "kind": "encounter",
+      "schemaVersion": 1,
+      "publicPath": "data/encounters/tutorial-qingyun-mind-echo.json"
+    },
+    {
+      "resourceId": "tutorial.qingyun-encounter-mist-fox",
+      "kind": "encounter",
+      "schemaVersion": 1,
+      "publicPath": "data/encounters/tutorial-qingyun-mist-fox.json"
     },
     {
       "resourceId": "tutorial_encounter_stage1",
@@ -246,6 +312,12 @@
       "kind": "worldSeed",
       "schemaVersion": 1,
       "publicPath": "data/world/initial-state.json"
+    },
+    {
+      "resourceId": "tutorial.qingyun-world-seed",
+      "kind": "worldSeed",
+      "schemaVersion": 1,
+      "publicPath": "data/world/tutorial-qingyun-initial-state.json"
     },
     {
       "resourceId": "world.seed.items-artifacts",

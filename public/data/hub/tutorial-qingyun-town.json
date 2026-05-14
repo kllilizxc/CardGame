@@ -1,0 +1,83 @@
+{
+  "hubId": "tutorial.qingyun-hub-town",
+  "title": "教学青云镇",
+  "subtitle": "教程主线的城镇入口",
+  "description": "教学青云镇承载山脚告示、集市茶棚和进入山门前的传闻铺垫；当前不接入正式入口或提示 UI。",
+  "defaultLocationId": "location.tutorial-qingyun-town.notice-board",
+  "locations": [
+    {
+      "id": "location.tutorial-qingyun-town.notice-board",
+      "title": "试炼告示牌",
+      "summary": "山门试炼告示旁，教程主线从这里确认问心规则和山门方向。",
+      "detail": "这处地点既能启动青云入门故事，也能导航到茶棚听取问心传闻。",
+      "actions": [
+        {
+          "id": "action.tutorial-qingyun-town.start-entry-story",
+          "kind": "startStory",
+          "label": "阅读入门试炼告示",
+          "description": "启动青云入门故事，进入山脚告示、山门问心和首场固定牌序演武。",
+          "storyResourceId": "tutorial.qingyun-story-entry",
+          "storyGraphFile": "data/story/tutorial-qingyun-entry.json",
+          "statusText": "你读完告示，准备沿云阶前往山门问心。"
+        },
+        {
+          "id": "action.tutorial-qingyun-town.visit-teahouse",
+          "kind": "navigate",
+          "label": "去茶棚打听试炼传闻",
+          "description": "切换到教程茶棚地点，以验证 Hub 内部地点和故事入口可以分开登记。",
+          "targetLocationId": "location.tutorial-qingyun-town.teahouse",
+          "statusText": "你来到教学茶棚地点。"
+        }
+      ],
+      "presentation": {
+        "position": {
+          "x": 0.34,
+          "y": 0.58
+        },
+        "icon": "tutorial-notice",
+        "regionLabel": "告示牌"
+      }
+    },
+    {
+      "id": "location.tutorial-qingyun-town.teahouse",
+      "title": "教学茶棚",
+      "summary": "散修低声谈论问心阶，是进入首场演武前的传闻铺垫。",
+      "detail": "这里启动独立的茶棚传闻故事，验证 Story 选择与问心线索反馈。",
+      "actions": [
+        {
+          "id": "action.tutorial-qingyun-town.return-notice-board",
+          "kind": "navigate",
+          "label": "返回试炼告示牌",
+          "description": "回到教程城镇默认地点。",
+          "targetLocationId": "location.tutorial-qingyun-town.notice-board",
+          "statusText": "你回到教学试炼告示牌。"
+        },
+        {
+          "id": "action.tutorial-qingyun-town.start-teahouse-rumor",
+          "kind": "startStory",
+          "label": "听问心阶传闻",
+          "description": "启动茶棚传闻故事，听掌柜说明问心钟和基础出牌顺序。",
+          "storyResourceId": "tutorial.qingyun-story-teahouse-rumor",
+          "storyGraphFile": "data/story/tutorial-qingyun-teahouse-rumor.json",
+          "statusText": "你在茶棚坐下，准备听掌柜讲问心阶旧事。"
+        }
+      ],
+      "presentation": {
+        "position": {
+          "x": 0.64,
+          "y": 0.48
+        },
+        "icon": "tutorial-teahouse",
+        "regionLabel": "茶棚"
+      }
+    }
+  ],
+  "presentation": {
+    "mapWidth": 900,
+    "mapHeight": 540,
+    "initialCenter": {
+      "x": 0.5,
+      "y": 0.55
+    }
+  }
+}

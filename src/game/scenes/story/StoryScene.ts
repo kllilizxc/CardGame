@@ -31,6 +31,11 @@ import {
     type ResolvedStorySceneCatalogResource,
     type StorySceneLaunchData,
 } from './storySceneLaunch';
+import {
+    createStorySceneStatusLabel,
+    createStorySceneSubtitleCopy,
+    createStorySceneTerminalCopy,
+} from './storyPlayerFacingCopy';
 
 export class StoryScene extends Scene {
     private storyGraph!: StoryGraph;
@@ -136,8 +141,7 @@ export class StoryScene extends Scene {
             fontStyle: 'bold',
         }).setOrigin(0.5);
 
-        const sceneTitle = this.storyGraph.title ?? '主线故事';
-        this.add.text(width / 2, 120, `当前故事：${sceneTitle}`, {
+        this.add.text(width / 2, 120, createStorySceneSubtitleCopy(), {
             fontFamily: 'Arial',
             fontSize: '20px',
             color: '#93c5fd',
@@ -214,11 +218,7 @@ export class StoryScene extends Scene {
             wordWrap: { width: panelWidth - 112 },
         });
 
-        const nodeLocation = [view.currentNode.location, view.currentNode.sublocation]
-            .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
-            .join(' · ');
-        const locationHint = nodeLocation.length > 0 ? `当前位置：${nodeLocation}` : '当前位置：剧情推进中';
-        const hint = this.add.text(contentX, panelY + panelHeight / 2 - 72, locationHint, {
+        const hint = this.add.text(contentX, panelY + panelHeight / 2 - 72, createStorySceneStatusLabel(view.stateLine), {
             fontFamily: 'Arial',
             fontSize: '17px',
             color: '#c4b5fd',
@@ -230,7 +230,7 @@ export class StoryScene extends Scene {
         const visibleChoices = view.choices.filter((choice) => choice.visible);
 
         if (visibleChoices.length === 0) {
-            const terminal = this.add.text(panelX, height - 210, '已到达故事终点，当前分支可继续选择重开。', {
+            const terminal = this.add.text(panelX, height - 210, createStorySceneTerminalCopy(), {
                 fontFamily: 'Arial',
                 fontSize: '22px',
                 color: '#bbf7d0',

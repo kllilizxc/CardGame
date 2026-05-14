@@ -1,0 +1,49 @@
+{
+  "id": "tutorial.qingyun-shop-wayfarer",
+  "shopsByNodeId": {
+    "shop.tutorial-qingyun-wayfarer": {
+      "nodeId": "shop.tutorial-qingyun-wayfarer",
+      "title": "引路散修",
+      "description": "一名守山散修只收本次探索携带的灵石。教程商店让玩家看到可购买与灵石不足两种状态。",
+      "offers": [
+        {
+          "id": "offer.tutorial.qingyun.guard-talisman",
+          "label": "护体符",
+          "description": "花少量灵石补一张护体符，演示购买会扣除本次 run 的灵石并写入已购状态。",
+          "cost": {
+            "spiritStones": 8
+          },
+          "rewards": {
+            "cards": [
+              {
+                "id": "TL_002",
+                "count": 1
+              }
+            ],
+            "items": [],
+            "spiritStones": 0
+          }
+        },
+        {
+          "id": "offer.tutorial.qingyun.fly-sword-keepsake",
+          "label": "飞剑挂坠",
+          "description": "更昂贵的纪念物会在教程首轮显示为灵石不足，帮助玩家理解商店报价。",
+          "cost": {
+            "spiritStones": 16
+          },
+          "rewards": {
+            "cards": [],
+            "items": [
+              {
+                "id": "artifact_fly_sword_basic",
+                "itemType": "artifact",
+                "count": 1
+              }
+            ],
+            "spiritStones": 0
+          }
+        }
+      ]
+    }
+  }
+}

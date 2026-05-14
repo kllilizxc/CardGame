@@ -1,0 +1,12 @@
+{
+  "id": "tutorial.qingyun-encounter-mist-fox",
+  "name": "教学雾狐",
+  "description": "教程外山的第一场轻量战斗，用单只灵狐验证战斗启动与胜利返回路线。",
+  "difficulty": 1,
+  "enemies": [
+    {
+      "cardId": "CR_001",
+      "position": 1
+    }
+  ]
+}

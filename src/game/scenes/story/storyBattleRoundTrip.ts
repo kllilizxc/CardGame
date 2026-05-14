@@ -52,7 +52,12 @@ export function cloneStoryState(state: StoryState): StoryState {
 export function cloneStoryBattleLaunchMetadata(
     battleLaunch: StoryBattleLaunchMetadata,
 ): StoryBattleLaunchMetadata {
-    return { ...battleLaunch };
+    return {
+        ...battleLaunch,
+        ...(battleLaunch.deterministicBattleSetup
+            ? { deterministicBattleSetup: { ...battleLaunch.deterministicBattleSetup } }
+            : {}),
+    };
 }
 
 export function createStoryBattleSceneStartPayload(

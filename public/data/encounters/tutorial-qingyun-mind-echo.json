@@ -1,0 +1,12 @@
+{
+  "id": "tutorial.qingyun-encounter-mind-echo",
+  "name": "问心狐影",
+  "description": "首场 Story-sourced 问心演武遭遇。钟声借青云山灵狐的影子凝成低阶幻象，用固定敌方位置配合教程卡组的固定起手，教学基础召唤、法器和符箓顺序。",
+  "difficulty": 1,
+  "enemies": [
+    {
+      "cardId": "CR_001",
+      "position": 1
+    }
+  ]
+}

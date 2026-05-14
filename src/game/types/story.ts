@@ -1,3 +1,5 @@
+import type { DeterministicBattleSetup } from './battle';
+
 export type StoryAttributeOperator = '>' | '>=' | '<' | '<=' | '==' | '!=';
 
 export interface StoryState {
@@ -137,6 +139,7 @@ export interface StoryBattleTrigger {
     encounterFile: string;
     deckResourceId?: string;
     deckFile: string;
+    deterministicBattleSetup?: DeterministicBattleSetup;
     onVictoryNodeId: string;
     onDefeatNodeId: string;
     launchText?: string;

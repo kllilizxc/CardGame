@@ -46,20 +46,44 @@ import {
 
 const expectedCheckedInResources = [
     ['worldMap', 'data/world/world-map.json'],
+    ['worldMap', 'data/world/tutorial-qingyun-world-map.json'],
     ['hub', 'data/hub/qingyun-sect-gate.json'],
     ['hub', 'data/hub/town-shell.json'],
+    ['hub', 'data/hub/tutorial-qingyun-town.json'],
+    ['hub', 'data/hub/tutorial-qingyun-sect-gate.json'],
     ['story', 'data/story/qingyun-teahouse-rumors.json'],
     ['story', 'data/story/story-graph.compact.example.json'],
     ['story', 'data/story/story-graph.executable.json'],
+    ['story', 'data/story/tutorial-story-graph.json'],
     ['story', 'data/story/story-graph.json'],
+    ['story', 'data/story/tutorial-qingyun-teahouse-rumor.json'],
+    ['story', 'data/story/tutorial-qingyun-entry.json'],
     ['expeditionMap', 'data/mijing/jade-cave-map.json'],
     ['expeditionMap', 'data/mijing/prototype-map.json'],
+    ['expeditionMap', 'data/mijing/tutorial-qingyun-outer-mountain-map.json'],
     ['expeditionEvents', 'data/mijing/prototype-events.json'],
+    ['expeditionEvents', 'data/mijing/tutorial-qingyun-events.json'],
     ['expeditionShop', 'data/mijing/prototype-shop.json'],
+    ['expeditionShop', 'data/mijing/tutorial-qingyun-shop.json'],
     ['deck', 'data/decks/starter-deck.json'],
+    ['deck', 'data/decks/tutorial-qingyun-casket-starter.json'],
+    ['deck', 'data/decks/tutorial-stage1-deck.json'],
+    ['deck', 'data/decks/tutorial-stage2-deck.json'],
+    ['deck', 'data/decks/tutorial-stage3-deck.json'],
+    ['deck', 'data/decks/tutorial-stage4-deck.json'],
+    ['deck', 'data/decks/tutorial-stage5-deck.json'],
+    ['deck', 'data/decks/tutorial-stage6-deck.json'],
     ['encounter', 'data/encounters/medium-enemy.json'],
     ['encounter', 'data/encounters/mijing-boss.json'],
     ['encounter', 'data/encounters/test-enemy.json'],
+    ['encounter', 'data/encounters/tutorial-qingyun-mind-echo.json'],
+    ['encounter', 'data/encounters/tutorial-qingyun-mist-fox.json'],
+    ['encounter', 'data/encounters/tutorial-stage1.json'],
+    ['encounter', 'data/encounters/tutorial-stage2.json'],
+    ['encounter', 'data/encounters/tutorial-stage3.json'],
+    ['encounter', 'data/encounters/tutorial-stage4.json'],
+    ['encounter', 'data/encounters/tutorial-stage5.json'],
+    ['encounter', 'data/encounters/tutorial-stage6.json'],
     ['card', 'data/cards/artifacts.json'],
     ['card', 'data/cards/fields.json'],
     ['card', 'data/cards/pills.json'],
@@ -73,11 +97,75 @@ const expectedCheckedInResources = [
     ['config', 'data/config/realm-presets.json'],
     ['worldSeed', 'data/world/factions.json'],
     ['worldSeed', CANONICAL_INITIAL_STATE_PUBLIC_PATH],
+    ['worldSeed', 'data/world/tutorial-qingyun-initial-state.json'],
     ['worldSeed', CANONICAL_WORLD_ITEM_REGISTRY_PUBLIC_PATH],
     ['worldSeed', 'data/world/meta.json'],
     ['worldSeed', 'data/world/npcs.json'],
     ['worldSeed', 'data/world/protagonist.json'],
     ['worldSeed', 'data/world/skills.techniques.json'],
+] as const;
+
+const expectedTutorialCatalogEntries = [
+    {
+        resourceId: 'tutorial.qingyun-worldmap',
+        kind: 'worldMap',
+        publicPath: 'data/world/tutorial-qingyun-world-map.json',
+    },
+    {
+        resourceId: 'tutorial.qingyun-hub-town',
+        kind: 'hub',
+        publicPath: 'data/hub/tutorial-qingyun-town.json',
+    },
+    {
+        resourceId: 'tutorial.qingyun-hub-sect-gate',
+        kind: 'hub',
+        publicPath: 'data/hub/tutorial-qingyun-sect-gate.json',
+    },
+    {
+        resourceId: 'tutorial.qingyun-story-teahouse-rumor',
+        kind: 'story',
+        publicPath: 'data/story/tutorial-qingyun-teahouse-rumor.json',
+    },
+    {
+        resourceId: 'tutorial.qingyun-story-entry',
+        kind: 'story',
+        publicPath: 'data/story/tutorial-qingyun-entry.json',
+    },
+    {
+        resourceId: 'tutorial.qingyun-deck-casket-starter',
+        kind: 'deck',
+        publicPath: 'data/decks/tutorial-qingyun-casket-starter.json',
+    },
+    {
+        resourceId: 'tutorial.qingyun-encounter-mind-echo',
+        kind: 'encounter',
+        publicPath: 'data/encounters/tutorial-qingyun-mind-echo.json',
+    },
+    {
+        resourceId: 'tutorial.qingyun-encounter-mist-fox',
+        kind: 'encounter',
+        publicPath: 'data/encounters/tutorial-qingyun-mist-fox.json',
+    },
+    {
+        resourceId: 'tutorial.qingyun-expedition-outer-mountain-map',
+        kind: 'expeditionMap',
+        publicPath: 'data/mijing/tutorial-qingyun-outer-mountain-map.json',
+    },
+    {
+        resourceId: 'tutorial.qingyun-events-outer-mountain',
+        kind: 'expeditionEvents',
+        publicPath: 'data/mijing/tutorial-qingyun-events.json',
+    },
+    {
+        resourceId: 'tutorial.qingyun-shop-wayfarer',
+        kind: 'expeditionShop',
+        publicPath: 'data/mijing/tutorial-qingyun-shop.json',
+    },
+    {
+        resourceId: 'tutorial.qingyun-world-seed',
+        kind: 'worldSeed',
+        publicPath: 'data/world/tutorial-qingyun-initial-state.json',
+    },
 ] as const;
 
 function toMutableCheckedInResources(
@@ -209,6 +297,32 @@ function createCanonicalRealmAndGradeOverrides(): Record<string, unknown> {
 
 function readCatalogJson(): unknown {
     return JSON.parse(readFileSync(join('public', CONTENT_CATALOG_PUBLIC_PATH), 'utf8'));
+}
+
+function readPublicJson(publicPath: string): unknown | undefined {
+    const absolutePath = join('public', publicPath);
+
+    return existsSync(absolutePath) ? JSON.parse(readFileSync(absolutePath, 'utf8')) : undefined;
+}
+
+function expectRecord(value: unknown, label: string): Record<string, unknown> {
+    expect(typeof value === 'object' && value !== null && !Array.isArray(value), label).toBe(true);
+
+    return value as Record<string, unknown>;
+}
+
+function expectRecordArray(value: unknown, label: string): Record<string, unknown>[] {
+    expect(Array.isArray(value), label).toBe(true);
+
+    return value as Record<string, unknown>[];
+}
+
+function findRecordById(records: Record<string, unknown>[], id: string, label: string): Record<string, unknown> {
+    const record = records.find((entry) => entry.id === id);
+
+    expect(record, label).toBeDefined();
+
+    return record as Record<string, unknown>;
 }
 
 function createPublicFileSource(): ContentCatalogFileSource {
@@ -783,6 +897,87 @@ describe('content catalog', () => {
         ]);
     });
 
+    it('resolves checked-in tutorial Expedition resources by stable catalog ids', () => {
+        const resolver = createContentCatalogResolver(readCatalogJson(), {
+            context: 'ExpeditionScene',
+            sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+        });
+
+        expect([
+            resolver.resolveJsonResource({
+                resourceId: 'tutorial.qingyun-world-seed',
+                expectedKind: 'worldSeed',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'tutorial.qingyun-deck-casket-starter',
+                expectedKind: 'deck',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'tutorial.qingyun-expedition-outer-mountain-map',
+                expectedKind: 'expeditionMap',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'tutorial.qingyun-events-outer-mountain',
+                expectedKind: 'expeditionEvents',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'tutorial.qingyun-shop-wayfarer',
+                expectedKind: 'expeditionShop',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'tutorial.qingyun-encounter-mist-fox',
+                expectedKind: 'encounter',
+            }),
+            resolver.resolveJsonResource({
+                resourceId: 'tutorial.qingyun-encounter-mind-echo',
+                expectedKind: 'encounter',
+            }),
+        ]).toEqual([
+            {
+                resourceId: 'tutorial.qingyun-world-seed',
+                kind: 'worldSeed',
+                schemaVersion: 1,
+                publicPath: 'data/world/tutorial-qingyun-initial-state.json',
+            },
+            {
+                resourceId: 'tutorial.qingyun-deck-casket-starter',
+                kind: 'deck',
+                schemaVersion: 1,
+                publicPath: 'data/decks/tutorial-qingyun-casket-starter.json',
+            },
+            {
+                resourceId: 'tutorial.qingyun-expedition-outer-mountain-map',
+                kind: 'expeditionMap',
+                schemaVersion: 1,
+                publicPath: 'data/mijing/tutorial-qingyun-outer-mountain-map.json',
+            },
+            {
+                resourceId: 'tutorial.qingyun-events-outer-mountain',
+                kind: 'expeditionEvents',
+                schemaVersion: 1,
+                publicPath: 'data/mijing/tutorial-qingyun-events.json',
+            },
+            {
+                resourceId: 'tutorial.qingyun-shop-wayfarer',
+                kind: 'expeditionShop',
+                schemaVersion: 1,
+                publicPath: 'data/mijing/tutorial-qingyun-shop.json',
+            },
+            {
+                resourceId: 'tutorial.qingyun-encounter-mist-fox',
+                kind: 'encounter',
+                schemaVersion: 1,
+                publicPath: 'data/encounters/tutorial-qingyun-mist-fox.json',
+            },
+            {
+                resourceId: 'tutorial.qingyun-encounter-mind-echo',
+                kind: 'encounter',
+                schemaVersion: 1,
+                publicPath: 'data/encounters/tutorial-qingyun-mind-echo.json',
+            },
+        ]);
+    });
+
     it('fails actionably when the runtime catalog cache is missing before WorldMapScene resolves resources', () => {
         expect(() => createContentCatalogResolver(undefined, {
             context: 'WorldMapScene',
@@ -1123,6 +1318,177 @@ describe('content catalog', () => {
             'story:validatePlayableStoryGraph|validateStoryContentGraph',
             'expedition:validatePrototypeExpeditionContent',
         ]);
+    });
+
+    it('registers tutorial Qingyun resources and validates their first-level resource graph', () => {
+        const catalog = parseContentCatalogDefinition(readCatalogJson());
+
+        for (const expectedEntry of expectedTutorialCatalogEntries) {
+            const catalogEntry = catalog.resources.find((entry) => entry.resourceId === expectedEntry.resourceId);
+
+            expect(catalogEntry).toEqual({
+                ...expectedEntry,
+                schemaVersion: 1,
+            });
+        }
+
+        const result = validateContentCatalog(catalog, createPublicFileSource());
+
+        expect(result.failures).toEqual([]);
+
+        const worldMap = expectRecord(
+            readPublicJson('data/world/tutorial-qingyun-world-map.json'),
+            'tutorial world map JSON exists',
+        );
+        const destinations = expectRecordArray(worldMap.destinations, 'tutorial world map destinations');
+        const townDestination = findRecordById(destinations, 'destination.tutorial-qingyun-town', 'town destination');
+        const sectGateDestination = findRecordById(destinations, 'destination.tutorial-qingyun-sect-gate', 'sect gate destination');
+        const expeditionDestination = findRecordById(
+            destinations,
+            'destination.tutorial-qingyun-outer-mountain',
+            'outer mountain destination',
+        );
+
+        expect(townDestination).toMatchObject({
+            kind: 'hub',
+            hubId: 'tutorial.qingyun-hub-town',
+            hubResourceId: 'tutorial.qingyun-hub-town',
+            hubFile: 'data/hub/tutorial-qingyun-town.json',
+        });
+        expect(sectGateDestination).toMatchObject({
+            kind: 'hub',
+            hubId: 'tutorial.qingyun-hub-sect-gate',
+            hubResourceId: 'tutorial.qingyun-hub-sect-gate',
+            hubFile: 'data/hub/tutorial-qingyun-sect-gate.json',
+        });
+        expect(expeditionDestination).toMatchObject({
+            kind: 'expedition',
+            worldStateResourceId: 'tutorial.qingyun-world-seed',
+            starterDeckResourceId: 'tutorial.qingyun-deck-casket-starter',
+            mapResourceId: 'tutorial.qingyun-expedition-outer-mountain-map',
+            eventsResourceId: 'tutorial.qingyun-events-outer-mountain',
+            shopResourceId: 'tutorial.qingyun-shop-wayfarer',
+        });
+
+        const townHub = expectRecord(readPublicJson('data/hub/tutorial-qingyun-town.json'), 'tutorial town Hub JSON exists');
+        const townLocations = expectRecordArray(townHub.locations, 'tutorial town locations');
+        const townActions = townLocations.flatMap((location) =>
+            expectRecordArray(location.actions, `tutorial town location ${String(location.id)} actions`),
+        );
+        expect(townActions).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                kind: 'startStory',
+                storyResourceId: 'tutorial.qingyun-story-entry',
+                storyGraphFile: 'data/story/tutorial-qingyun-entry.json',
+            }),
+            expect.objectContaining({
+                kind: 'startStory',
+                storyResourceId: 'tutorial.qingyun-story-teahouse-rumor',
+                storyGraphFile: 'data/story/tutorial-qingyun-teahouse-rumor.json',
+            }),
+        ]));
+
+        const entryStory = expectRecord(readPublicJson('data/story/tutorial-qingyun-entry.json'), 'tutorial entry story JSON exists');
+        expect(JSON.stringify(entryStory)).not.toContain('骨架');
+        expect(JSON.stringify(entryStory)).not.toContain('后续批次');
+        const entryNodes = expectRecordArray(entryStory.nodes, 'tutorial entry story nodes');
+        expect(entryNodes.map((node) => node.id)).toEqual([
+            'tutorial_entry_001_foothill_notice',
+            'tutorial_entry_002_waiting_queue',
+            'tutorial_entry_003_patient_line',
+            'tutorial_entry_003_help_frail_girl',
+            'tutorial_entry_004_bell_secret',
+            'tutorial_entry_005_mind_bell_duel',
+            'tutorial_entry_006_mind_duel_victory',
+            'tutorial_entry_006_mind_duel_defeat',
+            'tutorial_entry_007_outer_mountain_lead',
+        ]);
+        const battleNode = findRecordById(entryNodes, 'tutorial_entry_005_mind_bell_duel', 'tutorial entry battle node');
+        const battleEffects = expectRecordArray(battleNode.onEnter, 'tutorial entry battle node onEnter');
+        expect(battleEffects).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                kind: 'startBattle',
+                battle: expect.objectContaining({
+                    encounterResourceId: 'tutorial.qingyun-encounter-mind-echo',
+                    encounterFile: 'data/encounters/tutorial-qingyun-mind-echo.json',
+                    deckResourceId: 'tutorial.qingyun-deck-casket-starter',
+                    deckFile: 'data/decks/tutorial-qingyun-casket-starter.json',
+                    deterministicBattleSetup: {
+                        deckOrder: 'preserve-json-order',
+                    },
+                    onVictoryNodeId: 'tutorial_entry_006_mind_duel_victory',
+                    onDefeatNodeId: 'tutorial_entry_006_mind_duel_defeat',
+                }),
+            }),
+        ]));
+
+        const tutorialDeck = expectRecord(
+            readPublicJson('data/decks/tutorial-qingyun-casket-starter.json'),
+            'tutorial deck JSON exists',
+        );
+        const tutorialDeckCards = expectRecordArray(tutorialDeck.cards, 'tutorial deck cards');
+        expect(tutorialDeckCards.slice(0, 5)).toEqual([
+            { id: 'SX_YJZ_001', count: 1 },
+            { id: 'AR_001', count: 1 },
+            { id: 'TL_002', count: 1 },
+            { id: 'SX_TY_001', count: 1 },
+            { id: 'PL_001', count: 1 },
+        ]);
+
+        const mindEchoEncounter = expectRecord(
+            readPublicJson('data/encounters/tutorial-qingyun-mind-echo.json'),
+            'tutorial mind-echo encounter JSON exists',
+        );
+        expect(mindEchoEncounter).toMatchObject({
+            id: 'tutorial.qingyun-encounter-mind-echo',
+            name: '问心狐影',
+            difficulty: 1,
+        });
+
+        const expeditionMap = expectRecord(
+            readPublicJson('data/mijing/tutorial-qingyun-outer-mountain-map.json'),
+            'tutorial Expedition map JSON exists',
+        );
+        const expeditionNodes = expectRecordArray(expeditionMap.nodes, 'tutorial Expedition nodes');
+        const battleNodeRef = expectRecord(
+            findRecordById(expeditionNodes, 'battle.tutorial-qingyun-mist-fox', 'tutorial Expedition battle').payloadRef,
+            'tutorial Expedition battle payloadRef',
+        );
+        const eventNodeRef = expectRecord(
+            findRecordById(expeditionNodes, 'event.tutorial-qingyun-first-cache', 'tutorial Expedition event').payloadRef,
+            'tutorial Expedition event payloadRef',
+        );
+        const shopNodeRef = expectRecord(
+            findRecordById(expeditionNodes, 'shop.tutorial-qingyun-wayfarer', 'tutorial Expedition shop').payloadRef,
+            'tutorial Expedition shop payloadRef',
+        );
+
+        expect(battleNodeRef).toMatchObject({
+            encounterResourceId: 'tutorial.qingyun-encounter-mist-fox',
+            encounterFile: 'data/encounters/tutorial-qingyun-mist-fox.json',
+        });
+        expect(eventNodeRef).toMatchObject({
+            ref: 'event.tutorial-qingyun-first-cache',
+            contentFile: 'data/mijing/tutorial-qingyun-events.json',
+        });
+        expect(shopNodeRef).toMatchObject({
+            ref: 'shop.tutorial-qingyun-wayfarer',
+            contentFile: 'data/mijing/tutorial-qingyun-shop.json',
+        });
+
+        const events = expectRecord(readPublicJson('data/mijing/tutorial-qingyun-events.json'), 'tutorial events JSON exists');
+        const eventsByNodeId = expectRecord(events.eventsByNodeId, 'tutorial eventsByNodeId');
+        const firstEvent = expectRecord(
+            eventsByNodeId['event.tutorial-qingyun-first-cache'],
+            'tutorial first-cache event definition',
+        );
+        const eventOutcomes = expectRecordArray(firstEvent.pool, 'tutorial first-cache event outcomes');
+
+        expect(eventOutcomes).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                id: 'outcome.tutorial.qingyun.guard-talisman-cache',
+            }),
+        ]));
     });
 
     it('returns actionable failures when a route-critical target is absent from the catalog', () => {

@@ -160,6 +160,9 @@ describe('StoryState', () => {
                     encounterId: 'test_encounter_01',
                     encounterFile: 'data/encounters/test-enemy.json',
                     deckFile: 'data/decks/starter-deck.json',
+                    deterministicBattleSetup: {
+                        deckOrder: 'preserve-json-order',
+                    },
                     onVictoryNodeId: 'node.duel-victory',
                     onDefeatNodeId: 'node.duel-defeat',
                     launchText: '青云执事示意你以卡匣应战。',
@@ -174,10 +177,17 @@ describe('StoryState', () => {
             encounterId: 'test_encounter_01',
             encounterFile: 'data/encounters/test-enemy.json',
             deckFile: 'data/decks/starter-deck.json',
+            deterministicBattleSetup: {
+                deckOrder: 'preserve-json-order',
+            },
             onVictoryNodeId: 'node.duel-victory',
             onDefeatNodeId: 'node.duel-defeat',
             launchText: '青云执事示意你以卡匣应战。',
         });
+        expect(result.pendingBattle?.deterministicBattleSetup)
+            .not.toBe(effects[0].kind === 'startBattle'
+                ? effects[0].battle.deterministicBattleSetup
+                : undefined);
         expect(result.state.currentNodeId).toBe('node.arrival');
         expect(result.state.visitedNodeIds).toEqual(['node.arrival']);
         expect(result.appliedEffectKinds).toEqual(['startBattle']);

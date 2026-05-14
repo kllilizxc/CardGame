@@ -1,0 +1,115 @@
+{
+  "id": "tutorial.qingyun-worldmap",
+  "title": "青云入门教学路线",
+  "subtitle": "教程入口 · 青云入门前半段",
+  "description": "教学专用大地图，承载青云镇传闻、青云山门问心和外山秘境三段教程路线；当前仍不接主菜单入口，也不承担解锁或 UI 提示。",
+  "defaultDestinationId": "destination.tutorial-qingyun-town",
+  "presentation": {
+    "mapWidth": 1200,
+    "mapHeight": 720,
+    "initialCenter": {
+      "x": 0.5,
+      "y": 0.55
+    }
+  },
+  "destinations": [
+    {
+      "id": "destination.tutorial-qingyun-town",
+      "kind": "hub",
+      "label": "教学青云镇",
+      "description": "青云镇教学 Hub，用来承载山脚告示和茶棚问心传闻。",
+      "presentation": {
+        "position": {
+          "x": 0.28,
+          "y": 0.64
+        },
+        "icon": "tutorial-town",
+        "regionLabel": "教学城镇"
+      },
+      "hubId": "tutorial.qingyun-hub-town",
+      "hubResourceId": "tutorial.qingyun-hub-town",
+      "hubFile": "data/hub/tutorial-qingyun-town.json",
+      "statusText": "进入教学青云镇，先查看告示或去茶棚打听问心传闻。"
+    },
+    {
+      "id": "destination.tutorial-qingyun-sect-gate",
+      "kind": "hub",
+      "label": "教学青云山门",
+      "description": "青云山门教学 Hub，用独立 Hub 身份进入山门问心故事。",
+      "presentation": {
+        "position": {
+          "x": 0.55,
+          "y": 0.28
+        },
+        "icon": "tutorial-sect-gate",
+        "regionLabel": "教学山门"
+      },
+      "hubId": "tutorial.qingyun-hub-sect-gate",
+      "hubResourceId": "tutorial.qingyun-hub-sect-gate",
+      "hubFile": "data/hub/tutorial-qingyun-sect-gate.json",
+      "statusText": "进入教学青云山门，准备叩问山门并踏上问心阶。"
+    },
+    {
+      "id": "destination.tutorial-qingyun-outer-mountain",
+      "kind": "expedition",
+      "label": "教学外山秘境",
+      "description": "青云外山教学秘境目标，用于承接问心演武后的探索、事件、商店与撤离教学。",
+      "presentation": {
+        "position": {
+          "x": 0.75,
+          "y": 0.58
+        },
+        "icon": "tutorial-trial",
+        "regionLabel": "教学秘境"
+      },
+      "expeditionId": "tutorial.qingyun-expedition",
+      "mapId": "tutorial.qingyun-expedition-outer-mountain-map",
+      "worldStateResourceId": "tutorial.qingyun-world-seed",
+      "worldStateFile": "data/world/tutorial-qingyun-initial-state.json",
+      "starterDeckResourceId": "tutorial.qingyun-deck-casket-starter",
+      "starterDeckFile": "data/decks/tutorial-qingyun-casket-starter.json",
+      "mapResourceId": "tutorial.qingyun-expedition-outer-mountain-map",
+      "mapFile": "data/mijing/tutorial-qingyun-outer-mountain-map.json",
+      "eventsResourceId": "tutorial.qingyun-events-outer-mountain",
+      "eventsFile": "data/mijing/tutorial-qingyun-events.json",
+      "shopResourceId": "tutorial.qingyun-shop-wayfarer",
+      "shopFile": "data/mijing/tutorial-qingyun-shop.json",
+      "statusText": "进入教学外山秘境，开始固定路线的探索教学。"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "node.tutorial-qingyun-town",
+      "type": "hub",
+      "title": "青云镇",
+      "description": "山麓下的凡人集镇。",
+      "targetId": "tutorial.qingyun-hub-town",
+      "position": {
+        "x": 0.3,
+        "y": 0.6
+      }
+    },
+    {
+      "id": "node.tutorial-qingyun-sect-gate",
+      "type": "hub",
+      "title": "青云宗山门",
+      "description": "青云宗入门试炼的起点。",
+      "targetId": "tutorial.qingyun-hub-sect-gate",
+      "position": {
+        "x": 0.5,
+        "y": 0.4
+      }
+    },
+    {
+      "id": "node.tutorial-qingyun-expedition-outer-mountain",
+      "type": "expedition",
+      "title": "青云外山教学试炼",
+      "description": "完成问心阶后的实战秘境。",
+      "targetId": "tutorial.qingyun-expedition-outer-mountain-map",
+      "position": {
+        "x": 0.7,
+        "y": 0.3
+      }
+    }
+  ]
+}
