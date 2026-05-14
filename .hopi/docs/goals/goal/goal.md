@@ -67,9 +67,8 @@ deployRequiresApproval: true
 
 ## Current Focus
 
-- 2026-05-14 最新评估：当前仍在执行 `tutorial-mainmenu-entry`（MainMenu 教学入口与教程 Session/Reset 逻辑）和 `tutorial-hint-ui`（教学关卡中嵌入的提示 UI 逻辑）。
-- 由于 `tutorial-e2e-smoke` 强依赖于这两者的完成，本轮 Planner 不进行新的任务发配。
-- 等待前置任务完成后，再推进最终的端到端 Smoke Test 验证。
+- 2026-05-14 最新评估：前置资源、大地图/Hub 路由以及故事和战斗内容的任务均已在 dev 分支中验证落地，依赖阻断解除。
+- 此时可继续推进 `tutorial-mainmenu-entry`（MainMenu 教学入口与教程 Session/Reset 逻辑）。由于 `tutorial-e2e-smoke` 强依赖于它和提示 UI 的完成，本轮 Planner 重新激活发配 `tutorial-mainmenu-entry`，待完成或有余量时再发配 `tutorial-hint-ui`。
 
 ## Open Questions
 
