@@ -17,13 +17,15 @@ goals:
         title: 为教程秘境事件添加确定性结果选择边界
         taskId: a09cfd41-d530-458f-bdec-e9476958f27d
       - ref: tutorial-worldmap-hub-routing
-        status: promoted
+        status: done
+        taskId: 34373950-13fc-46ca-8cb7-8c4d692e8fa6
         title: 落地教程大地图与 Hub 路由内容
         dependencyTaskList:
           - ref: tutorial-resource-catalog-skeleton
           - ref: tutorial-script-matrix
       - ref: tutorial-story-battle-content
-        status: promoted
+        status: done
+        taskId: 2ce8c8a1-eeee-4890-ac28-801f069d476d
         title: 落地教程故事与首场演武战斗内容
         dependencyTaskList:
           - ref: tutorial-resource-catalog-skeleton

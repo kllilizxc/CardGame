@@ -67,7 +67,7 @@ deployRequiresApproval: true
 
 ## Current Focus
 
-教学关卡的主要内容（大地图、Hub、故事、第一场战斗）已通过前置任务被发配出去。我们当前需要继续完成教学关的 playable wiring 环节：在 MainMenu 加入教学关的专属入口（独立于常规 New Game），并建立正确的 Tutorial Session / Reset 机制，最后加上教学关专属的引导文本弹窗支持和 E2E 的自动化测试。本轮将其中的 `tutorial-mainmenu-entry` 进行 promotion，同时将它的下游放入 candidates 中，准备接棒。
+教学关卡的 MainMenu 入口和 Tutorial Session/Reset 逻辑已经通过 `tutorial-mainmenu-entry` 发配。本轮开始，我们将解封并推进 `tutorial-hint-ui` 和 `tutorial-e2e-smoke` 等 candidates，以完成最后阶段的教学内提示信息和端到端验证。
 
 ## Open Questions
 
