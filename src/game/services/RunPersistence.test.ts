@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 
 import type { PersistentStash } from '../types/expedition';
+import { validateDeckAvailability } from '../state/PersistentStashDecks';
 import {
     loadPersistentStash,
     resetRunPersistenceForTests,
@@ -141,5 +142,88 @@ describe('RunPersistence', () => {
             lastRunSummary: null,
         });
         expect(JSON.parse(ambientStorage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(loadPersistentStash());
+    });
+
+    it('preserves a too-small deck (< 20 cards) through a save/load round-trip', () => {
+        const stash: PersistentStash = {
+            stashId: 'test-stash',
+            cards: [{ id: 'CARD_A', count: 10 }],
+            savedDecks: [{ id: 'small-deck', name: 'Too Small', cards: [{ id: 'CARD_A', count: 5 }] }],
+            selectedDeckId: 'small-deck',
+            items: [],
+            spiritStones: 0,
+        };
+
+        savePersistentStash(stash);
+        const loaded = loadPersistentStash();
+
+        expect(loaded).not.toBeNull();
+        expect(loaded).toEqual(stash);
+    });
+
+    it('preserves a too-large deck (> 40 cards) through a save/load round-trip', () => {
+        const stash: PersistentStash = {
+            stashId: 'test-stash',
+            cards: [{ id: 'CARD_A', count: 60 }],
+            savedDecks: [{ id: 'big-deck', name: 'Too Large', cards: [{ id: 'CARD_A', count: 55 }] }],
+            selectedDeckId: 'big-deck',
+            items: [],
+            spiritStones: 0,
+        };
+
+        savePersistentStash(stash);
+        const loaded = loadPersistentStash();
+
+        expect(loaded).not.toBeNull();
+        expect(loaded).toEqual(stash);
+    });
+
+    it('preserves a deck with unavailable cards through a save/load round-trip, and validation still reports issues', () => {
+        const stash: PersistentStash = {
+            stashId: 'test-stash',
+            cards: [{ id: 'CARD_A', count: 3 }],
+            savedDecks: [{ id: 'unavailable-deck', name: 'Unavailable', cards: [{ id: 'CARD_MISSING', count: 2 }] }],
+            selectedDeckId: 'unavailable-deck',
+            items: [],
+            spiritStones: 0,
+        };
+
+        savePersistentStash(stash);
+        const loaded = loadPersistentStash();
+
+        expect(loaded).not.toBeNull();
+        expect(loaded).toEqual(stash);
+
+        const issues = validateDeckAvailability(loaded!.savedDecks[0].cards, loaded!.cards);
+        expect(issues).toHaveLength(1);
+        expect(issues[0]).toEqual({
+            kind: 'insufficient-copies',
+            cardId: 'CARD_MISSING',
+            required: 2,
+            available: 0,
+        });
+    });
+
+    it('preserves two invalid decks coexisting in savedDecks through a save/load round-trip', () => {
+        const stash: PersistentStash = {
+            stashId: 'test-stash',
+            cards: [{ id: 'CARD_A', count: 60 }],
+            savedDecks: [
+                { id: 'small-deck', name: 'Small', cards: [{ id: 'CARD_A', count: 5 }] },
+                { id: 'big-deck', name: 'Big', cards: [{ id: 'CARD_A', count: 55 }] },
+            ],
+            selectedDeckId: 'big-deck',
+            items: [],
+            spiritStones: 0,
+        };
+
+        savePersistentStash(stash);
+        const loaded = loadPersistentStash();
+
+        expect(loaded).not.toBeNull();
+        expect(loaded!.savedDecks).toHaveLength(2);
+        expect(loaded!.savedDecks[0]).toEqual(stash.savedDecks[0]);
+        expect(loaded!.savedDecks[1]).toEqual(stash.savedDecks[1]);
+        expect(loaded).toEqual(stash);
     });
 });
