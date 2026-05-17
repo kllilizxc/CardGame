@@ -16,9 +16,14 @@ describe('expedition UI Chinese copy', () => {
 
         expect(panel).toContain('选择要带入秘境的卡组；卡组需满足20-40张且所有卡牌均在储物袋中。');
         expect(panel).toContain('管理卡组');
+        expect(panel).toContain('卡组符合要求，可以带入秘境。');
+        expect(panel).toContain('卡组数量不足');
+        expect(panel).toContain('卡组数量超限');
+        expect(panel).toContain('数量不足');
         expect(panel).toContain('初始卡组');
         expect(panel).toContain('初始道具');
         expect(panel).toContain('灵石：');
+        expect(panel).not.toContain('第一阶段暂不开放卡组构筑');
         expect(panel).not.toContain('Starter Deck');
         expect(panel).not.toContain('Starter Items');
         expect(panel).not.toContain('spiritStones：');
