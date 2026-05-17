@@ -5,6 +5,10 @@ import type {
     RunRewardBundle,
     RunSnapshot,
 } from '../types/expedition';
+import {
+    getSelectedDeckCards,
+    syncSelectedSavedDeckCards,
+} from './PersistentStashDecks';
 
 function itemStackKey(stack: Pick<ExpeditionItemStack, 'itemType' | 'id'>): string {
     return `${stack.itemType}:${stack.id}`;
@@ -131,7 +135,7 @@ export function subtractItemStacks(
 
 export function createStartingLoadoutFromStash(stash: PersistentStash): RunRewardBundle {
     return {
-        cards: cloneCardStacks(stash.deck),
+        cards: getSelectedDeckCards(stash),
         items: cloneItemStacks(stash.items),
         spiritStones: stash.spiritStones,
     };
@@ -160,22 +164,26 @@ export function subtractStartingLoadoutFromStash(
     stash: PersistentStash,
     startingLoadout: RunRewardBundle,
 ): PersistentStash {
-    return {
+    const nextCards = subtractCardStacks(stash.cards, startingLoadout.cards);
+
+    return syncSelectedSavedDeckCards({
         ...stash,
-        deck: subtractCardStacks(stash.deck, startingLoadout.cards),
+        cards: nextCards,
         items: subtractItemStacks(stash.items, startingLoadout.items),
         spiritStones: Math.max(0, stash.spiritStones - Math.max(0, startingLoadout.spiritStones)),
-    };
+    }, nextCards);
 }
 
 export function addCarriedBundleToStash(
     stash: PersistentStash,
     carried: RunRewardBundle,
 ): PersistentStash {
-    return {
+    const nextCards = mergeCardStacks(stash.cards, carried.cards);
+
+    return syncSelectedSavedDeckCards({
         ...stash,
-        deck: mergeCardStacks(stash.deck, carried.cards),
+        cards: nextCards,
         items: mergeItemStacks(stash.items, carried.items),
         spiritStones: stash.spiritStones + carried.spiritStones,
-    };
+    }, nextCards);
 }

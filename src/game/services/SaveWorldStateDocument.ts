@@ -386,6 +386,14 @@ function validateRunResolutionSummary(value: unknown): boolean {
         && isNonEmptyString(value.endedAt));
 }
 
+function validateSavedDecks(value: unknown): boolean {
+    return Array.isArray(value)
+        && value.every((savedDeck) => isRecord(savedDeck)
+            && isNonEmptyString(savedDeck.id)
+            && isNonEmptyString(savedDeck.name)
+            && validateCardStacks(savedDeck.cards));
+}
+
 function validatePersistentStash(value: unknown): PersistentStash | null {
     if (value === null) {
         return null;
@@ -393,12 +401,17 @@ function validatePersistentStash(value: unknown): PersistentStash | null {
 
     if (!isRecord(value)
         || !isNonEmptyString(value.stashId)
-        || !validateCardStacks(value.deck)
+        || !validateCardStacks(value.cards)
+        || !validateSavedDecks(value.savedDecks)
+        || !(value.selectedDeckId === null || isNonEmptyString(value.selectedDeckId))
         || !validateItemStacks(value.items)
         || !isNumber(value.spiritStones)
-        || !isOptionalString(value.deckRef)
         || (value.lastRunSummary !== undefined && !validateRunResolutionSummary(value.lastRunSummary))) {
         fail('persistentStash document is malformed.');
+    }
+
+    if (value.selectedDeckId !== null && !value.savedDecks.some((savedDeck) => savedDeck.id === value.selectedDeckId)) {
+        fail('persistentStash selectedDeckId must reference a saved deck.');
     }
 
     return value as unknown as PersistentStash;

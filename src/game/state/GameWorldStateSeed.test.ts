@@ -14,8 +14,9 @@ describe('GameWorldStateSeed', () => {
 
         expect(stash).toEqual({
             stashId: 'phase01.starter-stash',
-            deckRef: 'starter-deck',
-            deck: starterDeckJson.cards,
+            cards: starterDeckJson.cards,
+            savedDecks: [{ id: 'starter-deck', name: starterDeckJson.name, cards: starterDeckJson.cards }],
+            selectedDeckId: 'starter-deck',
             items: initialWorldState.stash.items,
             spiritStones: 36,
             lastRunSummary: null,
@@ -32,8 +33,9 @@ describe('GameWorldStateSeed', () => {
 
         expect(stash).toEqual({
             stashId: 'phase01.starter-stash',
-            deckRef: 'starter-deck',
-            deck: [{ id: 'TEST_CARD', count: 2 }],
+            cards: [{ id: 'TEST_CARD', count: 2 }],
+            savedDecks: [{ id: 'starter-deck', name: 'Starter Deck', cards: [{ id: 'TEST_CARD', count: 2 }] }],
+            selectedDeckId: 'starter-deck',
             items: [
                 { id: 'tool.return-rope', itemType: 'tool', count: 1 },
                 { id: 'consumable.spirit-salve', itemType: 'consumable', count: 2 },
@@ -56,12 +58,14 @@ describe('GameWorldStateSeed', () => {
         const firstStash = createPersistentStashFromWorldStateSeed({ worldState, starterDeck });
         const secondStash = createPersistentStashFromWorldStateSeed({ worldState, starterDeck });
 
-        firstStash.deck[0].count = 99;
+        firstStash.cards[0].count = 99;
+        firstStash.savedDecks[0]!.cards[0]!.count = 77;
         firstStash.items[0].count = 88;
 
         expect(starterDeck.cards[0].count).toBe(1);
         expect(worldState.stash.items[0].count).toBe(1);
-        expect(secondStash.deck).toEqual([{ id: 'CARD_A', count: 1 }]);
+        expect(secondStash.cards).toEqual([{ id: 'CARD_A', count: 1 }]);
+        expect(secondStash.savedDecks[0]?.cards).toEqual([{ id: 'CARD_A', count: 1 }]);
         expect(secondStash.items).toEqual([{ id: 'tool.test', itemType: 'tool', count: 1 }]);
     });
 });

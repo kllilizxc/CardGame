@@ -15,6 +15,7 @@ import {
     STASH_STORAGE_KEY,
 } from '../services/RunPersistence';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
+import { getSelectedDeckCards } from './PersistentStashDecks';
 import { ExpeditionState } from './ExpeditionState';
 
 const DEFAULT_TARGET = {
@@ -103,8 +104,11 @@ describe('ExpeditionState', () => {
 
         expect(state.activeRun).toBeNull();
         expect(state.persistentStash.stashId).toBe('phase01.starter-stash');
-        expect(state.persistentStash.deckRef).toBe('starter-deck');
-        expect(state.persistentStash.deck).toEqual(starterDeckJson.cards);
+        expect(state.persistentStash.cards).toEqual(starterDeckJson.cards);
+        expect(state.persistentStash.savedDecks).toEqual([
+            { id: 'starter-deck', name: starterDeckJson.name, cards: starterDeckJson.cards },
+        ]);
+        expect(state.persistentStash.selectedDeckId).toBe('starter-deck');
         expect(state.persistentStash.items).toEqual(initialWorldState.stash.items);
         expect(state.persistentStash.spiritStones).toBe(initialWorldState.stash.spiritStones);
     });
@@ -120,8 +124,9 @@ describe('ExpeditionState', () => {
         const existingStash = {
             ...seededState.persistentStash,
             stashId: 'player-existing-stash',
-            deckRef: 'player-existing-deck',
-            deck: [{ id: 'EXISTING_CARD', count: 1 }],
+            cards: [{ id: 'EXISTING_CARD', count: 1 }],
+            savedDecks: [{ id: 'player-existing-deck', name: 'player-existing-deck', cards: [{ id: 'EXISTING_CARD', count: 1 }] }],
+            selectedDeckId: 'player-existing-deck',
             items: [{ id: 'tool.existing', itemType: 'tool' as const, count: 3 }],
             spiritStones: 777,
         };
@@ -178,7 +183,7 @@ describe('ExpeditionState', () => {
         });
 
         expect(run.currentNodeId).toBe('entrance.mountain-gate');
-        expect(run.carriedDeck).toEqual(state.persistentStash.deck);
+        expect(run.carriedDeck).toEqual(getSelectedDeckCards(state.persistentStash));
         expect(run.carriedItems).toEqual(state.persistentStash.items);
         expect(run.spiritStones).toBe(state.persistentStash.spiritStones);
         expect(run.visitedNodeIds).toEqual(['entrance.mountain-gate']);
@@ -326,7 +331,7 @@ describe('ExpeditionState', () => {
         expect(unaffordablePurchase.status).toBe('insufficientFunds');
         expect(state.activeRun?.spiritStones).toBe(12);
         expect(state.activeRun?.carriedItems.some((stack) => stack.id === 'artifact_fly_sword_basic')).toBe(false);
-        expect(state.persistentStash.deck.find((stack) => stack.id === 'AR_001')?.count).toBe(3);
+        expect(state.persistentStash.cards.find((stack) => stack.id === 'AR_001')?.count).toBe(3);
         expect(state.persistentStash.spiritStones).toBe(36);
     });
 

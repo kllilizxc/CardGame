@@ -1,6 +1,7 @@
 import { GameObjects, Scene } from 'phaser';
 
 import { createPreparationSummary } from '../../scenes/expedition/entryFlowModel';
+import { getSelectedDeckCards } from '../../state/PersistentStashDecks';
 import type { ExpeditionCardStack, ExpeditionItemStack, PersistentStash } from '../../types/expedition';
 
 export interface PreparationPanelConfig {
@@ -78,7 +79,7 @@ export class PreparationPanel extends GameObjects.Container {
             fontStyle: 'bold',
         });
 
-        const deckList = this.scene.add.text(leftColumnX, deckHeading.y + 36, this.stash.deck.map(formatCardLine).join('\n'), {
+        const deckList = this.scene.add.text(leftColumnX, deckHeading.y + 36, getSelectedDeckCards(this.stash).map(formatCardLine).join('\n'), {
             fontFamily: 'Courier New',
             fontSize: '18px',
             color: '#e2e8f0',

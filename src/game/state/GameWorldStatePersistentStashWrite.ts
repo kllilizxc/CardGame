@@ -15,6 +15,7 @@ import {
     cloneCardStacks,
     cloneItemStacks,
 } from './GameWorldStateStashOperations';
+import { cloneSavedDecks } from './PersistentStashDecks';
 
 export interface GameWorldStatePersistentStashWriteOptions extends Omit<GameWorldStateOptions, 'storage'> {
     readonly storage: RunPersistenceStorageAdapter;
@@ -58,14 +59,12 @@ function cloneRunResolutionSummary(
 function clonePersistentStashDocument(stash: DeepReadonly<PersistentStash>): PersistentStash {
     const clonedStash: PersistentStash = {
         stashId: stash.stashId,
-        deck: cloneCardStacks(stash.deck),
+        cards: cloneCardStacks(stash.cards),
+        savedDecks: cloneSavedDecks(stash.savedDecks),
+        selectedDeckId: stash.selectedDeckId,
         items: cloneItemStacks(stash.items),
         spiritStones: stash.spiritStones,
     };
-
-    if (stash.deckRef !== undefined) {
-        clonedStash.deckRef = stash.deckRef;
-    }
 
     if ('lastRunSummary' in stash) {
         clonedStash.lastRunSummary = cloneRunResolutionSummary(stash.lastRunSummary);

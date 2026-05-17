@@ -133,8 +133,9 @@ function createStoryHubDocument(statusText: string): StoryHubSessionDocument {
 function createPersistentStash(): PersistentStash {
     return {
         stashId: 'stash.source',
-        deckRef: 'deck.source',
-        deck: [{ id: 'SRC_CARD', count: 2 }],
+        cards: [{ id: 'SRC_CARD', count: 2 }],
+        savedDecks: [{ id: 'deck.source', name: 'deck.source', cards: [{ id: 'SRC_CARD', count: 2 }] }],
+        selectedDeckId: 'deck.source',
         items: [{ id: 'source-tool', itemType: 'tool', count: 1 }],
         spiritStones: 88,
         lastRunSummary: null,

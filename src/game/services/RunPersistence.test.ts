@@ -38,8 +38,9 @@ class MemoryStorage implements Storage {
 
 const TEST_STASH: PersistentStash = {
     stashId: 'test-stash',
-    deckRef: 'test-deck',
-    deck: [{ id: 'CARD_A', count: 2 }],
+    cards: [{ id: 'CARD_A', count: 2 }],
+    savedDecks: [{ id: 'test-deck', name: 'test-deck', cards: [{ id: 'CARD_A', count: 2 }] }],
+    selectedDeckId: 'test-deck',
     items: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
     spiritStones: 9,
     lastRunSummary: null,
@@ -117,5 +118,28 @@ describe('RunPersistence', () => {
         savePersistentStash(TEST_STASH);
 
         expect(loadPersistentStash()).toEqual(TEST_STASH);
+    });
+
+    it('migrates a legacy deck-based stash into permanent collection plus a default saved deck without clearing progress', () => {
+        const ambientStorage = globalThis.localStorage as MemoryStorage;
+        ambientStorage.setItem(STASH_STORAGE_KEY, JSON.stringify({
+            stashId: 'legacy-stash',
+            deckRef: 'legacy-deck',
+            deck: [{ id: 'CARD_A', count: 2 }],
+            items: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
+            spiritStones: 9,
+            lastRunSummary: null,
+        }));
+
+        expect(loadPersistentStash()).toEqual({
+            stashId: 'legacy-stash',
+            cards: [{ id: 'CARD_A', count: 2 }],
+            savedDecks: [{ id: 'legacy-deck', name: 'legacy-deck', cards: [{ id: 'CARD_A', count: 2 }] }],
+            selectedDeckId: 'legacy-deck',
+            items: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
+            spiritStones: 9,
+            lastRunSummary: null,
+        });
+        expect(JSON.parse(ambientStorage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(loadPersistentStash());
     });
 });

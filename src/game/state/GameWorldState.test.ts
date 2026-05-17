@@ -305,7 +305,8 @@ describe('GameWorldState', () => {
         (firstRead.storyHubSession.document.stories[
             'hub.qingyun-town|action.start-qingyun-entry-story|data%2Fstory%2Fstory-graph.json'
         ].storyState.visitedNodeIds as string[]).push('mutated-node');
-        (firstRead.persistentStash.document.deck as Array<{ id: string; count: number }>)[0].count = 999;
+        (firstRead.persistentStash.document.cards as Array<{ id: string; count: number }>)[0].count = 999;
+        (firstRead.persistentStash.document.savedDecks[0].cards as Array<{ id: string; count: number }>)[0].count = 666;
         (firstRead.persistentStash.document.items as Array<{ id: string; itemType: string; count: number }>)[0].count = 888;
         (firstRead.activeRun.document!.carriedDeck as Array<{ id: string; count: number }>)[0].count = 777;
         (firstRead.activeRun.keys.legacyRouteStorageKeys as string[]).push('mutated-legacy-key');
@@ -316,7 +317,8 @@ describe('GameWorldState', () => {
         expect(secondRead.storyHubSession.document.stories[
             'hub.qingyun-town|action.start-qingyun-entry-story|data%2Fstory%2Fstory-graph.json'
         ].storyState.visitedNodeIds).not.toContain('mutated-node');
-        expect(secondRead.persistentStash.document.deck[0].count).toBe(starterDeckJson.cards[0].count);
+        expect(secondRead.persistentStash.document.cards[0].count).toBe(starterDeckJson.cards[0].count);
+        expect(secondRead.persistentStash.document.savedDecks[0]?.cards[0]?.count).toBe(starterDeckJson.cards[0].count);
         expect(secondRead.persistentStash.document.items[0].count).toBe(initialWorldState.stash.items[0].count);
         expect(secondRead.activeRun.document?.carriedDeck[0].count).toBe(starterDeckJson.cards[0].count);
         expect(secondRead.activeRun.keys.legacyRouteStorageKeys).toEqual([]);
@@ -343,7 +345,7 @@ describe('GameWorldState', () => {
             statusText: 'Injected Hub session',
         });
         expect(worldState.persistentStash.source).toBe('seed-fallback');
-        expect(worldState.persistentStash.document.deck).toEqual(starterDeckJson.cards);
+        expect(worldState.persistentStash.document.cards).toEqual(starterDeckJson.cards);
         expect(worldState.activeRun.document?.runId).toBe(run.runId);
         expect(worldState.activeRun.document?.routeKey).toBe(createActiveRunRouteKey(SYNTHETIC_TARGET));
         expect(storage.keys().sort()).toEqual(ambientKeysBeforeRead);

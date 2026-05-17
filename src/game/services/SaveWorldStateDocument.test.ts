@@ -271,7 +271,8 @@ describe('SaveWorldStateDocument', () => {
             migrationHooks: [],
         });
         expect(document.worldState.persistentStash.document).toEqual(loadPersistentStash());
-        expect(document.worldState.persistentStash.document?.deck).toEqual(starterDeckJson.cards);
+        expect(document.worldState.persistentStash.document?.cards).toEqual(starterDeckJson.cards);
+        expect(document.worldState.persistentStash.document?.savedDecks[0]?.cards).toEqual(starterDeckJson.cards);
         expect(document.worldState.persistentStash.document?.items).toEqual(initialWorldState.stash.items);
         expect(document.worldState.activeRun.compatibility).toMatchObject({
             owner: 'activeRun',
@@ -325,7 +326,7 @@ describe('SaveWorldStateDocument', () => {
         expect(Object.keys(document.worldState.storyHubSession.document.stories)).toEqual([
             'hub.qingyun-town|action.start-qingyun-entry-story|data%2Fstory%2Fstory-graph.json',
         ]);
-        expect(document.worldState.persistentStash.document?.deck).toEqual(starterDeckJson.cards);
+        expect(document.worldState.persistentStash.document?.cards).toEqual(starterDeckJson.cards);
         expect(document.worldState.activeRun.keys).toEqual(createActiveRunCompatibilityKeys(undefined, SYNTHETIC_TARGET));
         expect(document.worldState.activeRun.document?.runId).toBe(syntheticRunId);
         expect(document.worldState.activeRun.document?.carriedDeck).toContainEqual({ id: 'AR_001', count: 4 });

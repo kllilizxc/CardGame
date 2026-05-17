@@ -3,8 +3,13 @@ import type {
     ExpeditionItemStack,
     PersistentStash,
 } from '../types/expedition';
+import {
+    createSavedDeck,
+    DEFAULT_SAVED_DECK_ID,
+} from './PersistentStashDecks';
 
 export interface StarterDeckSeed {
+    name?: string;
     cards: ExpeditionCardStack[];
 }
 
@@ -25,7 +30,6 @@ export interface PersistentStashSeedSources {
 }
 
 const DEFAULT_STASH_ID = 'phase01.starter-stash';
-const DEFAULT_DECK_REF = 'starter-deck';
 const DEFAULT_STARTER_ITEMS: ExpeditionItemStack[] = [
     { id: 'tool.return-rope', itemType: 'tool', count: 1 },
     { id: 'consumable.spirit-salve', itemType: 'consumable', count: 2 },
@@ -45,11 +49,17 @@ export function createPersistentStashFromWorldStateSeed({
     starterDeck,
 }: PersistentStashSeedSources): PersistentStash {
     const stashSeed = worldState.stash;
+    const starterSavedDeck = createSavedDeck(
+        stashSeed?.deckRef ?? DEFAULT_SAVED_DECK_ID,
+        starterDeck.name ?? stashSeed?.deckRef,
+        starterDeck.cards,
+    );
 
     return {
         stashId: stashSeed?.stashId ?? DEFAULT_STASH_ID,
-        deckRef: stashSeed?.deckRef ?? DEFAULT_DECK_REF,
-        deck: cloneCardStacks(starterDeck.cards),
+        cards: cloneCardStacks(starterDeck.cards),
+        savedDecks: [starterSavedDeck],
+        selectedDeckId: starterSavedDeck.id,
         items: cloneItemStacks(stashSeed?.items ?? DEFAULT_STARTER_ITEMS),
         spiritStones: stashSeed?.spiritStones ?? DEFAULT_STARTER_SPIRIT_STONES,
         lastRunSummary: null,

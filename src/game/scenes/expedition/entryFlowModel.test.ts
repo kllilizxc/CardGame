@@ -116,8 +116,9 @@ describe('entryFlowModel', () => {
     it('summarizes the entrance state after acknowledging a terminal run result', () => {
         const stash = {
             stashId: 'phase01.starter-stash',
-            deckRef: 'starter-deck',
-            deck: [{ id: 'AR_001', count: 2 }],
+            cards: [{ id: 'AR_001', count: 2 }],
+            savedDecks: [{ id: 'starter-deck', name: 'starter-deck', cards: [{ id: 'AR_001', count: 2 }] }],
+            selectedDeckId: 'starter-deck',
             items: [{ id: 'tool_talisman_basic', itemType: 'tool' as const, count: 1 }],
             spiritStones: 24,
             lastRunSummary: null,

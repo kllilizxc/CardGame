@@ -6,6 +6,7 @@ import prototypeMapJson from '../../../../public/data/mijing/prototype-map.json'
 
 import { resetRunPersistenceForTests } from '../../services/RunPersistence';
 import { ExpeditionState } from '../../state/ExpeditionState';
+import { getSelectedDeckCards } from '../../state/PersistentStashDecks';
 import {
     confirmExpeditionLoadout,
     getInitialExpeditionEntryView,
@@ -61,7 +62,7 @@ describe('expeditionEntryFlow', () => {
 
         expect(view.mode).toBe('activeRun');
         expect(view.activeRun.currentNodeId).toBe(prototypeMapJson.entryNodeId);
-        expect(view.activeRun.carriedDeck).toEqual(expeditionState.persistentStash.deck);
+        expect(view.activeRun.carriedDeck).toEqual(getSelectedDeckCards(expeditionState.persistentStash));
         expect(view.activeRun.carriedItems).toEqual(expeditionState.persistentStash.items);
         expect(view.activeRun.spiritStones).toBe(expeditionState.persistentStash.spiritStones);
         expect(view.statusText).toBe('已进入秘境：当前位置 entrance.mountain-gate，携带 14 张卡、3 件道具、36 枚灵石。');

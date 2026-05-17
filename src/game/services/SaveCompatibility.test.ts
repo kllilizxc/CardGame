@@ -115,7 +115,9 @@ describe('SaveCompatibility', () => {
         };
         const stashDocument = {
             stashId: 'starter-stash',
-            deck: [],
+            cards: [],
+            savedDecks: [],
+            selectedDeckId: null,
             items: [],
             spiritStones: 0,
         };

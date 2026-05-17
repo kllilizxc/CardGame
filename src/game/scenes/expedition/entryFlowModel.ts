@@ -1,4 +1,5 @@
 import type { PersistentStash, RunResolutionSummary, RunSnapshot } from '../../types/expedition';
+import { getSelectedDeckCards } from '../../state/PersistentStashDecks';
 
 interface CountableStack {
     count: number;
@@ -45,7 +46,7 @@ function countStacks<T extends CountableStack>(stacks: T[]): number {
 }
 
 export function createPreparationSummary(stash: PersistentStash): PreparationSummary {
-    const deckCount = countStacks(stash.deck);
+    const deckCount = countStacks(getSelectedDeckCards(stash));
     const itemCount = countStacks(stash.items);
 
     return {

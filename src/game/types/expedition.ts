@@ -19,6 +19,12 @@ export interface ExpeditionItemStack {
     count: number;
 }
 
+export interface SavedDeck {
+    id: string;
+    name: string;
+    cards: ExpeditionCardStack[];
+}
+
 export interface RunRewardBundle {
     cards: ExpeditionCardStack[];
     items: ExpeditionItemStack[];
@@ -46,8 +52,9 @@ export interface ExpeditionTargetConfig extends ExpeditionRouteIdentity {
 
 export interface PersistentStash {
     stashId: string;
-    deckRef?: string;
-    deck: ExpeditionCardStack[];
+    cards: ExpeditionCardStack[];
+    savedDecks: SavedDeck[];
+    selectedDeckId: string | null;
     items: ExpeditionItemStack[];
     spiritStones: number;
     lastRunSummary?: RunResolutionSummary | null;

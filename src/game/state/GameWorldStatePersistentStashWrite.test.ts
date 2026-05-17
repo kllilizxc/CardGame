@@ -84,11 +84,18 @@ function createSeedSources() {
 function createStoredStash(): PersistentStash {
     return {
         stashId: 'stored-stash',
-        deckRef: 'stored-deck',
-        deck: [
+        cards: [
             { id: 'AR_001', count: 4 },
             { id: 'TL_002', count: 1 },
         ],
+        savedDecks: [{
+            id: 'stored-deck',
+            name: 'stored-deck',
+            cards: [
+                { id: 'AR_001', count: 3 },
+            ],
+        }],
+        selectedDeckId: 'stored-deck',
         items: [
             { id: 'tool.return-rope', itemType: 'tool', count: 2 },
             { id: 'artifact.fly-sword', itemType: 'artifact', count: 1 },
@@ -178,7 +185,8 @@ describe('GameWorldStatePersistentStashWrite', () => {
         expect(JSON.parse(storage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(storedStash);
         expect(storage.getItem(activeRunStorageKey)).toBe(activeRunBeforeWrite);
 
-        result.document.deck[0].count = 999;
+        result.document.cards[0].count = 999;
+        result.document.savedDecks[0]!.cards[0]!.count = 888;
         result.document.items[0].count = 999;
         result.document.lastRunSummary!.kept.cards[0].count = 999;
 
@@ -199,18 +207,21 @@ describe('GameWorldStatePersistentStashWrite', () => {
         expect(result.document).toEqual(expectedSeedStash);
         expect(JSON.parse(storage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(expectedSeedStash);
         expect(Object.keys(JSON.parse(storage.getItem(STASH_STORAGE_KEY) ?? '{}')).sort()).toEqual([
-            'deck',
-            'deckRef',
+            'cards',
             'items',
             'lastRunSummary',
+            'savedDecks',
+            'selectedDeckId',
             'spiritStones',
             'stashId',
         ]);
-        expect(result.document.deck).toEqual(starterDeckJson.cards);
+        expect(result.document.cards).toEqual(starterDeckJson.cards);
+        expect(result.document.savedDecks[0]?.cards).toEqual(starterDeckJson.cards);
         expect(result.document.items).toEqual(initialWorldState.stash.items);
         expect(result.document.spiritStones).toBe(initialWorldState.stash.spiritStones);
 
-        result.document.deck[0].count = 999;
+        result.document.cards[0].count = 999;
+        result.document.savedDecks[0]!.cards[0]!.count = 888;
         result.document.items[0].count = 999;
 
         expect(JSON.parse(storage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(expectedSeedStash);

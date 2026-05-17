@@ -132,7 +132,7 @@ describe('RunResolution', () => {
         const updatedStash = loadPersistentStash();
 
         expect(loadActiveRun()).toBeNull();
-        expect(updatedStash?.deck).toEqual([]);
+        expect(updatedStash?.cards).toEqual([]);
         expect(updatedStash?.items).toEqual([]);
         expect(updatedStash?.spiritStones).toBe(0);
         expect(summary.outcome).toBe('defeat');
@@ -151,7 +151,7 @@ describe('RunResolution', () => {
         const updatedStash = loadPersistentStash();
 
         expect(loadActiveRun()).toBeNull();
-        expect(updatedStash?.deck).toEqual([...starterDeckJson.cards, { id: 'TL_002', count: 1 }]);
+        expect(updatedStash?.cards).toEqual([...starterDeckJson.cards, { id: 'TL_002', count: 1 }]);
         expect(updatedStash?.items).toEqual([
             ...initialWorldState.stash.items,
             { id: 'tool_talisman_basic', itemType: 'tool', count: 1 },
@@ -266,7 +266,7 @@ describe('RunResolution', () => {
         expect(summary.runId).toBe(runId);
         expect(summary.outcome).toBe('extract');
         expect(injectedStash?.lastRunSummary).toEqual(summary);
-        expect(injectedStash?.deck).toContainEqual({ id: 'AR_001', count: 4 });
+        expect(injectedStash?.cards).toContainEqual({ id: 'AR_001', count: 4 });
         expect(loadActiveRun(SYNTHETIC_TARGET, undefined, injectedStorage)).toBeNull();
         expect(injectedStorage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET))).toBeNull();
         expect(injectedStorage.getItem(STASH_STORAGE_KEY)).not.toBeNull();

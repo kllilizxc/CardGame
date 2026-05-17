@@ -319,7 +319,8 @@ describe('SaveWorldStateSnapshot', () => {
             'hub.qingyun-town|action.start-qingyun-entry-story|data%2Fstory%2Fstory-graph.json',
         ]);
         expect(snapshot.persistentStash.document?.stashId).toBe('phase01.starter-stash');
-        expect(snapshot.persistentStash.document?.deck).toEqual(starterDeckJson.cards);
+        expect(snapshot.persistentStash.document?.cards).toEqual(starterDeckJson.cards);
+        expect(snapshot.persistentStash.document?.savedDecks[0]?.cards).toEqual(starterDeckJson.cards);
         expect(snapshot.activeRun.keys).toEqual(createActiveRunCompatibilityKeys(undefined, SYNTHETIC_TARGET));
         expect(snapshot.activeRun.document?.runId).toBe(run.runId);
         expect(snapshot.activeRun.document?.carriedDeck).toContainEqual({ id: 'AR_001', count: 4 });
@@ -375,7 +376,7 @@ describe('SaveWorldStateSnapshot', () => {
         expect(defaultSnapshot.activeRun.keys.routeKey).toBe('expedition:phase01-first-playable-expedition:phase01-prototype-map');
         expect(defaultSnapshot.activeRun.document?.runId).toBe(defaultRun.runId);
         expect(syntheticSnapshot.persistentStash.document?.stashId).toBe('phase01.starter-stash');
-        expect(syntheticSnapshot.persistentStash.document?.deck).toEqual(starterDeckJson.cards);
+        expect(syntheticSnapshot.persistentStash.document?.cards).toEqual(starterDeckJson.cards);
         expect(syntheticSnapshot.persistentStash.document?.items).toEqual(initialWorldState.stash.items);
         expect(syntheticSnapshot.persistentStash.document?.spiritStones).toBe(initialWorldState.stash.spiritStones);
         expect(defaultSnapshot.persistentStash.document).toEqual(syntheticSnapshot.persistentStash.document);

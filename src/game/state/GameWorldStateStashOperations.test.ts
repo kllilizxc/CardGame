@@ -10,15 +10,24 @@ import {
     mergeItemStacks,
     subtractStartingLoadoutFromStash,
 } from './GameWorldStateStashOperations';
+import { getSelectedDeckCards } from './PersistentStashDecks';
 
 function createPersistentStash(overrides: Partial<PersistentStash> = {}): PersistentStash {
     return {
         stashId: 'test-stash',
-        deckRef: 'test-deck',
-        deck: [
+        cards: [
             { id: 'CARD_A', count: 2 },
             { id: 'CARD_B', count: 1 },
         ],
+        savedDecks: [{
+            id: 'test-deck',
+            name: 'test-deck',
+            cards: [
+                { id: 'CARD_A', count: 2 },
+                { id: 'CARD_B', count: 1 },
+            ],
+        }],
+        selectedDeckId: 'test-deck',
         items: [
             { id: 'item.rope', itemType: 'tool', count: 1 },
             { id: 'item.salve', itemType: 'consumable', count: 2 },
@@ -72,11 +81,11 @@ describe('GameWorldStateStashOperations', () => {
         const carriedBundle = createCarriedBundleFromRun(run);
 
         expect(startingLoadout).toEqual({
-            cards: stash.deck,
+            cards: getSelectedDeckCards(stash),
             items: stash.items,
             spiritStones: stash.spiritStones,
         });
-        expect(startingLoadout.cards[0]).not.toBe(stash.deck[0]);
+        expect(startingLoadout.cards[0]).not.toBe(stash.savedDecks[0]?.cards[0]);
         expect(startingLoadout.items[0]).not.toBe(stash.items[0]);
 
         expect(carriedBundle).toEqual({
@@ -90,7 +99,7 @@ describe('GameWorldStateStashOperations', () => {
         startingLoadout.cards[0].count = 99;
         carriedBundle.items[0].count = 99;
 
-        expect(stash.deck[0].count).toBe(2);
+        expect(stash.savedDecks[0]?.cards[0]?.count).toBe(2);
         expect(run.carriedItems[0].count).toBe(1);
     });
 
@@ -137,7 +146,7 @@ describe('GameWorldStateStashOperations', () => {
 
     it('subtracts a starting loadout from a stash without negative stacks or spirit stones', () => {
         const stash = createPersistentStash({
-            deck: [
+            cards: [
                 { id: 'CARD_A', count: 2 },
                 { id: 'CARD_B', count: 1 },
                 { id: 'CARD_ZERO', count: 0 },
@@ -169,11 +178,16 @@ describe('GameWorldStateStashOperations', () => {
 
         expect(updatedStash).toEqual({
             ...stash,
-            deck: [],
+            cards: [],
+            savedDecks: [{
+                id: 'test-deck',
+                name: 'test-deck',
+                cards: [],
+            }],
             items: [{ id: 'item.salve', itemType: 'consumable', count: 1 }],
             spiritStones: 0,
         });
-        expect(stash.deck).toEqual([
+        expect(stash.cards).toEqual([
             { id: 'CARD_A', count: 2 },
             { id: 'CARD_B', count: 1 },
             { id: 'CARD_ZERO', count: 0 },
@@ -204,7 +218,7 @@ describe('GameWorldStateStashOperations', () => {
         };
         const rewardedCarried = addRewardBundleToCarriedBundle(carried, rewards);
         const stash = createPersistentStash({
-            deck: [{ id: 'CARD_A', count: 1 }],
+            cards: [{ id: 'CARD_A', count: 1 }],
             items: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
             spiritStones: 7,
         });
@@ -224,10 +238,18 @@ describe('GameWorldStateStashOperations', () => {
         });
         expect(updatedStash).toEqual({
             ...stash,
-            deck: [
+            cards: [
                 { id: 'CARD_A', count: 4 },
                 { id: 'CARD_B', count: 3 },
             ],
+            savedDecks: [{
+                id: 'test-deck',
+                name: 'test-deck',
+                cards: [
+                    { id: 'CARD_A', count: 4 },
+                    { id: 'CARD_B', count: 3 },
+                ],
+            }],
             items: [
                 { id: 'item.rope', itemType: 'tool', count: 3 },
                 { id: 'item.charm', itemType: 'artifact', count: 1 },
@@ -235,11 +257,11 @@ describe('GameWorldStateStashOperations', () => {
             spiritStones: 15,
         });
         expect(rewardedCarried.cards[0]).not.toBe(carried.cards[0]);
-        expect(updatedStash.deck[0]).not.toBe(stash.deck[0]);
+        expect(updatedStash.cards[0]).not.toBe(stash.cards[0]);
         expect(carried.cards).toEqual([
             { id: 'CARD_A', count: 2 },
             { id: 'CARD_ZERO', count: 0 },
         ]);
-        expect(stash.deck).toEqual([{ id: 'CARD_A', count: 1 }]);
+        expect(stash.cards).toEqual([{ id: 'CARD_A', count: 1 }]);
     });
 });
