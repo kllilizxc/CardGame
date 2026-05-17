@@ -40,11 +40,14 @@ import { TutorialOverlayController } from '../../ui/battle/TutorialOverlayContro
 import type { TutorialStepDefinition, TutorialPlayerAction, TutorialHighlightZone } from '../../ui/battle/TutorialOverlayController';
 import { CardPreviewManager } from '../../managers/common/CardPreviewManager';
 import { PillTooltipUI } from '../../ui/common/PillTooltipUI';
-import { getStage2TutorialSteps } from '../../data/tutorial/stage2Steps';
 import type { AnyCard } from '@data/types/cards/all';
 import type { BattleLaunchPayload } from '../../types/expedition';
 import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import { createExpeditionBattleCompleteEvent } from './battleCompletion';
+import {
+    getBuiltInTutorialStepsForEncounter,
+    resolveTutorialStepDefinitions,
+} from './tutorialStepRuntime';
 import { createStoryBattleCompleteEvent } from '../story/storyBattleRoundTrip';
 import {
     BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
@@ -1185,11 +1188,17 @@ export class BattleScene extends Scene {
     /**
      * 根据遭遇战 ID 加载对应的教程步骤。
      */
-    private loadTutorialStepsForEncounter(): void {
-        const encounterId = this.storyLaunchPayload?.battleLaunch?.encounterId;
-        if (encounterId === 'tutorial_encounter_stage2') {
-            this.loadTutorialSteps(getStage2TutorialSteps());
+    private loadTutorialStepsForEncounter(): boolean {
+        const steps = getBuiltInTutorialStepsForEncounter(
+            this.storyLaunchPayload?.battleLaunch?.encounterId,
+        );
+
+        if (!steps) {
+            return false;
         }
+
+        this.loadTutorialSteps(steps);
+        return true;
     }
 
     /** 通知教程控制器玩家操作 */
@@ -1256,13 +1265,23 @@ export class BattleScene extends Scene {
     /** 加载教程步骤 JSON 并补充 completionCheck 与动态高亮区域 */
     private loadAndStartTutorialSteps(): void {
         if (!this.tutorialController || !this.tutorialStepsCacheKey) return;
-        const rawSteps = this.cache.json.get(this.tutorialStepsCacheKey);
-        if (!rawSteps || !Array.isArray(rawSteps)) {
-            console.warn(`教程步骤数据缺失: ${this.tutorialStepsCacheKey}`);
+
+        const resolution = resolveTutorialStepDefinitions({
+            rawSteps: this.cache.json.get(this.tutorialStepsCacheKey),
+            encounterId: this.storyLaunchPayload?.battleLaunch?.encounterId,
+            enrichRawSteps: (rawSteps) => this.enrichTutorialSteps(rawSteps),
+        });
+
+        if (!resolution.steps) {
+            console.warn(`教程步骤数据缺失或格式无效: ${this.tutorialStepsCacheKey}`);
             return;
         }
-        const enriched = this.enrichTutorialSteps(rawSteps);
-        this.loadTutorialSteps(enriched);
+
+        if (resolution.source === 'encounter-fallback') {
+            console.warn(`教程步骤 JSON 缺失，已回退到内置步骤: ${this.tutorialStepsCacheKey}`);
+        }
+
+        this.loadTutorialSteps(resolution.steps);
     }
 
     /** 将原始 JSON 数据填充为完整的 TutorialStepDefinition[] */
