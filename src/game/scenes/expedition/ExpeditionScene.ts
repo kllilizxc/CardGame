@@ -28,9 +28,11 @@ import type {
     ShopMapNode,
 } from '../../types/expedition';
 import { MapNodeView } from '../../ui/expedition/MapNodeView';
+import { DeckManagementPanel } from '../../ui/deckbuilder/DeckManagementPanel';
 import { PreparationPanel } from '../../ui/expedition/PreparationPanel';
 import { RunHud } from '../../ui/expedition/RunHud';
 import { createWorldMapReturnIntent } from '../worldmap/worldMap';
+import { savePersistentStash } from '../../services/RunPersistence';
 import {
     createPostRunEntranceStatus,
     createPreparationSummary,
@@ -68,6 +70,7 @@ export class ExpeditionScene extends Scene {
     private eventCollection!: PrototypeEventCollection;
     private shopCollection!: PrototypeShopCollection;
     private preparationPanel?: PreparationPanel;
+    private deckManagementPanel?: DeckManagementPanel;
     private runHud!: RunHud;
     private statusText!: Phaser.GameObjects.Text;
     private nodeMenu?: Phaser.GameObjects.Container;
@@ -205,6 +208,8 @@ export class ExpeditionScene extends Scene {
 
     private showPreparationPanel(): void {
         this.preparationPanel?.destroy();
+        this.deckManagementPanel?.destroy();
+        this.deckManagementPanel = undefined;
         this.runHud.setVisible(false);
         this.clearMapViews();
         this.destroyNodeMenu();
@@ -212,6 +217,22 @@ export class ExpeditionScene extends Scene {
         this.preparationPanel = new PreparationPanel(this, {
             stash: this.expeditionState.persistentStash,
             onConfirm: () => this.startFreshRun(),
+            onOpenDeckManager: () => this.showDeckManagementPanel(),
+        });
+    }
+
+    private showDeckManagementPanel(): void {
+        this.preparationPanel?.destroy();
+        this.preparationPanel = undefined;
+        this.deckManagementPanel?.destroy();
+
+        this.deckManagementPanel = new DeckManagementPanel(this, {
+            stash: this.expeditionState.persistentStash,
+            onStashChange: (newStash) => {
+                this.expeditionState.persistentStash = newStash;
+                savePersistentStash(newStash);
+            },
+            onClose: () => this.showPreparationPanel(),
         });
     }
 

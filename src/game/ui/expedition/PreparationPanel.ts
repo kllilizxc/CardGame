@@ -7,6 +7,7 @@ import type { ExpeditionCardStack, ExpeditionItemStack, PersistentStash } from '
 export interface PreparationPanelConfig {
     stash: PersistentStash;
     onConfirm: () => void;
+    onOpenDeckManager?: () => void;
 }
 
 function formatCardLine(stack: ExpeditionCardStack): string {
@@ -20,6 +21,7 @@ function formatItemLine(stack: ExpeditionItemStack): string {
 export class PreparationPanel extends GameObjects.Container {
     private readonly stash: PersistentStash;
     private readonly onConfirm: () => void;
+    private readonly onOpenDeckManager?: () => void;
     private confirmButton!: GameObjects.Rectangle;
 
     constructor(scene: Scene, config: PreparationPanelConfig) {
@@ -27,6 +29,7 @@ export class PreparationPanel extends GameObjects.Container {
 
         this.stash = config.stash;
         this.onConfirm = config.onConfirm;
+        this.onOpenDeckManager = config.onOpenDeckManager;
 
         this.createPanel();
         scene.add.existing(this);
@@ -100,14 +103,28 @@ export class PreparationPanel extends GameObjects.Container {
             lineSpacing: 8,
         });
 
-        this.confirmButton = this.scene.add.rectangle(panelX, panelY + panelHeight / 2 - 64, 280, 56, 0x2563eb, 1);
+        const deckManagerButton = this.scene.add.rectangle(panelX - 200, panelY + panelHeight / 2 - 64, 180, 56, 0x7c3aed, 1);
+        deckManagerButton.setStrokeStyle(2, 0xffffff, 0.9);
+        deckManagerButton.setInteractive({ useHandCursor: true });
+        deckManagerButton.on('pointerover', () => deckManagerButton.setFillStyle(0x8b5cf6));
+        deckManagerButton.on('pointerout', () => deckManagerButton.setFillStyle(0x7c3aed));
+        deckManagerButton.on('pointerdown', () => this.openDeckManager());
+
+        const deckManagerLabel = this.scene.add.text(deckManagerButton.x, deckManagerButton.y, '管理卡组', {
+            fontFamily: 'Arial',
+            fontSize: '22px',
+            color: '#f8fafc',
+            fontStyle: 'bold',
+        }).setOrigin(0.5);
+
+        this.confirmButton = this.scene.add.rectangle(panelX + 80, panelY + panelHeight / 2 - 64, 200, 56, 0x2563eb, 1);
         this.confirmButton.setStrokeStyle(2, 0xffffff, 0.9);
         this.confirmButton.setInteractive({ useHandCursor: true });
         this.confirmButton.on('pointerover', () => this.confirmButton.setFillStyle(0x3b82f6));
         this.confirmButton.on('pointerout', () => this.confirmButton.setFillStyle(0x2563eb));
         this.confirmButton.on('pointerdown', () => this.confirmLoadout());
 
-        const confirmLabel = this.scene.add.text(this.confirmButton.x, this.confirmButton.y, '确认带入当前储物袋', {
+        const confirmLabel = this.scene.add.text(this.confirmButton.x, this.confirmButton.y, '确认带入', {
             fontFamily: 'Arial',
             fontSize: '22px',
             color: '#f8fafc',
@@ -125,6 +142,8 @@ export class PreparationPanel extends GameObjects.Container {
             deckList,
             itemsHeading,
             itemsText,
+            deckManagerButton,
+            deckManagerLabel,
             this.confirmButton,
             confirmLabel,
         ]);
@@ -134,5 +153,9 @@ export class PreparationPanel extends GameObjects.Container {
 
     private confirmLoadout(): void {
         this.onConfirm();
+    }
+
+    private openDeckManager(): void {
+        this.onOpenDeckManager?.();
     }
 }
