@@ -1,5 +1,6 @@
 import { GameObjects, Scene } from 'phaser';
 
+import type { CardKind } from '@data/types/cards/core';
 import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import {
     computeCardCollectionViewModel,
@@ -67,8 +68,23 @@ export class DeckManagementPanel extends GameObjects.Container {
 
     private filterQuery = '';
     private filterHideZero = true;
+    private filterKind: CardKind | undefined = undefined;
     private sortField: CardCollectionSortField = 'id';
     private sortDirection: 'asc' | 'desc' = 'asc';
+
+    private static readonly KIND_CYCLE: (CardKind | undefined)[] = [
+        undefined, 'unit', 'artifact', 'talisman', 'field', 'skill', 'pill',
+    ];
+
+    private static readonly KIND_LABEL: Record<string, string> = {
+        undefined: '全部',
+        unit: '生物',
+        artifact: '神器',
+        talisman: '护符',
+        field: '场地',
+        skill: '技能',
+        pill: '丹药',
+    };
 
     private renameMode = false;
     private renameBuffer = '';
@@ -82,6 +98,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     private browserOuter?: GameObjects.Container;
     private browserInner?: GameObjects.Container;
     private queryText?: GameObjects.Text;
+    private kindBtnText?: GameObjects.Text;
 
     private keydownHandler?: (event: KeyboardEvent) => void;
 
@@ -490,8 +507,22 @@ export class DeckManagementPanel extends GameObjects.Container {
             color: this.filterQuery ? '#f8fafc' : '#64748b',
         }).setOrigin(0.5);
 
-        const hideZeroBtn = this.createButton(
+        const kindLabel = DeckManagementPanel.KIND_LABEL[String(this.filterKind)];
+        const kindBtn = this.createButton(
             x + colW / 2, y + 64, colW - 16, 28,
+            `种类: ${kindLabel}`,
+            0x7c3aed,
+            () => {
+                const cycle = DeckManagementPanel.KIND_CYCLE;
+                const idx = cycle.indexOf(this.filterKind);
+                this.filterKind = cycle[(idx + 1) % cycle.length];
+                this.refreshBrowser();
+            },
+        );
+        this.kindBtnText = kindBtn[1];
+
+        const hideZeroBtn = this.createButton(
+            x + colW / 2, y + 92, colW - 16, 28,
             this.filterHideZero ? '✓ 隐藏零张' : '☐ 隐藏零张',
             this.filterHideZero ? 0x2563eb : 0x334155,
             () => {
@@ -500,26 +531,26 @@ export class DeckManagementPanel extends GameObjects.Container {
             },
         );
 
-        const sortLabel = this.scene.add.text(x, y + 92, '排序:', {
+        const sortLabel = this.scene.add.text(x, y + 120, '排序:', {
             fontFamily: 'Arial',
             fontSize: '15px',
             color: '#cbd5e1',
         });
-        const sortFieldBtn = this.createButton(x + 58, y + 92, 58, 24, this.sortField, 0x334155, () => {
+        const sortFieldBtn = this.createButton(x + 58, y + 120, 58, 24, this.sortField, 0x334155, () => {
             const fields: CardCollectionSortField[] = ['id', 'count', 'kind', 'name'];
             const idx = fields.indexOf(this.sortField);
             this.sortField = fields[(idx + 1) % fields.length];
             this.refreshBrowser();
         });
-        const sortDirBtn = this.createButton(x + 124, y + 92, 58, 24, this.sortDirection === 'asc' ? '↑ 升序' : '↓ 降序', 0x334155, () => {
+        const sortDirBtn = this.createButton(x + 124, y + 120, 58, 24, this.sortDirection === 'asc' ? '↑ 升序' : '↓ 降序', 0x334155, () => {
             this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
             this.refreshBrowser();
         });
 
-        this.add([queryLabel, queryBg, this.queryText, ...hideZeroBtn, sortLabel, ...sortFieldBtn, ...sortDirBtn]);
+        this.add([queryLabel, queryBg, this.queryText, ...kindBtn, ...hideZeroBtn, sortLabel, ...sortFieldBtn, ...sortDirBtn]);
 
-        const listTop = y + 128;
-        const listH = colH - 222;
+        const listTop = y + 156;
+        const listH = colH - 250;
         const maskGraphics = this.scene.make.graphics({});
         maskGraphics.fillStyle(0xffffff);
         maskGraphics.fillRect(x, listTop, colW, listH);
@@ -552,10 +583,16 @@ export class DeckManagementPanel extends GameObjects.Container {
             this.queryText.setColor(this.filterQuery ? '#f8fafc' : '#64748b');
         }
 
+        if (this.kindBtnText) {
+            const label = DeckManagementPanel.KIND_LABEL[String(this.filterKind)];
+            this.kindBtnText.setText(`种类: ${label}`);
+        }
+
         this.browserInner.removeAll(true);
 
         const filters: CardCollectionFilters = {
             query: this.filterQuery || undefined,
+            kind: this.filterKind,
             hideZeroCount: this.filterHideZero,
         };
         const sort: CardCollectionSortConfig = {
