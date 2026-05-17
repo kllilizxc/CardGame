@@ -7,6 +7,14 @@ import type {
 export const DEFAULT_SAVED_DECK_ID = 'starter-deck';
 export const DEFAULT_SAVED_DECK_NAME = 'Starter Deck';
 
+export const DECK_CARD_MIN = 20;
+export const DECK_CARD_MAX = 40;
+
+export type DeckValidityReason =
+    | { readonly kind: 'too-few-cards'; readonly count: number; readonly min: number }
+    | { readonly kind: 'too-many-cards'; readonly count: number; readonly max: number }
+    | { readonly kind: 'insufficient-copies'; readonly cardId: string; readonly required: number; readonly available: number };
+
 function normalizeDeckIdentityValue(value: string | null | undefined, fallback: string): string {
     const normalized = value?.trim();
 
@@ -104,5 +112,162 @@ export function syncSelectedSavedDeckCards(
                 ...savedDeck,
                 cards: cloneDeckCardStacks(savedDeck.cards),
             }),
+    };
+}
+
+export function countDeckCards(cards: readonly ExpeditionCardStack[]): number {
+    let total = 0;
+
+    for (let i = 0; i < cards.length; i += 1) {
+        total += cards[i].count;
+    }
+
+    return total;
+}
+
+export function validateDeckSize(cards: readonly ExpeditionCardStack[]): DeckValidityReason | null {
+    const count = countDeckCards(cards);
+
+    if (count < DECK_CARD_MIN) {
+        return { kind: 'too-few-cards', count, min: DECK_CARD_MIN };
+    }
+
+    if (count > DECK_CARD_MAX) {
+        return { kind: 'too-many-cards', count, max: DECK_CARD_MAX };
+    }
+
+    return null;
+}
+
+export function validateDeckAvailability(
+    deckCards: readonly ExpeditionCardStack[],
+    stashCards: readonly ExpeditionCardStack[],
+): DeckValidityReason[] {
+    const issues: DeckValidityReason[] = [];
+
+    for (let i = 0; i < deckCards.length; i += 1) {
+        const deckStack = deckCards[i];
+
+        if (deckStack.count <= 0) {
+            continue;
+        }
+
+        const stashStack = stashCards.find((stash) => stash.id === deckStack.id);
+        const available = stashStack?.count ?? 0;
+
+        if (available < deckStack.count) {
+            issues.push({
+                kind: 'insufficient-copies',
+                cardId: deckStack.id,
+                required: deckStack.count,
+                available,
+            });
+        }
+    }
+
+    return issues;
+}
+
+export function addSavedDeckToStash(
+    stash: PersistentStash,
+    id: string | null | undefined,
+    name: string | null | undefined,
+    cards: readonly ExpeditionCardStack[],
+): PersistentStash {
+    const savedDeck = createSavedDeck(id, name, cards);
+    const savedDecks = [...cloneSavedDecks(stash.savedDecks), savedDeck];
+
+    return {
+        ...stash,
+        cards: cloneDeckCardStacks(stash.cards),
+        savedDecks,
+        selectedDeckId: resolveSelectedDeckId(stash.selectedDeckId, savedDecks),
+        items: stash.items.map((item) => ({ ...item })),
+        lastRunSummary: stash.lastRunSummary
+            ? JSON.parse(JSON.stringify(stash.lastRunSummary))
+            : stash.lastRunSummary,
+    };
+}
+
+export function updateSavedDeckInStash(
+    stash: PersistentStash,
+    deckId: string,
+    cards: readonly ExpeditionCardStack[],
+): PersistentStash {
+    const savedDecks = stash.savedDecks.map((savedDeck) =>
+        savedDeck.id === deckId
+            ? { ...savedDeck, cards: cloneDeckCardStacks(cards) }
+            : { ...savedDeck, cards: cloneDeckCardStacks(savedDeck.cards) },
+    );
+
+    return {
+        ...stash,
+        cards: cloneDeckCardStacks(stash.cards),
+        savedDecks,
+        selectedDeckId: resolveSelectedDeckId(stash.selectedDeckId, savedDecks),
+        items: stash.items.map((item) => ({ ...item })),
+        lastRunSummary: stash.lastRunSummary
+            ? JSON.parse(JSON.stringify(stash.lastRunSummary))
+            : stash.lastRunSummary,
+    };
+}
+
+export function renameSavedDeckInStash(
+    stash: PersistentStash,
+    deckId: string,
+    name: string,
+): PersistentStash {
+    const trimmedName = name.trim();
+    const effectiveName = trimmedName.length > 0 ? trimmedName : deckId;
+
+    const savedDecks = stash.savedDecks.map((savedDeck) =>
+        savedDeck.id === deckId
+            ? { ...savedDeck, name: effectiveName, cards: cloneDeckCardStacks(savedDeck.cards) }
+            : { ...savedDeck, cards: cloneDeckCardStacks(savedDeck.cards) },
+    );
+
+    return {
+        ...stash,
+        cards: cloneDeckCardStacks(stash.cards),
+        savedDecks,
+        selectedDeckId: resolveSelectedDeckId(stash.selectedDeckId, savedDecks),
+        items: stash.items.map((item) => ({ ...item })),
+        lastRunSummary: stash.lastRunSummary
+            ? JSON.parse(JSON.stringify(stash.lastRunSummary))
+            : stash.lastRunSummary,
+    };
+}
+
+export function deleteSavedDeckFromStash(
+    stash: PersistentStash,
+    deckId: string,
+): PersistentStash {
+    const savedDecks = cloneSavedDecks(stash.savedDecks.filter((savedDeck) => savedDeck.id !== deckId));
+
+    return {
+        ...stash,
+        cards: cloneDeckCardStacks(stash.cards),
+        savedDecks,
+        selectedDeckId: resolveSelectedDeckId(stash.selectedDeckId, savedDecks),
+        items: stash.items.map((item) => ({ ...item })),
+        lastRunSummary: stash.lastRunSummary
+            ? JSON.parse(JSON.stringify(stash.lastRunSummary))
+            : stash.lastRunSummary,
+    };
+}
+
+export function selectDeckInStash(
+    stash: PersistentStash,
+    deckId: string | null,
+): PersistentStash {
+    return {
+        ...stash,
+        cards: cloneDeckCardStacks(stash.cards),
+        savedDecks: cloneSavedDecks(stash.savedDecks),
+        selectedDeckId: resolveSelectedDeckId(deckId, stash.savedDecks),
+        items: stash.items.map((item) => ({ ...item })),
+        lastRunSummary: stash.lastRunSummary
+            ? JSON.parse(JSON.stringify(stash.lastRunSummary))
+            : stash.lastRunSummary,
     };
 }
