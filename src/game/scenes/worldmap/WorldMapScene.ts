@@ -145,13 +145,13 @@ export class WorldMapScene extends Scene {
             wordWrap: { width: panelWidth - 120 },
         }));
 
-        this.statusText = this.add.text(contentX, panelTop + 182, '拖拽地图平移，点击标记前往目的地。', {
+        this.statusText = this.add.text(contentX, panelTop + 182, this.getDefaultStatusText(), {
             fontFamily: 'Arial',
             fontSize: '18px',
             color: '#fde68a',
             wordWrap: { width: panelWidth - 120 },
         });
-        this.statusText.setText(this.returnStatusText ?? '拖拽地图平移，点击标记前往目的地。');
+        this.statusText.setText(this.getDefaultStatusText());
         container.add(this.statusText);
 
         const mapViewport = {
@@ -211,7 +211,7 @@ export class WorldMapScene extends Scene {
         frame.setStrokeStyle(4, 0x38bdf8, 0.74);
         container.add(frame);
 
-        const hint = this.add.text(viewport.left + 24, viewport.top + 18, '拖拽地图查看周边 · 点击标记进入', {
+        const hint = this.add.text(viewport.left + 24, viewport.top + 18, '拖拽地图查看周边 · 点击标记启程', {
             fontFamily: 'Arial',
             fontSize: '17px',
             color: '#bae6fd',
@@ -265,7 +265,7 @@ export class WorldMapScene extends Scene {
         const position = getWorldMapDestinationSurfacePosition(this.worldMap, destination);
         const marker = this.add.container(position.x, position.y);
         const palette = this.getDestinationMarkerPalette(destination);
-        const markerLabel = destination.kind === 'hub' ? 'Hub' : '秘境';
+        const markerLabel = destination.kind === 'hub' ? '驻地' : '秘境';
 
         const aura = this.add.circle(0, 0, 56, palette.fill, 0.18);
         const pin = this.add.circle(0, 0, 34, palette.fill, 0.98);
@@ -374,15 +374,17 @@ export class WorldMapScene extends Scene {
     }
 
     private previewDestination(destination: WorldMapDestination): void {
-        const sceneLabel = destination.kind === 'hub' ? 'HubScene' : 'ExpeditionScene';
+        const travelSummary = destination.kind === 'hub'
+            ? '可在此落脚整备。'
+            : '可在此深入探索。';
 
         this.statusText.setText(
-            `${destination.presentation.regionLabel} · ${destination.label}（${sceneLabel}）\n${destination.description}`,
+            `${destination.presentation.regionLabel} · ${destination.label}\n${travelSummary} ${destination.description}`,
         );
     }
 
     private restoreDefaultStatusText(): void {
-        this.statusText.setText(this.returnStatusText ?? '拖拽地图平移，点击标记前往目的地。');
+        this.statusText.setText(this.getDefaultStatusText());
     }
 
     private registerMapInputHandlers(): void {
@@ -441,7 +443,11 @@ export class WorldMapScene extends Scene {
         const intent = createWorldMapDestinationIntent(this.worldMap, destinationId);
         const destination = this.worldMap.destinations.find((candidate) => candidate.id === destinationId);
 
-        this.statusText.setText(destination?.statusText ?? `正在前往 ${destinationId}。`);
+        this.statusText.setText(destination?.statusText ?? '已启程，正在赶往选中的地点。');
         this.scene.start(intent.sceneKey, intent.payload);
+    }
+
+    private getDefaultStatusText(): string {
+        return this.returnStatusText ?? '拖拽地图平移，指向标记查看地点，点击即可启程。';
     }
 }
