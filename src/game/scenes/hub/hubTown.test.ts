@@ -595,19 +595,19 @@ describe('hub town shell content', () => {
 
         const markerIntent = helpers.createHubLocationSelectionIntent(
             'location.qingyun-town.teahouse',
-            '已在 Hub 子地图选择集市茶棚。',
+            '已选定前往：集市茶棚。',
         );
 
         expect(markerIntent).toEqual({
             kind: 'selectLocation',
             targetLocationId: 'location.qingyun-town.teahouse',
-            statusText: '已在 Hub 子地图选择集市茶棚。',
+            statusText: '已选定前往：集市茶棚。',
         });
         expect(applyHubNavigationIntent(town, {
             currentLocationId: 'location.qingyun-town.gate-market',
         }, markerIntent)).toEqual({
             currentLocationId: 'location.qingyun-town.teahouse',
-            statusText: '已在 Hub 子地图选择集市茶棚。',
+            statusText: '已选定前往：集市茶棚。',
         });
     });
 

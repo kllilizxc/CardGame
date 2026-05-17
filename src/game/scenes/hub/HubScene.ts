@@ -37,6 +37,10 @@ import {
     type HubTownViewport,
 } from './hubTown';
 
+const HUB_MAP_TITLE = '城镇地图';
+const HUB_MAP_INSTRUCTION = '拖拽查看地图，点击标记切换想去的地点。';
+const HUB_DEFAULT_STATUS_TEXT = '选好落脚点后安心四处看看；离开城镇后，下次回来仍会从这里继续。';
+
 export class HubScene extends Scene {
     private launchData: NormalizedHubSceneLaunchData = normalizeHubSceneLaunchData();
     private hubResource?: ResolvedHubSceneCatalogResource;
@@ -184,14 +188,14 @@ export class HubScene extends Scene {
         panel.setStrokeStyle(3, 0x38bdf8, 0.82);
         container.add(panel);
 
-        container.add(this.add.text(contentX, panelTop + 48, '地点子地图', {
+        container.add(this.add.text(contentX, panelTop + 48, HUB_MAP_TITLE, {
             fontFamily: 'Arial',
             fontSize: '31px',
             color: '#fef3c7',
             fontStyle: 'bold',
         }));
 
-        container.add(this.add.text(contentX, panelTop + 94, '拖拽平移地图，点击标记选择 Hub 小地点。', {
+        container.add(this.add.text(contentX, panelTop + 94, HUB_MAP_INSTRUCTION, {
             fontFamily: 'Arial',
             fontSize: '18px',
             color: '#bae6fd',
@@ -230,7 +234,7 @@ export class HubScene extends Scene {
             wordWrap: { width: detailWidth },
         }));
 
-        const statusLine = this.navigationState.statusText ?? '当前 Hub 位置会保存到本地 Story/Hub session。';
+        const statusLine = this.navigationState.statusText ?? HUB_DEFAULT_STATUS_TEXT;
         this.statusText = this.add.text(detailLeft, panelTop + 368, statusLine, {
             fontFamily: 'Arial',
             fontSize: '17px',
@@ -509,7 +513,7 @@ export class HubScene extends Scene {
     }
 
     private restoreDefaultStatusText(): void {
-        this.statusText?.setText(this.navigationState.statusText ?? '当前 Hub 位置会保存到本地 Story/Hub session。');
+        this.statusText?.setText(this.navigationState.statusText ?? HUB_DEFAULT_STATUS_TEXT);
     }
 
     private handleHubMarkerSelected(locationId: string): void {
@@ -520,7 +524,7 @@ export class HubScene extends Scene {
             this.navigationState,
             createHubLocationSelectionIntent(
                 location.id,
-                `已在 Hub 子地图选择：${location.title}。`,
+                `已选定前往：${location.title}。`,
             ),
         );
         this.persistHubNavigationState();
