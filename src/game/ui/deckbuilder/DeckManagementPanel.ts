@@ -101,6 +101,12 @@ export class DeckManagementPanel extends GameObjects.Container {
     private kindBtnText?: GameObjects.Text;
 
     private keydownHandler?: (event: KeyboardEvent) => void;
+    private wheelHandler?: (pointer: Phaser.Input.Pointer, _gameObjects: unknown[], deltaX: number, deltaY: number) => void;
+
+    private deckListArea = { x: 0, y: 0, w: 0, h: 0 };
+    private browserArea = { x: 0, y: 0, w: 0, h: 0 };
+    private deckListPosText?: GameObjects.Text;
+    private browserPosText?: GameObjects.Text;
 
     constructor(scene: Scene, config: DeckManagementPanelConfig) {
         super(scene, 0, 0);
@@ -113,11 +119,17 @@ export class DeckManagementPanel extends GameObjects.Container {
 
         this.keydownHandler = this.handleKeyDown.bind(this);
         scene.input.keyboard?.on('keydown', this.keydownHandler);
+
+        this.wheelHandler = (pointer, _go, _dx, deltaY) => this.handleWheel(pointer, deltaY);
+        scene.input.on('wheel', this.wheelHandler);
     }
 
     destroy(fromScene?: boolean): void {
         if (this.keydownHandler) {
             this.scene.input.keyboard?.off('keydown', this.keydownHandler);
+        }
+        if (this.wheelHandler) {
+            this.scene.input.off('wheel', this.wheelHandler);
         }
         super.destroy(fromScene);
     }
@@ -139,6 +151,24 @@ export class DeckManagementPanel extends GameObjects.Container {
         } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
             this.renameBuffer += event.key;
             this.refreshEditor();
+        }
+    }
+
+    private handleWheel(pointer: Phaser.Input.Pointer, deltaY: number): void {
+        const dir = Math.sign(deltaY);
+        if (dir === 0) return;
+
+        const a = this.deckListArea;
+        if (pointer.x >= a.x && pointer.x <= a.x + a.w && pointer.y >= a.y && pointer.y <= a.y + a.h) {
+            this.deckListScrollOffset += dir;
+            this.refreshDeckList();
+            return;
+        }
+
+        const b = this.browserArea;
+        if (pointer.x >= b.x && pointer.x <= b.x + b.w && pointer.y >= b.y && pointer.y <= b.y + b.h) {
+            this.browserScrollOffset += dir;
+            this.refreshBrowser();
         }
     }
 
@@ -241,6 +271,8 @@ export class DeckManagementPanel extends GameObjects.Container {
     // ─── Left column: Deck List ───────────────────────────────────
 
     private createDeckListColumn(x: number, y: number, colW: number, colH: number): void {
+        this.deckListArea = { x, y, w: colW, h: colH };
+
         const header = this.scene.add.text(x, y, '已有卡组', {
             fontFamily: 'Arial',
             fontSize: '22px',
@@ -281,6 +313,13 @@ export class DeckManagementPanel extends GameObjects.Container {
             this.deckListScrollOffset += 1;
             this.refreshDeckList();
         }));
+
+        this.deckListPosText = this.scene.add.text(x + 8, scrollBtnY, '', {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#94a3b8',
+        }).setOrigin(0, 0.5);
+        this.add(this.deckListPosText);
 
         const deleteY = scrollBtnY + 36;
         const canDelete = this.selectedDeckId !== null && this.stash.savedDecks.length > 1;
@@ -342,6 +381,13 @@ export class DeckManagementPanel extends GameObjects.Container {
         }
 
         this.updateDeleteButton();
+
+        if (this.deckListPosText) {
+            const total = decks.length;
+            const start = total === 0 ? 0 : this.deckListScrollOffset + 1;
+            const end = total === 0 ? 0 : Math.min(this.deckListScrollOffset + DECK_LIST_VISIBLE, total);
+            this.deckListPosText.setText(`第 ${start}-${end} / ${total} 项`);
+        }
     }
 
     private updateDeleteButton(): void {
@@ -478,6 +524,8 @@ export class DeckManagementPanel extends GameObjects.Container {
     // ─── Right column: Card Browser ─────────────────────────────────
 
     private createBrowserColumn(x: number, y: number, colW: number, colH: number): void {
+        this.browserArea = { x, y, w: colW, h: colH };
+
         const header = this.scene.add.text(x, y, '储物袋卡牌', {
             fontFamily: 'Arial',
             fontSize: '22px',
@@ -572,6 +620,13 @@ export class DeckManagementPanel extends GameObjects.Container {
             this.refreshBrowser();
         }));
 
+        this.browserPosText = this.scene.add.text(x + 8, scrollBtnY, '', {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#94a3b8',
+        }).setOrigin(0, 0.5);
+        this.add(this.browserPosText);
+
         this.refreshBrowser();
     }
 
@@ -637,6 +692,13 @@ export class DeckManagementPanel extends GameObjects.Container {
             }, !canAdd);
 
             this.browserInner.add([label, ...addBtn]);
+        }
+
+        if (this.browserPosText) {
+            const total = rows.length;
+            const start = total === 0 ? 0 : this.browserScrollOffset + 1;
+            const end = total === 0 ? 0 : Math.min(this.browserScrollOffset + BROWSER_VISIBLE, total);
+            this.browserPosText.setText(`第 ${start}-${end} / ${total} 项`);
         }
     }
 }
