@@ -335,6 +335,10 @@ export class ExpeditionState {
         return nextRun;
     }
 
+    persistCurrentStash(): void {
+        savePersistentStash(this.persistentStash, this.storage);
+    }
+
     resetToEntranceState(): void {
         clearActiveRun(this.targetIdentity, undefined, this.storage);
         this.activeRun = null;

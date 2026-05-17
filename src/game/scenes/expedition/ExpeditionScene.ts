@@ -7,6 +7,7 @@ import {
     type ExpeditionBootstrapSources,
     type ExpeditionWorldStateSeed,
 } from '../../state/ExpeditionState';
+import { selectDeckInStash } from '../../state/PersistentStashDecks';
 import {
     resolveBattleDefeat,
     resolveBattleVictory,
@@ -32,7 +33,6 @@ import { DeckManagementPanel } from '../../ui/deckbuilder/DeckManagementPanel';
 import { PreparationPanel } from '../../ui/expedition/PreparationPanel';
 import { RunHud } from '../../ui/expedition/RunHud';
 import { createWorldMapReturnIntent } from '../worldmap/worldMap';
-import { savePersistentStash } from '../../services/RunPersistence';
 import {
     createPostRunEntranceStatus,
     createPreparationSummary,
@@ -217,8 +217,15 @@ export class ExpeditionScene extends Scene {
         this.preparationPanel = new PreparationPanel(this, {
             stash: this.expeditionState.persistentStash,
             onConfirm: () => this.startFreshRun(),
+            onDeckSelect: (deckId) => this.handleDeckSelect(deckId),
             onOpenDeckManager: () => this.showDeckManagementPanel(),
         });
+    }
+
+    private handleDeckSelect(deckId: string): void {
+        this.expeditionState.persistentStash = selectDeckInStash(this.expeditionState.persistentStash, deckId);
+        this.expeditionState.persistCurrentStash();
+        this.showPreparationPanel();
     }
 
     private showDeckManagementPanel(): void {
@@ -230,7 +237,7 @@ export class ExpeditionScene extends Scene {
             stash: this.expeditionState.persistentStash,
             onStashChange: (newStash) => {
                 this.expeditionState.persistentStash = newStash;
-                savePersistentStash(newStash);
+                this.expeditionState.persistCurrentStash();
             },
             onClose: () => this.showPreparationPanel(),
         });

@@ -14,7 +14,8 @@ describe('expedition UI Chinese copy', () => {
     it('uses Chinese loadout labels in the preparation panel', () => {
         const panel = read('src/game/ui/expedition/PreparationPanel.ts');
 
-        expect(panel).toContain('第一阶段暂不开放卡组构筑；确认当前储物袋后即可进入。');
+        expect(panel).toContain('选择要带入秘境的卡组；卡组需满足20-40张且所有卡牌均在储物袋中。');
+        expect(panel).toContain('管理卡组');
         expect(panel).toContain('初始卡组');
         expect(panel).toContain('初始道具');
         expect(panel).toContain('灵石：');
