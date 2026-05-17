@@ -89,6 +89,13 @@ export class DeckManagementPanel extends GameObjects.Container {
     private renameMode = false;
     private renameBuffer = '';
 
+    private searchFocus = false;
+    private cursorVisible = true;
+    private cursorTimer?: Phaser.Time.TimerEvent;
+
+    private queryBg?: GameObjects.Rectangle;
+    private queryClearBtn?: GameObjects.Text;
+
     private deleteDeckBtn?: GameObjects.Rectangle;
     private deleteDeckLabel?: GameObjects.Text;
 
@@ -128,6 +135,11 @@ export class DeckManagementPanel extends GameObjects.Container {
         if (this.keydownHandler) {
             this.scene.input.keyboard?.off('keydown', this.keydownHandler);
         }
+        if (this.cursorTimer) {
+            this.cursorTimer.destroy();
+            this.cursorTimer = undefined;
+        }
+        this.scene.input.off('pointerdown', this.handleSearchClickOutside, this);
         if (this.wheelHandler) {
             this.scene.input.off('wheel', this.wheelHandler);
         }
@@ -139,18 +151,35 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
-        if (!this.renameMode) return;
+        if (this.renameMode) {
+            if (event.key === 'Enter') {
+                this.confirmRename();
+            } else if (event.key === 'Escape') {
+                this.cancelRename();
+            } else if (event.key === 'Backspace') {
+                this.renameBuffer = this.renameBuffer.slice(0, -1);
+                this.refreshEditor();
+            } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+                this.renameBuffer += event.key;
+                this.refreshEditor();
+            }
+            return;
+        }
 
-        if (event.key === 'Enter') {
-            this.confirmRename();
-        } else if (event.key === 'Escape') {
-            this.cancelRename();
-        } else if (event.key === 'Backspace') {
-            this.renameBuffer = this.renameBuffer.slice(0, -1);
-            this.refreshEditor();
-        } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-            this.renameBuffer += event.key;
-            this.refreshEditor();
+        if (this.searchFocus) {
+            if (event.key === 'Escape') {
+                this.setSearchFocus(false);
+            } else if (event.key === 'Enter') {
+                this.setSearchFocus(false);
+            } else if (event.key === 'Backspace') {
+                this.filterQuery = this.filterQuery.slice(0, -1);
+                this.refreshBrowser();
+                this.updateSearchDisplay();
+            } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+                this.filterQuery += event.key;
+                this.refreshBrowser();
+                this.updateSearchDisplay();
+            }
         }
     }
 
@@ -187,6 +216,62 @@ export class DeckManagementPanel extends GameObjects.Container {
     private cancelRename(): void {
         this.renameMode = false;
         this.refreshEditor();
+    }
+
+    private setSearchFocus(focused: boolean): void {
+        if (this.searchFocus === focused) return;
+        this.searchFocus = focused;
+
+        if (focused) {
+            if (this.renameMode) this.cancelRename();
+            this.cursorVisible = true;
+            this.cursorTimer = this.scene.time.addEvent({
+                delay: 530,
+                loop: true,
+                callback: () => {
+                    this.cursorVisible = !this.cursorVisible;
+                    this.updateSearchDisplay();
+                },
+            });
+            this.scene.input.on('pointerdown', this.handleSearchClickOutside, this);
+        } else {
+            if (this.cursorTimer) {
+                this.cursorTimer.destroy();
+                this.cursorTimer = undefined;
+            }
+            this.scene.input.off('pointerdown', this.handleSearchClickOutside, this);
+        }
+        this.updateSearchDisplay();
+    }
+
+    private handleSearchClickOutside(pointer: Phaser.Input.Pointer): void {
+        if (!this.searchFocus) return;
+        if (this.queryBg) {
+            const bgBounds = this.queryBg.getBounds();
+            if (bgBounds.contains(pointer.x, pointer.y)) return;
+        }
+        if (this.queryClearBtn && this.queryClearBtn.visible) {
+            const btnBounds = this.queryClearBtn.getBounds();
+            if (btnBounds.contains(pointer.x, pointer.y)) return;
+        }
+        this.setSearchFocus(false);
+    }
+
+    private updateSearchDisplay(): void {
+        if (!this.queryText || !this.queryBg) return;
+        if (this.searchFocus) {
+            const cursor = this.cursorVisible ? '|' : '';
+            this.queryText.setText((this.filterQuery || '') + cursor);
+            this.queryText.setColor('#f8fafc');
+            this.queryBg.setStrokeStyle(1, 0x7c3aed, 0.9);
+        } else {
+            this.queryText.setText(this.filterQuery || '搜索卡牌...');
+            this.queryText.setColor(this.filterQuery ? '#f8fafc' : '#64748b');
+            this.queryBg.setStrokeStyle(1, 0x475569, 0.8);
+        }
+        if (this.queryClearBtn) {
+            this.queryClearBtn.setVisible(this.filterQuery.length > 0);
+        }
     }
 
     private applyStashChange(newStash: PersistentStash): void {
@@ -539,21 +624,29 @@ export class DeckManagementPanel extends GameObjects.Container {
             fontSize: '15px',
             color: '#cbd5e1',
         });
-        const queryBg = this.scene.add.rectangle(x + 100, y + 36, 140, 24, 0x1e293b, 1);
-        queryBg.setStrokeStyle(1, 0x475569, 0.8);
-        queryBg.setInteractive({ useHandCursor: true });
-        queryBg.on('pointerdown', () => {
-            const input = prompt('输入卡牌 ID 搜索（留空清除）:', this.filterQuery);
-            if (input !== null) {
-                this.filterQuery = input;
-                this.refreshBrowser();
-            }
-        });
-        this.queryText = this.scene.add.text(x + 100, y + 36, this.filterQuery || '点击输入...', {
+        this.queryBg = this.scene.add.rectangle(x + 100, y + 36, 140, 24, 0x1e293b, 1);
+        this.queryBg.setStrokeStyle(1, 0x475569, 0.8);
+        this.queryBg.setInteractive({ useHandCursor: true });
+        this.queryBg.on('pointerdown', () => this.setSearchFocus(true));
+        this.queryText = this.scene.add.text(x + 100, y + 36, this.filterQuery || '搜索卡牌...', {
             fontFamily: 'Arial',
             fontSize: '14px',
             color: this.filterQuery ? '#f8fafc' : '#64748b',
         }).setOrigin(0.5);
+
+        this.queryClearBtn = this.scene.add.text(x + 176, y + 36, '✕', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#94a3b8',
+        }).setOrigin(0.5);
+        this.queryClearBtn.setInteractive({ useHandCursor: true });
+        this.queryClearBtn.on('pointerdown', () => {
+            this.filterQuery = '';
+            this.setSearchFocus(false);
+            this.refreshBrowser();
+            this.updateSearchDisplay();
+        });
+        this.queryClearBtn.setVisible(this.filterQuery.length > 0);
 
         const kindLabel = DeckManagementPanel.KIND_LABEL[String(this.filterKind)];
         const kindBtn = this.createButton(
@@ -595,7 +688,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             this.refreshBrowser();
         });
 
-        this.add([queryLabel, queryBg, this.queryText, ...kindBtn, ...hideZeroBtn, sortLabel, ...sortFieldBtn, ...sortDirBtn]);
+        this.add([queryLabel, this.queryBg, this.queryText, this.queryClearBtn, ...kindBtn, ...hideZeroBtn, sortLabel, ...sortFieldBtn, ...sortDirBtn]);
 
         const listTop = y + 156;
         const listH = colH - 250;
@@ -634,8 +727,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         if (!this.browserInner) return;
 
         if (this.queryText) {
-            this.queryText.setText(this.filterQuery || '点击输入...');
-            this.queryText.setColor(this.filterQuery ? '#f8fafc' : '#64748b');
+            this.updateSearchDisplay();
         }
 
         if (this.kindBtnText) {
