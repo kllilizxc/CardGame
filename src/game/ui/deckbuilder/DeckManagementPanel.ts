@@ -115,6 +115,9 @@ export class DeckManagementPanel extends GameObjects.Container {
     private deckListPosText?: GameObjects.Text;
     private browserPosText?: GameObjects.Text;
 
+    private dialogMode = false;
+    private dialogObjects: GameObjects.GameObject[] = [];
+
     constructor(scene: Scene, config: DeckManagementPanelConfig) {
         super(scene, 0, 0);
         this.stash = config.stash;
@@ -143,6 +146,8 @@ export class DeckManagementPanel extends GameObjects.Container {
         if (this.wheelHandler) {
             this.scene.input.off('wheel', this.wheelHandler);
         }
+        this.dialogObjects.forEach((obj) => obj.destroy());
+        this.dialogObjects = [];
         super.destroy(fromScene);
     }
 
@@ -151,6 +156,15 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
+        if (this.dialogMode) {
+            if (event.key === 'Enter') {
+                this.confirmDelete();
+            } else if (event.key === 'Escape') {
+                this.hideDeleteConfirmation();
+            }
+            return;
+        }
+
         if (this.renameMode) {
             if (event.key === 'Enter') {
                 this.confirmRename();
@@ -184,6 +198,8 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private handleWheel(pointer: Phaser.Input.Pointer, deltaY: number): void {
+        if (this.dialogMode) return;
+
         const dir = Math.sign(deltaY);
         if (dir === 0) return;
 
@@ -409,12 +425,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         const deleteY = scrollBtnY + 36;
         const canDelete = this.selectedDeckId !== null && this.stash.savedDecks.length > 1;
         const [delBtn, delLabel] = this.createButton(x + colW / 2, deleteY, colW - 12, 34, '删除选中卡组', canDelete ? 0xdc2626 : 0x475569, () => {
-            if (!this.selectedDeckId) return;
-            const newStash = deleteSavedDeckFromStash(this.stash, this.selectedDeckId);
-            this.applyStashChange(newStash);
-            this.refreshDeckList();
-            this.refreshEditor();
-            this.refreshBrowser();
+            this.showDeleteConfirmation();
         }, !canDelete);
         this.deleteDeckBtn = delBtn;
         this.deleteDeckLabel = delLabel;
@@ -487,12 +498,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             this.deleteDeckBtn.on('pointerover', () => this.deleteDeckBtn?.setAlpha(0.84));
             this.deleteDeckBtn.on('pointerout', () => this.deleteDeckBtn?.setAlpha(1));
             this.deleteDeckBtn.on('pointerdown', () => {
-                if (!this.selectedDeckId) return;
-                const newStash = deleteSavedDeckFromStash(this.stash, this.selectedDeckId);
-                this.applyStashChange(newStash);
-                this.refreshDeckList();
-                this.refreshEditor();
-                this.refreshBrowser();
+                this.showDeleteConfirmation();
             });
         }
     }
@@ -792,5 +798,71 @@ export class DeckManagementPanel extends GameObjects.Container {
             const end = total === 0 ? 0 : Math.min(this.browserScrollOffset + BROWSER_VISIBLE, total);
             this.browserPosText.setText(`第 ${start}-${end} / ${total} 项`);
         }
+    }
+
+    // ─── Deletion confirmation dialog ──────────────────────────────
+
+    private showDeleteConfirmation(): void {
+        if (this.dialogMode) return;
+        const deck = this.getSelectedDeck();
+        if (!deck || !this.selectedDeckId) return;
+
+        this.dialogMode = true;
+
+        const { width, height } = this.scene.scale;
+
+        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.62)
+            .setInteractive()
+            .setDepth(1500);
+
+        const boxW = 440;
+        const boxH = 210;
+        const box = this.scene.add.rectangle(width / 2, height / 2, boxW, boxH, 0x1e293b, 0.98)
+            .setStrokeStyle(2, 0xef4444, 0.85)
+            .setDepth(1501);
+
+        const title = this.scene.add.text(width / 2, height / 2 - 65, '确认删除卡组', {
+            fontFamily: 'Arial',
+            fontSize: '24px',
+            color: '#f8fafc',
+            fontStyle: 'bold',
+        }).setOrigin(0.5).setDepth(1501);
+
+        const body = this.scene.add.text(width / 2, height / 2 - 18, `确定要删除卡组「${deck.name}」吗？\n此操作无法撤销。`, {
+            fontFamily: 'Arial',
+            fontSize: '16px',
+            color: '#cbd5e1',
+            align: 'center',
+        }).setOrigin(0.5).setDepth(1501);
+
+        const [cancelBtn, cancelLabel] = this.createButton(
+            width / 2 - 88, height / 2 + 58, 130, 36, '取消', 0x334155, () => this.hideDeleteConfirmation(),
+        );
+        cancelBtn.setDepth(1501);
+        cancelLabel.setDepth(1501);
+
+        const [confirmBtn, confirmLabel] = this.createButton(
+            width / 2 + 88, height / 2 + 58, 130, 36, '确认删除', 0xdc2626, () => this.confirmDelete(),
+        );
+        confirmBtn.setDepth(1501);
+        confirmLabel.setDepth(1501);
+
+        this.dialogObjects = [overlay, box, title, body, cancelBtn, cancelLabel, confirmBtn, confirmLabel];
+    }
+
+    private hideDeleteConfirmation(): void {
+        this.dialogMode = false;
+        this.dialogObjects.forEach((obj) => obj.destroy());
+        this.dialogObjects = [];
+    }
+
+    private confirmDelete(): void {
+        if (!this.selectedDeckId) return;
+        const newStash = deleteSavedDeckFromStash(this.stash, this.selectedDeckId);
+        this.applyStashChange(newStash);
+        this.refreshDeckList();
+        this.refreshEditor();
+        this.refreshBrowser();
+        this.hideDeleteConfirmation();
     }
 }
