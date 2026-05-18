@@ -90,6 +90,16 @@ export class PreparationPanel extends GameObjects.Container {
     private readonly onOpenDeckManager?: () => void;
     private confirmButton!: GameObjects.Rectangle;
 
+    private scrollX = 0;
+    private maxScrollX = 0;
+    private isDragging = false;
+    private dragStartX = 0;
+    private dragMoved = false;
+    private pendingDeckClick: string | null = null;
+    private scrollContainer?: GameObjects.Container;
+    private leftIndicator?: GameObjects.Text;
+    private rightIndicator?: GameObjects.Text;
+
     constructor(scene: Scene, config: PreparationPanelConfig) {
         super(scene, 0, 0);
 
@@ -254,6 +264,10 @@ export class PreparationPanel extends GameObjects.Container {
             confirmLabel,
         ]);
 
+        if (this.maxScrollX > 0) {
+            this.setupScrollInteraction();
+        }
+
         this.setDepth(1000);
     }
 
@@ -265,12 +279,35 @@ export class PreparationPanel extends GameObjects.Container {
     ): Phaser.GameObjects.GameObject[] {
         const elements: Phaser.GameObjects.GameObject[] = [];
         const decks = this.stash.savedDecks;
-        const cardWidth = Math.min(220, (maxWidth - (decks.length - 1) * 12) / decks.length);
+        const cardWidth = 200;
         const cardHeight = 80;
+        const cardGap = 12;
+        const totalContentWidth = decks.length * cardWidth + (decks.length - 1) * cardGap;
+        const needsScroll = totalContentWidth > maxWidth;
+
+        this.maxScrollX = Math.max(0, totalContentWidth - maxWidth);
+        this.scrollX = 0;
+
+        // Mask for clipping the visible scroll area
+        const maskGraphics = this.scene.make.graphics({});
+        maskGraphics.fillStyle(0xffffff);
+        maskGraphics.fillRect(startX, y, maxWidth, cardHeight);
+        const mask = maskGraphics.createGeometryMask();
+        elements.push(maskGraphics);
+
+        // Inner container holds all deck cards, positioned relative to 0
+        const innerContainer = this.scene.add.container(0, 0);
+        this.scrollContainer = innerContainer;
+
+        // Outer container positioned at the scroll area origin, masked
+        const outerContainer = this.scene.add.container(startX, y);
+        outerContainer.add(innerContainer);
+        outerContainer.setMask(mask);
+        elements.push(outerContainer);
 
         decks.forEach((deck, index) => {
-            const cardX = startX + index * (cardWidth + 12) + cardWidth / 2;
-            const cardY = y + cardHeight / 2;
+            const cardX = index * (cardWidth + cardGap) + cardWidth / 2;
+            const cardY = cardHeight / 2;
             const isSelected = deck.id === selectedDeckId;
             const displayValidation = validateDeckForDisplay(deck, this.stash.cards);
             const indicatorColor = displayValidation.valid ? VALID_INDICATOR_COLOR : INVALID_INDICATOR_COLOR;
@@ -281,7 +318,12 @@ export class PreparationPanel extends GameObjects.Container {
             bg.setInteractive({ useHandCursor: true });
             bg.on('pointerover', () => bg.setFillStyle(0x334155, 1));
             bg.on('pointerout', () => bg.setFillStyle(0x1e293b, 0.94));
-            bg.on('pointerdown', () => this.onDeckSelect(deck.id));
+            bg.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+                this.pendingDeckClick = deck.id;
+                this.dragStartX = pointer.x;
+                this.isDragging = true;
+                this.dragMoved = false;
+            });
 
             const deckName = this.scene.add.text(cardX - cardWidth / 2 + 12, cardY - 20, deck.name, {
                 fontFamily: 'Arial',
@@ -304,10 +346,72 @@ export class PreparationPanel extends GameObjects.Container {
 
             const indicator = this.scene.add.rectangle(cardX + cardWidth / 2 - 18, cardY - cardHeight / 2 + 18, 12, 12, indicatorColor, 1);
 
-            elements.push(bg, deckName, countText, indicator);
+            innerContainer.add([bg, deckName, countText, indicator]);
         });
 
+        // Scroll overflow indicators
+        if (needsScroll) {
+            this.leftIndicator = this.scene.add.text(startX + 8, y + cardHeight / 2, '◀', {
+                fontFamily: 'Arial',
+                fontSize: '18px',
+                color: '#7c3aed',
+            }).setOrigin(0.5).setAlpha(0);
+            this.rightIndicator = this.scene.add.text(startX + maxWidth - 8, y + cardHeight / 2, '▶', {
+                fontFamily: 'Arial',
+                fontSize: '18px',
+                color: '#7c3aed',
+            }).setOrigin(0.5).setAlpha(0);
+            this.updateScrollIndicators();
+            elements.push(this.leftIndicator, this.rightIndicator);
+        }
+
         return elements;
+    }
+
+    private setupScrollInteraction(): void {
+        this.scene.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gameObjects: unknown[], _deltaX: number, deltaY: number) => {
+            if (!this.visible) return;
+            this.applyScroll(this.scrollX + deltaY * 0.5);
+        });
+
+        this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+            if (!this.visible || !this.isDragging) return;
+            const dx = this.dragStartX - pointer.x;
+            if (!this.dragMoved && Math.abs(dx) > 3) {
+                this.dragMoved = true;
+            }
+            if (this.dragMoved) {
+                this.applyScroll(this.scrollX + dx);
+                this.dragStartX = pointer.x;
+            }
+        });
+
+        this.scene.input.on('pointerup', () => {
+            if (!this.isDragging) return;
+            if (!this.dragMoved && this.pendingDeckClick !== null) {
+                this.onDeckSelect(this.pendingDeckClick);
+            }
+            this.isDragging = false;
+            this.dragMoved = false;
+            this.pendingDeckClick = null;
+        });
+    }
+
+    private applyScroll(desired: number): void {
+        this.scrollX = Phaser.Math.Clamp(desired, 0, this.maxScrollX);
+        if (this.scrollContainer) {
+            this.scrollContainer.setX(-this.scrollX);
+        }
+        this.updateScrollIndicators();
+    }
+
+    private updateScrollIndicators(): void {
+        if (this.leftIndicator) {
+            this.leftIndicator.setAlpha(this.scrollX > 1 ? 1 : 0);
+        }
+        if (this.rightIndicator) {
+            this.rightIndicator.setAlpha(this.scrollX < this.maxScrollX - 1 ? 1 : 0);
+        }
     }
 
     private confirmLoadout(): void {
