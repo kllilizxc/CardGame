@@ -42,12 +42,6 @@ export function getInitialExpeditionEntryView(expeditionState: ExpeditionState):
     };
 }
 
-export interface LoadoutValidationResult {
-    valid: boolean;
-    sizeIssue: DeckValidityReason | null;
-    availabilityIssues: DeckValidityReason[];
-}
-
 export function validateExpeditionLoadout(stash: PersistentStash): LoadoutValidationResult {
     const selectedDeck = getSelectedSavedDeck(stash);
 
@@ -79,26 +73,5 @@ export function confirmExpeditionLoadout(
         mode: 'activeRun',
         activeRun,
         statusText: createRunSummary(activeRun, { mode: 'started' }).statusText,
-    };
-}
-
-export function validateExpeditionLoadout(stash: PersistentStash): LoadoutValidationResult {
-    const selectedDeck = getSelectedSavedDeck(stash);
-
-    if (!selectedDeck) {
-        return {
-            valid: false,
-            sizeIssue: null,
-            availabilityIssues: [],
-        };
-    }
-
-    const sizeIssue = validateDeckSize(selectedDeck.cards);
-    const availabilityIssues = validateDeckAvailability(selectedDeck.cards, stash.cards);
-
-    return {
-        valid: !sizeIssue && availabilityIssues.length === 0,
-        sizeIssue,
-        availabilityIssues,
     };
 }
