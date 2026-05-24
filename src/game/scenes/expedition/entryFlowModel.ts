@@ -1,4 +1,5 @@
 import type { PersistentStash, RunResolutionSummary, RunSnapshot } from '../../types/expedition';
+import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import {
     DECK_CARD_MAX,
     DECK_CARD_MIN,
@@ -6,6 +7,7 @@ import {
     getSelectedSavedDeck,
     validateDeckAvailability,
     validateDeckSize,
+    type DeckValidityReason,
 } from '../../state/PersistentStashDecks';
 
 interface CountableStack {
@@ -81,6 +83,12 @@ export interface RunSummaryOptions {
     currentNodeLabel?: string;
 }
 
+export interface PreparationLoadoutValidationResult {
+    valid: boolean;
+    sizeIssue: DeckValidityReason | null;
+    availabilityIssues: DeckValidityReason[];
+}
+
 function countStacks<T extends CountableStack>(stacks: T[]): number {
     return stacks.reduce((sum, stack) => sum + stack.count, 0);
 }
@@ -135,8 +143,17 @@ function getPreparationDeckReadinessLabel(readiness: PreparationDeckReadiness): 
     }
 }
 
-function formatPreparationPreviewLine(stack: { id: string; count: number }): string {
-    return `${stack.id} ×${stack.count}`;
+function getPreparationCardDisplayName(cardId: string, metadata?: CardMetadataMap): string {
+    const name = metadata?.[cardId]?.name?.trim();
+
+    return name && name.length > 0 ? name : cardId;
+}
+
+function formatPreparationPreviewLine(
+    stack: { id: string; count: number },
+    metadata?: CardMetadataMap,
+): string {
+    return `${getPreparationCardDisplayName(stack.id, metadata)} ×${stack.count}`;
 }
 
 function formatPreparationDeckContext(prefix: string, context: PreparationDeckContext): string {
@@ -267,6 +284,7 @@ export function createPreparationDeckHandoffSummary(
 
 export function createPreparationSelectedLoadoutSummary(
     stash: PersistentStash,
+    metadata?: CardMetadataMap,
 ): PreparationSelectedLoadoutSummary {
     const selectedDeck = getSelectedSavedDeck(stash);
     const selectedDeckCards = getSelectedDeckCards(stash);
@@ -326,12 +344,68 @@ export function createPreparationSelectedLoadoutSummary(
         shortageCardKinds,
         shortageCardCopies,
         deckPreviewLines: selectedDeckCards.length > 0
-            ? selectedDeckCards.map(formatPreparationPreviewLine)
+            ? selectedDeckCards.map((stack) => formatPreparationPreviewLine(stack, metadata))
             : ['无'],
         itemPreviewLines: stash.items.length > 0
-            ? stash.items.map(formatPreparationPreviewLine)
+            ? stash.items.map((stack) => formatPreparationPreviewLine(stack))
             : ['无'],
     };
+}
+
+function formatPreparationSizeIssue(issue: Extract<DeckValidityReason, { kind: 'too-few-cards' | 'too-many-cards' }>): string {
+    if (issue.kind === 'too-few-cards') {
+        return `卡组数量不足（当前 ${issue.count} 张，需要至少 ${issue.min} 张）`;
+    }
+
+    return `卡组数量超限（当前 ${issue.count} 张，最多 ${issue.max} 张）`;
+}
+
+function formatPreparationAvailabilityIssue(
+    issue: DeckValidityReason,
+    metadata?: CardMetadataMap,
+): string {
+    if (issue.kind === 'insufficient-copies') {
+        const displayName = getPreparationCardDisplayName(issue.cardId, metadata);
+        return `卡牌 ${displayName} 数量不足（需要 ${issue.required} 张，储物袋中仅有 ${issue.available} 张）`;
+    }
+
+    return '';
+}
+
+export function formatPreparationValidationLines(
+    result: PreparationLoadoutValidationResult,
+    metadata?: CardMetadataMap,
+): string[] {
+    if (result.valid) {
+        return ['卡组符合要求，可以带入秘境。'];
+    }
+
+    const lines: string[] = [];
+
+    if (result.sizeIssue?.kind === 'too-few-cards' || result.sizeIssue?.kind === 'too-many-cards') {
+        lines.push(formatPreparationSizeIssue(result.sizeIssue));
+    }
+
+    for (const issue of result.availabilityIssues) {
+        const line = formatPreparationAvailabilityIssue(issue, metadata);
+
+        if (line.length > 0) {
+            lines.push(line);
+        }
+    }
+
+    if (lines.length === 0) {
+        lines.push('请先在管理卡组中创建或选择一套可用卡组。');
+    }
+
+    return lines;
+}
+
+export function formatPreparationValidationStatusText(
+    result: PreparationLoadoutValidationResult,
+    metadata?: CardMetadataMap,
+): string {
+    return formatPreparationValidationLines(result, metadata).join('\n');
 }
 
 export function createRunSummary(run: RunSnapshot, options: RunSummaryOptions = {}): RunSummary {

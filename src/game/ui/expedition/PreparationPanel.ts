@@ -3,6 +3,8 @@ import { GameObjects, Scene } from 'phaser';
 import {
     createPreparationSummary,
     createPreparationSelectedLoadoutSummary,
+    formatPreparationValidationLines,
+    formatPreparationValidationStatusText,
     type PreparationDeckHandoffSummary,
     type PreparationSelectedLoadoutSummary,
 } from '../../scenes/expedition/entryFlowModel';
@@ -16,6 +18,7 @@ import {
     validateDeckSize,
     type DeckValidityReason,
 } from '../../state/PersistentStashDecks';
+import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import type {
     ExpeditionCardStack,
     PersistentStash,
@@ -24,6 +27,7 @@ import type {
 
 export interface PreparationPanelConfig {
     stash: PersistentStash;
+    metadata?: CardMetadataMap;
     onConfirm: () => void;
     onDeckSelect: (deckId: string) => void;
     onOpenDeckManager?: () => void;
@@ -75,8 +79,6 @@ const DECK_CARD_HEIGHT = 140;
 const DECK_CARD_GAP = 14;
 const LOADOUT_SUMMARY_HEIGHT = 188;
 
-type DeckSizeIssue = Extract<DeckValidityReason, { kind: 'too-few-cards' | 'too-many-cards' }>;
-
 function validateDeckForDisplay(
     deck: SavedDeck,
     stashCards: readonly ExpeditionCardStack[],
@@ -89,52 +91,6 @@ function validateDeckForDisplay(
         sizeIssue,
         availabilityIssues,
     };
-}
-
-function formatValidationLines(
-    result: ReturnType<typeof validateExpeditionLoadout>,
-): string[] {
-    if (result.valid) {
-        return ['卡组符合要求，可以带入秘境。'];
-    }
-
-    const lines: string[] = [];
-
-    if (result.sizeIssue) {
-        lines.push(formatSizeIssue(result.sizeIssue as DeckSizeIssue));
-    }
-
-    for (const issue of result.availabilityIssues) {
-        lines.push(formatAvailabilityIssue(issue));
-    }
-
-    if (lines.length === 0) {
-        lines.push('请先在管理卡组中创建或选择一套可用卡组。');
-    }
-
-    return lines;
-}
-
-function formatValidationStatusText(
-    result: ReturnType<typeof validateExpeditionLoadout>,
-): string {
-    return formatValidationLines(result).join('\n');
-}
-
-function formatSizeIssue(issue: DeckSizeIssue): string {
-    if (issue.kind === 'too-few-cards') {
-        return `卡组数量不足（当前 ${issue.count} 张，需要至少 ${issue.min} 张）`;
-    }
-
-    return `卡组数量超限（当前 ${issue.count} 张，最多 ${issue.max} 张）`;
-}
-
-function formatAvailabilityIssue(issue: DeckValidityReason): string {
-    if (issue.kind === 'insufficient-copies') {
-        return `卡牌 ${issue.cardId} 数量不足（需要 ${issue.required} 张，储物袋中仅有 ${issue.available} 张）`;
-    }
-
-    return '';
 }
 
 function formatPreviewList(lines: string[], maxLines: number): string {
@@ -440,6 +396,7 @@ function getDeckHandoffBannerColors(
 
 export class PreparationPanel extends GameObjects.Container {
     private readonly stash: PersistentStash;
+    private readonly metadata?: CardMetadataMap;
     private readonly onConfirm: () => void;
     private readonly onDeckSelect: (deckId: string) => void;
     private readonly onOpenDeckManager?: () => void;
@@ -467,6 +424,7 @@ export class PreparationPanel extends GameObjects.Container {
         super(scene, 0, 0);
 
         this.stash = config.stash;
+        this.metadata = config.metadata;
         this.onConfirm = config.onConfirm;
         this.onDeckSelect = config.onDeckSelect;
         this.onOpenDeckManager = config.onOpenDeckManager;
@@ -488,9 +446,9 @@ export class PreparationPanel extends GameObjects.Container {
         const contentLeft = panelLeft + 48;
         const contentWidth = panelWidth - 96;
         const summary = createPreparationSummary(this.stash);
-        const selectedLoadoutSummary = createPreparationSelectedLoadoutSummary(this.stash);
+        const selectedLoadoutSummary = createPreparationSelectedLoadoutSummary(this.stash, this.metadata);
         const validation = validateExpeditionLoadout(this.stash);
-        const validationLines = formatValidationLines(validation);
+        const validationLines = formatPreparationValidationLines(validation, this.metadata);
         const validationHeight = Math.max(104, 86 + (validationLines.length - 1) * 24);
         const isDeckValid = validation.valid;
         const selectedDeck = getSelectedSavedDeck(this.stash);
@@ -593,7 +551,7 @@ export class PreparationPanel extends GameObjects.Container {
             backgroundColor: isDeckValid ? '#14532d' : '#7f1d1d',
             padding: { left: 12, right: 12, top: 6, bottom: 6 },
         });
-        const validationText = this.scene.add.text(contentLeft + 18, validationBadge.y + 40, formatValidationStatusText(validation), {
+        const validationText = this.scene.add.text(contentLeft + 18, validationBadge.y + 40, formatPreparationValidationStatusText(validation, this.metadata), {
             fontFamily: 'Arial',
             fontSize: '19px',
             color: isDeckValid ? '#dcfce7' : '#fee2e2',

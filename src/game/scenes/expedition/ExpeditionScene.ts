@@ -250,6 +250,7 @@ export class ExpeditionScene extends Scene {
         this.destroyActiveNodePanel();
         this.preparationPanel = new PreparationPanel(this, {
             stash: this.expeditionState.persistentStash,
+            metadata: this.deckbuilderCardMetadata,
             onConfirm: () => this.startFreshRun(),
             onDeckSelect: (deckId) => this.handleDeckSelect(deckId),
             onOpenDeckManager: () => this.showDeckManagementPanel(),

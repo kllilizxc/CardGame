@@ -4,7 +4,9 @@ import initialWorldState from '../../../../public/data/world/initial-state.json'
 import starterDeckJson from '../../../../public/data/decks/starter-deck.json';
 
 import { resetRunPersistenceForTests } from '../../services/RunPersistence';
+import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import { ExpeditionState } from '../../state/ExpeditionState';
+import { validateExpeditionLoadout } from './expeditionEntryFlow';
 import {
     createPreparationDeckContext,
     createPreparationDeckHandoffSummary,
@@ -13,7 +15,14 @@ import {
     createPreparationSummary,
     createRunResolutionSummaryView,
     createRunSummary,
+    formatPreparationValidationLines,
 } from './entryFlowModel';
+
+const PREPARATION_CARD_METADATA: CardMetadataMap = {
+    AR_001: { name: '青云剑' },
+    AR_002: { name: '流云符' },
+    SX_YJZ_001: { name: '一剑斩' },
+};
 
 describe('entryFlowModel', () => {
     beforeEach(() => {
@@ -102,6 +111,68 @@ describe('entryFlowModel', () => {
             shortageCardKinds: 3,
             shortageCardCopies: 15,
         });
+    });
+
+    it('uses metadata-backed card names in selected-loadout previews and falls back to raw ids when missing', () => {
+        const stash = {
+            stashId: 'phase01.starter-stash',
+            cards: [
+                { id: 'AR_001', count: 3 },
+                { id: 'AR_002', count: 2 },
+                { id: 'AR_003', count: 13 },
+            ],
+            savedDecks: [{
+                id: 'named-preview',
+                name: '带名卡组',
+                cards: [
+                    { id: 'AR_001', count: 3 },
+                    { id: 'AR_002', count: 2 },
+                    { id: 'AR_003', count: 13 },
+                ],
+            }],
+            selectedDeckId: 'named-preview',
+            items: [],
+            spiritStones: 18,
+            lastRunSummary: null,
+        };
+
+        expect(createPreparationSelectedLoadoutSummary(stash, PREPARATION_CARD_METADATA).deckPreviewLines).toEqual([
+            '青云剑 ×3',
+            '流云符 ×2',
+            'AR_003 ×13',
+        ]);
+    });
+
+    it('uses metadata-backed card names in preparation validation copy with raw-id fallback', () => {
+        const stash = {
+            stashId: 'phase01.starter-stash',
+            cards: [
+                { id: 'AR_001', count: 3 },
+                { id: 'AR_002', count: 2 },
+            ],
+            savedDecks: [{
+                id: 'shortage',
+                name: '缺牌卡组',
+                cards: [
+                    { id: 'AR_001', count: 4 },
+                    { id: 'AR_002', count: 3 },
+                    { id: 'AR_003', count: 13 },
+                ],
+            }],
+            selectedDeckId: 'shortage',
+            items: [],
+            spiritStones: 18,
+            lastRunSummary: null,
+        };
+
+        expect(formatPreparationValidationLines(
+            validateExpeditionLoadout(stash),
+            PREPARATION_CARD_METADATA,
+        )).toEqual([
+            '卡牌 青云剑 数量不足（需要 4 张，储物袋中仅有 3 张）',
+            '卡牌 流云符 数量不足（需要 3 张，储物袋中仅有 2 张）',
+            '卡牌 AR_003 数量不足（需要 13 张，储物袋中仅有 0 张）',
+        ]);
     });
 
     it('summarizes an active run for the HUD and resume status copy', () => {
