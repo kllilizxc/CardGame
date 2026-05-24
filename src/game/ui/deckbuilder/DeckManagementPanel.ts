@@ -102,6 +102,19 @@ interface ReturnCtaState {
     summaryLabel: string;
 }
 
+interface CardDetailViewModel {
+    displayName: string;
+    metaLabel: string;
+    contextLabel: string;
+    descriptionLabel: string;
+    effectSummaryLabel: string | null;
+    statusLabel: string;
+    accentColor: number;
+    fillColor: number;
+    statusColor: string;
+    bodyColor: string;
+}
+
 function createDeckId(): string {
     return `deck-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
@@ -247,36 +260,6 @@ function summarizeDeckStatus(
     };
 }
 
-function formatDeckIssueLines(
-    summary: DeckStatusSummary,
-    maxAvailabilityLines = 2,
-): string[] {
-    const lines: string[] = [];
-
-    if (summary.sizeIssue?.kind === 'too-few-cards') {
-        lines.push(`· 当前 ${summary.sizeIssue.count} 张，还差 ${summary.sizeIssue.min - summary.sizeIssue.count} 张。`);
-    } else if (summary.sizeIssue?.kind === 'too-many-cards') {
-        lines.push(`· 当前 ${summary.sizeIssue.count} 张，超出上限 ${summary.sizeIssue.count - summary.sizeIssue.max} 张。`);
-    }
-
-    if (summary.availabilityIssues.length > 0) {
-        summary.availabilityIssues.slice(0, maxAvailabilityLines).forEach((issue) => {
-            lines.push(`· ${issue.cardId} 缺 ${issue.required - issue.available} 张（需 ${issue.required} / 袋中 ${issue.available}）。`);
-        });
-
-        const overflow = summary.availabilityIssues.length - maxAvailabilityLines;
-        if (overflow > 0) {
-            lines.push(`· 另有 ${overflow} 种卡牌库存不足。`);
-        }
-    }
-
-    if (lines.length === 0) {
-        lines.push('· 当前卡组满足出征要求，可直接带入秘境。');
-    }
-
-    return lines;
-}
-
 function getCardDisplayName(cardId: string, metadata?: CardMetadataMap): string {
     return metadata?.[cardId]?.name ?? cardId;
 }
@@ -295,6 +278,84 @@ function getCardMetaLabel(cardId: string, metadata?: CardMetadataMap): string {
     }
 
     return parts.length > 0 ? parts.join(' · ') : '未标注类别';
+}
+
+function buildCardDetailViewModel(
+    cardId: string | null,
+    stashCards: readonly ExpeditionCardStack[],
+    deckCards: readonly ExpeditionCardStack[],
+    metadata?: CardMetadataMap,
+): CardDetailViewModel {
+    if (!cardId) {
+        return {
+            displayName: '悬停卡牌查看详情',
+            metaLabel: '当前卡组与储物袋条目会同步在这里展示',
+            contextLabel: deckCards.length > 0
+                ? `当前卡组 ${countDeckCards(deckCards)} 张 · ${deckCards.length} 个条目`
+                : '可先在右侧储物袋中浏览可用卡牌',
+            descriptionLabel: '从当前卡组清单或储物袋浏览中悬停任一条目，即可查看名称、简介、效果与数量上下文。',
+            effectSummaryLabel: null,
+            statusLabel: '等待查看',
+            accentColor: PANEL_ACCENT,
+            fillColor: 0x0f172a,
+            statusColor: '#cbd5e1',
+            bodyColor: '#cbd5e1',
+        };
+    }
+
+    const displayName = getCardDisplayName(cardId, metadata);
+    const metaLabel = getCardMetaLabel(cardId, metadata);
+    const description = metadata?.[cardId]?.description?.trim() || undefined;
+    const effectSummary = metadata?.[cardId]?.effectSummary?.trim() || undefined;
+    const ownedCount = getStackCount(stashCards, cardId);
+    const deckCount = getStackCount(deckCards, cardId);
+    const availableCount = Math.max(ownedCount - deckCount, 0);
+    const shortageCount = Math.max(deckCount - ownedCount, 0);
+    const contextParts = [`袋中 ${ownedCount} 张`, `卡组 ${deckCount} 张`];
+
+    let statusLabel = '当前未持有';
+    let accentColor = SECTION_BORDER;
+    let fillColor = 0x111827;
+    let statusColor = '#cbd5e1';
+    let bodyColor = '#e2e8f0';
+
+    if (shortageCount > 0) {
+        contextParts.push(`缺 ${shortageCount} 张`);
+        statusLabel = `库存不足 ${shortageCount} 张`;
+        accentColor = INVALID_ACCENT;
+        fillColor = 0x201018;
+        statusColor = '#fecaca';
+        bodyColor = '#fce7ea';
+    } else if (availableCount > 0) {
+        contextParts.push(`可再加 ${availableCount} 张`);
+        statusLabel = `还可加入 ${availableCount} 张`;
+        accentColor = VALID_ACCENT;
+        fillColor = 0x0d1b13;
+        statusColor = '#bbf7d0';
+    } else if (deckCount > 0) {
+        contextParts.push('已占满库存');
+        statusLabel = '当前卡组已用满库存';
+        accentColor = WARNING_ACCENT;
+        fillColor = 0x1b1a12;
+        statusColor = '#fde68a';
+    } else {
+        contextParts.push('库存为 0');
+    }
+
+    return {
+        displayName,
+        metaLabel,
+        contextLabel: contextParts.join(' · '),
+        descriptionLabel: description ?? effectSummary ?? '未找到描述或效果摘要，仍可按编号与数量管理此卡。',
+        effectSummaryLabel: description && effectSummary && effectSummary !== description
+            ? `效果：${effectSummary}`
+            : null,
+        statusLabel,
+        accentColor,
+        fillColor,
+        statusColor,
+        bodyColor,
+    };
 }
 
 function createReturnCtaState(summary: DeckStatusSummary): ReturnCtaState {
@@ -353,6 +414,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     private stash: PersistentStash;
     private readonly config: DeckManagementPanelConfig;
     private selectedDeckId: string | null = null;
+    private detailCardId: string | null = null;
 
     private deckListScrollOffset = 0;
     private editorScrollOffset = 0;
@@ -397,6 +459,13 @@ export class DeckManagementPanel extends GameObjects.Container {
     private sortDirBtnText?: GameObjects.Text;
     private browserSummaryText?: GameObjects.Text;
     private browserPosText?: GameObjects.Text;
+    private detailPaneCard?: GameObjects.Rectangle;
+    private detailPaneNameText?: GameObjects.Text;
+    private detailPaneMetaText?: GameObjects.Text;
+    private detailPaneStatusText?: GameObjects.Text;
+    private detailPaneContextText?: GameObjects.Text;
+    private detailPaneDescriptionText?: GameObjects.Text;
+    private detailPaneEffectText?: GameObjects.Text;
 
     private keydownHandler?: (event: KeyboardEvent) => void;
     private wheelHandler?: (pointer: Phaser.Input.Pointer, _gameObjects: unknown[], deltaX: number, deltaY: number) => void;
@@ -415,6 +484,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.stash = config.stash;
         this.config = config;
         this.selectedDeckId = config.stash.selectedDeckId ?? config.stash.savedDecks[0]?.id ?? null;
+        this.detailCardId = this.resolveFallbackDetailCardId();
 
         this.createPanel();
         scene.add.existing(this);
@@ -454,6 +524,87 @@ export class DeckManagementPanel extends GameObjects.Container {
     private getSelectedDeckStatus(): DeckStatusSummary | null {
         const deck = this.getSelectedDeck();
         return deck ? summarizeDeckStatus(deck, this.stash.cards) : null;
+    }
+
+    private isCardKnownToPanel(cardId: string): boolean {
+        if (this.config.metadata?.[cardId]) {
+            return true;
+        }
+
+        if (this.stash.cards.some((stack) => stack.id === cardId)) {
+            return true;
+        }
+
+        return this.stash.savedDecks.some((deck) => deck.cards.some((stack) => stack.id === cardId));
+    }
+
+    private resolveFallbackDetailCardId(): string | null {
+        const selectedDeck = this.getSelectedDeck();
+        const selectedDeckCardId = selectedDeck?.cards[0]?.id;
+        if (selectedDeckCardId) {
+            return selectedDeckCardId;
+        }
+
+        const ownedCardId = this.stash.cards.find((stack) => stack.count > 0)?.id ?? this.stash.cards[0]?.id;
+        if (ownedCardId) {
+            return ownedCardId;
+        }
+
+        return Object.keys(this.config.metadata ?? {})[0] ?? null;
+    }
+
+    private ensureDetailCardSelection(): void {
+        if (this.detailCardId && this.isCardKnownToPanel(this.detailCardId)) {
+            return;
+        }
+
+        this.detailCardId = this.resolveFallbackDetailCardId();
+    }
+
+    private setDetailCardId(cardId: string): void {
+        if (this.detailCardId === cardId) {
+            return;
+        }
+
+        this.detailCardId = cardId;
+        this.refreshDetailPane();
+    }
+
+    private refreshDetailPane(): void {
+        if (!this.detailPaneCard
+            || !this.detailPaneNameText
+            || !this.detailPaneMetaText
+            || !this.detailPaneStatusText
+            || !this.detailPaneContextText
+            || !this.detailPaneDescriptionText
+            || !this.detailPaneEffectText) {
+            return;
+        }
+
+        const detail = buildCardDetailViewModel(
+            this.detailCardId,
+            this.stash.cards,
+            this.getSelectedDeck()?.cards ?? [],
+            this.config.metadata,
+        );
+
+        this.detailPaneCard.setFillStyle(detail.fillColor, 0.98);
+        this.detailPaneCard.setStrokeStyle(1, detail.accentColor, 0.92);
+        this.detailPaneNameText.setText(detail.displayName);
+        this.detailPaneMetaText.setText(detail.metaLabel);
+        this.detailPaneStatusText.setText(detail.statusLabel);
+        this.detailPaneStatusText.setColor(detail.statusColor);
+        this.detailPaneContextText.setText(detail.contextLabel);
+        this.detailPaneDescriptionText.setText(detail.descriptionLabel);
+        this.detailPaneDescriptionText.setColor(detail.bodyColor);
+
+        if (detail.effectSummaryLabel) {
+            this.detailPaneEffectText.setText(detail.effectSummaryLabel);
+            this.detailPaneEffectText.setVisible(true);
+        } else {
+            this.detailPaneEffectText.setText('');
+            this.detailPaneEffectText.setVisible(false);
+        }
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
@@ -617,6 +768,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.stash = newStash;
         this.config.onStashChange(this.stash);
         this.selectedDeckId = this.stash.selectedDeckId ?? this.stash.savedDecks[0]?.id ?? null;
+        this.ensureDetailCardSelection();
     }
 
     private refreshDeckViews(): void {
@@ -1060,7 +1212,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createEditorColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '卡组编辑', '重命名、校验，并以单张或整行清空的方式快速调整当前卡组；摘要区可直接返回远征准备。', PANEL_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '卡组编辑', '重命名、校验，并以单张或整行清空的方式快速调整当前卡组；摘要区可直接返回远征准备，右侧详情窗会跟随当前查看的卡牌更新。', PANEL_ACCENT));
         this.editorContentWidth = colW - 32;
         this.editorContentHeight = colH - 72;
         this.editorContainer = this.scene.add.container(x + 16, y + 70);
@@ -1071,11 +1223,18 @@ export class DeckManagementPanel extends GameObjects.Container {
     private refreshEditor(): void {
         if (!this.editorContainer) return;
         this.editorContainer.removeAll(true);
+        this.detailPaneCard = undefined;
+        this.detailPaneNameText = undefined;
+        this.detailPaneMetaText = undefined;
+        this.detailPaneStatusText = undefined;
+        this.detailPaneContextText = undefined;
+        this.detailPaneDescriptionText = undefined;
+        this.detailPaneEffectText = undefined;
 
         const localX = 0;
         const summaryW = this.editorContentWidth;
         const contentH = this.editorContentHeight;
-        const summaryH = this.renameMode ? 270 : 246;
+        const summaryH = this.renameMode ? 296 : 268;
         const listHeaderY = summaryH + 10;
         const scrollBtnY = contentH - 12;
         const listTop = listHeaderY + 34;
@@ -1089,6 +1248,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             h: listH,
         };
         this.editorVisibleRows = Math.max(1, Math.floor(listH / EDITOR_ROW_HEIGHT));
+        this.ensureDetailCardSelection();
 
         const deck = this.getSelectedDeck();
 
@@ -1179,46 +1339,52 @@ export class DeckManagementPanel extends GameObjects.Container {
         }
 
         const detailY = this.renameMode ? 86 : 66;
+        const detailPaneW = 168;
+        const detailPaneH = 132;
+        const detailPaneX = localX + summaryW - detailPaneW - 16;
+        const detailPaneY = this.renameMode ? 96 : 52;
+        const leftSummaryW = detailPaneX - (localX + 28);
         const countText = this.scene.add.text(localX + 16, detailY, `${summary.count} / ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, {
             fontFamily: 'Arial',
             fontSize: '19px',
             color: summary.isValid ? '#86efac' : summary.pillTextColor,
             fontStyle: 'bold',
+            wordWrap: { width: leftSummaryW },
         });
         const [statusPillBg, statusPillText] = this.createPill(
-            localX + 170,
-            detailY + 10,
+            localX + 16,
+            detailY + 30,
             summary.statusLabel,
             summary.pillFillColor,
             summary.pillTextColor,
         );
-        const detailText = this.scene.add.text(localX + 16, detailY + 26, summary.detailLabel, {
+        const detailText = this.scene.add.text(localX + 16, detailY + 50, summary.detailLabel, {
             fontFamily: 'Arial',
-            fontSize: '13px',
+            fontSize: '12px',
             color: summary.isValid ? '#93c5fd' : summary.pillTextColor,
+            wordWrap: { width: leftSummaryW },
         });
         this.editorContainer.add([countText, statusPillBg, statusPillText, detailText]);
 
-        const capacityProgressText = this.scene.add.text(localX + 16, detailY + 50, getDeckCapacityProgressLabel(capacity), {
+        const capacityProgressText = this.scene.add.text(localX + 16, detailY + 74, getDeckCapacityProgressLabel(capacity), {
             fontFamily: 'Arial',
             fontSize: '11px',
             color: capacityTextColor,
             fontStyle: 'bold',
-            wordWrap: { width: summaryW / 2 - 24 },
+            wordWrap: { width: leftSummaryW },
         });
-        const capacityHeadroomText = this.scene.add.text(localX + summaryW - 16, detailY + 50, getDeckCapacityHeadroomLabel(capacity), {
+        const capacityHeadroomText = this.scene.add.text(localX + 16, detailY + 90, getDeckCapacityHeadroomLabel(capacity), {
             fontFamily: 'Arial',
             fontSize: '11px',
             color: capacityTextColor,
             fontStyle: 'bold',
-            align: 'right',
-            wordWrap: { width: summaryW / 2 - 24 },
-        }).setOrigin(1, 0);
+            wordWrap: { width: leftSummaryW },
+        });
         this.editorContainer.add([capacityProgressText, capacityHeadroomText]);
 
         const capacityTrackX = localX + 16;
-        const capacityTrackY = detailY + 74;
-        const capacityTrackW = summaryW - 32;
+        const capacityTrackY = detailY + 114;
+        const capacityTrackW = leftSummaryW;
         const capacityTrackH = 14;
         const capacityFillWidth = capacityTrackW * Phaser.Math.Clamp(capacity.count / DECK_CARD_MAX, 0, 1);
         const capacityTrackBg = this.scene.add.rectangle(
@@ -1271,15 +1437,94 @@ export class DeckManagementPanel extends GameObjects.Container {
         }).setOrigin(1, 0);
         this.editorContainer.add([capacityMinimumMarker, capacityMinimumLabel, capacityMaximumLabel]);
 
-        const issueLines = formatDeckIssueLines(summary, 1);
-        const issueText = this.scene.add.text(localX + 16, detailY + 96, issueLines.join('\n'), {
+        const issueSummaryLabel = summary.availabilityIssues.length > 0
+            ? '· 先修正库存短缺，再返回远征准备。'
+            : summary.sizeIssue?.kind === 'too-few-cards'
+                ? '· 继续补牌直到达到出征线。'
+                : summary.sizeIssue?.kind === 'too-many-cards'
+                    ? '· 先移除多余卡牌，再返回远征准备。'
+                    : '· 当前卡组满足出征要求，可直接带入秘境。';
+        const issueText = this.scene.add.text(localX + 16, detailY + 136, issueSummaryLabel, {
             fontFamily: 'Arial',
-            fontSize: '11px',
+            fontSize: '10px',
             color: summary.isValid ? '#cbd5e1' : '#f8d2d2',
-            lineSpacing: 4,
-            wordWrap: { width: summaryW - 32 },
+            wordWrap: { width: leftSummaryW },
         });
         this.editorContainer.add(issueText);
+
+        const detailPaneCard = this.scene.add.rectangle(
+            detailPaneX + detailPaneW / 2,
+            detailPaneY + detailPaneH / 2,
+            detailPaneW,
+            detailPaneH,
+            0x111827,
+            0.98,
+        );
+        detailPaneCard.setStrokeStyle(1, PANEL_ACCENT, 0.92);
+        const detailPaneHeader = this.scene.add.text(detailPaneX + 12, detailPaneY + 10, '卡牌详情', {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: '#93c5fd',
+            fontStyle: 'bold',
+        });
+        const detailPaneNameText = this.scene.add.text(detailPaneX + 12, detailPaneY + 28, '', {
+            fontFamily: 'Arial',
+            fontSize: '15px',
+            color: '#f8fafc',
+            fontStyle: 'bold',
+            wordWrap: { width: detailPaneW - 24 },
+        });
+        const detailPaneMetaText = this.scene.add.text(detailPaneX + 12, detailPaneY + 48, '', {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: '#cbd5e1',
+            wordWrap: { width: detailPaneW - 24 },
+        });
+        const detailPaneStatusText = this.scene.add.text(detailPaneX + 12, detailPaneY + 64, '', {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: '#cbd5e1',
+            fontStyle: 'bold',
+            wordWrap: { width: detailPaneW - 24 },
+        });
+        const detailPaneContextText = this.scene.add.text(detailPaneX + 12, detailPaneY + 80, '', {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: '#94a3b8',
+            wordWrap: { width: detailPaneW - 24 },
+        });
+        const detailPaneDescriptionText = this.scene.add.text(detailPaneX + 12, detailPaneY + 98, '', {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: '#e2e8f0',
+            lineSpacing: 2,
+            wordWrap: { width: detailPaneW - 24 },
+        });
+        const detailPaneEffectText = this.scene.add.text(detailPaneX + 12, detailPaneY + 118, '', {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: '#93c5fd',
+            lineSpacing: 2,
+            wordWrap: { width: detailPaneW - 24 },
+        });
+        this.detailPaneCard = detailPaneCard;
+        this.detailPaneNameText = detailPaneNameText;
+        this.detailPaneMetaText = detailPaneMetaText;
+        this.detailPaneStatusText = detailPaneStatusText;
+        this.detailPaneContextText = detailPaneContextText;
+        this.detailPaneDescriptionText = detailPaneDescriptionText;
+        this.detailPaneEffectText = detailPaneEffectText;
+        this.editorContainer.add([
+            detailPaneCard,
+            detailPaneHeader,
+            detailPaneNameText,
+            detailPaneMetaText,
+            detailPaneStatusText,
+            detailPaneContextText,
+            detailPaneDescriptionText,
+            detailPaneEffectText,
+        ]);
+        this.refreshDetailPane();
 
         const returnCta = createReturnCtaState(summary);
         const exitStripX = localX + 16;
@@ -1438,6 +1683,13 @@ export class DeckManagementPanel extends GameObjects.Container {
 
                 const rowBg = this.scene.add.rectangle(summaryW / 2, rowY + EDITOR_ROW_HEIGHT / 2, summaryW, EDITOR_ROW_HEIGHT - 6, rowFillColor, 0.98);
                 rowBg.setStrokeStyle(1, rowBorderColor, shortageCount > 0 ? 0.95 : 0.82);
+                rowBg.setInteractive({ useHandCursor: true });
+                rowBg.on('pointerover', () => {
+                    rowBg.setFillStyle(shortageCount > 0 ? 0x27141c : remainingCount === 0 ? 0x252015 : 0x172033, 1);
+                    this.setDetailCardId(stack.id);
+                });
+                rowBg.on('pointerout', () => rowBg.setFillStyle(rowFillColor, 0.98));
+                rowBg.on('pointerdown', () => this.setDetailCardId(stack.id));
                 const accent = this.scene.add.rectangle(5, rowY + EDITOR_ROW_HEIGHT / 2, 6, EDITOR_ROW_HEIGHT - 14, rowAccentColor, 1)
                     .setOrigin(0, 0.5);
 
@@ -1462,7 +1714,10 @@ export class DeckManagementPanel extends GameObjects.Container {
                     22,
                     '移除 1',
                     0x7f1d1d,
-                    () => this.updateDeckCards(deck.id, adjustDeckCardCount(deck.cards, stack.id, -1)),
+                    () => {
+                        this.setDetailCardId(stack.id);
+                        this.updateDeckCards(deck.id, adjustDeckCardCount(deck.cards, stack.id, -1));
+                    },
                     false,
                     {
                         hoverFillColor: 0x991b1b,
@@ -1477,7 +1732,10 @@ export class DeckManagementPanel extends GameObjects.Container {
                     22,
                     '全部移除',
                     0x991b1b,
-                    () => this.updateDeckCards(deck.id, adjustDeckCardCount(deck.cards, stack.id, -stack.count)),
+                    () => {
+                        this.setDetailCardId(stack.id);
+                        this.updateDeckCards(deck.id, adjustDeckCardCount(deck.cards, stack.id, -stack.count));
+                    },
                     false,
                     {
                         hoverFillColor: 0xb91c1c,
@@ -1543,7 +1801,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createBrowserColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '储物袋浏览', '筛选库存卡牌，并按单张或一键加满的方式补入当前卡组。', VALID_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '储物袋浏览', '筛选库存卡牌，并按单张或一键加满的方式补入当前卡组；悬停条目可在中栏查看详情。', VALID_ACCENT));
 
         const innerX = x + 16;
         const innerW = colW - 32;
@@ -1898,6 +2156,13 @@ export class DeckManagementPanel extends GameObjects.Container {
 
                 const rowBg = this.scene.add.rectangle(this.browserArea.w / 2, rowY + BROWSER_ROW_HEIGHT / 2, this.browserArea.w, BROWSER_ROW_HEIGHT - 6, fillColor, 0.98);
                 rowBg.setStrokeStyle(1, borderColor, canAdd ? 0.9 : 0.65);
+                rowBg.setInteractive({ useHandCursor: true });
+                rowBg.on('pointerover', () => {
+                    rowBg.setFillStyle(!hasDeck ? 0x172033 : deckFull ? 0x252016 : available <= 0 ? 0x27141c : 0x102017, 1);
+                    this.setDetailCardId(row.id);
+                });
+                rowBg.on('pointerout', () => rowBg.setFillStyle(fillColor, 0.98));
+                rowBg.on('pointerdown', () => this.setDetailCardId(row.id));
                 const accent = this.scene.add.rectangle(5, rowY + BROWSER_ROW_HEIGHT / 2, 6, BROWSER_ROW_HEIGHT - 14, borderColor, 1)
                     .setOrigin(0, 0.5);
 
@@ -1927,7 +2192,12 @@ export class DeckManagementPanel extends GameObjects.Container {
                     22,
                     '加入 1',
                     0x166534,
-                    () => selectedDeck && this.updateDeckCards(selectedDeck.id, adjustDeckCardCount(deckCards, row.id, 1)),
+                    () => {
+                        this.setDetailCardId(row.id);
+                        if (selectedDeck) {
+                            this.updateDeckCards(selectedDeck.id, adjustDeckCardCount(deckCards, row.id, 1));
+                        }
+                    },
                     !canAdd,
                     {
                         hoverFillColor: 0x15803d,
@@ -1945,7 +2215,12 @@ export class DeckManagementPanel extends GameObjects.Container {
                     22,
                     '一键加满',
                     0x15803d,
-                    () => selectedDeck && this.updateDeckCards(selectedDeck.id, adjustDeckCardCount(deckCards, row.id, quickAddCount)),
+                    () => {
+                        this.setDetailCardId(row.id);
+                        if (selectedDeck) {
+                            this.updateDeckCards(selectedDeck.id, adjustDeckCardCount(deckCards, row.id, quickAddCount));
+                        }
+                    },
                     !canAdd,
                     {
                         hoverFillColor: 0x16a34a,

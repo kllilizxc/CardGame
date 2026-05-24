@@ -21,6 +21,8 @@ export interface CardCollectionFilters {
 export interface CardMetadata {
     kind?: CardKind;
     name?: string;
+    description?: string;
+    effectSummary?: string;
 }
 
 export interface CardCollectionRow {

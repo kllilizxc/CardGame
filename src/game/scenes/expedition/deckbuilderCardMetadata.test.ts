@@ -35,19 +35,36 @@ describe('deckbuilder card metadata helpers', () => {
         });
     });
 
-    it('builds player-facing name and kind metadata while safely skipping malformed cache entries', () => {
+    it('builds player-facing name, kind, description, and concise effect metadata while safely skipping malformed cache entries', () => {
         const resources = resolveDeckbuilderCardMetadataResources(CONTENT_CATALOG);
         const loadedJson = {
             unitCards: {
                 units: [
-                    { id: 'CR_001', name: '火虎', kind: 'unit' },
+                    {
+                        id: 'CR_001',
+                        name: '火虎',
+                        kind: 'unit',
+                        description: '山林间游走的火属性灵兽。',
+                        effects: [
+                            { text: '登场时：若本回合已召唤过其他灵兽，则本卡攻击力+1。' },
+                        ],
+                    },
                     { id: 'BROKEN_KIND', name: '坏条目', kind: 'unknown' },
                     { name: 'missing-id', kind: 'unit' },
                 ],
             },
             artifactCards: {
                 artifacts: [
-                    { id: 'AR_001', name: '青云剑', kind: 'artifact' },
+                    {
+                        id: 'AR_001',
+                        name: '青云剑',
+                        kind: 'artifact',
+                        description: '青云宗外门弟子常用的飞剑。',
+                        effects: [
+                            { text: '攻击时：本次攻击额外获得+1攻击力。' },
+                            { text: '击败敌方单位后：抽1张牌。' },
+                        ],
+                    },
                 ],
             },
             talismanCards: {
@@ -61,7 +78,14 @@ describe('deckbuilder card metadata helpers', () => {
             fieldCards: undefined,
             skillCards: {
                 skills: [
-                    { id: 'SK_001', name: '灵兽召唤练习', kind: 'skill' },
+                    {
+                        id: 'SK_001',
+                        name: '灵兽召唤练习',
+                        kind: 'skill',
+                        effects: [
+                            { actions: [{ type: 'drawCard', count: 1 }] },
+                        ],
+                    },
                 ],
             },
         } as const;
@@ -72,11 +96,21 @@ describe('deckbuilder card metadata helpers', () => {
         );
 
         expect(metadata).toEqual({
-            CR_001: { name: '火虎', kind: 'unit' },
+            CR_001: {
+                name: '火虎',
+                kind: 'unit',
+                description: '山林间游走的火属性灵兽。',
+                effectSummary: '登场时：若本回合已召唤过其他灵兽，则本卡攻击力+1。',
+            },
             BROKEN_KIND: { name: '坏条目' },
-            AR_001: { name: '青云剑', kind: 'artifact' },
+            AR_001: {
+                name: '青云剑',
+                kind: 'artifact',
+                description: '青云宗外门弟子常用的飞剑。',
+                effectSummary: '攻击时：本次攻击额外获得+1攻击力。 / 击败敌方单位后：抽1张牌。',
+            },
             TL_001: { kind: 'talisman' },
-            SK_001: { name: '灵兽召唤练习', kind: 'skill' },
+            SK_001: { name: '灵兽召唤练习', kind: 'skill', effectSummary: '抽1张卡' },
         });
     });
 });
