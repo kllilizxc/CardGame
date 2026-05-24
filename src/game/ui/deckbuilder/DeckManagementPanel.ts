@@ -88,6 +88,17 @@ interface DeckStatusSummary {
     detailLabel: string;
 }
 
+interface ReturnCtaState {
+    stripFillColor: number;
+    stripTextColor: string;
+    buttonFillColor: number;
+    buttonHoverFillColor: number;
+    buttonStrokeColor: number;
+    buttonTextColor: string;
+    buttonStatusLabel: string;
+    summaryLabel: string;
+}
+
 function createDeckId(): string {
     return `deck-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
@@ -229,6 +240,58 @@ function getCardMetaLabel(cardId: string, metadata?: CardMetadataMap): string {
     }
 
     return parts.length > 0 ? parts.join(' · ') : '未标注类别';
+}
+
+function createReturnCtaState(summary: DeckStatusSummary): ReturnCtaState {
+    if (summary.availabilityIssues.length > 0) {
+        return {
+            stripFillColor: 0x29161b,
+            stripTextColor: '#fecaca',
+            buttonFillColor: 0xb91c1c,
+            buttonHoverFillColor: 0xdc2626,
+            buttonStrokeColor: 0xfca5a5,
+            buttonTextColor: '#fff1f2',
+            buttonStatusLabel: '库存待补齐',
+            summaryLabel: `${summary.count} 张 · ${summary.availabilityIssues.length} 种卡牌库存不足`,
+        };
+    }
+
+    if (summary.sizeIssue?.kind === 'too-few-cards') {
+        return {
+            stripFillColor: 0x271b0b,
+            stripTextColor: '#fde68a',
+            buttonFillColor: 0xb45309,
+            buttonHoverFillColor: 0xd97706,
+            buttonStrokeColor: 0xfcd34d,
+            buttonTextColor: '#fff7ed',
+            buttonStatusLabel: `还差 ${summary.sizeIssue.min - summary.sizeIssue.count} 张`,
+            summaryLabel: `${summary.count} 张 · 还差 ${summary.sizeIssue.min - summary.sizeIssue.count} 张`,
+        };
+    }
+
+    if (summary.sizeIssue?.kind === 'too-many-cards') {
+        return {
+            stripFillColor: 0x29161b,
+            stripTextColor: '#fecaca',
+            buttonFillColor: 0xb91c1c,
+            buttonHoverFillColor: 0xdc2626,
+            buttonStrokeColor: 0xfca5a5,
+            buttonTextColor: '#fff1f2',
+            buttonStatusLabel: `超出 ${summary.sizeIssue.count - summary.sizeIssue.max} 张`,
+            summaryLabel: `${summary.count} 张 · 超出 ${summary.sizeIssue.count - summary.sizeIssue.max} 张`,
+        };
+    }
+
+    return {
+        stripFillColor: 0x10251a,
+        stripTextColor: '#bbf7d0',
+        buttonFillColor: 0x166534,
+        buttonHoverFillColor: 0x15803d,
+        buttonStrokeColor: 0x86efac,
+        buttonTextColor: '#f0fdf4',
+        buttonStatusLabel: '当前卡组已就绪',
+        summaryLabel: `${summary.count} 张 · 已满足 20-40 张`,
+    };
 }
 
 export class DeckManagementPanel extends GameObjects.Container {
@@ -785,9 +848,10 @@ export class DeckManagementPanel extends GameObjects.Container {
 
         const selectedDeck = this.getSelectedDeck();
         if (this.deckListSummaryText) {
+            const selectedSummary = selectedDeck ? summarizeDeckStatus(selectedDeck, this.stash.cards) : null;
             this.deckListSummaryText.setText(
                 selectedDeck
-                    ? `共 ${decks.length} 套 · 当前：${selectedDeck.name}`
+                    ? `共 ${decks.length} 套 · 当前 ${selectedSummary?.count ?? 0} 张 · ${selectedSummary?.statusLabel ?? '未选择'}`
                     : `共 ${decks.length} 套 · 请选择或新建卡组`,
             );
         }
@@ -929,9 +993,9 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createEditorColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '卡组编辑', '重命名、校验并逐张调整当前卡组。', PANEL_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '卡组编辑', '重命名、校验并逐张调整当前卡组；摘要区可直接返回远征准备。', PANEL_ACCENT));
         this.editorContentWidth = colW - 32;
-        this.editorContentHeight = colH - 86;
+        this.editorContentHeight = colH - 72;
         this.editorContainer = this.scene.add.container(x + 16, y + 70);
         this.add(this.editorContainer);
         this.refreshEditor();
@@ -944,11 +1008,11 @@ export class DeckManagementPanel extends GameObjects.Container {
         const localX = 0;
         const summaryW = this.editorContentWidth;
         const contentH = this.editorContentHeight;
-        const summaryH = this.renameMode ? 188 : 176;
-        const listHeaderY = summaryH + 16;
-        const scrollBtnY = contentH - 14;
-        const listTop = listHeaderY + 38;
-        const listBottom = scrollBtnY - 18;
+        const summaryH = this.renameMode ? 214 : 202;
+        const listHeaderY = summaryH + 10;
+        const scrollBtnY = contentH - 12;
+        const listTop = listHeaderY + 34;
+        const listBottom = scrollBtnY - 12;
         const listH = Math.max(118, listBottom - listTop);
 
         this.editorArea = {
@@ -981,9 +1045,9 @@ export class DeckManagementPanel extends GameObjects.Container {
             return;
         }
 
-        const summary = this.getSelectedDeckStatus();
+        const summary = this.getSelectedDeckStatus() ?? summarizeDeckStatus(deck, this.stash.cards);
         const summaryCard = this.scene.add.rectangle(localX + summaryW / 2, summaryH / 2, summaryW, summaryH, 0x0f172a, 0.98);
-        summaryCard.setStrokeStyle(1, summary?.accentColor ?? SECTION_BORDER, 0.9);
+        summaryCard.setStrokeStyle(1, summary.accentColor, 0.9);
         this.editorContainer.add(summaryCard);
 
         const eyebrow = this.scene.add.text(localX + 16, 16, '当前卡组', {
@@ -1044,38 +1108,98 @@ export class DeckManagementPanel extends GameObjects.Container {
             this.editorContainer.add([nameText, ...renameButton]);
         }
 
-        const detailY = this.renameMode ? 88 : 74;
-        const countText = this.scene.add.text(localX + 16, detailY, `${summary?.count ?? 0} / ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, {
+        const detailY = this.renameMode ? 86 : 66;
+        const countText = this.scene.add.text(localX + 16, detailY, `${summary.count} / ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, {
             fontFamily: 'Arial',
             fontSize: '19px',
-            color: summary?.isValid ? '#86efac' : summary?.pillTextColor ?? '#fca5a5',
+            color: summary.isValid ? '#86efac' : summary.pillTextColor,
             fontStyle: 'bold',
         });
         const [statusPillBg, statusPillText] = this.createPill(
             localX + 170,
             detailY + 10,
-            summary?.statusLabel ?? '未选择',
-            summary?.pillFillColor ?? 0x1f2937,
-            summary?.pillTextColor ?? '#94a3b8',
+            summary.statusLabel,
+            summary.pillFillColor,
+            summary.pillTextColor,
         );
-        const detailText = this.scene.add.text(localX + 16, detailY + 28, summary?.detailLabel ?? '', {
+        const detailText = this.scene.add.text(localX + 16, detailY + 26, summary.detailLabel, {
             fontFamily: 'Arial',
             fontSize: '13px',
-            color: summary?.isValid ? '#93c5fd' : summary?.pillTextColor ?? '#94a3b8',
+            color: summary.isValid ? '#93c5fd' : summary.pillTextColor,
         });
         this.editorContainer.add([countText, statusPillBg, statusPillText, detailText]);
 
-        const issueLines = formatDeckIssueLines(summary ?? summarizeDeckStatus(deck, this.stash.cards));
-        const issueText = this.scene.add.text(localX + 16, detailY + 52, issueLines.join('\n'), {
+        const issueLines = formatDeckIssueLines(summary, 1);
+        const issueText = this.scene.add.text(localX + 16, detailY + 48, issueLines.join('\n'), {
             fontFamily: 'Arial',
-            fontSize: '12px',
-            color: summary?.isValid ? '#cbd5e1' : '#f8d2d2',
+            fontSize: '11px',
+            color: summary.isValid ? '#cbd5e1' : '#f8d2d2',
             lineSpacing: 4,
-            wordWrap: { width: summaryW - 32 },
+            wordWrap: { width: summaryW - 176 },
         });
         this.editorContainer.add(issueText);
 
-        const cardListTitle = this.scene.add.text(localX, listHeaderY, `卡牌清单 · ${deck.cards.length} 个条目 / ${summary?.count ?? 0} 张`, {
+        const returnCta = createReturnCtaState(summary);
+        const exitStripX = localX + 16;
+        const exitStripY = summaryH - 54;
+        const exitStripW = summaryW - 32;
+        const exitStripH = 48;
+        const exitStrip = this.scene.add.rectangle(
+            exitStripX + exitStripW / 2,
+            exitStripY + exitStripH / 2,
+            exitStripW,
+            exitStripH,
+            returnCta.stripFillColor,
+            0.98,
+        );
+        exitStrip.setStrokeStyle(1, summary.accentColor, 0.9);
+
+        const exitHeader = this.scene.add.text(exitStripX + 14, exitStripY + 8, '返回前摘要', {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: returnCta.stripTextColor,
+            fontStyle: 'bold',
+        });
+
+        const exitSummary = this.scene.add.text(exitStripX + 14, exitStripY + 24, returnCta.summaryLabel, {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: '#e2e8f0',
+            wordWrap: { width: exitStripW - 184 },
+        }).setOrigin(0, 0.5);
+
+        const ctaButtonWidth = 150;
+        const ctaButtonHeight = 36;
+        const ctaButtonX = exitStripX + exitStripW - ctaButtonWidth / 2 - 8;
+        const ctaButtonY = exitStripY + exitStripH / 2;
+        const ctaButton = this.scene.add.rectangle(
+            ctaButtonX,
+            ctaButtonY,
+            ctaButtonWidth,
+            ctaButtonHeight,
+            returnCta.buttonFillColor,
+            1,
+        );
+        ctaButton.setStrokeStyle(1, returnCta.buttonStrokeColor, 0.95);
+        ctaButton.setInteractive({ useHandCursor: true });
+        ctaButton.on('pointerover', () => ctaButton.setFillStyle(returnCta.buttonHoverFillColor, 1));
+        ctaButton.on('pointerout', () => ctaButton.setFillStyle(returnCta.buttonFillColor, 1));
+        ctaButton.on('pointerdown', () => this.config.onClose());
+
+        const ctaLabel = this.scene.add.text(ctaButtonX, ctaButtonY - 6, '返回远征准备', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: returnCta.buttonTextColor,
+            fontStyle: 'bold',
+        }).setOrigin(0.5);
+        const ctaSubLabel = this.scene.add.text(ctaButtonX, ctaButtonY + 8, returnCta.buttonStatusLabel, {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: returnCta.buttonTextColor,
+        }).setOrigin(0.5);
+        this.editorContainer.add([exitStrip, exitHeader, exitSummary, ctaButton, ctaLabel, ctaSubLabel]);
+
+        const cardListTitle = this.scene.add.text(localX, listHeaderY, `卡牌清单 · ${deck.cards.length} 个条目 / ${summary.count} 张`, {
             fontFamily: 'Arial',
             fontSize: '16px',
             color: '#f8fafc',
@@ -1459,7 +1583,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         if (this.browserSummaryText) {
             const summaryParts = [`显示 ${rows.length} 张库存条目`];
             if (selectedDeck) {
-                summaryParts.push(`当前加入：${selectedSummary?.count ?? 0} 张`);
+                summaryParts.push(`当前卡组：${selectedSummary?.count ?? 0} 张 · ${selectedSummary?.statusLabel ?? '未选择'}`);
             } else {
                 summaryParts.push('未选择卡组');
             }

@@ -29,6 +29,17 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).not.toContain('spiritStones：');
     });
 
+    it('uses Chinese exit-summary labels in the deck management panel', () => {
+        const panel = read('src/game/ui/deckbuilder/DeckManagementPanel.ts');
+
+        expect(panel).toContain('返回前摘要');
+        expect(panel).toContain('返回远征准备');
+        expect(panel).toContain('摘要区可直接返回远征准备');
+        expect(panel).toContain('当前卡组：');
+        expect(panel).not.toContain('Return to Expedition Prep');
+        expect(panel).not.toContain('Exit summary');
+    });
+
     it('uses Chinese run HUD labels', () => {
         const hud = read('src/game/ui/expedition/RunHud.ts');
 
