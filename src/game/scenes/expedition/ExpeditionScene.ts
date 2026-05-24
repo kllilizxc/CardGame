@@ -61,6 +61,12 @@ import {
     createShopNodeView,
     type ShopOfferView,
 } from './nonCombatNodeFlow';
+import {
+    buildDeckbuilderCardMetadataMap,
+    resolveDeckbuilderCardMetadataResources,
+    type DeckbuilderCardMetadataResources,
+} from './deckbuilderCardMetadata';
+import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 
 type StarterDeckCacheEntry = ExpeditionBootstrapSources['starterDeck'];
 
@@ -84,6 +90,8 @@ export class ExpeditionScene extends Scene {
     private pendingBattleResult: ExpeditionBattleCompleteEvent | null = null;
     private deckManagerEntryContext?: PreparationDeckContext;
     private pendingPreparationDeckHandoff?: PreparationDeckHandoffSummary;
+    private deckbuilderCardMetadataResources?: DeckbuilderCardMetadataResources;
+    private deckbuilderCardMetadata: CardMetadataMap = {};
 
     constructor() {
         super('ExpeditionScene');
@@ -93,6 +101,8 @@ export class ExpeditionScene extends Scene {
         this.launchData = normalizeExpeditionSceneLaunchData(data);
         this.expeditionResources = undefined;
         this.pendingBattleResult = this.launchData.battleResult ?? null;
+        this.deckbuilderCardMetadataResources = undefined;
+        this.deckbuilderCardMetadata = {};
     }
 
     preload(): void {
@@ -103,6 +113,10 @@ export class ExpeditionScene extends Scene {
         this.load.json(expeditionResources.map.cacheKey, expeditionResources.map.publicPath);
         this.load.json(expeditionResources.events.cacheKey, expeditionResources.events.publicPath);
         this.load.json(expeditionResources.shop.cacheKey, expeditionResources.shop.publicPath);
+
+        Object.values(this.getDeckbuilderCardMetadataResources()).forEach((resource) => {
+            this.load.json(resource.cacheKey, resource.publicPath);
+        });
     }
 
     create(): void {
@@ -113,6 +127,10 @@ export class ExpeditionScene extends Scene {
         this.mapDefinition = this.cache.json.get(expeditionResources.map.cacheKey) as ExpeditionMapDefinition;
         this.eventCollection = this.cache.json.get(expeditionResources.events.cacheKey) as PrototypeEventCollection;
         this.shopCollection = this.cache.json.get(expeditionResources.shop.cacheKey) as PrototypeShopCollection;
+        this.deckbuilderCardMetadata = buildDeckbuilderCardMetadataMap(
+            this.getDeckbuilderCardMetadataResources(),
+            (cacheKey) => this.cache.json.get(cacheKey),
+        );
         this.assertLaunchTargetMatchesMapDefinition();
         this.expeditionState = ExpeditionState.bootstrap({
             worldState,
@@ -174,6 +192,16 @@ export class ExpeditionScene extends Scene {
         }
 
         return this.expeditionResources;
+    }
+
+    private getDeckbuilderCardMetadataResources(): DeckbuilderCardMetadataResources {
+        if (!this.deckbuilderCardMetadataResources) {
+            this.deckbuilderCardMetadataResources = resolveDeckbuilderCardMetadataResources(
+                this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+            );
+        }
+
+        return this.deckbuilderCardMetadataResources;
     }
 
     private assertLaunchTargetMatchesMapDefinition(): void {
@@ -244,6 +272,7 @@ export class ExpeditionScene extends Scene {
 
         this.deckManagementPanel = new DeckManagementPanel(this, {
             stash: this.expeditionState.persistentStash,
+            metadata: this.deckbuilderCardMetadata,
             onStashChange: (newStash) => {
                 this.expeditionState.persistentStash = newStash;
                 this.expeditionState.persistCurrentStash();

@@ -51,8 +51,8 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 const DECK_ROW_HEIGHT = 58;
-const EDITOR_ROW_HEIGHT = 58;
-const BROWSER_ROW_HEIGHT = 58;
+const EDITOR_ROW_HEIGHT = 64;
+const BROWSER_ROW_HEIGHT = 64;
 
 const PANEL_FILL = 0x0b1220;
 const SECTION_FILL = 0x111827;
@@ -127,6 +127,10 @@ function computeAvailable(
     const stashCount = stashCards.find((stack) => stack.id === cardId)?.count ?? 0;
     const deckCount = deckCards.find((stack) => stack.id === cardId)?.count ?? 0;
     return stashCount - deckCount;
+}
+
+function getStackCount(stacks: readonly ExpeditionCardStack[], cardId: string): number {
+    return stacks.find((stack) => stack.id === cardId)?.count ?? 0;
 }
 
 function summarizeDeckStatus(
@@ -1205,7 +1209,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             color: '#f8fafc',
             fontStyle: 'bold',
         });
-        const cardListSubtitle = this.scene.add.text(localX + summaryW, listHeaderY + 2, '右侧加入，列表内可移除 1 张', {
+        const cardListSubtitle = this.scene.add.text(localX + summaryW, listHeaderY + 2, '右侧加入，列表内显示袋中数量、短缺与剩余可加张数', {
             fontFamily: 'Arial',
             fontSize: '12px',
             color: '#94a3b8',
@@ -1250,9 +1254,54 @@ export class DeckManagementPanel extends GameObjects.Container {
                 const rowY = (index - start) * EDITOR_ROW_HEIGHT;
                 const displayName = getCardDisplayName(stack.id, this.config.metadata);
                 const metaLabel = getCardMetaLabel(stack.id, this.config.metadata);
+                const ownedCount = getStackCount(this.stash.cards, stack.id);
+                const shortageCount = Math.max(stack.count - ownedCount, 0);
+                const remainingCount = Math.max(ownedCount - stack.count, 0);
+                const rowAccentColor = shortageCount > 0
+                    ? INVALID_ACCENT
+                    : remainingCount === 0
+                        ? WARNING_ACCENT
+                        : VALID_ACCENT;
+                const rowBorderColor = shortageCount > 0
+                    ? INVALID_ACCENT
+                    : remainingCount === 0
+                        ? WARNING_ACCENT
+                        : SECTION_BORDER;
+                const rowFillColor = shortageCount > 0
+                    ? 0x201018
+                    : remainingCount === 0
+                        ? 0x1b1a12
+                        : 0x111827;
+                const detailColor = shortageCount > 0
+                    ? '#fecaca'
+                    : remainingCount === 0
+                        ? '#fde68a'
+                        : '#93c5fd';
+                const availabilityLabel = shortageCount > 0
+                    ? `袋中${ownedCount} · 缺${shortageCount}张`
+                    : remainingCount === 0
+                        ? `袋中${ownedCount} · 已占满库存`
+                        : `袋中${ownedCount} · 可再加${remainingCount}张`;
+                const stateLabel = shortageCount > 0
+                    ? `缺 ${shortageCount} 张`
+                    : remainingCount === 0
+                        ? '已占满'
+                        : `可再加 ${remainingCount}`;
+                const stateFillColor = shortageCount > 0
+                    ? 0x3f1d24
+                    : remainingCount === 0
+                        ? 0x3b2a0e
+                        : 0x15372a;
+                const stateTextColor = shortageCount > 0
+                    ? '#fecaca'
+                    : remainingCount === 0
+                        ? '#fde68a'
+                        : '#bbf7d0';
 
-                const rowBg = this.scene.add.rectangle(summaryW / 2, rowY + EDITOR_ROW_HEIGHT / 2, summaryW, EDITOR_ROW_HEIGHT - 6, 0x111827, 0.98);
-                rowBg.setStrokeStyle(1, SECTION_BORDER, 0.82);
+                const rowBg = this.scene.add.rectangle(summaryW / 2, rowY + EDITOR_ROW_HEIGHT / 2, summaryW, EDITOR_ROW_HEIGHT - 6, rowFillColor, 0.98);
+                rowBg.setStrokeStyle(1, rowBorderColor, shortageCount > 0 ? 0.95 : 0.82);
+                const accent = this.scene.add.rectangle(5, rowY + EDITOR_ROW_HEIGHT / 2, 6, EDITOR_ROW_HEIGHT - 14, rowAccentColor, 1)
+                    .setOrigin(0, 0.5);
 
                 const nameText = this.scene.add.text(14, rowY + 14, displayName, {
                     fontFamily: 'Arial',
@@ -1260,17 +1309,18 @@ export class DeckManagementPanel extends GameObjects.Container {
                     color: '#f8fafc',
                     fontStyle: 'bold',
                 });
-                const metaText = this.scene.add.text(14, rowY + 35, metaLabel, {
+                const metaText = this.scene.add.text(14, rowY + 36, `${metaLabel} · ${availabilityLabel}`, {
                     fontFamily: 'Arial',
                     fontSize: '11px',
-                    color: '#94a3b8',
+                    color: detailColor,
                 });
 
-                const [countPillBg, countPillText] = this.createPill(summaryW - 152, rowY + 18, `×${stack.count}`, 0x1d4ed8, '#dbeafe');
+                const [countPillBg, countPillText] = this.createPill(summaryW - 188, rowY + 18, `卡组 ×${stack.count}`, 0x1d4ed8, '#dbeafe');
+                const [statePillBg, statePillText] = this.createPill(summaryW - 188, rowY + 40, stateLabel, stateFillColor, stateTextColor);
                 const removeButton = this.createButton(
-                    summaryW - 54,
+                    summaryW - 40,
                     rowY + EDITOR_ROW_HEIGHT / 2,
-                    82,
+                    76,
                     28,
                     '移除 1',
                     0x7f1d1d,
@@ -1292,10 +1342,13 @@ export class DeckManagementPanel extends GameObjects.Container {
 
                 cardsInner.add([
                     rowBg,
+                    accent,
                     nameText,
                     metaText,
                     countPillBg,
                     countPillText,
+                    statePillBg,
+                    statePillText,
                     ...removeButton,
                 ]);
             }
@@ -1632,8 +1685,6 @@ export class DeckManagementPanel extends GameObjects.Container {
                 const deckFull = deckCount >= DECK_CARD_MAX;
                 const canAdd = hasDeck && available > 0 && !deckFull;
                 const displayName = row.name ?? row.id;
-                const borderColor = canAdd ? 0x1f8a4c : SECTION_BORDER;
-                const fillColor = available > 0 ? 0x0f172a : 0x111827;
 
                 const secondaryParts: string[] = [];
                 if (displayName !== row.id) {
@@ -1642,38 +1693,85 @@ export class DeckManagementPanel extends GameObjects.Container {
                 if (row.kind) {
                     secondaryParts.push(KIND_LABEL[row.kind]);
                 }
-                secondaryParts.push(`袋中 ${row.count}`);
-                secondaryParts.push(`卡组 ${inDeck}`);
-                secondaryParts.push(`余量 ${Math.max(available, 0)}`);
+                secondaryParts.push(`库存${row.count}`);
+                secondaryParts.push(`卡组${inDeck}`);
+                secondaryParts.push(`余${Math.max(available, 0)}`);
 
-                let buttonLabel = '加入';
+                let buttonLabel = '加入 1';
+                let stateLabel = `可加 ${available}`;
+                let stateFillColor = 0x15372a;
+                let stateTextColor = '#bbf7d0';
+                let borderColor = VALID_ACCENT;
+                let fillColor = 0x0d1b13;
+                let nameColor = '#f8fafc';
+                let detailColor = '#bbf7d0';
+                let disabledFillColor = 0x1f2937;
+                let disabledStrokeColor = 0x334155;
+                let disabledTextColor = '#94a3b8';
+
                 if (!hasDeck) {
-                    buttonLabel = '未选';
+                    buttonLabel = '先选卡组';
+                    stateLabel = '先选卡组';
+                    stateFillColor = 0x1f2937;
+                    stateTextColor = '#cbd5e1';
+                    borderColor = SECTION_BORDER;
+                    fillColor = 0x111827;
+                    nameColor = '#e2e8f0';
+                    detailColor = '#94a3b8';
+                    disabledStrokeColor = 0x475569;
                 } else if (deckFull) {
-                    buttonLabel = '已满';
+                    buttonLabel = '卡组已满';
+                    stateLabel = '卡组已满';
+                    stateFillColor = 0x3b2a0e;
+                    stateTextColor = '#fde68a';
+                    borderColor = WARNING_ACCENT;
+                    fillColor = 0x1c1a12;
+                    detailColor = '#fde68a';
+                    disabledFillColor = 0x3b2a0e;
+                    disabledStrokeColor = 0xfcd34d;
+                    disabledTextColor = '#fde68a';
                 } else if (available <= 0) {
-                    buttonLabel = '无余量';
+                    buttonLabel = '已耗尽';
+                    stateLabel = '已耗尽';
+                    stateFillColor = 0x3f1d24;
+                    stateTextColor = '#fecaca';
+                    borderColor = INVALID_ACCENT;
+                    fillColor = 0x201018;
+                    nameColor = row.count > 0 || inDeck > 0 ? '#e2e8f0' : '#94a3b8';
+                    detailColor = '#fecaca';
+                    disabledFillColor = 0x3f1d24;
+                    disabledStrokeColor = 0xfca5a5;
+                    disabledTextColor = '#fecaca';
                 }
 
                 const rowBg = this.scene.add.rectangle(this.browserArea.w / 2, rowY + BROWSER_ROW_HEIGHT / 2, this.browserArea.w, BROWSER_ROW_HEIGHT - 6, fillColor, 0.98);
                 rowBg.setStrokeStyle(1, borderColor, canAdd ? 0.9 : 0.65);
+                const accent = this.scene.add.rectangle(5, rowY + BROWSER_ROW_HEIGHT / 2, 6, BROWSER_ROW_HEIGHT - 14, borderColor, 1)
+                    .setOrigin(0, 0.5);
 
                 const nameText = this.scene.add.text(14, rowY + 14, displayName, {
                     fontFamily: 'Arial',
                     fontSize: '15px',
-                    color: available > 0 ? '#f8fafc' : '#94a3b8',
+                    color: nameColor,
                     fontStyle: 'bold',
                 });
                 const detailText = this.scene.add.text(14, rowY + 35, secondaryParts.join(' · '), {
                     fontFamily: 'Arial',
                     fontSize: '11px',
-                    color: available > 0 ? '#cbd5e1' : '#64748b',
+                    color: detailColor,
                 });
+                const [statePillBg, statePillText] = this.createPill(
+                    this.browserArea.w - 202,
+                    rowY + 18,
+                    stateLabel,
+                    stateFillColor,
+                    stateTextColor,
+                );
 
                 const addButton = this.createButton(
-                    this.browserArea.w - 46,
+                    this.browserArea.w - 48,
                     rowY + BROWSER_ROW_HEIGHT / 2,
-                    84,
+                    92,
                     30,
                     buttonLabel,
                     0x166534,
@@ -1690,13 +1788,14 @@ export class DeckManagementPanel extends GameObjects.Container {
                     {
                         hoverFillColor: 0x15803d,
                         strokeColor: 0x86efac,
-                        disabledFillColor: 0x1f2937,
-                        disabledStrokeColor: 0x334155,
-                        fontSize: '12px',
+                        disabledFillColor,
+                        disabledStrokeColor,
+                        disabledTextColor,
+                        fontSize: '11px',
                     },
                 );
 
-                this.browserInner.add([rowBg, nameText, detailText, ...addButton]);
+                this.browserInner.add([rowBg, accent, nameText, detailText, statePillBg, statePillText, ...addButton]);
             }
         }
 
