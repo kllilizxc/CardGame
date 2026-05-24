@@ -3,12 +3,14 @@ import { describe, expect, it } from 'bun:test';
 import type { ExpeditionCardStack, PersistentStash } from '../types/expedition';
 import {
     addSavedDeckToStash,
+    adjustDeckCardCount,
     countDeckCards,
     DECK_CARD_MAX,
     DECK_CARD_MIN,
     deleteSavedDeckFromStash,
     renameSavedDeckInStash,
     selectDeckInStash,
+    summarizeDeckCapacity,
     updateSavedDeckInStash,
     validateDeckAvailability,
     validateDeckSize,
@@ -57,6 +59,70 @@ describe('countDeckCards', () => {
 
     it('treats zero-count stacks as contributing nothing', () => {
         expect(countDeckCards(stacks(['A', 0], ['B', 3]))).toBe(3);
+    });
+});
+
+describe('summarizeDeckCapacity', () => {
+    it('reports cards still needed to reach the minimum deck size', () => {
+        expect(summarizeDeckCapacity(stacks(['CARD_A', 18]))).toEqual({
+            count: 18,
+            cardsNeededToMin: 2,
+            cardsOverMax: 0,
+            slotsRemainingToMax: 22,
+        });
+    });
+
+    it('reports remaining headroom for a legal in-range deck', () => {
+        expect(summarizeDeckCapacity(stacks(['CARD_A', 20], ['CARD_B', 7]))).toEqual({
+            count: 27,
+            cardsNeededToMin: 0,
+            cardsOverMax: 0,
+            slotsRemainingToMax: 13,
+        });
+    });
+
+    it('reports overflow for a deck above the maximum', () => {
+        expect(summarizeDeckCapacity(stacks(['CARD_A', 45]))).toEqual({
+            count: 45,
+            cardsNeededToMin: 0,
+            cardsOverMax: 5,
+            slotsRemainingToMax: 0,
+        });
+    });
+});
+
+describe('adjustDeckCardCount', () => {
+    it('adds a new stack when increasing a missing card', () => {
+        expect(adjustDeckCardCount(stacks(['CARD_A', 2]), 'CARD_B', 3)).toEqual(
+            stacks(['CARD_A', 2], ['CARD_B', 3]),
+        );
+    });
+
+    it('increments an existing stack without mutating the input', () => {
+        const cards = stacks(['CARD_A', 2], ['CARD_B', 1]);
+        const result = adjustDeckCardCount(cards, 'CARD_A', 2);
+
+        expect(result).toEqual(stacks(['CARD_A', 4], ['CARD_B', 1]));
+        expect(cards).toEqual(stacks(['CARD_A', 2], ['CARD_B', 1]));
+    });
+
+    it('decrements an existing stack and removes it when the count reaches zero', () => {
+        expect(adjustDeckCardCount(stacks(['CARD_A', 2], ['CARD_B', 1]), 'CARD_A', -2)).toEqual(
+            stacks(['CARD_B', 1]),
+        );
+    });
+
+    it('clamps removal below zero by dropping the stack entirely', () => {
+        expect(adjustDeckCardCount(stacks(['CARD_A', 2]), 'CARD_A', -99)).toEqual([]);
+    });
+
+    it('returns cloned stacks for a zero delta', () => {
+        const cards = stacks(['CARD_A', 2], ['CARD_B', 1]);
+        const result = adjustDeckCardCount(cards, 'CARD_A', 0);
+
+        expect(result).toEqual(cards);
+        expect(result).not.toBe(cards);
+        expect(result[0]).not.toBe(cards[0]);
     });
 });
 

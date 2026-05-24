@@ -10,16 +10,19 @@ import {
 } from '../../state/CardCollectionViewModel';
 import {
     addSavedDeckToStash,
+    adjustDeckCardCount,
     countDeckCards,
     DECK_CARD_MAX,
     DECK_CARD_MIN,
     deleteSavedDeckFromStash,
     renameSavedDeckInStash,
     selectDeckInStash,
+    summarizeDeckCapacity,
     updateSavedDeckInStash,
     validateDeckAvailability,
     validateDeckSize,
     type DeckValidityReason,
+    type DeckCapacitySummary as DeckCapacityMetrics,
 } from '../../state/PersistentStashDecks';
 import type { ExpeditionCardStack, PersistentStash, SavedDeck } from '../../types/expedition';
 
@@ -51,8 +54,8 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 const DECK_ROW_HEIGHT = 58;
-const EDITOR_ROW_HEIGHT = 64;
-const BROWSER_ROW_HEIGHT = 64;
+const EDITOR_ROW_HEIGHT = 72;
+const BROWSER_ROW_HEIGHT = 72;
 
 const PANEL_FILL = 0x0b1220;
 const SECTION_FILL = 0x111827;
@@ -103,22 +106,6 @@ function createDeckId(): string {
     return `deck-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
-function addCardToStack(stacks: readonly ExpeditionCardStack[], cardId: string): ExpeditionCardStack[] {
-    const existing = stacks.find((stack) => stack.id === cardId);
-
-    if (existing) {
-        return stacks.map((stack) => (stack.id === cardId ? { id: stack.id, count: stack.count + 1 } : { ...stack }));
-    }
-
-    return [...stacks.map((stack) => ({ ...stack })), { id: cardId, count: 1 }];
-}
-
-function removeCardFromStack(stacks: readonly ExpeditionCardStack[], cardId: string): ExpeditionCardStack[] {
-    return stacks
-        .map((stack) => (stack.id === cardId ? { id: stack.id, count: stack.count - 1 } : { ...stack }))
-        .filter((stack) => stack.count > 0);
-}
-
 function computeAvailable(
     stashCards: readonly ExpeditionCardStack[],
     deckCards: readonly ExpeditionCardStack[],
@@ -131,6 +118,70 @@ function computeAvailable(
 
 function getStackCount(stacks: readonly ExpeditionCardStack[], cardId: string): number {
     return stacks.find((stack) => stack.id === cardId)?.count ?? 0;
+}
+
+function getDeckCapacityAccentColor(capacity: DeckCapacityMetrics): number {
+    if (capacity.cardsOverMax > 0) {
+        return INVALID_ACCENT;
+    }
+
+    if (capacity.cardsNeededToMin > 0) {
+        return WARNING_ACCENT;
+    }
+
+    return VALID_ACCENT;
+}
+
+function getDeckCapacityTextColor(capacity: DeckCapacityMetrics): string {
+    if (capacity.cardsOverMax > 0) {
+        return '#fecaca';
+    }
+
+    if (capacity.cardsNeededToMin > 0) {
+        return '#fde68a';
+    }
+
+    return '#bbf7d0';
+}
+
+function getDeckCapacityProgressLabel(capacity: DeckCapacityMetrics): string {
+    if (capacity.cardsNeededToMin > 0) {
+        return `离 ${DECK_CARD_MIN} 张出征线还差 ${capacity.cardsNeededToMin} 张`;
+    }
+
+    return `已达到 ${DECK_CARD_MIN} 张出征线`;
+}
+
+function getDeckCapacityHeadroomLabel(capacity: DeckCapacityMetrics): string {
+    if (capacity.cardsOverMax > 0) {
+        return `超出 ${DECK_CARD_MAX} 张上限 ${capacity.cardsOverMax} 张`;
+    }
+
+    if (capacity.slotsRemainingToMax === 0) {
+        return `已到 ${DECK_CARD_MAX} 张上限`;
+    }
+
+    return `距 ${DECK_CARD_MAX} 张上限还剩 ${capacity.slotsRemainingToMax} 张`;
+}
+
+function getDeckCapacityBrowserLabel(capacity: DeckCapacityMetrics): string {
+    if (capacity.cardsOverMax > 0) {
+        return `超上限 ${capacity.cardsOverMax} 张 · 需回到 ${DECK_CARD_MAX} 张内`;
+    }
+
+    if (capacity.slotsRemainingToMax === 0) {
+        return `已到 ${DECK_CARD_MAX} 张上限 · 请先移除再加入`;
+    }
+
+    if (capacity.cardsNeededToMin > 0) {
+        return `离 ${DECK_CARD_MIN} 张还差 ${capacity.cardsNeededToMin} 张 · 空位 ${capacity.slotsRemainingToMax} 张`;
+    }
+
+    return `已达 ${DECK_CARD_MIN} 张出征线 · 空位 ${capacity.slotsRemainingToMax} 张`;
+}
+
+function getQuickAddCount(available: number, slotsRemainingToMax: number): number {
+    return Math.max(0, Math.min(Math.max(available, 0), Math.max(slotsRemainingToMax, 0)));
 }
 
 function summarizeDeckStatus(
@@ -568,6 +619,18 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.selectedDeckId = this.stash.selectedDeckId ?? this.stash.savedDecks[0]?.id ?? null;
     }
 
+    private refreshDeckViews(): void {
+        this.refreshDeckList();
+        this.refreshEditor();
+        this.refreshBrowser();
+    }
+
+    private updateDeckCards(deckId: string, cards: readonly ExpeditionCardStack[]): void {
+        const newStash = updateSavedDeckInStash(this.stash, deckId, cards);
+        this.applyStashChange(newStash);
+        this.refreshDeckViews();
+    }
+
     private createPanel(): void {
         const { width, height } = this.scene.scale;
         const panelWidth = Math.min(1120, width * 0.9);
@@ -997,7 +1060,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createEditorColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '卡组编辑', '重命名、校验并逐张调整当前卡组；摘要区可直接返回远征准备。', PANEL_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '卡组编辑', '重命名、校验，并以单张或整行清空的方式快速调整当前卡组；摘要区可直接返回远征准备。', PANEL_ACCENT));
         this.editorContentWidth = colW - 32;
         this.editorContentHeight = colH - 72;
         this.editorContainer = this.scene.add.container(x + 16, y + 70);
@@ -1012,7 +1075,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         const localX = 0;
         const summaryW = this.editorContentWidth;
         const contentH = this.editorContentHeight;
-        const summaryH = this.renameMode ? 214 : 202;
+        const summaryH = this.renameMode ? 270 : 246;
         const listHeaderY = summaryH + 10;
         const scrollBtnY = contentH - 12;
         const listTop = listHeaderY + 34;
@@ -1050,6 +1113,9 @@ export class DeckManagementPanel extends GameObjects.Container {
         }
 
         const summary = this.getSelectedDeckStatus() ?? summarizeDeckStatus(deck, this.stash.cards);
+        const capacity = summarizeDeckCapacity(deck.cards);
+        const capacityAccentColor = getDeckCapacityAccentColor(capacity);
+        const capacityTextColor = getDeckCapacityTextColor(capacity);
         const summaryCard = this.scene.add.rectangle(localX + summaryW / 2, summaryH / 2, summaryW, summaryH, 0x0f172a, 0.98);
         summaryCard.setStrokeStyle(1, summary.accentColor, 0.9);
         this.editorContainer.add(summaryCard);
@@ -1133,13 +1199,85 @@ export class DeckManagementPanel extends GameObjects.Container {
         });
         this.editorContainer.add([countText, statusPillBg, statusPillText, detailText]);
 
+        const capacityProgressText = this.scene.add.text(localX + 16, detailY + 50, getDeckCapacityProgressLabel(capacity), {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: capacityTextColor,
+            fontStyle: 'bold',
+            wordWrap: { width: summaryW / 2 - 24 },
+        });
+        const capacityHeadroomText = this.scene.add.text(localX + summaryW - 16, detailY + 50, getDeckCapacityHeadroomLabel(capacity), {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: capacityTextColor,
+            fontStyle: 'bold',
+            align: 'right',
+            wordWrap: { width: summaryW / 2 - 24 },
+        }).setOrigin(1, 0);
+        this.editorContainer.add([capacityProgressText, capacityHeadroomText]);
+
+        const capacityTrackX = localX + 16;
+        const capacityTrackY = detailY + 74;
+        const capacityTrackW = summaryW - 32;
+        const capacityTrackH = 14;
+        const capacityFillWidth = capacityTrackW * Phaser.Math.Clamp(capacity.count / DECK_CARD_MAX, 0, 1);
+        const capacityTrackBg = this.scene.add.rectangle(
+            capacityTrackX + capacityTrackW / 2,
+            capacityTrackY,
+            capacityTrackW,
+            capacityTrackH,
+            0x172033,
+            1,
+        );
+        capacityTrackBg.setStrokeStyle(1, SECTION_BORDER, 0.9);
+        this.editorContainer.add(capacityTrackBg);
+
+        if (capacityFillWidth > 0) {
+            const capacityFill = this.scene.add.rectangle(
+                capacityTrackX + capacityFillWidth / 2,
+                capacityTrackY,
+                capacityFillWidth,
+                capacityTrackH - 4,
+                capacityAccentColor,
+                1,
+            );
+            this.editorContainer.add(capacityFill);
+        }
+
+        const capacityMinimumMarker = this.scene.add.rectangle(
+            capacityTrackX + capacityTrackW * (DECK_CARD_MIN / DECK_CARD_MAX),
+            capacityTrackY,
+            3,
+            capacityTrackH + 8,
+            0xe2e8f0,
+            0.9,
+        );
+        const capacityMinimumLabel = this.scene.add.text(
+            capacityTrackX + capacityTrackW * (DECK_CARD_MIN / DECK_CARD_MAX),
+            capacityTrackY + 14,
+            `${DECK_CARD_MIN} 张`,
+            {
+                fontFamily: 'Arial',
+                fontSize: '10px',
+                color: '#cbd5e1',
+                fontStyle: 'bold',
+            },
+        ).setOrigin(0.5, 0);
+        const capacityMaximumLabel = this.scene.add.text(capacityTrackX + capacityTrackW, capacityTrackY + 14, `${DECK_CARD_MAX} 张上限`, {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: '#94a3b8',
+            fontStyle: 'bold',
+        }).setOrigin(1, 0);
+        this.editorContainer.add([capacityMinimumMarker, capacityMinimumLabel, capacityMaximumLabel]);
+
         const issueLines = formatDeckIssueLines(summary, 1);
-        const issueText = this.scene.add.text(localX + 16, detailY + 48, issueLines.join('\n'), {
+        const issueText = this.scene.add.text(localX + 16, detailY + 96, issueLines.join('\n'), {
             fontFamily: 'Arial',
             fontSize: '11px',
             color: summary.isValid ? '#cbd5e1' : '#f8d2d2',
             lineSpacing: 4,
-            wordWrap: { width: summaryW - 176 },
+            wordWrap: { width: summaryW - 32 },
         });
         this.editorContainer.add(issueText);
 
@@ -1209,7 +1347,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             color: '#f8fafc',
             fontStyle: 'bold',
         });
-        const cardListSubtitle = this.scene.add.text(localX + summaryW, listHeaderY + 2, '右侧加入，列表内显示袋中数量、短缺与剩余可加张数', {
+        const cardListSubtitle = this.scene.add.text(localX + summaryW, listHeaderY + 2, '单张可移除 1 或一键清空整行，列表内同步显示库存、短缺与可加余量', {
             fontFamily: 'Arial',
             fontSize: '12px',
             color: '#94a3b8',
@@ -1309,34 +1447,42 @@ export class DeckManagementPanel extends GameObjects.Container {
                     color: '#f8fafc',
                     fontStyle: 'bold',
                 });
-                const metaText = this.scene.add.text(14, rowY + 36, `${metaLabel} · ${availabilityLabel}`, {
+                const metaText = this.scene.add.text(14, rowY + 40, `${metaLabel} · ${availabilityLabel}`, {
                     fontFamily: 'Arial',
                     fontSize: '11px',
                     color: detailColor,
                 });
 
-                const [countPillBg, countPillText] = this.createPill(summaryW - 188, rowY + 18, `卡组 ×${stack.count}`, 0x1d4ed8, '#dbeafe');
-                const [statePillBg, statePillText] = this.createPill(summaryW - 188, rowY + 40, stateLabel, stateFillColor, stateTextColor);
+                const [countPillBg, countPillText] = this.createPill(summaryW - 196, rowY + 20, `卡组 ×${stack.count}`, 0x1d4ed8, '#dbeafe');
+                const [statePillBg, statePillText] = this.createPill(summaryW - 196, rowY + 48, stateLabel, stateFillColor, stateTextColor);
                 const removeButton = this.createButton(
-                    summaryW - 40,
-                    rowY + EDITOR_ROW_HEIGHT / 2,
-                    76,
-                    28,
+                    summaryW - 50,
+                    rowY + 22,
+                    84,
+                    22,
                     '移除 1',
                     0x7f1d1d,
-                    () => {
-                        const newCards = removeCardFromStack(deck.cards, stack.id);
-                        const newStash = updateSavedDeckInStash(this.stash, deck.id, newCards);
-                        this.applyStashChange(newStash);
-                        this.refreshEditor();
-                        this.refreshDeckList();
-                        this.refreshBrowser();
-                    },
+                    () => this.updateDeckCards(deck.id, adjustDeckCardCount(deck.cards, stack.id, -1)),
                     false,
                     {
                         hoverFillColor: 0x991b1b,
                         strokeColor: 0xfca5a5,
-                        fontSize: '13px',
+                        fontSize: '11px',
+                    },
+                );
+                const clearButton = this.createButton(
+                    summaryW - 50,
+                    rowY + 50,
+                    84,
+                    22,
+                    '全部移除',
+                    0x991b1b,
+                    () => this.updateDeckCards(deck.id, adjustDeckCardCount(deck.cards, stack.id, -stack.count)),
+                    false,
+                    {
+                        hoverFillColor: 0xb91c1c,
+                        strokeColor: 0xfca5a5,
+                        fontSize: '11px',
                     },
                 );
 
@@ -1350,6 +1496,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                     statePillBg,
                     statePillText,
                     ...removeButton,
+                    ...clearButton,
                 ]);
             }
         }
@@ -1396,7 +1543,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createBrowserColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '储物袋浏览', '筛选库存卡牌并加入当前卡组。', VALID_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '储物袋浏览', '筛选库存卡牌，并按单张或一键加满的方式补入当前卡组。', VALID_ACCENT));
 
         const innerX = x + 16;
         const innerW = colW - 32;
@@ -1406,7 +1553,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         const summaryY = y + 192;
         const deleteY = y + colH - 28;
         const scrollBtnY = deleteY - 42;
-        const listTop = summaryY + 28;
+        const listTop = summaryY + 42;
         const listBottom = scrollBtnY - 18;
         const listH = Math.max(120, listBottom - listTop);
 
@@ -1519,6 +1666,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             fontFamily: 'Arial',
             fontSize: '13px',
             color: '#cbd5e1',
+            wordWrap: { width: innerW },
         });
 
         this.add([
@@ -1632,11 +1780,15 @@ export class DeckManagementPanel extends GameObjects.Container {
         const selectedDeck = this.getSelectedDeck();
         const deckCards = selectedDeck?.cards ?? [];
         const selectedSummary = this.getSelectedDeckStatus();
+        const selectedCapacity = selectedDeck ? summarizeDeckCapacity(deckCards) : null;
 
         if (this.browserSummaryText) {
             const summaryParts = [`显示 ${rows.length} 张库存条目`];
             if (selectedDeck) {
                 summaryParts.push(`当前卡组：${selectedSummary?.count ?? 0} 张 · ${selectedSummary?.statusLabel ?? '未选择'}`);
+                if (selectedCapacity) {
+                    summaryParts.push(getDeckCapacityBrowserLabel(selectedCapacity));
+                }
             } else {
                 summaryParts.push('未选择卡组');
             }
@@ -1680,9 +1832,10 @@ export class DeckManagementPanel extends GameObjects.Container {
                 const rowY = (index - start) * BROWSER_ROW_HEIGHT;
                 const inDeck = deckCards.find((stack) => stack.id === row.id)?.count ?? 0;
                 const available = computeAvailable(this.stash.cards, deckCards, row.id);
-                const deckCount = countDeckCards(deckCards);
                 const hasDeck = selectedDeck !== null;
-                const deckFull = deckCount >= DECK_CARD_MAX;
+                const deckSlotsRemaining = selectedCapacity?.slotsRemainingToMax ?? 0;
+                const deckFull = deckSlotsRemaining <= 0;
+                const quickAddCount = getQuickAddCount(available, deckSlotsRemaining);
                 const canAdd = hasDeck && available > 0 && !deckFull;
                 const displayName = row.name ?? row.id;
 
@@ -1695,10 +1848,12 @@ export class DeckManagementPanel extends GameObjects.Container {
                 }
                 secondaryParts.push(`库存${row.count}`);
                 secondaryParts.push(`卡组${inDeck}`);
-                secondaryParts.push(`余${Math.max(available, 0)}`);
+                secondaryParts.push(`可加${Math.max(available, 0)}`);
+                if (hasDeck) {
+                    secondaryParts.push(`空位${deckSlotsRemaining}`);
+                }
 
-                let buttonLabel = '加入 1';
-                let stateLabel = `可加 ${available}`;
+                let stateLabel = `一键 +${quickAddCount}`;
                 let stateFillColor = 0x15372a;
                 let stateTextColor = '#bbf7d0';
                 let borderColor = VALID_ACCENT;
@@ -1710,7 +1865,6 @@ export class DeckManagementPanel extends GameObjects.Container {
                 let disabledTextColor = '#94a3b8';
 
                 if (!hasDeck) {
-                    buttonLabel = '先选卡组';
                     stateLabel = '先选卡组';
                     stateFillColor = 0x1f2937;
                     stateTextColor = '#cbd5e1';
@@ -1720,7 +1874,6 @@ export class DeckManagementPanel extends GameObjects.Container {
                     detailColor = '#94a3b8';
                     disabledStrokeColor = 0x475569;
                 } else if (deckFull) {
-                    buttonLabel = '卡组已满';
                     stateLabel = '卡组已满';
                     stateFillColor = 0x3b2a0e;
                     stateTextColor = '#fde68a';
@@ -1731,7 +1884,6 @@ export class DeckManagementPanel extends GameObjects.Container {
                     disabledStrokeColor = 0xfcd34d;
                     disabledTextColor = '#fde68a';
                 } else if (available <= 0) {
-                    buttonLabel = '已耗尽';
                     stateLabel = '已耗尽';
                     stateFillColor = 0x3f1d24;
                     stateTextColor = '#fecaca';
@@ -1755,35 +1907,27 @@ export class DeckManagementPanel extends GameObjects.Container {
                     color: nameColor,
                     fontStyle: 'bold',
                 });
-                const detailText = this.scene.add.text(14, rowY + 35, secondaryParts.join(' · '), {
+                const detailText = this.scene.add.text(14, rowY + 40, secondaryParts.join(' · '), {
                     fontFamily: 'Arial',
                     fontSize: '11px',
                     color: detailColor,
                 });
                 const [statePillBg, statePillText] = this.createPill(
-                    this.browserArea.w - 202,
-                    rowY + 18,
+                    this.browserArea.w - 210,
+                    rowY + 20,
                     stateLabel,
                     stateFillColor,
                     stateTextColor,
                 );
 
                 const addButton = this.createButton(
-                    this.browserArea.w - 48,
-                    rowY + BROWSER_ROW_HEIGHT / 2,
-                    92,
-                    30,
-                    buttonLabel,
+                    this.browserArea.w - 50,
+                    rowY + 22,
+                    84,
+                    22,
+                    '加入 1',
                     0x166534,
-                    () => {
-                        if (!selectedDeck) return;
-                        const newCards = addCardToStack(deckCards, row.id);
-                        const newStash = updateSavedDeckInStash(this.stash, selectedDeck.id, newCards);
-                        this.applyStashChange(newStash);
-                        this.refreshBrowser();
-                        this.refreshEditor();
-                        this.refreshDeckList();
-                    },
+                    () => selectedDeck && this.updateDeckCards(selectedDeck.id, adjustDeckCardCount(deckCards, row.id, 1)),
                     !canAdd,
                     {
                         hoverFillColor: 0x15803d,
@@ -1794,8 +1938,26 @@ export class DeckManagementPanel extends GameObjects.Container {
                         fontSize: '11px',
                     },
                 );
+                const quickAddButton = this.createButton(
+                    this.browserArea.w - 50,
+                    rowY + 50,
+                    84,
+                    22,
+                    '一键加满',
+                    0x15803d,
+                    () => selectedDeck && this.updateDeckCards(selectedDeck.id, adjustDeckCardCount(deckCards, row.id, quickAddCount)),
+                    !canAdd,
+                    {
+                        hoverFillColor: 0x16a34a,
+                        strokeColor: 0x86efac,
+                        disabledFillColor,
+                        disabledStrokeColor,
+                        disabledTextColor,
+                        fontSize: '11px',
+                    },
+                );
 
-                this.browserInner.add([rowBg, accent, nameText, detailText, statePillBg, statePillText, ...addButton]);
+                this.browserInner.add([rowBg, accent, nameText, detailText, statePillBg, statePillText, ...addButton, ...quickAddButton]);
             }
         }
 

@@ -39,6 +39,10 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).toContain('摘要区可直接返回远征准备');
         expect(panel).toContain('当前卡组：');
         expect(panel).toContain('卡组 ×');
+        expect(panel).toContain('一键加满');
+        expect(panel).toContain('全部移除');
+        expect(panel).toContain('张出征线还差');
+        expect(panel).toContain('张上限还剩');
         expect(panel).toContain('已耗尽');
         expect(panel).toContain('卡组已满');
         expect(panel).toContain('袋中');

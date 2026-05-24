@@ -15,6 +15,13 @@ export type DeckValidityReason =
     | { readonly kind: 'too-many-cards'; readonly count: number; readonly max: number }
     | { readonly kind: 'insufficient-copies'; readonly cardId: string; readonly required: number; readonly available: number };
 
+export interface DeckCapacitySummary {
+    readonly count: number;
+    readonly cardsNeededToMin: number;
+    readonly cardsOverMax: number;
+    readonly slotsRemainingToMax: number;
+}
+
 function normalizeDeckIdentityValue(value: string | null | undefined, fallback: string): string {
     const normalized = value?.trim();
 
@@ -123,6 +130,60 @@ export function countDeckCards(cards: readonly ExpeditionCardStack[]): number {
     }
 
     return total;
+}
+
+export function summarizeDeckCapacity(cards: readonly ExpeditionCardStack[]): DeckCapacitySummary {
+    const count = countDeckCards(cards);
+
+    return {
+        count,
+        cardsNeededToMin: Math.max(DECK_CARD_MIN - count, 0),
+        cardsOverMax: Math.max(count - DECK_CARD_MAX, 0),
+        slotsRemainingToMax: Math.max(DECK_CARD_MAX - count, 0),
+    };
+}
+
+export function adjustDeckCardCount(
+    cards: readonly ExpeditionCardStack[],
+    cardId: string,
+    delta: number,
+): ExpeditionCardStack[] {
+    const normalizedDelta = Number.isFinite(delta) ? Math.trunc(delta) : 0;
+
+    if (normalizedDelta === 0) {
+        return cloneDeckCardStacks(cards);
+    }
+
+    const updatedCards: ExpeditionCardStack[] = [];
+    let found = false;
+
+    for (let i = 0; i < cards.length; i += 1) {
+        const card = cards[i];
+
+        if (card.id !== cardId) {
+            updatedCards.push({ ...card });
+            continue;
+        }
+
+        found = true;
+        const nextCount = card.count + normalizedDelta;
+
+        if (nextCount > 0) {
+            updatedCards.push({
+                id: card.id,
+                count: nextCount,
+            });
+        }
+    }
+
+    if (!found && normalizedDelta > 0) {
+        updatedCards.push({
+            id: cardId,
+            count: normalizedDelta,
+        });
+    }
+
+    return updatedCards;
 }
 
 export function validateDeckSize(cards: readonly ExpeditionCardStack[]): DeckValidityReason | null {
