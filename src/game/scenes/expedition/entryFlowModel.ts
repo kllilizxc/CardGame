@@ -1,5 +1,7 @@
 import type { PersistentStash, RunResolutionSummary, RunSnapshot } from '../../types/expedition';
 import {
+    DECK_CARD_MAX,
+    DECK_CARD_MIN,
     getSelectedDeckCards,
     getSelectedSavedDeck,
     validateDeckAvailability,
@@ -32,6 +34,22 @@ export interface PreparationDeckHandoffSummary {
     title: string;
     detail: string;
     tone: 'positive' | 'neutral' | 'warning';
+}
+
+export interface PreparationSelectedLoadoutSummary {
+    selectedDeckName: string;
+    deckCount: number;
+    itemCount: number;
+    spiritStones: number;
+    readiness: PreparationDeckReadiness;
+    readinessLabel: string;
+    headline: string;
+    detail: string;
+    footer: string;
+    shortageCardKinds: number;
+    shortageCardCopies: number;
+    deckPreviewLines: string[];
+    itemPreviewLines: string[];
 }
 
 export interface RunSummary {
@@ -115,6 +133,10 @@ function getPreparationDeckReadinessLabel(readiness: PreparationDeckReadiness): 
         case 'insufficient-copies':
             return '缺少库存卡牌';
     }
+}
+
+function formatPreparationPreviewLine(stack: { id: string; count: number }): string {
+    return `${stack.id} ×${stack.count}`;
 }
 
 function formatPreparationDeckContext(prefix: string, context: PreparationDeckContext): string {
@@ -240,6 +262,75 @@ export function createPreparationDeckHandoffSummary(
         title: selectedDeckChanged ? '当前带入已切换' : '卡组改动已同步',
         detail: detailParts.join(''),
         tone,
+    };
+}
+
+export function createPreparationSelectedLoadoutSummary(
+    stash: PersistentStash,
+): PreparationSelectedLoadoutSummary {
+    const selectedDeck = getSelectedSavedDeck(stash);
+    const selectedDeckCards = getSelectedDeckCards(stash);
+    const deckCount = countStacks(selectedDeckCards);
+    const itemCount = countStacks(stash.items);
+    const readiness = getPreparationDeckReadiness(stash);
+    const readinessLabel = getPreparationDeckReadinessLabel(readiness);
+    const sizeIssue = selectedDeck ? validateDeckSize(selectedDeck.cards) : null;
+    const availabilityIssues = selectedDeck ? validateDeckAvailability(selectedDeck.cards, stash.cards) : [];
+    const shortageCardKinds = availabilityIssues.length;
+    const shortageCardCopies = availabilityIssues.reduce(
+        (sum, issue) => sum + Math.max(0, issue.required - issue.available),
+        0,
+    );
+
+    let headline = '尚未选择卡组';
+    let detail = '请先选择或创建一套满足要求的卡组，再确认本次带入。';
+    let footer = '当前不会创建新的秘境带入快照。';
+
+    switch (readiness) {
+        case 'ready':
+            headline = '当前卡组已可带入';
+            detail = '满足 20-40 张且所有卡牌均在储物袋中。';
+            footer = `确认时会携带 ${deckCount} 张卡、${itemCount} 件道具与 ${stash.spiritStones} 枚灵石进入秘境。`;
+            break;
+        case 'too-few-cards':
+            headline = '当前卡组张数不足';
+            detail = `还差 ${(sizeIssue?.kind === 'too-few-cards' ? sizeIssue.min - sizeIssue.count : DECK_CARD_MIN - deckCount)} 张才能达到 ${DECK_CARD_MIN} 张。`;
+            footer = '补足牌数后，会按当前所示卡组与物资进入秘境。';
+            break;
+        case 'too-many-cards':
+            headline = '当前卡组超出上限';
+            detail = `超出 ${(sizeIssue?.kind === 'too-many-cards' ? sizeIssue.count - sizeIssue.max : deckCount - DECK_CARD_MAX)} 张，请精简到 ${DECK_CARD_MAX} 张内。`;
+            footer = '精简卡组后，会按当前所示卡组与物资进入秘境。';
+            break;
+        case 'insufficient-copies':
+            headline = '当前卡组库存不足';
+            detail = shortageCardKinds === 1
+                ? `1 种卡牌库存不足，共缺 ${shortageCardCopies} 张。`
+                : `${shortageCardKinds} 种卡牌库存不足，共缺 ${shortageCardCopies} 张。`;
+            footer = '补齐库存卡牌后，会按当前所示卡组与物资进入秘境。';
+            break;
+        case 'none':
+            break;
+    }
+
+    return {
+        selectedDeckName: selectedDeck?.name ?? '未选择卡组',
+        deckCount,
+        itemCount,
+        spiritStones: stash.spiritStones,
+        readiness,
+        readinessLabel,
+        headline,
+        detail,
+        footer,
+        shortageCardKinds,
+        shortageCardCopies,
+        deckPreviewLines: selectedDeckCards.length > 0
+            ? selectedDeckCards.map(formatPreparationPreviewLine)
+            : ['无'],
+        itemPreviewLines: stash.items.length > 0
+            ? stash.items.map(formatPreparationPreviewLine)
+            : ['无'],
     };
 }
 

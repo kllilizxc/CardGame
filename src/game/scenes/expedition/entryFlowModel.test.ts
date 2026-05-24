@@ -8,6 +8,7 @@ import { ExpeditionState } from '../../state/ExpeditionState';
 import {
     createPreparationDeckContext,
     createPreparationDeckHandoffSummary,
+    createPreparationSelectedLoadoutSummary,
     createPostRunEntranceStatus,
     createPreparationSummary,
     createRunResolutionSummaryView,
@@ -30,6 +31,76 @@ describe('entryFlowModel', () => {
             itemCount: 3,
             spiritStones: 36,
             statusText: '储物袋已备好：20 张卡、3 件道具、36 枚灵石。',
+        });
+    });
+
+    it('summarizes the currently selected preparation loadout for quick scanning', () => {
+        const state = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+        });
+
+        expect(createPreparationSelectedLoadoutSummary(state.persistentStash)).toMatchObject({
+            selectedDeckName: '功能测试卡组',
+            deckCount: 20,
+            itemCount: 3,
+            spiritStones: 36,
+            readiness: 'ready',
+            readinessLabel: '已满足带入要求',
+            headline: '当前卡组已可带入',
+            detail: '满足 20-40 张且所有卡牌均在储物袋中。',
+            footer: '确认时会携带 20 张卡、3 件道具与 36 枚灵石进入秘境。',
+            shortageCardKinds: 0,
+            shortageCardCopies: 0,
+            deckPreviewLines: [
+                'SX_YJZ_001 ×3',
+                'SX_YJS_001 ×3',
+                'SX_TY_001 ×3',
+                'SX_JXTM_001 ×2',
+                'SX_JYNX_001 ×1',
+                'AR_001 ×3',
+                'AR_002 ×2',
+                'AR_004 ×3',
+            ],
+            itemPreviewLines: [
+                'tool.return-rope ×1',
+                'consumable.spirit-salve ×2',
+            ],
+        });
+    });
+
+    it('highlights inventory shortages in the selected preparation loadout summary', () => {
+        const stash = {
+            stashId: 'phase01.starter-stash',
+            cards: [
+                { id: 'AR_001', count: 3 },
+                { id: 'AR_002', count: 2 },
+            ],
+            savedDecks: [{
+                id: 'shortage',
+                name: '缺牌卡组',
+                cards: [
+                    { id: 'AR_001', count: 4 },
+                    { id: 'AR_002', count: 3 },
+                    { id: 'AR_003', count: 13 },
+                ],
+            }],
+            selectedDeckId: 'shortage',
+            items: [],
+            spiritStones: 18,
+            lastRunSummary: null,
+        };
+
+        expect(createPreparationSelectedLoadoutSummary(stash)).toMatchObject({
+            selectedDeckName: '缺牌卡组',
+            deckCount: 20,
+            readiness: 'insufficient-copies',
+            readinessLabel: '缺少库存卡牌',
+            headline: '当前卡组库存不足',
+            detail: '3 种卡牌库存不足，共缺 15 张。',
+            footer: '补齐库存卡牌后，会按当前所示卡组与物资进入秘境。',
+            shortageCardKinds: 3,
+            shortageCardCopies: 15,
         });
     });
 
