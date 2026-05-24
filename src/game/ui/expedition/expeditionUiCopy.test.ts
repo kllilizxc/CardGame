@@ -13,16 +13,20 @@ describe('expedition UI Chinese copy', () => {
 
     it('uses Chinese loadout labels in the preparation panel', () => {
         const panel = read('src/game/ui/expedition/PreparationPanel.ts');
+        const model = read('src/game/scenes/expedition/entryFlowModel.ts');
+        const loadoutCopy = `${panel}\n${model}`;
 
         expect(panel).toContain('选择要带入秘境的卡组；卡组需满足20-40张且所有卡牌均在储物袋中。');
         expect(panel).toContain('管理卡组');
-        expect(panel).toContain('卡组符合要求，可以带入秘境。');
-        expect(panel).toContain('卡组数量不足');
-        expect(panel).toContain('卡组数量超限');
+        expect(loadoutCopy).toContain('卡组符合要求，可以带入秘境。');
+        expect(loadoutCopy).toContain('卡组数量不足');
+        expect(loadoutCopy).toContain('卡组数量超限');
         expect(panel).toContain('库存不足');
         expect(panel).toContain('当前带入卡组');
+        expect(panel).toContain('构成速览');
+        expect(panel).toContain('缺口预览');
         expect(panel).toContain('本次携带一览');
-        expect(panel).toContain('卡组预览');
+        expect(panel).toContain('卡组构成');
         expect(panel).toContain('携带道具');
         expect(panel).toContain('灵石');
         expect(panel).not.toContain('第一阶段暂不开放卡组构筑');

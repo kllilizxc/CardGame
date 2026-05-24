@@ -1,3 +1,4 @@
+import type { CardKind } from '@data/types/cards/core';
 import type { PersistentStash, RunResolutionSummary, RunSnapshot } from '../../types/expedition';
 import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import {
@@ -41,6 +42,7 @@ export interface PreparationDeckHandoffSummary {
 export interface PreparationSelectedLoadoutSummary {
     selectedDeckName: string;
     deckCount: number;
+    uniqueCardCount: number;
     itemCount: number;
     spiritStones: number;
     readiness: PreparationDeckReadiness;
@@ -50,8 +52,21 @@ export interface PreparationSelectedLoadoutSummary {
     footer: string;
     shortageCardKinds: number;
     shortageCardCopies: number;
+    kindSummaryLine: string;
+    compositionLine: string;
+    issuePreviewLines: string[];
     deckPreviewLines: string[];
     itemPreviewLines: string[];
+}
+
+export interface PreparationDeckCardPreview {
+    deckCount: number;
+    uniqueCardCount: number;
+    readiness: PreparationDeckReadiness;
+    readinessLabel: string;
+    kindSummaryLine: string;
+    compositionLine: string;
+    issuePreviewLine: string;
 }
 
 export interface RunSummary {
@@ -89,7 +104,34 @@ export interface PreparationLoadoutValidationResult {
     availabilityIssues: DeckValidityReason[];
 }
 
-function countStacks<T extends CountableStack>(stacks: T[]): number {
+type PreparationCardKind = CardKind | 'unknown';
+
+interface PreparationCardKindCount {
+    kind: PreparationCardKind;
+    count: number;
+}
+
+const PREPARATION_CARD_KIND_LABELS: Record<PreparationCardKind, string> = {
+    unit: '单位',
+    artifact: '法宝',
+    talisman: '符箓',
+    field: '场地',
+    skill: '技能',
+    pill: '丹药',
+    unknown: '未分类',
+};
+
+const PREPARATION_CARD_KIND_ORDER: Record<PreparationCardKind, number> = {
+    skill: 0,
+    unit: 1,
+    artifact: 2,
+    talisman: 3,
+    field: 4,
+    pill: 5,
+    unknown: 6,
+};
+
+function countStacks<T extends CountableStack>(stacks: readonly T[]): number {
     return stacks.reduce((sum, stack) => sum + stack.count, 0);
 }
 
@@ -104,15 +146,10 @@ function createDeckCardSignature(stacks: Array<{ id: string; count: number }>): 
         .join('|');
 }
 
-function getPreparationDeckReadiness(stash: PersistentStash): PreparationDeckReadiness {
-    const selectedDeck = getSelectedSavedDeck(stash);
-
-    if (!selectedDeck) {
-        return 'none';
-    }
-
-    const sizeIssue = validateDeckSize(selectedDeck.cards);
-
+function getDeckReadinessFromValidation(
+    sizeIssue: DeckValidityReason | null,
+    availabilityIssues: DeckValidityReason[],
+): PreparationDeckReadiness {
     if (sizeIssue?.kind === 'too-few-cards') {
         return 'too-few-cards';
     }
@@ -121,11 +158,24 @@ function getPreparationDeckReadiness(stash: PersistentStash): PreparationDeckRea
         return 'too-many-cards';
     }
 
-    if (validateDeckAvailability(selectedDeck.cards, stash.cards).length > 0) {
+    if (availabilityIssues.length > 0) {
         return 'insufficient-copies';
     }
 
     return 'ready';
+}
+
+function getPreparationDeckReadiness(stash: PersistentStash): PreparationDeckReadiness {
+    const selectedDeck = getSelectedSavedDeck(stash);
+
+    if (!selectedDeck) {
+        return 'none';
+    }
+
+    const sizeIssue = validateDeckSize(selectedDeck.cards);
+    const availabilityIssues = validateDeckAvailability(selectedDeck.cards, stash.cards);
+
+    return getDeckReadinessFromValidation(sizeIssue, availabilityIssues);
 }
 
 function getPreparationDeckReadinessLabel(readiness: PreparationDeckReadiness): string {
@@ -154,6 +204,155 @@ function formatPreparationPreviewLine(
     metadata?: CardMetadataMap,
 ): string {
     return `${getPreparationCardDisplayName(stack.id, metadata)} ×${stack.count}`;
+}
+
+function formatPreparationInlinePreview(lines: string[], maxEntries: number): string {
+    if (lines.length === 0) {
+        return '无';
+    }
+
+    const visibleEntries = lines.slice(0, maxEntries);
+
+    if (lines.length <= maxEntries) {
+        return visibleEntries.join(' · ');
+    }
+
+    return `${visibleEntries.join(' · ')} · …另 ${lines.length - maxEntries} 项`;
+}
+
+function getPreparationCardKind(cardId: string, metadata?: CardMetadataMap): PreparationCardKind {
+    return metadata?.[cardId]?.kind ?? 'unknown';
+}
+
+function buildPreparationCardKindBreakdown(
+    stacks: readonly { id: string; count: number }[],
+    metadata?: CardMetadataMap,
+): PreparationCardKindCount[] {
+    const counts = new Map<PreparationCardKind, number>();
+
+    for (const stack of stacks) {
+        if (stack.count <= 0) {
+            continue;
+        }
+
+        const kind = getPreparationCardKind(stack.id, metadata);
+        counts.set(kind, (counts.get(kind) ?? 0) + stack.count);
+    }
+
+    return [...counts.entries()]
+        .map(([kind, count]) => ({ kind, count }))
+        .sort((left, right) => {
+            if (right.count !== left.count) {
+                return right.count - left.count;
+            }
+
+            return PREPARATION_CARD_KIND_ORDER[left.kind] - PREPARATION_CARD_KIND_ORDER[right.kind];
+        });
+}
+
+function formatPreparationKindSummary(
+    stacks: readonly { id: string; count: number }[],
+    metadata?: CardMetadataMap,
+    maxKinds = 3,
+): string {
+    const uniqueCardCount = stacks.filter((stack) => stack.count > 0).length;
+
+    if (uniqueCardCount === 0) {
+        return '暂无卡牌构成';
+    }
+
+    const breakdown = buildPreparationCardKindBreakdown(stacks, metadata);
+    const knownBreakdown = breakdown.filter((entry) => entry.kind !== 'unknown');
+
+    if (knownBreakdown.length === 0) {
+        return `${uniqueCardCount} 种卡 · 共 ${countStacks(stacks)} 张`;
+    }
+
+    const segments = knownBreakdown
+        .slice(0, maxKinds)
+        .map((entry) => `${PREPARATION_CARD_KIND_LABELS[entry.kind]} ${entry.count}`);
+
+    if (knownBreakdown.length > maxKinds) {
+        segments.push('…');
+    }
+
+    return [`${uniqueCardCount} 种卡`, ...segments].join(' · ');
+}
+
+function createPreparationShortagePreviewSegments(
+    issues: readonly DeckValidityReason[],
+    metadata?: CardMetadataMap,
+): string[] {
+    return [...issues]
+        .filter((issue): issue is Extract<DeckValidityReason, { kind: 'insufficient-copies' }> => issue.kind === 'insufficient-copies')
+        .sort((left, right) => {
+            const leftMissing = Math.max(0, left.required - left.available);
+            const rightMissing = Math.max(0, right.required - right.available);
+
+            if (rightMissing !== leftMissing) {
+                return rightMissing - leftMissing;
+            }
+
+            return getPreparationCardDisplayName(left.cardId, metadata)
+                .localeCompare(getPreparationCardDisplayName(right.cardId, metadata), 'zh-Hans-CN');
+        })
+        .map((issue) => `${getPreparationCardDisplayName(issue.cardId, metadata)} -${Math.max(0, issue.required - issue.available)}`);
+}
+
+export function createPreparationShortagePreviewLines(
+    issues: readonly DeckValidityReason[],
+    metadata?: CardMetadataMap,
+    maxLines = Number.POSITIVE_INFINITY,
+): string[] {
+    return createPreparationShortagePreviewSegments(issues, metadata)
+        .slice(0, maxLines)
+        .map((segment) => segment.replace(' -', ' 还差 ').concat(' 张'));
+}
+
+function createPreparationIssuePreviewLines(
+    readiness: PreparationDeckReadiness,
+    sizeIssue: DeckValidityReason | null,
+    availabilityIssues: DeckValidityReason[],
+    metadata?: CardMetadataMap,
+): string[] {
+    switch (readiness) {
+        case 'too-few-cards':
+            return [
+                `还差 ${(sizeIssue?.kind === 'too-few-cards' ? sizeIssue.min - sizeIssue.count : 0)} 张才能达到 ${DECK_CARD_MIN} 张。`,
+            ];
+        case 'too-many-cards':
+            return [
+                `超出 ${(sizeIssue?.kind === 'too-many-cards' ? sizeIssue.count - sizeIssue.max : 0)} 张，请精简到 ${DECK_CARD_MAX} 张内。`,
+            ];
+        case 'insufficient-copies':
+            return createPreparationShortagePreviewLines(availabilityIssues, metadata, 3);
+        case 'none':
+        case 'ready':
+            return [];
+    }
+}
+
+function createPreparationDeckCardIssuePreviewLine(
+    readiness: PreparationDeckReadiness,
+    sizeIssue: DeckValidityReason | null,
+    availabilityIssues: DeckValidityReason[],
+    metadata?: CardMetadataMap,
+): string {
+    switch (readiness) {
+        case 'ready':
+            return '库存充足，可直接带入。';
+        case 'too-few-cards':
+            return `还差 ${(sizeIssue?.kind === 'too-few-cards' ? sizeIssue.min - sizeIssue.count : 0)} 张达到 ${DECK_CARD_MIN} 张。`;
+        case 'too-many-cards':
+            return `超出 ${(sizeIssue?.kind === 'too-many-cards' ? sizeIssue.count - sizeIssue.max : 0)} 张，请精简。`;
+        case 'insufficient-copies':
+            return `缺牌：${formatPreparationInlinePreview(
+                createPreparationShortagePreviewSegments(availabilityIssues, metadata),
+                2,
+            )}`;
+        case 'none':
+            return '请先选择卡组。';
+    }
 }
 
 function formatPreparationDeckContext(prefix: string, context: PreparationDeckContext): string {
@@ -289,6 +488,7 @@ export function createPreparationSelectedLoadoutSummary(
     const selectedDeck = getSelectedSavedDeck(stash);
     const selectedDeckCards = getSelectedDeckCards(stash);
     const deckCount = countStacks(selectedDeckCards);
+    const uniqueCardCount = selectedDeckCards.filter((stack) => stack.count > 0).length;
     const itemCount = countStacks(stash.items);
     const readiness = getPreparationDeckReadiness(stash);
     const readinessLabel = getPreparationDeckReadinessLabel(readiness);
@@ -331,9 +531,20 @@ export function createPreparationSelectedLoadoutSummary(
             break;
     }
 
+    const deckPreviewLines = selectedDeckCards.length > 0
+        ? selectedDeckCards.map((stack) => formatPreparationPreviewLine(stack, metadata))
+        : ['无'];
+    const issuePreviewLines = createPreparationIssuePreviewLines(
+        readiness,
+        sizeIssue,
+        availabilityIssues,
+        metadata,
+    );
+
     return {
         selectedDeckName: selectedDeck?.name ?? '未选择卡组',
         deckCount,
+        uniqueCardCount,
         itemCount,
         spiritStones: stash.spiritStones,
         readiness,
@@ -343,12 +554,41 @@ export function createPreparationSelectedLoadoutSummary(
         footer,
         shortageCardKinds,
         shortageCardCopies,
-        deckPreviewLines: selectedDeckCards.length > 0
-            ? selectedDeckCards.map((stack) => formatPreparationPreviewLine(stack, metadata))
-            : ['无'],
+        kindSummaryLine: formatPreparationKindSummary(selectedDeckCards, metadata),
+        compositionLine: formatPreparationInlinePreview(deckPreviewLines, 4),
+        issuePreviewLines,
+        deckPreviewLines,
         itemPreviewLines: stash.items.length > 0
             ? stash.items.map((stack) => formatPreparationPreviewLine(stack))
             : ['无'],
+    };
+}
+
+export function createPreparationDeckCardPreview(
+    deck: { cards: readonly { id: string; count: number }[] },
+    stashCards: readonly { id: string; count: number }[],
+    metadata?: CardMetadataMap,
+): PreparationDeckCardPreview {
+    const sizeIssue = validateDeckSize(deck.cards);
+    const availabilityIssues = validateDeckAvailability(deck.cards, stashCards);
+    const readiness = getDeckReadinessFromValidation(sizeIssue, availabilityIssues);
+    const compositionPreviewLines = deck.cards
+        .filter((stack) => stack.count > 0)
+        .map((stack) => formatPreparationPreviewLine(stack, metadata));
+
+    return {
+        deckCount: countStacks(deck.cards),
+        uniqueCardCount: deck.cards.filter((stack) => stack.count > 0).length,
+        readiness,
+        readinessLabel: getPreparationDeckReadinessLabel(readiness),
+        kindSummaryLine: formatPreparationKindSummary(deck.cards, metadata, 2),
+        compositionLine: formatPreparationInlinePreview(compositionPreviewLines, 3),
+        issuePreviewLine: createPreparationDeckCardIssuePreviewLine(
+            readiness,
+            sizeIssue,
+            availabilityIssues,
+            metadata,
+        ),
     };
 }
 

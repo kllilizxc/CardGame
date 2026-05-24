@@ -8,6 +8,7 @@ import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import { ExpeditionState } from '../../state/ExpeditionState';
 import { validateExpeditionLoadout } from './expeditionEntryFlow';
 import {
+    createPreparationDeckCardPreview,
     createPreparationDeckContext,
     createPreparationDeckHandoffSummary,
     createPreparationSelectedLoadoutSummary,
@@ -19,9 +20,9 @@ import {
 } from './entryFlowModel';
 
 const PREPARATION_CARD_METADATA: CardMetadataMap = {
-    AR_001: { name: '青云剑' },
-    AR_002: { name: '流云符' },
-    SX_YJZ_001: { name: '一剑斩' },
+    AR_001: { name: '青云剑', kind: 'artifact' },
+    AR_002: { name: '流云符', kind: 'talisman' },
+    SX_YJZ_001: { name: '一剑斩', kind: 'skill' },
 };
 
 describe('entryFlowModel', () => {
@@ -52,6 +53,7 @@ describe('entryFlowModel', () => {
         expect(createPreparationSelectedLoadoutSummary(state.persistentStash)).toMatchObject({
             selectedDeckName: '功能测试卡组',
             deckCount: 20,
+            uniqueCardCount: 8,
             itemCount: 3,
             spiritStones: 36,
             readiness: 'ready',
@@ -61,6 +63,9 @@ describe('entryFlowModel', () => {
             footer: '确认时会携带 20 张卡、3 件道具与 36 枚灵石进入秘境。',
             shortageCardKinds: 0,
             shortageCardCopies: 0,
+            kindSummaryLine: '8 种卡 · 共 20 张',
+            compositionLine: 'SX_YJZ_001 ×3 · SX_YJS_001 ×3 · SX_TY_001 ×3 · SX_JXTM_001 ×2 · …另 4 项',
+            issuePreviewLines: [],
             deckPreviewLines: [
                 'SX_YJZ_001 ×3',
                 'SX_YJS_001 ×3',
@@ -103,6 +108,7 @@ describe('entryFlowModel', () => {
         expect(createPreparationSelectedLoadoutSummary(stash)).toMatchObject({
             selectedDeckName: '缺牌卡组',
             deckCount: 20,
+            uniqueCardCount: 3,
             readiness: 'insufficient-copies',
             readinessLabel: '缺少库存卡牌',
             headline: '当前卡组库存不足',
@@ -110,6 +116,13 @@ describe('entryFlowModel', () => {
             footer: '补齐库存卡牌后，会按当前所示卡组与物资进入秘境。',
             shortageCardKinds: 3,
             shortageCardCopies: 15,
+            kindSummaryLine: '3 种卡 · 共 20 张',
+            compositionLine: 'AR_001 ×4 · AR_002 ×3 · AR_003 ×13',
+            issuePreviewLines: [
+                'AR_003 还差 13 张',
+                'AR_001 还差 1 张',
+                'AR_002 还差 1 张',
+            ],
         });
     });
 
@@ -136,11 +149,44 @@ describe('entryFlowModel', () => {
             lastRunSummary: null,
         };
 
-        expect(createPreparationSelectedLoadoutSummary(stash, PREPARATION_CARD_METADATA).deckPreviewLines).toEqual([
-            '青云剑 ×3',
-            '流云符 ×2',
-            'AR_003 ×13',
-        ]);
+        expect(createPreparationSelectedLoadoutSummary(stash, PREPARATION_CARD_METADATA)).toMatchObject({
+            kindSummaryLine: '3 种卡 · 法宝 3 · 符箓 2',
+            compositionLine: '青云剑 ×3 · 流云符 ×2 · AR_003 ×13',
+            deckPreviewLines: [
+                '青云剑 ×3',
+                '流云符 ×2',
+                'AR_003 ×13',
+            ],
+        });
+    });
+
+    it('builds compact deck-card previews with composition and shortage details', () => {
+        const deck = {
+            id: 'shortage',
+            name: '缺牌卡组',
+            cards: [
+                { id: 'AR_001', count: 4 },
+                { id: 'AR_002', count: 3 },
+                { id: 'AR_003', count: 13 },
+            ],
+        };
+
+        expect(createPreparationDeckCardPreview(
+            deck,
+            [
+                { id: 'AR_001', count: 3 },
+                { id: 'AR_002', count: 2 },
+            ],
+            PREPARATION_CARD_METADATA,
+        )).toEqual({
+            deckCount: 20,
+            uniqueCardCount: 3,
+            readiness: 'insufficient-copies',
+            readinessLabel: '缺少库存卡牌',
+            kindSummaryLine: '3 种卡 · 法宝 4 · 符箓 3',
+            compositionLine: '青云剑 ×4 · 流云符 ×3 · AR_003 ×13',
+            issuePreviewLine: '缺牌：AR_003 -13 · 流云符 -1 · …另 1 项',
+        });
     });
 
     it('uses metadata-backed card names in preparation validation copy with raw-id fallback', () => {
