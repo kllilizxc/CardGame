@@ -24,7 +24,8 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).toContain('库存不足');
         expect(panel).toContain('当前带入卡组');
         expect(panel).toContain('构成速览');
-        expect(panel).toContain('缺口预览');
+        expect(panel).toContain('出发校验');
+        expect(panel).toContain('缺口重点');
         expect(panel).toContain('本次携带一览');
         expect(panel).toContain('卡组构成');
         expect(panel).toContain('携带道具');

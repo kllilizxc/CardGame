@@ -40,7 +40,8 @@ interface DeckDisplayState {
     uniqueCardCount: number;
     selectionLabel: string;
     statusLabel: string;
-    detailText: string;
+    previewLabel: string;
+    previewText: string;
     footerText: string;
     fillColor: number;
     hoverFillColor: number;
@@ -50,7 +51,11 @@ interface DeckDisplayState {
     selectionBadgeBackgroundColor: string;
     statusBadgeColor: string;
     statusBadgeBackgroundColor: string;
-    detailColor: string;
+    countColor: string;
+    previewLabelColor: string;
+    previewTextColor: string;
+    previewFillColor: number;
+    previewBorderColor: number;
     footerFillColor: number;
     footerTextColor: string;
     shadowColor: number;
@@ -77,9 +82,9 @@ interface SelectedLoadoutColors {
 }
 
 const DECK_CARD_WIDTH = 244;
-const DECK_CARD_HEIGHT = 152;
+const DECK_CARD_HEIGHT = 166;
 const DECK_CARD_GAP = 14;
-const LOADOUT_SUMMARY_HEIGHT = 208;
+const LOADOUT_SUMMARY_HEIGHT = 224;
 
 function validateDeckForDisplay(
     deck: SavedDeck,
@@ -147,7 +152,10 @@ function createDeckDisplayState(
     const selectionLabel = isSelected ? '已选定' : '备选卡组';
     const selectionBadgeColor = isSelected ? '#dbeafe' : '#e2e8f0';
     const selectionBadgeBackgroundColor = isSelected ? '#1d4ed8' : '#334155';
-    const detailText = `构成：${preview.compositionLine}`;
+    const missingCopies = validation.availabilityIssues.reduce(
+        (sum, issue) => sum + (issue.kind === 'insufficient-copies' ? Math.max(0, issue.required - issue.available) : 0),
+        0,
+    );
 
     if (validation.valid && isSelected) {
         return {
@@ -155,7 +163,8 @@ function createDeckDisplayState(
             uniqueCardCount: preview.uniqueCardCount,
             selectionLabel,
             statusLabel: '可出发',
-            detailText,
+            previewLabel: '构成速览',
+            previewText: `库存齐备，可直接确认带入。\n${preview.kindSummaryLine}\n${preview.compositionLine}`,
             footerText: '库存充足，当前带入可直接确认。',
             fillColor: 0x14264a,
             hoverFillColor: 0x1a3571,
@@ -165,7 +174,11 @@ function createDeckDisplayState(
             selectionBadgeBackgroundColor,
             statusBadgeColor: '#dbeafe',
             statusBadgeBackgroundColor: '#166534',
-            detailColor: '#bfdbfe',
+            countColor: '#bfdbfe',
+            previewLabelColor: '#93c5fd',
+            previewTextColor: '#eff6ff',
+            previewFillColor: 0x0f1d38,
+            previewBorderColor: 0x1d4ed8,
             footerFillColor: 0x0f1d38,
             footerTextColor: '#dbeafe',
             shadowColor: 0x1d4ed8,
@@ -179,7 +192,8 @@ function createDeckDisplayState(
             uniqueCardCount: preview.uniqueCardCount,
             selectionLabel,
             statusLabel: '可带入',
-            detailText,
+            previewLabel: '构成速览',
+            previewText: `库存齐备，点按即可切换。\n${preview.kindSummaryLine}\n${preview.compositionLine}`,
             footerText: '库存充足，点按即可切换为本次带入。',
             fillColor: 0x12201d,
             hoverFillColor: 0x163123,
@@ -189,7 +203,11 @@ function createDeckDisplayState(
             selectionBadgeBackgroundColor,
             statusBadgeColor: '#dcfce7',
             statusBadgeBackgroundColor: '#166534',
-            detailColor: '#bbf7d0',
+            countColor: '#bbf7d0',
+            previewLabelColor: '#86efac',
+            previewTextColor: '#f0fdf4',
+            previewFillColor: 0x0e1c17,
+            previewBorderColor: 0x166534,
             footerFillColor: 0x0e1c17,
             footerTextColor: '#dcfce7',
             shadowColor: 0x020617,
@@ -203,7 +221,8 @@ function createDeckDisplayState(
             uniqueCardCount: preview.uniqueCardCount,
             selectionLabel,
             statusLabel: '张数不足',
-            detailText,
+            previewLabel: '当前重点',
+            previewText: `还差 ${(validation.sizeIssue?.kind === 'too-few-cards' ? validation.sizeIssue.min - validation.sizeIssue.count : 0)} 张达到出发线。\n${preview.kindSummaryLine}\n${preview.issuePreviewLine}`,
             footerText: preview.issuePreviewLine,
             fillColor: isSelected ? 0x372215 : 0x2f1d12,
             hoverFillColor: isSelected ? 0x46301e : 0x3b2416,
@@ -213,7 +232,11 @@ function createDeckDisplayState(
             selectionBadgeBackgroundColor,
             statusBadgeColor: '#fef3c7',
             statusBadgeBackgroundColor: '#92400e',
-            detailColor: '#fde68a',
+            countColor: '#fde68a',
+            previewLabelColor: '#fcd34d',
+            previewTextColor: '#fffbeb',
+            previewFillColor: 0x291d0e,
+            previewBorderColor: 0xb45309,
             footerFillColor: 0x291d0e,
             footerTextColor: '#fde68a',
             shadowColor: isSelected ? 0x1d4ed8 : 0x020617,
@@ -227,7 +250,8 @@ function createDeckDisplayState(
             uniqueCardCount: preview.uniqueCardCount,
             selectionLabel,
             statusLabel: '超出上限',
-            detailText,
+            previewLabel: '当前重点',
+            previewText: `超出 ${(validation.sizeIssue?.kind === 'too-many-cards' ? validation.sizeIssue.count - validation.sizeIssue.max : 0)} 张，请精简后再确认。\n${preview.kindSummaryLine}\n${preview.issuePreviewLine}`,
             footerText: preview.issuePreviewLine,
             fillColor: isSelected ? 0x3f1d2e : 0x2f1721,
             hoverFillColor: isSelected ? 0x4c1d30 : 0x3a1822,
@@ -237,7 +261,11 @@ function createDeckDisplayState(
             selectionBadgeBackgroundColor,
             statusBadgeColor: '#fee2e2',
             statusBadgeBackgroundColor: '#b91c1c',
-            detailColor: '#fecaca',
+            countColor: '#fecaca',
+            previewLabelColor: '#fda4af',
+            previewTextColor: '#fff1f2',
+            previewFillColor: 0x29131b,
+            previewBorderColor: 0x9f1239,
             footerFillColor: 0x29131b,
             footerTextColor: '#fecaca',
             shadowColor: isSelected ? 0x1d4ed8 : 0x020617,
@@ -250,7 +278,8 @@ function createDeckDisplayState(
         uniqueCardCount: preview.uniqueCardCount,
         selectionLabel,
         statusLabel: '库存不足',
-        detailText: `构成：${preview.kindSummaryLine}`,
+        previewLabel: '缺口重点',
+        previewText: `${validation.availabilityIssues.length} 种卡共缺 ${missingCopies} 张。\n${preview.issuePreviewLine}\n${preview.kindSummaryLine}`,
         footerText: preview.issuePreviewLine,
         fillColor: isSelected ? 0x3f1d2e : 0x2f1721,
         hoverFillColor: isSelected ? 0x4c1d30 : 0x3f1d2e,
@@ -260,7 +289,11 @@ function createDeckDisplayState(
         selectionBadgeBackgroundColor,
         statusBadgeColor: '#fee2e2',
         statusBadgeBackgroundColor: '#b91c1c',
-        detailColor: '#fecaca',
+        countColor: '#fecaca',
+        previewLabelColor: '#fda4af',
+        previewTextColor: '#fff1f2',
+        previewFillColor: 0x29131b,
+        previewBorderColor: 0x9f1239,
         footerFillColor: 0x29131b,
         footerTextColor: '#fecaca',
         shadowColor: isSelected ? 0x1d4ed8 : 0x020617,
@@ -470,7 +503,7 @@ export class PreparationPanel extends GameObjects.Container {
         const selectedDeckId = selectedDeck?.id ?? null;
         const selectedLoadoutColors = getSelectedLoadoutColors(selectedLoadoutSummary);
         const deckPreviewColumns = splitPreviewColumns(selectedLoadoutSummary.deckPreviewLines, 8, 2);
-        const itemPreviewText = formatPreviewBulletList(selectedLoadoutSummary.itemPreviewLines, 4);
+        const itemPreviewText = formatPreviewBulletList(selectedLoadoutSummary.itemPreviewLines, 3);
 
         const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x030712, 0.8);
         const shadow = this.scene.add.rectangle(panelX, panelY + 12, panelWidth + 16, panelHeight + 16, 0x020617, 0.42);
@@ -634,61 +667,64 @@ export class PreparationPanel extends GameObjects.Container {
             fontSize: '15px',
             color: selectedLoadoutColors.mutedColor,
         });
-        const selectedDeckHeadline = this.scene.add.text(contentLeft + 18, selectedDeckCount.y + 24, selectedLoadoutSummary.headline, {
+        const selectedDeckReadinessPanelTop = selectedDeckCount.y + 18;
+        const selectedDeckReadinessPanelHeight = 42;
+        const selectedDeckReadinessPanel = this.scene.add.rectangle(
+            contentLeft + selectedDeckSummaryWidth / 2,
+            selectedDeckReadinessPanelTop + selectedDeckReadinessPanelHeight / 2,
+            selectedDeckSummaryWidth - 36,
+            selectedDeckReadinessPanelHeight,
+            selectedLoadoutColors.fillColor,
+            0.72,
+        );
+        selectedDeckReadinessPanel.setStrokeStyle(1, selectedLoadoutColors.borderColor, 0.58);
+        const selectedDeckReadinessLabel = this.scene.add.text(contentLeft + 30, selectedDeckReadinessPanelTop + 7, '出发校验', {
             fontFamily: 'Arial',
-            fontSize: '17px',
-            color: selectedLoadoutColors.headlineColor,
+            fontSize: '12px',
+            color: selectedLoadoutColors.mutedColor,
             fontStyle: 'bold',
-            wordWrap: { width: selectedDeckSummaryWidth - 36 },
         });
-        const selectedDeckDetail = this.scene.add.text(contentLeft + 18, selectedDeckHeadline.y + selectedDeckHeadline.height + 8, selectedLoadoutSummary.detail, {
+        const selectedDeckReadinessText = this.scene.add.text(
+            contentLeft + 30,
+            selectedDeckReadinessLabel.y + 18,
+            selectedLoadoutSummary.detail,
+            {
+                fontFamily: 'Arial',
+                fontSize: '12px',
+                color: selectedLoadoutColors.headlineColor,
+                wordWrap: { width: selectedDeckSummaryWidth - 60 },
+                lineSpacing: 2,
+            },
+        );
+        const selectedDeckCompositionPanelTop = selectedDeckReadinessPanelTop + selectedDeckReadinessPanelHeight + 8;
+        const selectedDeckCompositionPanelHeight = 42;
+        const selectedDeckCompositionPanel = this.scene.add.rectangle(
+            contentLeft + selectedDeckSummaryWidth / 2,
+            selectedDeckCompositionPanelTop + selectedDeckCompositionPanelHeight / 2,
+            selectedDeckSummaryWidth - 36,
+            selectedDeckCompositionPanelHeight,
+            0x0b1220,
+            0.9,
+        );
+        selectedDeckCompositionPanel.setStrokeStyle(1, selectedLoadoutColors.borderColor, 0.42);
+        const selectedDeckCompositionLabel = this.scene.add.text(contentLeft + 30, selectedDeckCompositionPanelTop + 7, '构成速览', {
             fontFamily: 'Arial',
-            fontSize: '14px',
-            color: selectedLoadoutColors.detailColor,
-            wordWrap: { width: selectedDeckSummaryWidth - 36 },
-            lineSpacing: 4,
-        });
-        const selectedDeckCompositionLabel = this.scene.add.text(contentLeft + 18, selectedDeckDetail.y + selectedDeckDetail.height + 10, '构成速览', {
-            fontFamily: 'Arial',
-            fontSize: '13px',
+            fontSize: '12px',
             color: selectedLoadoutColors.mutedColor,
             fontStyle: 'bold',
         });
         const selectedDeckComposition = this.scene.add.text(
-            contentLeft + 18,
+            contentLeft + 30,
             selectedDeckCompositionLabel.y + 18,
             `${selectedLoadoutSummary.kindSummaryLine}\n${selectedLoadoutSummary.compositionLine}`,
             {
                 fontFamily: 'Arial',
-                fontSize: '13px',
+                fontSize: '11px',
                 color: selectedLoadoutColors.headlineColor,
-                wordWrap: { width: selectedDeckSummaryWidth - 36 },
-                lineSpacing: 4,
+                wordWrap: { width: selectedDeckSummaryWidth - 60 },
+                lineSpacing: 2,
             },
         );
-        let selectedDeckIssueLabel: GameObjects.Text | undefined;
-        let selectedDeckIssueText: GameObjects.Text | undefined;
-
-        if (selectedLoadoutSummary.issuePreviewLines.length > 0) {
-            selectedDeckIssueLabel = this.scene.add.text(contentLeft + 18, selectedDeckComposition.y + selectedDeckComposition.height + 10, '缺口预览', {
-                fontFamily: 'Arial',
-                fontSize: '13px',
-                color: selectedLoadoutColors.mutedColor,
-                fontStyle: 'bold',
-            });
-            selectedDeckIssueText = this.scene.add.text(
-                contentLeft + 18,
-                selectedDeckIssueLabel.y + 18,
-                selectedLoadoutSummary.issuePreviewLines.slice(0, 2).map((line) => `• ${line}`).join('\n'),
-                {
-                    fontFamily: 'Arial',
-                    fontSize: '13px',
-                    color: selectedLoadoutColors.detailColor,
-                    wordWrap: { width: selectedDeckSummaryWidth - 36 },
-                    lineSpacing: 4,
-                },
-            );
-        }
         const selectedDeckFooter = this.scene.add.text(
             contentLeft + 18,
             loadoutTop + LOADOUT_SUMMARY_HEIGHT - 18,
@@ -742,50 +778,127 @@ export class PreparationPanel extends GameObjects.Container {
             stroke: 0xf59e0b,
             value: '#fef3c7',
         });
-        const previewTop = metricChipY + 18;
-        const previewGap = 18;
-        const deckPreviewWidth = Math.floor((carriedLoadoutWidth - 36 - previewGap) * 0.66);
-        const itemPreviewWidth = carriedLoadoutWidth - 36 - previewGap - deckPreviewWidth;
-        const carriedDeckHeading = this.scene.add.text(carriedLoadoutLeft + 18, previewTop, '卡组构成', {
+        const previewTop = metricChipY + 24;
+        const previewGap = 16;
+        const utilityColumnWidth = 184;
+        const deckPreviewWidth = carriedLoadoutWidth - 36 - previewGap - utilityColumnWidth;
+        const previewPanelHeight = LOADOUT_SUMMARY_HEIGHT - (previewTop - loadoutTop) - 18;
+        const itemPanelHeight = 50;
+        const readinessPanelHeight = previewPanelHeight - itemPanelHeight - 8;
+        const carriedDeckPanel = this.scene.add.rectangle(
+            carriedLoadoutLeft + 18 + deckPreviewWidth / 2,
+            previewTop + previewPanelHeight / 2,
+            deckPreviewWidth,
+            previewPanelHeight,
+            0x0b1220,
+            0.92,
+        );
+        carriedDeckPanel.setStrokeStyle(1, 0x3b82f6, 0.42);
+        const carriedDeckHeading = this.scene.add.text(carriedLoadoutLeft + 18 + 12, previewTop + 10, '卡组构成', {
             fontFamily: 'Arial',
-            fontSize: '15px',
+            fontSize: '14px',
             color: '#93c5fd',
             fontStyle: 'bold',
         });
+        const carriedDeckSummary = this.scene.add.text(carriedDeckHeading.x, carriedDeckHeading.y + 18, selectedLoadoutSummary.kindSummaryLine, {
+            fontFamily: 'Arial',
+            fontSize: '12px',
+            color: '#bfdbfe',
+        });
         const deckPreviewColumnGap = 18;
-        const singleDeckPreviewColumnWidth = Math.floor((deckPreviewWidth - deckPreviewColumnGap) / 2);
-        const carriedDeckPreviewLeft = this.scene.add.text(carriedLoadoutLeft + 18, carriedDeckHeading.y + 22, deckPreviewColumns[0].join('\n'), {
+        const singleDeckPreviewColumnWidth = Math.floor((deckPreviewWidth - 24 - deckPreviewColumnGap) / 2);
+        const carriedDeckPreviewLeft = this.scene.add.text(carriedLoadoutLeft + 18 + 12, carriedDeckSummary.y + 24, deckPreviewColumns[0].join('\n'), {
             fontFamily: 'Courier New',
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#e2e8f0',
-            lineSpacing: 4,
+            lineSpacing: 3,
             wordWrap: { width: singleDeckPreviewColumnWidth },
         });
         const carriedDeckPreviewRight = this.scene.add.text(
-            carriedLoadoutLeft + 18 + singleDeckPreviewColumnWidth + deckPreviewColumnGap,
-            carriedDeckHeading.y + 22,
+            carriedLoadoutLeft + 18 + 12 + singleDeckPreviewColumnWidth + deckPreviewColumnGap,
+            carriedDeckPreviewLeft.y,
             deckPreviewColumns[1].join('\n'),
             {
                 fontFamily: 'Courier New',
-                fontSize: '13px',
+                fontSize: '12px',
                 color: '#e2e8f0',
-                lineSpacing: 4,
+                lineSpacing: 3,
                 wordWrap: { width: singleDeckPreviewColumnWidth },
             },
         );
-        const carriedItemsHeading = this.scene.add.text(carriedLoadoutLeft + 18 + deckPreviewWidth + previewGap, previewTop, '携带道具', {
+        const utilityColumnLeft = carriedLoadoutLeft + 18 + deckPreviewWidth + previewGap;
+        const carriedItemsPanel = this.scene.add.rectangle(
+            utilityColumnLeft + utilityColumnWidth / 2,
+            previewTop + itemPanelHeight / 2,
+            utilityColumnWidth,
+            itemPanelHeight,
+            0x0d1b15,
+            0.92,
+        );
+        carriedItemsPanel.setStrokeStyle(1, 0x22c55e, 0.42);
+        const carriedItemsHeading = this.scene.add.text(utilityColumnLeft + 12, previewTop + 10, '携带道具', {
             fontFamily: 'Arial',
-            fontSize: '15px',
+            fontSize: '14px',
             color: '#86efac',
             fontStyle: 'bold',
         });
-        const carriedItemsPreview = this.scene.add.text(carriedItemsHeading.x, carriedItemsHeading.y + 22, itemPreviewText, {
+        const carriedItemsPreview = this.scene.add.text(carriedItemsHeading.x, carriedItemsHeading.y + 18, itemPreviewText, {
             fontFamily: 'Courier New',
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#e2e8f0',
-            lineSpacing: 4,
-            wordWrap: { width: itemPreviewWidth },
+            lineSpacing: 3,
+            wordWrap: { width: utilityColumnWidth - 24 },
         });
+        const readinessPanelTop = previewTop + itemPanelHeight + 8;
+        const carriedReadinessPanel = this.scene.add.rectangle(
+            utilityColumnLeft + utilityColumnWidth / 2,
+            readinessPanelTop + readinessPanelHeight / 2,
+            utilityColumnWidth,
+            readinessPanelHeight,
+            selectedLoadoutColors.fillColor,
+            0.72,
+        );
+        carriedReadinessPanel.setStrokeStyle(1, selectedLoadoutColors.borderColor, 0.52);
+        const readinessPanelTitle = this.scene.add.text(
+            utilityColumnLeft + 12,
+            readinessPanelTop + 10,
+            selectedLoadoutSummary.issuePreviewLines.length > 0 ? '缺口重点' : '出发校验',
+            {
+                fontFamily: 'Arial',
+                fontSize: '12px',
+                color: selectedLoadoutColors.mutedColor,
+                fontStyle: 'bold',
+            },
+        );
+        const readinessPanelBadge = this.scene.add.text(
+            utilityColumnLeft + utilityColumnWidth - 12,
+            readinessPanelTop + 10,
+            selectedLoadoutSummary.readinessLabel,
+            {
+                fontFamily: 'Arial',
+                fontSize: '11px',
+                color: selectedLoadoutColors.badgeColor,
+                fontStyle: 'bold',
+                backgroundColor: selectedLoadoutColors.badgeBackgroundColor,
+                padding: { left: 8, right: 8, top: 4, bottom: 4 },
+            },
+        ).setOrigin(1, 0);
+        const readinessPanelBody = this.scene.add.text(
+            utilityColumnLeft + 12,
+            readinessPanelTitle.y + 22,
+            selectedLoadoutSummary.issuePreviewLines.length > 0
+                ? selectedLoadoutSummary.issuePreviewLines.slice(0, 2).map((line) => `• ${line}`).join('\n')
+                : selectedLoadoutSummary.readiness === 'ready'
+                    ? '库存充足，确认后会按当前卡组创建秘境快照。'
+                    : selectedLoadoutSummary.detail,
+            {
+                fontFamily: 'Arial',
+                fontSize: '12px',
+                color: selectedLoadoutColors.headlineColor,
+                lineSpacing: 3,
+                wordWrap: { width: utilityColumnWidth - 24 },
+            },
+        );
 
         const actionTop = loadoutTop + LOADOUT_SUMMARY_HEIGHT + 16;
         const actionHeight = 82;
@@ -797,7 +910,7 @@ export class PreparationPanel extends GameObjects.Container {
             color: '#f8fafc',
             fontStyle: 'bold',
         });
-        const actionSummary = this.scene.add.text(contentLeft + 20, actionTitle.y + 32, `${selectedLoadoutSummary.readinessLabel} · ${summary.deckCount} 张卡 · ${summary.itemCount} 件道具 · ${summary.spiritStones} 枚灵石`, {
+        const actionSummary = this.scene.add.text(contentLeft + 20, actionTitle.y + 32, `${selectedLoadoutSummary.readinessLabel} · ${selectedLoadoutSummary.kindSummaryLine} · ${summary.itemCount} 件道具 · ${summary.spiritStones} 枚灵石`, {
             fontFamily: 'Arial',
             fontSize: '16px',
             color: '#94a3b8',
@@ -857,12 +970,12 @@ export class PreparationPanel extends GameObjects.Container {
             selectedDeckStatusBadge,
             selectedDeckNameText,
             selectedDeckCount,
-            selectedDeckHeadline,
-            selectedDeckDetail,
+            selectedDeckReadinessPanel,
+            selectedDeckReadinessLabel,
+            selectedDeckReadinessText,
+            selectedDeckCompositionPanel,
             selectedDeckCompositionLabel,
             selectedDeckComposition,
-            ...(selectedDeckIssueLabel ? [selectedDeckIssueLabel] : []),
-            ...(selectedDeckIssueText ? [selectedDeckIssueText] : []),
             selectedDeckFooter,
             carriedLoadoutCard,
             carriedLoadoutAccent,
@@ -870,11 +983,18 @@ export class PreparationPanel extends GameObjects.Container {
             ...carriedDeckChip,
             ...carriedItemsChip,
             ...carriedStonesChip,
+            carriedDeckPanel,
             carriedDeckHeading,
+            carriedDeckSummary,
             carriedDeckPreviewLeft,
             carriedDeckPreviewRight,
+            carriedItemsPanel,
             carriedItemsHeading,
             carriedItemsPreview,
+            carriedReadinessPanel,
+            readinessPanelTitle,
+            readinessPanelBadge,
+            readinessPanelBody,
             actionBar,
             actionTitle,
             actionSummary,
@@ -959,6 +1079,9 @@ export class PreparationPanel extends GameObjects.Container {
             const isSelected = deck.id === selectedDeckId;
             const displayState = createDeckDisplayState(deck, this.stash.cards, isSelected, this.metadata);
             const cardCount = countDeckCards(deck.cards);
+            const spotlight = isSelected
+                ? this.scene.add.rectangle(cardX, cardY, cardWidth + 12, cardHeight + 12, displayState.borderColor, 0.08)
+                : undefined;
 
             const shadow = this.scene.add.rectangle(
                 cardX + 4,
@@ -968,6 +1091,7 @@ export class PreparationPanel extends GameObjects.Container {
                 displayState.shadowColor,
                 displayState.shadowAlpha,
             );
+            spotlight?.setStrokeStyle(1, displayState.borderColor, 0.32);
             const bg = this.scene.add.rectangle(cardX, cardY, cardWidth, cardHeight, displayState.fillColor, 0.98);
             bg.setStrokeStyle(isSelected ? 3 : 2, displayState.borderColor, 1);
 
@@ -1002,16 +1126,9 @@ export class PreparationPanel extends GameObjects.Container {
                 {
                     fontFamily: 'Arial',
                     fontSize: '13px',
-                    color: '#94a3b8',
+                    color: displayState.countColor,
                 },
             );
-            const detailText = this.scene.add.text(cardX - cardWidth / 2 + 16, countText.y + 24, displayState.detailText, {
-                fontFamily: 'Arial',
-                fontSize: '13px',
-                color: displayState.detailColor,
-                wordWrap: { width: cardWidth - 32 },
-                lineSpacing: 3,
-            });
             const footerBg = this.scene.add.rectangle(
                 cardX,
                 cardY + cardHeight / 2 - 18,
@@ -1020,6 +1137,30 @@ export class PreparationPanel extends GameObjects.Container {
                 displayState.footerFillColor,
                 0.95,
             );
+            const previewPanelTop = countText.y + 20;
+            const previewPanelHeight = Math.max(48, footerBg.getTopCenter().y - previewPanelTop - 10);
+            const previewPanel = this.scene.add.rectangle(
+                cardX,
+                previewPanelTop + previewPanelHeight / 2,
+                cardWidth - 32,
+                previewPanelHeight,
+                displayState.previewFillColor,
+                0.96,
+            );
+            previewPanel.setStrokeStyle(1, displayState.previewBorderColor, 0.55);
+            const previewLabel = this.scene.add.text(cardX - cardWidth / 2 + 24, previewPanelTop + 8, displayState.previewLabel, {
+                fontFamily: 'Arial',
+                fontSize: '11px',
+                color: displayState.previewLabelColor,
+                fontStyle: 'bold',
+            });
+            const previewText = this.scene.add.text(cardX - cardWidth / 2 + 24, previewLabel.y + 16, displayState.previewText, {
+                fontFamily: 'Arial',
+                fontSize: '11px',
+                color: displayState.previewTextColor,
+                wordWrap: { width: cardWidth - 48, useAdvancedWrap: true },
+                lineSpacing: 2,
+            });
             const footerText = this.scene.add.text(cardX - cardWidth / 2 + 16, footerBg.y, displayState.footerText, {
                 fontFamily: 'Arial',
                 fontSize: '11px',
@@ -1036,7 +1177,21 @@ export class PreparationPanel extends GameObjects.Container {
                 this.dragMoved = false;
             });
 
-            innerContainer.add([shadow, bg, accent, selection, status, deckName, countText, detailText, footerBg, footerText]);
+            innerContainer.add([
+                ...(spotlight ? [spotlight] : []),
+                shadow,
+                bg,
+                accent,
+                selection,
+                status,
+                deckName,
+                countText,
+                previewPanel,
+                previewLabel,
+                previewText,
+                footerBg,
+                footerText,
+            ]);
         });
 
         if (needsScroll) {
