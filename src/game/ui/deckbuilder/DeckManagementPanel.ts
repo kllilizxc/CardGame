@@ -1,6 +1,6 @@
 import { GameObjects, Scene } from 'phaser';
 
-import type { CardKind } from '@data/types/cards/core';
+import type { CardKind, CardRarity } from '@data/types/cards/core';
 import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import {
     computeCardCollectionViewModel,
@@ -66,6 +66,42 @@ const VALID_ACCENT = 0x22c55e;
 const WARNING_ACCENT = 0xf59e0b;
 const INVALID_ACCENT = 0xef4444;
 
+const KIND_GLYPHS: Record<string, string> = {
+    unit: '灵',
+    artifact: '器',
+    talisman: '符',
+    field: '阵',
+    skill: '诀',
+    pill: '丹',
+    unknown: '览',
+};
+
+const RARITY_LABEL: Record<string, string> = {
+    common: '普通',
+    uncommon: '少见',
+    rare: '稀有',
+    epic: '史诗',
+    legendary: '传说',
+};
+
+const TARGET_LABEL: Record<string, string> = {
+    unit: '单体单位',
+    player: '玩家本体',
+    allUnits: '全部单位',
+    all: '全体目标',
+};
+
+const EQUIP_TARGET_LABEL: Record<string, string> = {
+    unit: '装备单位',
+    player: '装备玩家',
+};
+
+const COOLDOWN_LABEL: Record<string, string> = {
+    perBattle: '每场 1 次',
+    perTurn: '每回合可用',
+    custom: '特殊冷却',
+};
+
 interface ButtonVisualOptions {
     hoverFillColor?: number;
     strokeColor?: number;
@@ -102,6 +138,16 @@ interface ReturnCtaState {
     summaryLabel: string;
 }
 
+interface CardPreviewTheme {
+    accentColor: number;
+    borderColor: number;
+    headerFillColor: number;
+    heroFillColor: number;
+    heroGlowColor: number;
+    badgeFillColor: number;
+    badgeTextColor: string;
+}
+
 interface CardDetailViewModel {
     displayName: string;
     metaLabel: string;
@@ -113,6 +159,130 @@ interface CardDetailViewModel {
     fillColor: number;
     statusColor: string;
     bodyColor: string;
+    kindLabel: string;
+    kindGlyph: string;
+    rarityLabel: string;
+    rarityColor: number;
+    previewTheme: CardPreviewTheme;
+    ownershipLabels: string[];
+    factsLabel: string | null;
+    rulesLabel: string | null;
+    footerLabel: string;
+}
+
+function getPreviewTheme(kind?: CardKind): CardPreviewTheme {
+    switch (kind) {
+        case 'unit':
+            return {
+                accentColor: 0x38bdf8,
+                borderColor: 0x7dd3fc,
+                headerFillColor: 0x0f2942,
+                heroFillColor: 0x10263a,
+                heroGlowColor: 0x38bdf8,
+                badgeFillColor: 0x0f3b63,
+                badgeTextColor: '#dbeafe',
+            };
+        case 'artifact':
+            return {
+                accentColor: 0xf59e0b,
+                borderColor: 0xfcd34d,
+                headerFillColor: 0x3a2407,
+                heroFillColor: 0x35210b,
+                heroGlowColor: 0xf59e0b,
+                badgeFillColor: 0x5b3a12,
+                badgeTextColor: '#fef3c7',
+            };
+        case 'talisman':
+            return {
+                accentColor: 0xfb7185,
+                borderColor: 0xfda4af,
+                headerFillColor: 0x3b1320,
+                heroFillColor: 0x32101b,
+                heroGlowColor: 0xfb7185,
+                badgeFillColor: 0x5c1834,
+                badgeTextColor: '#ffe4e6',
+            };
+        case 'field':
+            return {
+                accentColor: 0x2dd4bf,
+                borderColor: 0x5eead4,
+                headerFillColor: 0x10302b,
+                heroFillColor: 0x0f2925,
+                heroGlowColor: 0x2dd4bf,
+                badgeFillColor: 0x134e4a,
+                badgeTextColor: '#ccfbf1',
+            };
+        case 'skill':
+            return {
+                accentColor: 0xa78bfa,
+                borderColor: 0xc4b5fd,
+                headerFillColor: 0x27164a,
+                heroFillColor: 0x22143d,
+                heroGlowColor: 0xa78bfa,
+                badgeFillColor: 0x3b2276,
+                badgeTextColor: '#ede9fe',
+            };
+        case 'pill':
+            return {
+                accentColor: 0x22c55e,
+                borderColor: 0x86efac,
+                headerFillColor: 0x10311b,
+                heroFillColor: 0x112718,
+                heroGlowColor: 0x22c55e,
+                badgeFillColor: 0x14532d,
+                badgeTextColor: '#dcfce7',
+            };
+        default:
+            return {
+                accentColor: PANEL_ACCENT,
+                borderColor: 0xc4b5fd,
+                headerFillColor: 0x251744,
+                heroFillColor: 0x1f1732,
+                heroGlowColor: PANEL_ACCENT,
+                badgeFillColor: 0x312e81,
+                badgeTextColor: '#ede9fe',
+            };
+    }
+}
+
+function getRarityLabel(rarity?: CardRarity): string {
+    return rarity ? (RARITY_LABEL[rarity] ?? rarity) : '未标注稀有度';
+}
+
+function getRarityAccentColor(rarity?: CardRarity): number {
+    switch (rarity) {
+        case 'uncommon':
+            return VALID_ACCENT;
+        case 'rare':
+            return SELECTED_ACCENT;
+        case 'epic':
+            return PANEL_ACCENT;
+        case 'legendary':
+            return 0xf59e0b;
+        case 'common':
+        default:
+            return 0x94a3b8;
+    }
+}
+
+function truncateLabel(value: string, maxLength: number): string {
+    if (value.length <= maxLength) {
+        return value;
+    }
+
+    return `${value.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+}
+
+function joinPreviewFacts(parts: (string | null | undefined)[], maxLength = 50): string | null {
+    const normalized = parts
+        .map((part) => (typeof part === 'string' ? part.trim() : part))
+        .filter((part): part is string => typeof part === 'string' && part.length > 0);
+
+    if (normalized.length === 0) {
+        return null;
+    }
+
+    return truncateLabel(normalized.join(' · '), maxLength);
 }
 
 function createDeckId(): string {
@@ -280,6 +450,55 @@ function getCardMetaLabel(cardId: string, metadata?: CardMetadataMap): string {
     return parts.length > 0 ? parts.join(' · ') : '未标注类别';
 }
 
+function getCardKindLabel(kind?: CardKind): string {
+    return kind ? KIND_LABEL[kind] ?? '未标注类别' : '未标注类别';
+}
+
+function getCardKindGlyph(kind?: CardKind): string {
+    return kind ? KIND_GLYPHS[kind] ?? KIND_GLYPHS.unknown : KIND_GLYPHS.unknown;
+}
+
+function formatCardRulesLine(cardId: string, metadata?: CardMetadataMap): string | null {
+    const entry = metadata?.[cardId];
+
+    return joinPreviewFacts([
+        entry?.limitPerDeck ? `同卡上限 ${entry.limitPerDeck}` : null,
+        entry?.gradeLabel,
+        entry?.equipTarget ? (EQUIP_TARGET_LABEL[entry.equipTarget] ?? entry.equipTarget) : null,
+        entry?.target ? (TARGET_LABEL[entry.target] ?? entry.target) : null,
+        entry?.cooldownType ? (COOLDOWN_LABEL[entry.cooldownType] ?? entry.cooldownType) : null,
+        entry?.isInstant === true
+            ? '即时施放'
+            : entry?.duration
+                ? `持续 ${entry.duration} 回合`
+                : entry?.isInstant === false
+                    ? '持续施放'
+                    : null,
+        entry?.symmetric === true
+            ? '对称场地'
+            : entry?.symmetric === false
+                ? '单边场地'
+                : null,
+    ]);
+}
+
+function formatCardFactsLine(cardId: string, metadata?: CardMetadataMap): string | null {
+    const entry = metadata?.[cardId];
+    const labelSummary = entry?.labels?.slice(0, 2).join(' / ');
+
+    return joinPreviewFacts([
+        entry?.attack !== undefined ? `攻击 ${entry.attack}` : null,
+        entry?.health !== undefined ? `生命 ${entry.health}` : null,
+        entry?.attackBonus !== undefined ? `攻击 +${entry.attackBonus}` : null,
+        entry?.healthBonus !== undefined ? `生命 +${entry.healthBonus}` : null,
+        entry?.race,
+        entry?.weaponType ? `${entry.weaponType}器` : null,
+        entry?.linggen?.length ? `灵根 ${entry.linggen.join('/')}` : null,
+        entry?.elements?.length ? `五行 ${entry.elements.join('/')}` : null,
+        labelSummary ? `标签 ${labelSummary}` : null,
+    ]);
+}
+
 function buildCardDetailViewModel(
     cardId: string | null,
     stashCards: readonly ExpeditionCardStack[],
@@ -293,20 +512,37 @@ function buildCardDetailViewModel(
             contextLabel: deckCards.length > 0
                 ? `当前卡组 ${countDeckCards(deckCards)} 张 · ${deckCards.length} 个条目`
                 : '可先在右侧储物袋中浏览可用卡牌',
-            descriptionLabel: '从当前卡组清单或储物袋浏览中悬停任一条目，即可查看名称、简介、效果与数量上下文。',
+            descriptionLabel: '从当前卡组清单或储物袋浏览中悬停或点击任一条目，即可切换这里的牌面预览。',
             effectSummaryLabel: null,
             statusLabel: '等待查看',
             accentColor: PANEL_ACCENT,
             fillColor: 0x0f172a,
             statusColor: '#cbd5e1',
             bodyColor: '#cbd5e1',
+            kindLabel: '浏览提示',
+            kindGlyph: '览',
+            rarityLabel: '预览面板',
+            rarityColor: PANEL_ACCENT,
+            previewTheme: getPreviewTheme(undefined),
+            ownershipLabels: [
+                `当前卡组 ${countDeckCards(deckCards)} 张`,
+                `库存条目 ${stashCards.length}`,
+                deckCards.length > 0 ? `${deckCards.length} 个条目` : '先从右侧挑卡',
+            ],
+            factsLabel: deckCards.length > 0
+                ? '详情会保留最近查看的卡牌，方便一边滚动列表一边确认配置。'
+                : '右侧储物袋支持搜索、种类筛选与一键加满；这里会同步显示当前查看的牌面。',
+            rulesLabel: '缺少完整内容时也会回退到编号、类型与库存信息。',
+            footerLabel: '悬停卡组或储物袋条目即可切换预览',
         };
     }
 
+    const entry = metadata?.[cardId];
     const displayName = getCardDisplayName(cardId, metadata);
+    const kindLabel = getCardKindLabel(entry?.kind);
     const metaLabel = getCardMetaLabel(cardId, metadata);
-    const description = metadata?.[cardId]?.description?.trim() || undefined;
-    const effectSummary = metadata?.[cardId]?.effectSummary?.trim() || undefined;
+    const description = entry?.description?.trim() || undefined;
+    const effectSummary = entry?.effectSummary?.trim() || undefined;
     const ownedCount = getStackCount(stashCards, cardId);
     const deckCount = getStackCount(deckCards, cardId);
     const availableCount = Math.max(ownedCount - deckCount, 0);
@@ -342,6 +578,32 @@ function buildCardDetailViewModel(
         contextParts.push('库存为 0');
     }
 
+    const previewTheme = getPreviewTheme(entry?.kind);
+    const rarityColor = getRarityAccentColor(entry?.rarity);
+    const ownershipLabels = [
+        `袋中 ${ownedCount}`,
+        `卡组 ${deckCount}`,
+        shortageCount > 0
+            ? `缺口 ${shortageCount}`
+            : availableCount > 0
+                ? `可加 ${availableCount}`
+                : deckCount > 0
+                    ? '已占满'
+                    : '库存 0',
+    ];
+    const factsLabel = formatCardFactsLine(cardId, metadata);
+    const rulesLabel = formatCardRulesLine(cardId, metadata);
+    const footerLabel = entry
+        ? truncateLabel(
+            joinPreviewFacts([
+                entry.rarity ? `稀有度 ${getRarityLabel(entry.rarity)}` : null,
+                entry.gradeLabel,
+                contextParts.join(' · '),
+            ], 62) ?? contextParts.join(' · '),
+            62,
+        )
+        : contextParts.join(' · ');
+
     return {
         displayName,
         metaLabel,
@@ -349,12 +611,21 @@ function buildCardDetailViewModel(
         descriptionLabel: description ?? effectSummary ?? '未找到描述或效果摘要，仍可按编号与数量管理此卡。',
         effectSummaryLabel: description && effectSummary && effectSummary !== description
             ? `效果：${effectSummary}`
-            : null,
+            : factsLabel,
         statusLabel,
         accentColor,
         fillColor,
         statusColor,
         bodyColor,
+        kindLabel,
+        kindGlyph: getCardKindGlyph(entry?.kind),
+        rarityLabel: getRarityLabel(entry?.rarity),
+        rarityColor,
+        previewTheme,
+        ownershipLabels,
+        factsLabel,
+        rulesLabel,
+        footerLabel,
     };
 }
 
@@ -459,13 +730,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     private sortDirBtnText?: GameObjects.Text;
     private browserSummaryText?: GameObjects.Text;
     private browserPosText?: GameObjects.Text;
-    private detailPaneCard?: GameObjects.Rectangle;
-    private detailPaneNameText?: GameObjects.Text;
-    private detailPaneMetaText?: GameObjects.Text;
-    private detailPaneStatusText?: GameObjects.Text;
-    private detailPaneContextText?: GameObjects.Text;
-    private detailPaneDescriptionText?: GameObjects.Text;
-    private detailPaneEffectText?: GameObjects.Text;
+    private detailPaneContainer?: GameObjects.Container;
 
     private keydownHandler?: (event: KeyboardEvent) => void;
     private wheelHandler?: (pointer: Phaser.Input.Pointer, _gameObjects: unknown[], deltaX: number, deltaY: number) => void;
@@ -475,6 +740,8 @@ export class DeckManagementPanel extends GameObjects.Container {
     private browserArea = { x: 0, y: 0, w: 0, h: 0 };
     private editorContentWidth = 0;
     private editorContentHeight = 0;
+    private detailPaneWidth = 0;
+    private detailPaneHeight = 0;
 
     private dialogMode = false;
     private dialogObjects: GameObjects.GameObject[] = [];
@@ -571,15 +838,11 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private refreshDetailPane(): void {
-        if (!this.detailPaneCard
-            || !this.detailPaneNameText
-            || !this.detailPaneMetaText
-            || !this.detailPaneStatusText
-            || !this.detailPaneContextText
-            || !this.detailPaneDescriptionText
-            || !this.detailPaneEffectText) {
+        if (!this.detailPaneContainer) {
             return;
         }
+
+        this.detailPaneContainer.removeAll(true);
 
         const detail = buildCardDetailViewModel(
             this.detailCardId,
@@ -588,23 +851,199 @@ export class DeckManagementPanel extends GameObjects.Container {
             this.config.metadata,
         );
 
-        this.detailPaneCard.setFillStyle(detail.fillColor, 0.98);
-        this.detailPaneCard.setStrokeStyle(1, detail.accentColor, 0.92);
-        this.detailPaneNameText.setText(detail.displayName);
-        this.detailPaneMetaText.setText(detail.metaLabel);
-        this.detailPaneStatusText.setText(detail.statusLabel);
-        this.detailPaneStatusText.setColor(detail.statusColor);
-        this.detailPaneContextText.setText(detail.contextLabel);
-        this.detailPaneDescriptionText.setText(detail.descriptionLabel);
-        this.detailPaneDescriptionText.setColor(detail.bodyColor);
+        const previewWidth = this.detailPaneWidth;
+        const previewHeight = this.detailPaneHeight;
+        const previewTheme = detail.previewTheme;
+        const innerWidth = previewWidth - 24;
+        const headerHeight = 28;
+        const heroHeight = Phaser.Math.Clamp(previewHeight - 104, 44, 76);
+        const heroTop = headerHeight + 12;
+        const chipsY = heroTop + heroHeight + 14;
+        const descriptionY = chipsY + 18;
+        const footerY = previewHeight - 14;
+        const showSecondaryLine = previewHeight >= 164;
+        const descriptionCopy = truncateLabel(
+            detail.descriptionLabel,
+            detail.effectSummaryLabel ? (showSecondaryLine ? 88 : 70) : 96,
+        );
+        const secondaryCopy = showSecondaryLine && detail.effectSummaryLabel
+            ? truncateLabel(detail.effectSummaryLabel, 72)
+            : null;
+        const footerCopy = truncateLabel(detail.rulesLabel ?? detail.footerLabel, 62);
 
-        if (detail.effectSummaryLabel) {
-            this.detailPaneEffectText.setText(detail.effectSummaryLabel);
-            this.detailPaneEffectText.setVisible(true);
-        } else {
-            this.detailPaneEffectText.setText('');
-            this.detailPaneEffectText.setVisible(false);
-        }
+        const createBadge = (
+            x: number,
+            y: number,
+            label: string,
+            fillColor: number,
+            textColor: string,
+            align: 'left' | 'right' = 'left',
+        ): [GameObjects.Rectangle, GameObjects.Text, number] => {
+            const text = this.scene.add.text(0, y, label, {
+                fontFamily: 'Arial',
+                fontSize: '10px',
+                color: textColor,
+                fontStyle: 'bold',
+            }).setOrigin(0, 0.5);
+            const width = Math.max(54, text.width + 18);
+            const left = align === 'left' ? x : x - width;
+            text.setX(left + 9);
+
+            const bg = this.scene.add.rectangle(left + width / 2, y, width, 20, fillColor, 1);
+            bg.setStrokeStyle(1, 0xffffff, 0.12);
+            return [bg, text, width];
+        };
+
+        const outerCard = this.scene.add.rectangle(
+            previewWidth / 2,
+            previewHeight / 2,
+            previewWidth,
+            previewHeight,
+            detail.fillColor,
+            0.99,
+        );
+        outerCard.setStrokeStyle(2, detail.accentColor, 0.95);
+
+        const header = this.scene.add.rectangle(
+            previewWidth / 2,
+            headerHeight / 2,
+            previewWidth - 2,
+            headerHeight,
+            previewTheme.headerFillColor,
+            1,
+        );
+        header.setStrokeStyle(1, previewTheme.borderColor, 0.5);
+
+        const hero = this.scene.add.rectangle(
+            previewWidth / 2,
+            heroTop + heroHeight / 2,
+            innerWidth,
+            heroHeight,
+            previewTheme.heroFillColor,
+            1,
+        );
+        hero.setStrokeStyle(1, previewTheme.heroGlowColor, 0.6);
+
+        const heroGlow = this.scene.add.rectangle(
+            previewWidth - 44,
+            heroTop + heroHeight / 2,
+            62,
+            heroHeight - 10,
+            previewTheme.heroGlowColor,
+            0.16,
+        );
+
+        const headerTitle = this.scene.add.text(12, 14, '卡牌预览', {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: '#cbd5e1',
+            fontStyle: 'bold',
+        }).setOrigin(0, 0.5);
+        const [kindBadgeBg, kindBadgeText] = createBadge(
+            12,
+            42,
+            detail.kindLabel,
+            previewTheme.badgeFillColor,
+            previewTheme.badgeTextColor,
+        );
+        const [rarityBadgeBg, rarityBadgeText] = createBadge(
+            previewWidth - 12,
+            42,
+            detail.rarityLabel,
+            detail.rarityColor,
+            '#f8fafc',
+            'right',
+        );
+
+        const heroName = this.scene.add.text(22, heroTop + 10, detail.displayName, {
+            fontFamily: 'Arial',
+            fontSize: '17px',
+            color: '#f8fafc',
+            fontStyle: 'bold',
+            wordWrap: { width: innerWidth - 78 },
+        });
+        const heroMeta = this.scene.add.text(22, heroTop + 34, detail.metaLabel, {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: '#cbd5e1',
+            wordWrap: { width: innerWidth - 78 },
+        });
+        const heroStatus = this.scene.add.text(22, heroTop + heroHeight - 14, detail.statusLabel, {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: detail.statusColor,
+            fontStyle: 'bold',
+            wordWrap: { width: innerWidth - 78 },
+        }).setOrigin(0, 1);
+
+        const heroGlyph = this.scene.add.text(previewWidth - 40, heroTop + heroHeight / 2, detail.kindGlyph, {
+            fontFamily: 'Arial',
+            fontSize: '54px',
+            color: '#ffffff',
+            fontStyle: 'bold',
+        }).setOrigin(0.5).setAlpha(0.18);
+
+        const ownershipLine = this.scene.add.text(12, chipsY, detail.ownershipLabels.join(' · '), {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: '#e2e8f0',
+            fontStyle: 'bold',
+            wordWrap: { width: innerWidth },
+        });
+
+        const descriptionText = this.scene.add.text(12, descriptionY, descriptionCopy, {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: detail.bodyColor,
+            lineSpacing: 2,
+            wordWrap: { width: innerWidth },
+        });
+
+        const secondaryText = this.scene.add.text(12, descriptionY + 28, secondaryCopy ?? '', {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: '#93c5fd',
+            lineSpacing: 2,
+            wordWrap: { width: innerWidth },
+        });
+        secondaryText.setVisible(Boolean(secondaryCopy));
+
+        const footerSeparator = this.scene.add.rectangle(
+            previewWidth / 2,
+            previewHeight - 22,
+            innerWidth,
+            1,
+            detail.accentColor,
+            0.45,
+        );
+        const footerText = this.scene.add.text(12, previewHeight - 14, footerCopy, {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: '#94a3b8',
+            wordWrap: { width: innerWidth },
+        }).setOrigin(0, 1);
+        footerSeparator.setY(Math.min(previewHeight - 22, footerY - (showSecondaryLine ? 18 : 8)));
+
+        this.detailPaneContainer.add([
+            outerCard,
+            header,
+            hero,
+            heroGlow,
+            headerTitle,
+            kindBadgeBg,
+            kindBadgeText,
+            rarityBadgeBg,
+            rarityBadgeText,
+            heroName,
+            heroMeta,
+            heroStatus,
+            heroGlyph,
+            ownershipLine,
+            descriptionText,
+            secondaryText,
+            footerSeparator,
+            footerText,
+        ]);
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
@@ -1212,7 +1651,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createEditorColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '卡组编辑', '重命名、校验，并以单张或整行清空的方式快速调整当前卡组；摘要区可直接返回远征准备，右侧详情窗会跟随当前查看的卡牌更新。', PANEL_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '卡组编辑', '重命名、校验，并以单张或整行清空的方式快速调整当前卡组；摘要区可直接返回远征准备，右侧牌面预览会跟随当前查看的卡牌更新。', PANEL_ACCENT));
         this.editorContentWidth = colW - 32;
         this.editorContentHeight = colH - 72;
         this.editorContainer = this.scene.add.container(x + 16, y + 70);
@@ -1223,23 +1662,20 @@ export class DeckManagementPanel extends GameObjects.Container {
     private refreshEditor(): void {
         if (!this.editorContainer) return;
         this.editorContainer.removeAll(true);
-        this.detailPaneCard = undefined;
-        this.detailPaneNameText = undefined;
-        this.detailPaneMetaText = undefined;
-        this.detailPaneStatusText = undefined;
-        this.detailPaneContextText = undefined;
-        this.detailPaneDescriptionText = undefined;
-        this.detailPaneEffectText = undefined;
+        this.detailPaneContainer = undefined;
+        this.detailPaneWidth = 0;
+        this.detailPaneHeight = 0;
 
         const localX = 0;
         const summaryW = this.editorContentWidth;
         const contentH = this.editorContentHeight;
-        const summaryH = this.renameMode ? 296 : 268;
+        const targetSummaryH = this.renameMode ? 332 : 308;
+        const summaryH = Math.min(targetSummaryH, Math.max(176, contentH - 150));
         const listHeaderY = summaryH + 10;
         const scrollBtnY = contentH - 12;
         const listTop = listHeaderY + 34;
         const listBottom = scrollBtnY - 12;
-        const listH = Math.max(118, listBottom - listTop);
+        const listH = Math.max(82, listBottom - listTop);
 
         this.editorArea = {
             x: this.editorContainer.x,
@@ -1339,11 +1775,10 @@ export class DeckManagementPanel extends GameObjects.Container {
         }
 
         const detailY = this.renameMode ? 86 : 66;
-        const detailPaneW = 168;
-        const detailPaneH = 132;
+        const detailPaneW = 186;
         const detailPaneX = localX + summaryW - detailPaneW - 16;
-        const detailPaneY = this.renameMode ? 96 : 52;
-        const leftSummaryW = detailPaneX - (localX + 28);
+        const detailPaneY = this.renameMode ? 84 : 44;
+        const leftSummaryW = detailPaneX - (localX + 24);
         const countText = this.scene.add.text(localX + 16, detailY, `${summary.count} / ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, {
             fontFamily: 'Arial',
             fontSize: '19px',
@@ -1366,16 +1801,16 @@ export class DeckManagementPanel extends GameObjects.Container {
         });
         this.editorContainer.add([countText, statusPillBg, statusPillText, detailText]);
 
-        const capacityProgressText = this.scene.add.text(localX + 16, detailY + 74, getDeckCapacityProgressLabel(capacity), {
+        const capacityProgressText = this.scene.add.text(localX + 16, detailY + 78, getDeckCapacityProgressLabel(capacity), {
             fontFamily: 'Arial',
-            fontSize: '11px',
+            fontSize: '10px',
             color: capacityTextColor,
             fontStyle: 'bold',
             wordWrap: { width: leftSummaryW },
         });
-        const capacityHeadroomText = this.scene.add.text(localX + 16, detailY + 90, getDeckCapacityHeadroomLabel(capacity), {
+        const capacityHeadroomText = this.scene.add.text(localX + 16, detailY + 106, getDeckCapacityHeadroomLabel(capacity), {
             fontFamily: 'Arial',
-            fontSize: '11px',
+            fontSize: '10px',
             color: capacityTextColor,
             fontStyle: 'bold',
             wordWrap: { width: leftSummaryW },
@@ -1383,7 +1818,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.editorContainer.add([capacityProgressText, capacityHeadroomText]);
 
         const capacityTrackX = localX + 16;
-        const capacityTrackY = detailY + 114;
+        const capacityTrackY = detailY + 140;
         const capacityTrackW = leftSummaryW;
         const capacityTrackH = 14;
         const capacityFillWidth = capacityTrackW * Phaser.Math.Clamp(capacity.count / DECK_CARD_MAX, 0, 1);
@@ -1444,87 +1879,13 @@ export class DeckManagementPanel extends GameObjects.Container {
                 : summary.sizeIssue?.kind === 'too-many-cards'
                     ? '· 先移除多余卡牌，再返回远征准备。'
                     : '· 当前卡组满足出征要求，可直接带入秘境。';
-        const issueText = this.scene.add.text(localX + 16, detailY + 136, issueSummaryLabel, {
+        const issueText = this.scene.add.text(localX + 16, detailY + 162, issueSummaryLabel, {
             fontFamily: 'Arial',
             fontSize: '10px',
             color: summary.isValid ? '#cbd5e1' : '#f8d2d2',
             wordWrap: { width: leftSummaryW },
         });
         this.editorContainer.add(issueText);
-
-        const detailPaneCard = this.scene.add.rectangle(
-            detailPaneX + detailPaneW / 2,
-            detailPaneY + detailPaneH / 2,
-            detailPaneW,
-            detailPaneH,
-            0x111827,
-            0.98,
-        );
-        detailPaneCard.setStrokeStyle(1, PANEL_ACCENT, 0.92);
-        const detailPaneHeader = this.scene.add.text(detailPaneX + 12, detailPaneY + 10, '卡牌详情', {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#93c5fd',
-            fontStyle: 'bold',
-        });
-        const detailPaneNameText = this.scene.add.text(detailPaneX + 12, detailPaneY + 28, '', {
-            fontFamily: 'Arial',
-            fontSize: '15px',
-            color: '#f8fafc',
-            fontStyle: 'bold',
-            wordWrap: { width: detailPaneW - 24 },
-        });
-        const detailPaneMetaText = this.scene.add.text(detailPaneX + 12, detailPaneY + 48, '', {
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: '#cbd5e1',
-            wordWrap: { width: detailPaneW - 24 },
-        });
-        const detailPaneStatusText = this.scene.add.text(detailPaneX + 12, detailPaneY + 64, '', {
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: '#cbd5e1',
-            fontStyle: 'bold',
-            wordWrap: { width: detailPaneW - 24 },
-        });
-        const detailPaneContextText = this.scene.add.text(detailPaneX + 12, detailPaneY + 80, '', {
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: '#94a3b8',
-            wordWrap: { width: detailPaneW - 24 },
-        });
-        const detailPaneDescriptionText = this.scene.add.text(detailPaneX + 12, detailPaneY + 98, '', {
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: '#e2e8f0',
-            lineSpacing: 2,
-            wordWrap: { width: detailPaneW - 24 },
-        });
-        const detailPaneEffectText = this.scene.add.text(detailPaneX + 12, detailPaneY + 118, '', {
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: '#93c5fd',
-            lineSpacing: 2,
-            wordWrap: { width: detailPaneW - 24 },
-        });
-        this.detailPaneCard = detailPaneCard;
-        this.detailPaneNameText = detailPaneNameText;
-        this.detailPaneMetaText = detailPaneMetaText;
-        this.detailPaneStatusText = detailPaneStatusText;
-        this.detailPaneContextText = detailPaneContextText;
-        this.detailPaneDescriptionText = detailPaneDescriptionText;
-        this.detailPaneEffectText = detailPaneEffectText;
-        this.editorContainer.add([
-            detailPaneCard,
-            detailPaneHeader,
-            detailPaneNameText,
-            detailPaneMetaText,
-            detailPaneStatusText,
-            detailPaneContextText,
-            detailPaneDescriptionText,
-            detailPaneEffectText,
-        ]);
-        this.refreshDetailPane();
 
         const returnCta = createReturnCtaState(summary);
         const exitStripX = localX + 16;
@@ -1585,6 +1946,14 @@ export class DeckManagementPanel extends GameObjects.Container {
             color: returnCta.buttonTextColor,
         }).setOrigin(0.5);
         this.editorContainer.add([exitStrip, exitHeader, exitSummary, ctaButton, ctaLabel, ctaSubLabel]);
+
+        const detailPaneBottom = exitStripY - 12;
+        const detailPaneH = Math.max(124, detailPaneBottom - detailPaneY);
+        this.detailPaneContainer = this.scene.add.container(detailPaneX, detailPaneY);
+        this.detailPaneWidth = detailPaneW;
+        this.detailPaneHeight = detailPaneH;
+        this.editorContainer.add(this.detailPaneContainer);
+        this.refreshDetailPane();
 
         const cardListTitle = this.scene.add.text(localX, listHeaderY, `卡牌清单 · ${deck.cards.length} 个条目 / ${summary.count} 张`, {
             fontFamily: 'Arial',
@@ -1801,7 +2170,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createBrowserColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '储物袋浏览', '筛选库存卡牌，并按单张或一键加满的方式补入当前卡组；悬停条目可在中栏查看详情。', VALID_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '储物袋浏览', '筛选库存卡牌，并按单张或一键加满的方式补入当前卡组；悬停条目可在中栏查看更大的牌面预览。', VALID_ACCENT));
 
         const innerX = x + 16;
         const innerW = colW - 32;

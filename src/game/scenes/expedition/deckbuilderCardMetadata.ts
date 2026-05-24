@@ -1,4 +1,4 @@
-import type { CardKind } from '@data/types/cards/core';
+import type { CardKind, CardRarity } from '@data/types/cards/core';
 import type { CardEffect } from '@data/types/cards/effects';
 import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import {
@@ -39,6 +39,34 @@ export type DeckbuilderCardMetadataResources = Record<
 >;
 
 const CARD_KIND_VALUES: CardKind[] = ['unit', 'artifact', 'talisman', 'field', 'skill', 'pill'];
+const CARD_RARITY_VALUES: CardRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+
+const ARTIFACT_GRADE_TIER_LABELS: Record<string, string> = {
+    yellow: '黄阶',
+    earth: '地阶',
+    mystic: '玄阶',
+    heaven: '天阶',
+    immortal: '仙阶',
+    divine: '神阶',
+};
+
+const ARTIFACT_GRADE_QUALITY_LABELS: Record<string, string> = {
+    lower: '下品',
+    middle: '中品',
+    upper: '上品',
+};
+
+const PILL_GRADE_LABELS: Record<number, string> = {
+    1: '一品丹药',
+    2: '二品丹药',
+    3: '三品丹药',
+    4: '四品丹药',
+    5: '五品丹药',
+    6: '六品丹药',
+    7: '七品丹药',
+    8: '八品丹药',
+    9: '九品丹药',
+};
 
 const DECKBUILDER_CARD_METADATA_RESOURCE_REQUESTS: readonly DeckbuilderCardMetadataResourceRequest[] = [
     {
@@ -81,6 +109,10 @@ function isCardKind(value: unknown): value is CardKind {
     return typeof value === 'string' && CARD_KIND_VALUES.includes(value as CardKind);
 }
 
+function isCardRarity(value: unknown): value is CardRarity {
+    return typeof value === 'string' && CARD_RARITY_VALUES.includes(value as CardRarity);
+}
+
 function normalizeOptionalText(value: unknown): string | undefined {
     if (typeof value !== 'string') {
         return undefined;
@@ -88,6 +120,48 @@ function normalizeOptionalText(value: unknown): string | undefined {
 
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function normalizePositiveInteger(value: unknown): number | undefined {
+    return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : undefined;
+}
+
+function normalizeFiniteNumber(value: unknown): number | undefined {
+    return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function normalizeStringArray(value: unknown): string[] | undefined {
+    if (!Array.isArray(value)) {
+        return undefined;
+    }
+
+    const normalized = value
+        .map((entry) => normalizeOptionalText(entry))
+        .filter((entry): entry is string => entry !== undefined);
+
+    return normalized.length > 0 ? normalized : undefined;
+}
+
+function formatArtifactGradeLabel(value: unknown): string | undefined {
+    const raw = normalizeOptionalText(value);
+    if (!raw) {
+        return undefined;
+    }
+
+    const [, tierKey, qualityKey] = raw.split('_');
+    const tierLabel = ARTIFACT_GRADE_TIER_LABELS[tierKey];
+    const qualityLabel = ARTIFACT_GRADE_QUALITY_LABELS[qualityKey];
+
+    if (!tierLabel || !qualityLabel) {
+        return undefined;
+    }
+
+    return `${tierLabel}${qualityLabel}`;
+}
+
+function formatPillGradeLabel(value: unknown): string | undefined {
+    const grade = normalizePositiveInteger(value);
+    return grade ? PILL_GRADE_LABELS[grade] : undefined;
 }
 
 function truncateCopy(value: string, maxLength: number): string {
@@ -147,7 +221,33 @@ export function buildDeckbuilderCardMetadataMap(
     resources: DeckbuilderCardMetadataResources,
     readJson: (cacheKey: DeckbuilderCardMetadataCacheKey) => unknown,
 ): CardMetadataMap {
-    const metadata: Record<string, { kind?: CardKind; name?: string; description?: string; effectSummary?: string }> = {};
+    const metadata: Record<
+        string,
+        {
+            kind?: CardKind;
+            name?: string;
+            description?: string;
+            effectSummary?: string;
+            rarity?: CardRarity;
+            limitPerDeck?: number;
+            labels?: string[];
+            attack?: number;
+            health?: number;
+            attackBonus?: number;
+            healthBonus?: number;
+            race?: string;
+            linggen?: string[];
+            weaponType?: string;
+            elements?: string[];
+            equipTarget?: string;
+            target?: string;
+            isInstant?: boolean;
+            duration?: number;
+            symmetric?: boolean;
+            cooldownType?: string;
+            gradeLabel?: string;
+        }
+    > = {};
 
     Object.values(resources).forEach((resource) => {
         const source = readJson(resource.cacheKey);
@@ -186,6 +286,93 @@ export function buildDeckbuilderCardMetadataMap(
             const effectSummary = summarizeCardEffects(entry.effects);
             if (effectSummary) {
                 next.effectSummary = effectSummary;
+            }
+
+            if (isCardRarity(entry.rarity)) {
+                next.rarity = entry.rarity;
+            }
+
+            const limitPerDeck = normalizePositiveInteger(entry.limitPerDeck);
+            if (limitPerDeck !== undefined) {
+                next.limitPerDeck = limitPerDeck;
+            }
+
+            const labels = normalizeStringArray(entry.labels);
+            if (labels) {
+                next.labels = labels;
+            }
+
+            const attack = normalizeFiniteNumber(entry.attack);
+            if (attack !== undefined) {
+                next.attack = attack;
+            }
+
+            const health = normalizeFiniteNumber(entry.health);
+            if (health !== undefined) {
+                next.health = health;
+            }
+
+            const attackBonus = normalizeFiniteNumber(entry.attackBonus);
+            if (attackBonus !== undefined) {
+                next.attackBonus = attackBonus;
+            }
+
+            const healthBonus = normalizeFiniteNumber(entry.healthBonus);
+            if (healthBonus !== undefined) {
+                next.healthBonus = healthBonus;
+            }
+
+            const race = normalizeOptionalText(entry.race);
+            if (race) {
+                next.race = race;
+            }
+
+            const linggen = normalizeStringArray(entry.linggen);
+            if (linggen) {
+                next.linggen = linggen;
+            }
+
+            const weaponType = normalizeOptionalText(entry.weaponType);
+            if (weaponType) {
+                next.weaponType = weaponType;
+            }
+
+            const elements = normalizeStringArray(entry.elements);
+            if (elements) {
+                next.elements = elements;
+            }
+
+            const equipTarget = normalizeOptionalText(entry.equipTarget);
+            if (equipTarget) {
+                next.equipTarget = equipTarget;
+            }
+
+            const target = normalizeOptionalText(entry.target);
+            if (target) {
+                next.target = target;
+            }
+
+            if (typeof entry.isInstant === 'boolean') {
+                next.isInstant = entry.isInstant;
+            }
+
+            const duration = normalizePositiveInteger(entry.duration);
+            if (duration !== undefined) {
+                next.duration = duration;
+            }
+
+            if (typeof entry.symmetric === 'boolean') {
+                next.symmetric = entry.symmetric;
+            }
+
+            const cooldownType = normalizeOptionalText(entry.cooldownType);
+            if (cooldownType) {
+                next.cooldownType = cooldownType;
+            }
+
+            const gradeLabel = formatArtifactGradeLabel(entry.gradeId) ?? formatPillGradeLabel(entry.grade);
+            if (gradeLabel) {
+                next.gradeLabel = gradeLabel;
             }
 
             metadata[entry.id] = next;

@@ -1,4 +1,4 @@
-import type { CardKind } from '@data/types/cards/core';
+import type { CardKind, CardRarity } from '@data/types/cards/core';
 import type { ExpeditionCardStack } from '../types/expedition';
 
 export type CardCollectionSortField = 'id' | 'count' | 'kind' | 'name';
@@ -23,6 +23,24 @@ export interface CardMetadata {
     name?: string;
     description?: string;
     effectSummary?: string;
+    rarity?: CardRarity;
+    limitPerDeck?: number;
+    labels?: string[];
+    attack?: number;
+    health?: number;
+    attackBonus?: number;
+    healthBonus?: number;
+    race?: string;
+    linggen?: string[];
+    weaponType?: string;
+    elements?: string[];
+    equipTarget?: string;
+    target?: string;
+    isInstant?: boolean;
+    duration?: number;
+    symmetric?: boolean;
+    cooldownType?: string;
+    gradeLabel?: string;
 }
 
 export interface CardCollectionRow {
