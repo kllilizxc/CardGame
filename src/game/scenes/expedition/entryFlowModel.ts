@@ -1,5 +1,10 @@
 import type { PersistentStash, RunResolutionSummary, RunSnapshot } from '../../types/expedition';
-import { getSelectedDeckCards } from '../../state/PersistentStashDecks';
+import {
+    getSelectedDeckCards,
+    getSelectedSavedDeck,
+    validateDeckAvailability,
+    validateDeckSize,
+} from '../../state/PersistentStashDecks';
 
 interface CountableStack {
     count: number;
@@ -10,6 +15,23 @@ export interface PreparationSummary {
     itemCount: number;
     spiritStones: number;
     statusText: string;
+}
+
+export type PreparationDeckReadiness = 'none' | 'ready' | 'too-few-cards' | 'too-many-cards' | 'insufficient-copies';
+
+export interface PreparationDeckContext {
+    selectedDeckId: string | null;
+    selectedDeckName: string | null;
+    deckCount: number;
+    readiness: PreparationDeckReadiness;
+    savedDeckCount: number;
+    selectedDeckCardSignature: string | null;
+}
+
+export interface PreparationDeckHandoffSummary {
+    title: string;
+    detail: string;
+    tone: 'positive' | 'neutral' | 'warning';
 }
 
 export interface RunSummary {
@@ -45,6 +67,79 @@ function countStacks<T extends CountableStack>(stacks: T[]): number {
     return stacks.reduce((sum, stack) => sum + stack.count, 0);
 }
 
+function createDeckCardSignature(stacks: Array<{ id: string; count: number }>): string | null {
+    if (stacks.length === 0) {
+        return null;
+    }
+
+    return [...stacks]
+        .sort((left, right) => left.id.localeCompare(right.id) || left.count - right.count)
+        .map((stack) => `${stack.id}:${stack.count}`)
+        .join('|');
+}
+
+function getPreparationDeckReadiness(stash: PersistentStash): PreparationDeckReadiness {
+    const selectedDeck = getSelectedSavedDeck(stash);
+
+    if (!selectedDeck) {
+        return 'none';
+    }
+
+    const sizeIssue = validateDeckSize(selectedDeck.cards);
+
+    if (sizeIssue?.kind === 'too-few-cards') {
+        return 'too-few-cards';
+    }
+
+    if (sizeIssue?.kind === 'too-many-cards') {
+        return 'too-many-cards';
+    }
+
+    if (validateDeckAvailability(selectedDeck.cards, stash.cards).length > 0) {
+        return 'insufficient-copies';
+    }
+
+    return 'ready';
+}
+
+function getPreparationDeckReadinessLabel(readiness: PreparationDeckReadiness): string {
+    switch (readiness) {
+        case 'none':
+            return '未选择卡组';
+        case 'ready':
+            return '已满足带入要求';
+        case 'too-few-cards':
+            return '张数不足';
+        case 'too-many-cards':
+            return '张数超限';
+        case 'insufficient-copies':
+            return '缺少库存卡牌';
+    }
+}
+
+function formatPreparationDeckContext(prefix: string, context: PreparationDeckContext): string {
+    if (!context.selectedDeckId || !context.selectedDeckName) {
+        return `${prefix}未选择卡组。`;
+    }
+
+    return `${prefix}「${context.selectedDeckName}」：${context.deckCount} 张，${getPreparationDeckReadinessLabel(context.readiness)}。`;
+}
+
+function createDeckCountDeltaText(before: number, after: number): string {
+    return `已保存卡组数从 ${before} 套变为 ${after} 套。`;
+}
+
+function getPreparationDeckHandoffTone(
+    changed: boolean,
+    afterContext: PreparationDeckContext,
+): PreparationDeckHandoffSummary['tone'] {
+    if (!changed) {
+        return 'neutral';
+    }
+
+    return afterContext.readiness === 'ready' ? 'positive' : 'warning';
+}
+
 export function createPreparationSummary(stash: PersistentStash): PreparationSummary {
     const deckCount = countStacks(getSelectedDeckCards(stash));
     const itemCount = countStacks(stash.items);
@@ -54,6 +149,97 @@ export function createPreparationSummary(stash: PersistentStash): PreparationSum
         itemCount,
         spiritStones: stash.spiritStones,
         statusText: `储物袋已备好：${deckCount} 张卡、${itemCount} 件道具、${stash.spiritStones} 枚灵石。`,
+    };
+}
+
+export function createPreparationDeckContext(stash: PersistentStash): PreparationDeckContext {
+    const selectedDeck = getSelectedSavedDeck(stash);
+    const selectedDeckCards = getSelectedDeckCards(stash);
+
+    return {
+        selectedDeckId: selectedDeck?.id ?? null,
+        selectedDeckName: selectedDeck?.name ?? null,
+        deckCount: countStacks(selectedDeckCards),
+        readiness: getPreparationDeckReadiness(stash),
+        savedDeckCount: stash.savedDecks.length,
+        selectedDeckCardSignature: createDeckCardSignature(selectedDeckCards),
+    };
+}
+
+export function createPreparationDeckHandoffSummary(
+    beforeContext: PreparationDeckContext,
+    afterContext: PreparationDeckContext,
+): PreparationDeckHandoffSummary {
+    const selectedDeckChanged = beforeContext.selectedDeckId !== afterContext.selectedDeckId;
+    const deckNameChanged = beforeContext.selectedDeckName !== afterContext.selectedDeckName;
+    const deckCountChanged = beforeContext.deckCount !== afterContext.deckCount;
+    const readinessChanged = beforeContext.readiness !== afterContext.readiness;
+    const deckCompositionChanged = beforeContext.selectedDeckCardSignature !== afterContext.selectedDeckCardSignature;
+    const focusChanged = selectedDeckChanged
+        || deckNameChanged
+        || deckCountChanged
+        || readinessChanged
+        || deckCompositionChanged;
+    const savedDeckCountChanged = beforeContext.savedDeckCount !== afterContext.savedDeckCount;
+    const changed = focusChanged || savedDeckCountChanged;
+    const tone = getPreparationDeckHandoffTone(changed, afterContext);
+
+    if (!changed) {
+        return {
+            title: '卡组未改动',
+            detail: `${formatPreparationDeckContext('当前带入', afterContext)}名称、构成、张数与带入状态均未变化。`,
+            tone,
+        };
+    }
+
+    if (!focusChanged && savedDeckCountChanged) {
+        return {
+            title: '卡组列表已更新',
+            detail: `${formatPreparationDeckContext('当前带入', afterContext)}${createDeckCountDeltaText(
+                beforeContext.savedDeckCount,
+                afterContext.savedDeckCount,
+            )}`,
+            tone,
+        };
+    }
+
+    if (
+        !selectedDeckChanged
+        && !deckNameChanged
+        && !deckCountChanged
+        && !readinessChanged
+        && deckCompositionChanged
+        && !savedDeckCountChanged
+    ) {
+        return {
+            title: '卡组内容已调整',
+            detail: `${formatPreparationDeckContext('当前带入', afterContext)}卡牌构成已更新。`,
+            tone,
+        };
+    }
+
+    const detailParts = [
+        formatPreparationDeckContext('当前带入', afterContext),
+    ];
+
+    if (beforeContext.selectedDeckId || beforeContext.selectedDeckName) {
+        detailParts.push(formatPreparationDeckContext('离开前为', beforeContext));
+    } else {
+        detailParts.push('离开管理界面前尚未选中卡组。');
+    }
+
+    if (deckCompositionChanged && !selectedDeckChanged) {
+        detailParts.push('卡牌构成也已更新。');
+    }
+
+    if (savedDeckCountChanged) {
+        detailParts.push(createDeckCountDeltaText(beforeContext.savedDeckCount, afterContext.savedDeckCount));
+    }
+
+    return {
+        title: selectedDeckChanged ? '当前带入已切换' : '卡组改动已同步',
+        detail: detailParts.join(''),
+        tone,
     };
 }
 

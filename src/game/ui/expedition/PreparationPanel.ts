@@ -1,6 +1,9 @@
 import { GameObjects, Scene } from 'phaser';
 
-import { createPreparationSummary } from '../../scenes/expedition/entryFlowModel';
+import {
+    createPreparationSummary,
+    type PreparationDeckHandoffSummary,
+} from '../../scenes/expedition/entryFlowModel';
 import { validateExpeditionLoadout } from '../../scenes/expedition/expeditionEntryFlow';
 import {
     countDeckCards,
@@ -24,6 +27,7 @@ export interface PreparationPanelConfig {
     onConfirm: () => void;
     onDeckSelect: (deckId: string) => void;
     onOpenDeckManager?: () => void;
+    deckHandoffSummary?: PreparationDeckHandoffSummary | null;
 }
 
 interface DeckDisplayState {
@@ -34,6 +38,14 @@ interface DeckDisplayState {
     hoverFillColor: number;
     borderColor: number;
     accentColor: number;
+    badgeColor: string;
+    badgeBackgroundColor: string;
+    detailColor: string;
+}
+
+interface DeckHandoffBannerColors {
+    fillColor: number;
+    borderColor: number;
     badgeColor: string;
     badgeBackgroundColor: string;
     detailColor: string;
@@ -250,11 +262,43 @@ function createActionButton(
     return { background, label: text };
 }
 
+function getDeckHandoffBannerColors(
+    tone: PreparationDeckHandoffSummary['tone'],
+): DeckHandoffBannerColors {
+    switch (tone) {
+        case 'positive':
+            return {
+                fillColor: 0x10261d,
+                borderColor: 0x22c55e,
+                badgeColor: '#dcfce7',
+                badgeBackgroundColor: '#166534',
+                detailColor: '#bbf7d0',
+            };
+        case 'warning':
+            return {
+                fillColor: 0x2a1420,
+                borderColor: 0xf59e0b,
+                badgeColor: '#fef3c7',
+                badgeBackgroundColor: '#92400e',
+                detailColor: '#fde68a',
+            };
+        case 'neutral':
+            return {
+                fillColor: 0x111827,
+                borderColor: 0x64748b,
+                badgeColor: '#e2e8f0',
+                badgeBackgroundColor: '#334155',
+                detailColor: '#cbd5e1',
+            };
+    }
+}
+
 export class PreparationPanel extends GameObjects.Container {
     private readonly stash: PersistentStash;
     private readonly onConfirm: () => void;
     private readonly onDeckSelect: (deckId: string) => void;
     private readonly onOpenDeckManager?: () => void;
+    private readonly deckHandoffSummary?: PreparationDeckHandoffSummary | null;
 
     private scrollX = 0;
     private maxScrollX = 0;
@@ -281,6 +325,7 @@ export class PreparationPanel extends GameObjects.Container {
         this.onConfirm = config.onConfirm;
         this.onDeckSelect = config.onDeckSelect;
         this.onOpenDeckManager = config.onOpenDeckManager;
+        this.deckHandoffSummary = config.deckHandoffSummary;
 
         this.createPanel();
         this.once(Phaser.GameObjects.Events.DESTROY, () => this.teardownScrollInteraction());
@@ -290,7 +335,7 @@ export class PreparationPanel extends GameObjects.Container {
     private createPanel(): void {
         const { width, height } = this.scene.scale;
         const panelWidth = Math.min(980, width * 0.82);
-        const panelHeight = Math.min(760, height * 0.84);
+        const panelHeight = Math.min(820, height * 0.88);
         const panelX = width / 2;
         const panelY = height / 2 + 24;
         const panelLeft = panelX - panelWidth / 2;
@@ -329,7 +374,43 @@ export class PreparationPanel extends GameObjects.Container {
             wordWrap: { width: contentWidth },
         });
 
-        const deckSelectorY = subtitle.y + 46;
+        let deckSelectorY = subtitle.y + 46;
+        const handoffSummary = this.deckHandoffSummary;
+        const handoffElements: Phaser.GameObjects.GameObject[] = [];
+
+        if (handoffSummary) {
+            const bannerColors = getDeckHandoffBannerColors(handoffSummary.tone);
+            const bannerTop = subtitle.y + subtitle.height + 16;
+            const bannerHeight = 84;
+            const banner = this.scene.add.rectangle(
+                panelX,
+                bannerTop + bannerHeight / 2,
+                contentWidth,
+                bannerHeight,
+                bannerColors.fillColor,
+                0.96,
+            );
+            banner.setStrokeStyle(2, bannerColors.borderColor, 0.92);
+            const bannerTitle = this.scene.add.text(contentLeft + 18, bannerTop + 14, handoffSummary.title, {
+                fontFamily: 'Arial',
+                fontSize: '16px',
+                color: bannerColors.badgeColor,
+                fontStyle: 'bold',
+                backgroundColor: bannerColors.badgeBackgroundColor,
+                padding: { left: 12, right: 12, top: 6, bottom: 6 },
+            });
+            const bannerDetail = this.scene.add.text(contentLeft + 18, bannerTitle.y + 38, handoffSummary.detail, {
+                fontFamily: 'Arial',
+                fontSize: '17px',
+                color: bannerColors.detailColor,
+                wordWrap: { width: contentWidth - 36 },
+                lineSpacing: 4,
+            });
+
+            handoffElements.push(banner, bannerTitle, bannerDetail);
+            deckSelectorY = bannerTop + bannerHeight + 18;
+        }
+
         const deckCardElements = this.createDeckCardRow(
             contentLeft,
             deckSelectorY,
@@ -534,6 +615,7 @@ export class PreparationPanel extends GameObjects.Container {
             panelAccent,
             title,
             subtitle,
+            ...handoffElements,
             ...deckCardElements,
             scrollHint,
             validationCard,
@@ -609,9 +691,16 @@ export class PreparationPanel extends GameObjects.Container {
 
         const totalContentWidth = decks.length * cardWidth + Math.max(0, decks.length - 1) * cardGap;
         const needsScroll = totalContentWidth > maxWidth;
+        const selectedDeckIndex = Math.max(0, decks.findIndex((deck) => deck.id === selectedDeckId));
 
         this.maxScrollX = Math.max(0, totalContentWidth - maxWidth);
-        this.scrollX = 0;
+        this.scrollX = this.maxScrollX > 0
+            ? Phaser.Math.Clamp(
+                selectedDeckIndex * (cardWidth + cardGap) - (maxWidth - cardWidth) / 2,
+                0,
+                this.maxScrollX,
+            )
+            : 0;
 
         const maskGraphics = this.scene.make.graphics({});
         maskGraphics.fillStyle(0xffffff);
@@ -620,6 +709,7 @@ export class PreparationPanel extends GameObjects.Container {
         elements.push(maskGraphics);
 
         const innerContainer = this.scene.add.container(0, 0);
+        innerContainer.setX(-this.scrollX);
         this.scrollContainer = innerContainer;
 
         const outerContainer = this.scene.add.container(startX, y);

@@ -6,6 +6,8 @@ import starterDeckJson from '../../../../public/data/decks/starter-deck.json';
 import { resetRunPersistenceForTests } from '../../services/RunPersistence';
 import { ExpeditionState } from '../../state/ExpeditionState';
 import {
+    createPreparationDeckContext,
+    createPreparationDeckHandoffSummary,
     createPostRunEntranceStatus,
     createPreparationSummary,
     createRunResolutionSummaryView,
@@ -135,5 +137,125 @@ describe('entryFlowModel', () => {
         expect(createPostRunEntranceStatus(stash, summary)).toBe(
             '储物袋已备好：2 张卡、1 件道具、24 枚灵石。\n上次结果：撤离成功（extract.cliff-rope）。可立即开始新的秘境探索。',
         );
+    });
+
+    it('summarizes a post-edit return when the selected deck changed during deck management', () => {
+        const before = createPreparationDeckContext({
+            stashId: 'phase01.starter-stash',
+            cards: [{ id: 'AR_001', count: 24 }],
+            savedDecks: [
+                { id: 'main', name: '主力卡组', cards: [{ id: 'AR_001', count: 20 }] },
+                { id: 'alt', name: '候补卡组', cards: [{ id: 'AR_001', count: 18 }] },
+            ],
+            selectedDeckId: 'main',
+            items: [],
+            spiritStones: 24,
+            lastRunSummary: null,
+        });
+        const after = createPreparationDeckContext({
+            stashId: 'phase01.starter-stash',
+            cards: [{ id: 'AR_001', count: 24 }],
+            savedDecks: [
+                { id: 'main', name: '主力卡组', cards: [{ id: 'AR_001', count: 20 }] },
+                { id: 'alt', name: '候补卡组·改', cards: [{ id: 'AR_001', count: 22 }] },
+            ],
+            selectedDeckId: 'alt',
+            items: [],
+            spiritStones: 24,
+            lastRunSummary: null,
+        });
+
+        expect(createPreparationDeckHandoffSummary(before, after)).toEqual({
+            title: '当前带入已切换',
+            detail: '当前带入「候补卡组·改」：22 张，已满足带入要求。离开前为「主力卡组」：20 张，已满足带入要求。',
+            tone: 'positive',
+        });
+    });
+
+    it('summarizes a post-edit return when the selected deck did not change', () => {
+        const before = createPreparationDeckContext({
+            stashId: 'phase01.starter-stash',
+            cards: [{ id: 'AR_001', count: 24 }],
+            savedDecks: [{ id: 'main', name: '旧名字', cards: [{ id: 'AR_001', count: 18 }] }],
+            selectedDeckId: 'main',
+            items: [],
+            spiritStones: 24,
+            lastRunSummary: null,
+        });
+        const after = createPreparationDeckContext({
+            stashId: 'phase01.starter-stash',
+            cards: [{ id: 'AR_001', count: 24 }],
+            savedDecks: [{ id: 'main', name: '新名字', cards: [{ id: 'AR_001', count: 20 }] }],
+            selectedDeckId: 'main',
+            items: [],
+            spiritStones: 24,
+            lastRunSummary: null,
+        });
+
+        expect(createPreparationDeckHandoffSummary(before, after)).toEqual({
+            title: '卡组改动已同步',
+            detail: '当前带入「新名字」：20 张，已满足带入要求。离开前为「旧名字」：18 张，张数不足。卡牌构成也已更新。',
+            tone: 'positive',
+        });
+    });
+
+    it('acknowledges composition-only edits when the selected deck id, name, count, and readiness stay the same', () => {
+        const before = createPreparationDeckContext({
+            stashId: 'phase01.starter-stash',
+            cards: [
+                { id: 'AR_001', count: 20 },
+                { id: 'AR_002', count: 20 },
+            ],
+            savedDecks: [{ id: 'main', name: '主力卡组', cards: [{ id: 'AR_001', count: 20 }] }],
+            selectedDeckId: 'main',
+            items: [],
+            spiritStones: 24,
+            lastRunSummary: null,
+        });
+        const after = createPreparationDeckContext({
+            stashId: 'phase01.starter-stash',
+            cards: [
+                { id: 'AR_001', count: 20 },
+                { id: 'AR_002', count: 20 },
+            ],
+            savedDecks: [{ id: 'main', name: '主力卡组', cards: [{ id: 'AR_002', count: 20 }] }],
+            selectedDeckId: 'main',
+            items: [],
+            spiritStones: 24,
+            lastRunSummary: null,
+        });
+
+        expect(createPreparationDeckHandoffSummary(before, after)).toEqual({
+            title: '卡组内容已调整',
+            detail: '当前带入「主力卡组」：20 张，已满足带入要求。卡牌构成已更新。',
+            tone: 'positive',
+        });
+    });
+
+    it('reports when the player returns from deck management without changing the selected deck context', () => {
+        const before = createPreparationDeckContext({
+            stashId: 'phase01.starter-stash',
+            cards: [{ id: 'AR_001', count: 24 }],
+            savedDecks: [{ id: 'main', name: '主力卡组', cards: [{ id: 'AR_001', count: 20 }] }],
+            selectedDeckId: 'main',
+            items: [],
+            spiritStones: 24,
+            lastRunSummary: null,
+        });
+        const after = createPreparationDeckContext({
+            stashId: 'phase01.starter-stash',
+            cards: [{ id: 'AR_001', count: 24 }],
+            savedDecks: [{ id: 'main', name: '主力卡组', cards: [{ id: 'AR_001', count: 20 }] }],
+            selectedDeckId: 'main',
+            items: [],
+            spiritStones: 24,
+            lastRunSummary: null,
+        });
+
+        expect(createPreparationDeckHandoffSummary(before, after)).toEqual({
+            title: '卡组未改动',
+            detail: '当前带入「主力卡组」：20 张，已满足带入要求。名称、构成、张数与带入状态均未变化。',
+            tone: 'neutral',
+        });
     });
 });

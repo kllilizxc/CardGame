@@ -34,9 +34,13 @@ import { PreparationPanel } from '../../ui/expedition/PreparationPanel';
 import { RunHud } from '../../ui/expedition/RunHud';
 import { createWorldMapReturnIntent } from '../worldmap/worldMap';
 import {
+    createPreparationDeckContext,
+    createPreparationDeckHandoffSummary,
     createPostRunEntranceStatus,
     createPreparationSummary,
     createRunSummary,
+    type PreparationDeckContext,
+    type PreparationDeckHandoffSummary,
     type RunSummaryMode,
 } from './entryFlowModel';
 import { createBattleSceneStartPayload } from './battleLaunchFlow';
@@ -78,6 +82,8 @@ export class ExpeditionScene extends Scene {
     private mapGraphics?: Phaser.GameObjects.Graphics;
     private mapNodeViews: MapNodeView[] = [];
     private pendingBattleResult: ExpeditionBattleCompleteEvent | null = null;
+    private deckManagerEntryContext?: PreparationDeckContext;
+    private pendingPreparationDeckHandoff?: PreparationDeckHandoffSummary;
 
     constructor() {
         super('ExpeditionScene');
@@ -219,7 +225,9 @@ export class ExpeditionScene extends Scene {
             onConfirm: () => this.startFreshRun(),
             onDeckSelect: (deckId) => this.handleDeckSelect(deckId),
             onOpenDeckManager: () => this.showDeckManagementPanel(),
+            deckHandoffSummary: this.pendingPreparationDeckHandoff,
         });
+        this.pendingPreparationDeckHandoff = undefined;
     }
 
     private handleDeckSelect(deckId: string): void {
@@ -229,6 +237,7 @@ export class ExpeditionScene extends Scene {
     }
 
     private showDeckManagementPanel(): void {
+        this.deckManagerEntryContext = createPreparationDeckContext(this.expeditionState.persistentStash);
         this.preparationPanel?.destroy();
         this.preparationPanel = undefined;
         this.deckManagementPanel?.destroy();
@@ -239,7 +248,17 @@ export class ExpeditionScene extends Scene {
                 this.expeditionState.persistentStash = newStash;
                 this.expeditionState.persistCurrentStash();
             },
-            onClose: () => this.showPreparationPanel(),
+            onClose: () => {
+                if (this.deckManagerEntryContext) {
+                    this.pendingPreparationDeckHandoff = createPreparationDeckHandoffSummary(
+                        this.deckManagerEntryContext,
+                        createPreparationDeckContext(this.expeditionState.persistentStash),
+                    );
+                }
+
+                this.deckManagerEntryContext = undefined;
+                this.showPreparationPanel();
+            },
         });
     }
 
