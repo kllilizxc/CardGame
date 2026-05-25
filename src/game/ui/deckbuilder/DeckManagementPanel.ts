@@ -1,6 +1,7 @@
 import { GameObjects, Scene } from 'phaser';
 
 import type { CardKind, CardRarity } from '@data/types/cards/core';
+import type { ExpeditionRouteBriefingSummary } from '../../scenes/expedition/entryFlowModel';
 import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import {
     computeCardCollectionViewModel,
@@ -25,10 +26,12 @@ import {
     type DeckCapacitySummary as DeckCapacityMetrics,
 } from '../../state/PersistentStashDecks';
 import type { ExpeditionCardStack, PersistentStash, SavedDeck } from '../../types/expedition';
+import { createRouteBriefingStrip } from '../expedition/routeBriefingStrip';
 
 export interface DeckManagementPanelConfig {
     stash: PersistentStash;
     metadata?: CardMetadataMap;
+    routeBriefing?: ExpeditionRouteBriefingSummary;
     onStashChange: (stash: PersistentStash) => void;
     onClose: () => void;
 }
@@ -1263,10 +1266,26 @@ export class DeckManagementPanel extends GameObjects.Container {
             false,
             { hoverFillColor: 0x475569, strokeColor: 0x94a3b8 },
         );
+        const routeBriefingElements: Phaser.GameObjects.GameObject[] = [];
+        let contentY = panelY - panelHeight / 2 + 108;
+        let contentH = panelHeight - 136;
+
+        if (this.config.routeBriefing) {
+            const routeBriefing = createRouteBriefingStrip(
+                this.scene,
+                titleX,
+                subtitle.y + subtitle.height + 14,
+                panelWidth - 68,
+                this.config.routeBriefing,
+            );
+
+            routeBriefingElements.push(...routeBriefing.elements);
+            const contentTop = subtitle.y + subtitle.height + 14 + routeBriefing.height + 18;
+            contentY = contentTop;
+            contentH = panelY + panelHeight / 2 - 28 - contentY;
+        }
 
         const columnGap = 18;
-        const contentY = panelY - panelHeight / 2 + 108;
-        const contentH = panelHeight - 136;
         const leftColX = panelX - panelWidth / 2 + 26;
         const leftColW = 274;
         const centerColX = leftColX + leftColW + columnGap;
@@ -1274,7 +1293,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         const rightColX = centerColX + centerColW + columnGap;
         const rightColW = panelX + panelWidth / 2 - 26 - rightColX;
 
-        this.add([overlay, panel, title, subtitle, ...closeButton]);
+        this.add([overlay, panel, title, subtitle, ...closeButton, ...routeBriefingElements]);
 
         this.createDeckListColumn(leftColX, contentY, leftColW, contentH);
         this.createEditorColumn(centerColX, contentY, centerColW, contentH);

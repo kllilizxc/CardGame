@@ -6,9 +6,15 @@ const read = (path: string) => readFileSync(path, 'utf8');
 describe('expedition UI Chinese copy', () => {
     it('uses Chinese player-facing labels in the expedition entry scene', () => {
         const scene = read('src/game/scenes/expedition/ExpeditionScene.ts');
+        const model = read('src/game/scenes/expedition/entryFlowModel.ts');
+        const sceneCopy = `${scene}\n${model}`;
 
-        expect(scene).toContain('第一阶段 · 秘境入口流程');
-        expect(scene).not.toContain('Phase 01 · Expedition Entry Flow');
+        expect(sceneCopy).toContain('步骤 1 / 2');
+        expect(sceneCopy).toContain('步骤 2 / 2');
+        expect(sceneCopy).toContain('两步出发校验 · 先确认路线，再选定带入');
+        expect(sceneCopy).toContain('两步出发校验 · 整理卡组后返回确认');
+        expect(sceneCopy).toContain('路线简报');
+        expect(sceneCopy).not.toContain('Phase 01 · Expedition Entry Flow');
     });
 
     it('uses Chinese loadout labels in the preparation panel', () => {
@@ -27,6 +33,10 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).toContain('出发校验');
         expect(panel).toContain('缺口重点');
         expect(panel).toContain('本次携带一览');
+        expect(loadoutCopy).toContain('当前阶段：确认路线并选定本次带入');
+        expect(loadoutCopy).toContain('入口');
+        expect(loadoutCopy).toContain('路线');
+        expect(loadoutCopy).toContain('终点');
         expect(panel).toContain('卡组构成');
         expect(panel).toContain('携带道具');
         expect(panel).toContain('灵石');
@@ -38,6 +48,8 @@ describe('expedition UI Chinese copy', () => {
 
     it('uses Chinese exit-summary labels in the deck management panel', () => {
         const panel = read('src/game/ui/deckbuilder/DeckManagementPanel.ts');
+        const model = read('src/game/scenes/expedition/entryFlowModel.ts');
+        const deckManagerCopy = `${panel}\n${model}`;
 
         expect(panel).toContain('返回前摘要');
         expect(panel).toContain('返回远征准备');
@@ -46,6 +58,7 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).toContain('卡组 ×');
         expect(panel).toContain('一键加满');
         expect(panel).toContain('全部移除');
+        expect(deckManagerCopy).toContain('当前阶段：整理卡组并返回远征准备');
         expect(panel).toContain('张出征线还差');
         expect(panel).toContain('张上限还剩');
         expect(panel).toContain('已耗尽');

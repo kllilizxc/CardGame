@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 
 import initialWorldState from '../../../../public/data/world/initial-state.json';
+import jadeCaveMapJson from '../../../../public/data/mijing/jade-cave-map.json';
+import prototypeMapJson from '../../../../public/data/mijing/prototype-map.json';
 import starterDeckJson from '../../../../public/data/decks/starter-deck.json';
 
 import { resetRunPersistenceForTests } from '../../services/RunPersistence';
@@ -11,6 +13,7 @@ import {
     createPreparationDeckCardPreview,
     createPreparationDeckContext,
     createPreparationDeckHandoffSummary,
+    createExpeditionRouteBriefingSummary,
     createPreparationSelectedLoadoutSummary,
     createPostRunEntranceStatus,
     createPreparationSummary,
@@ -41,6 +44,38 @@ describe('entryFlowModel', () => {
             itemCount: 3,
             spiritStones: 36,
             statusText: '储物袋已备好：20 张卡、3 件道具、36 枚灵石。',
+        });
+    });
+
+    it('builds a route briefing from the expedition map and current shell step', () => {
+        expect(createExpeditionRouteBriefingSummary(prototypeMapJson, 'preparation')).toEqual({
+            mode: 'preparation',
+            shellBadgeLabel: '步骤 1 / 2',
+            shellSubtitle: '两步出发校验 · 先确认路线，再选定带入',
+            panelBadgeLabel: '路线简报',
+            panelStageLabel: '当前阶段：确认路线并选定本次带入',
+            description: '一张固定拓扑的第一阶段原型秘境地图，用于验证带入、搜打撤与首领通关闭环。',
+            highlights: [
+                { label: '入口', value: '山门入口' },
+                { label: '路线', value: '4 层 · 战斗 2 · 事件 1 · 商店 1' },
+                { label: '终点', value: '1 个撤离点 · 1 个首领' },
+            ],
+        });
+    });
+
+    it('keeps the same route identity while changing the shell framing for deck management', () => {
+        expect(createExpeditionRouteBriefingSummary(jadeCaveMapJson, 'deckManager')).toEqual({
+            mode: 'deckManager',
+            shellBadgeLabel: '步骤 2 / 2',
+            shellSubtitle: '两步出发校验 · 整理卡组后返回确认',
+            panelBadgeLabel: '路线简报',
+            panelStageLabel: '当前阶段：整理卡组并返回远征准备',
+            description: '青云后山一处青玉洞支脉，沿用第一阶段固定拓扑与原型事件/商店池，用于验证第二个秘境入口的 route identity 与 active-run 隔离。',
+            highlights: [
+                { label: '入口', value: '青玉洞口' },
+                { label: '路线', value: '4 层 · 战斗 2 · 事件 1 · 商店 1' },
+                { label: '终点', value: '1 个撤离点 · 1 个首领' },
+            ],
         });
     });
 

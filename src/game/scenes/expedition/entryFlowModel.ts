@@ -1,5 +1,11 @@
 import type { CardKind } from '@data/types/cards/core';
-import type { PersistentStash, RunResolutionSummary, RunSnapshot } from '../../types/expedition';
+import type {
+    ExpeditionMapDefinition,
+    ExpeditionNodeType,
+    PersistentStash,
+    RunResolutionSummary,
+    RunSnapshot,
+} from '../../types/expedition';
 import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import {
     DECK_CARD_MAX,
@@ -96,6 +102,23 @@ export type RunSummaryMode = 'started' | 'resumed';
 export interface RunSummaryOptions {
     mode?: RunSummaryMode;
     currentNodeLabel?: string;
+}
+
+export type ExpeditionRouteBriefingMode = 'preparation' | 'deckManager';
+
+export interface ExpeditionRouteBriefingHighlight {
+    label: string;
+    value: string;
+}
+
+export interface ExpeditionRouteBriefingSummary {
+    mode: ExpeditionRouteBriefingMode;
+    shellBadgeLabel: string;
+    shellSubtitle: string;
+    panelBadgeLabel: string;
+    panelStageLabel: string;
+    description: string;
+    highlights: ExpeditionRouteBriefingHighlight[];
 }
 
 export interface PreparationLoadoutValidationResult {
@@ -365,6 +388,88 @@ function formatPreparationDeckContext(prefix: string, context: PreparationDeckCo
 
 function createDeckCountDeltaText(before: number, after: number): string {
     return `已保存卡组数从 ${before} 套变为 ${after} 套。`;
+}
+
+function summarizeRouteNodes(map: ExpeditionMapDefinition): Record<ExpeditionNodeType, number> {
+    const counts: Record<ExpeditionNodeType, number> = {
+        entrance: 0,
+        battle: 0,
+        event: 0,
+        shop: 0,
+        extract: 0,
+        boss: 0,
+    };
+
+    for (const node of map.nodes) {
+        counts[node.type] += 1;
+    }
+
+    return counts;
+}
+
+function getRouteDepth(map: ExpeditionMapDefinition): number {
+    return map.nodes.reduce((maxLayer, node) => Math.max(maxLayer, node.layer), 0) + 1;
+}
+
+function formatRouteEndpointSummary(extractCount: number, bossCount: number): string {
+    const segments: string[] = [];
+
+    segments.push(extractCount > 0 ? `${extractCount} 个撤离点` : '无撤离点');
+    segments.push(bossCount > 0 ? `${bossCount} 个首领` : '无首领');
+
+    return segments.join(' · ');
+}
+
+function getRouteBriefingShellCopy(mode: ExpeditionRouteBriefingMode): {
+    badgeLabel: string;
+    subtitle: string;
+    stageLabel: string;
+} {
+    if (mode === 'deckManager') {
+        return {
+            badgeLabel: '步骤 2 / 2',
+            subtitle: '两步出发校验 · 整理卡组后返回确认',
+            stageLabel: '当前阶段：整理卡组并返回远征准备',
+        };
+    }
+
+    return {
+        badgeLabel: '步骤 1 / 2',
+        subtitle: '两步出发校验 · 先确认路线，再选定带入',
+        stageLabel: '当前阶段：确认路线并选定本次带入',
+    };
+}
+
+export function createExpeditionRouteBriefingSummary(
+    map: ExpeditionMapDefinition,
+    mode: ExpeditionRouteBriefingMode,
+): ExpeditionRouteBriefingSummary {
+    const entryNode = map.nodes.find((node) => node.id === map.entryNodeId);
+    const counts = summarizeRouteNodes(map);
+    const shellCopy = getRouteBriefingShellCopy(mode);
+
+    return {
+        mode,
+        shellBadgeLabel: shellCopy.badgeLabel,
+        shellSubtitle: shellCopy.subtitle,
+        panelBadgeLabel: '路线简报',
+        panelStageLabel: shellCopy.stageLabel,
+        description: map.description,
+        highlights: [
+            {
+                label: '入口',
+                value: entryNode?.label ?? map.entryNodeId,
+            },
+            {
+                label: '路线',
+                value: `${getRouteDepth(map)} 层 · 战斗 ${counts.battle} · 事件 ${counts.event} · 商店 ${counts.shop}`,
+            },
+            {
+                label: '终点',
+                value: formatRouteEndpointSummary(counts.extract, counts.boss),
+            },
+        ],
+    };
 }
 
 function getPreparationDeckHandoffTone(

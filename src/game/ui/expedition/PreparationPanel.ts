@@ -6,6 +6,7 @@ import {
     createPreparationSelectedLoadoutSummary,
     formatPreparationValidationLines,
     formatPreparationValidationStatusText,
+    type ExpeditionRouteBriefingSummary,
     type PreparationDeckHandoffSummary,
     type PreparationSelectedLoadoutSummary,
 } from '../../scenes/expedition/entryFlowModel';
@@ -25,10 +26,12 @@ import type {
     PersistentStash,
     SavedDeck,
 } from '../../types/expedition';
+import { createRouteBriefingStrip } from './routeBriefingStrip';
 
 export interface PreparationPanelConfig {
     stash: PersistentStash;
     metadata?: CardMetadataMap;
+    routeBriefing?: ExpeditionRouteBriefingSummary;
     onConfirm: () => void;
     onDeckSelect: (deckId: string) => void;
     onOpenDeckManager?: () => void;
@@ -525,13 +528,28 @@ export class PreparationPanel extends GameObjects.Container {
             wordWrap: { width: contentWidth },
         });
 
-        let deckSelectorY = subtitle.y + 46;
+        let deckSelectorY = subtitle.y + subtitle.height + 18;
+        const routeBriefingElements: Phaser.GameObjects.GameObject[] = [];
+
+        if (this.config.routeBriefing) {
+            const routeBriefing = createRouteBriefingStrip(
+                this.scene,
+                contentLeft,
+                deckSelectorY,
+                contentWidth,
+                this.config.routeBriefing,
+            );
+
+            routeBriefingElements.push(...routeBriefing.elements);
+            deckSelectorY += routeBriefing.height + 16;
+        }
+
         const handoffSummary = this.deckHandoffSummary;
         const handoffElements: Phaser.GameObjects.GameObject[] = [];
 
         if (handoffSummary) {
             const bannerColors = getDeckHandoffBannerColors(handoffSummary.tone);
-            const bannerTop = subtitle.y + subtitle.height + 16;
+            const bannerTop = deckSelectorY;
             const bannerHeight = 84;
             const banner = this.scene.add.rectangle(
                 panelX,
@@ -957,6 +975,7 @@ export class PreparationPanel extends GameObjects.Container {
             panelAccent,
             title,
             subtitle,
+            ...routeBriefingElements,
             ...handoffElements,
             ...deckCardElements,
             scrollHint,

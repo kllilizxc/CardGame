@@ -34,6 +34,7 @@ import { PreparationPanel } from '../../ui/expedition/PreparationPanel';
 import { RunHud } from '../../ui/expedition/RunHud';
 import { createWorldMapReturnIntent } from '../worldmap/worldMap';
 import {
+    createExpeditionRouteBriefingSummary,
     createPreparationDeckContext,
     createPreparationDeckHandoffSummary,
     createPostRunEntranceStatus,
@@ -279,6 +280,7 @@ export class ExpeditionScene extends Scene {
     private createEntryShell(): void {
         const { width } = this.scale;
         const container = this.add.container(0, 0);
+        const routeBriefing = this.getEntryRouteBriefing('preparation');
 
         const headerPlate = this.add.rectangle(width / 2, 48, 680, 78, 0x091423, 0.94);
         headerPlate.setStrokeStyle(2, 0x3b82f6, 0.72);
@@ -289,12 +291,12 @@ export class ExpeditionScene extends Scene {
             color: '#f8fafc',
             fontStyle: 'bold',
         }).setOrigin(0.5);
-        const subtitleText = this.add.text(width / 2, 72, '第一阶段 · 秘境入口流程', {
+        const subtitleText = this.add.text(width / 2, 72, routeBriefing.shellSubtitle, {
             fontFamily: 'Arial',
             fontSize: '15px',
             color: '#93c5fd',
         }).setOrigin(0.5);
-        const modeBadgeText = this.add.text(width / 2 - 256, 42, '出发前检查', {
+        const modeBadgeText = this.add.text(width / 2 - 256, 42, routeBriefing.shellBadgeLabel, {
             fontFamily: 'Arial',
             fontSize: '13px',
             color: '#dbeafe',
@@ -360,6 +362,10 @@ export class ExpeditionScene extends Scene {
         this.updateEntryShellLayout('preparation', false);
     }
 
+    private getEntryRouteBriefing(mode: EntryShellMode) {
+        return createExpeditionRouteBriefingSummary(this.mapDefinition, mode);
+    }
+
     private createWorldMapReturnButton(): void {
         const { width } = this.scale;
         const x = width - 150;
@@ -388,9 +394,9 @@ export class ExpeditionScene extends Scene {
             return;
         }
 
+        const routeBriefing = this.getEntryRouteBriefing(mode);
         const modeConfig = mode === 'deckManager'
             ? {
-                badgeLabel: '牌库整理中',
                 badgeBackgroundColor: '#4c1d95',
                 badgeColor: '#ede9fe',
                 borderColor: 0xa855f7,
@@ -399,7 +405,6 @@ export class ExpeditionScene extends Scene {
                 cornerBottomColor: 0x60a5fa,
             }
             : {
-                badgeLabel: '出发前检查',
                 badgeBackgroundColor: '#1d4ed8',
                 badgeColor: '#dbeafe',
                 borderColor: 0x3b82f6,
@@ -410,11 +415,12 @@ export class ExpeditionScene extends Scene {
 
         this.entryShell.headerPlate.setStrokeStyle(2, modeConfig.borderColor, 0.72);
         this.entryShell.headerAccent.setFillStyle(modeConfig.accentColor, 1);
-        this.entryShell.modeBadgeText.setText(modeConfig.badgeLabel);
+        this.entryShell.modeBadgeText.setText(routeBriefing.shellBadgeLabel);
         this.entryShell.modeBadgeText.setStyle({
             color: modeConfig.badgeColor,
             backgroundColor: modeConfig.badgeBackgroundColor,
         });
+        this.entryShell.subtitleText.setText(routeBriefing.shellSubtitle);
         this.entryShell.topRail.setFillStyle(modeConfig.accentColor, 0.9);
         this.entryShell.leftAccentBar.setFillStyle(modeConfig.cornerTopColor, 0.82);
         this.entryShell.rightAccentBar.setFillStyle(modeConfig.cornerBottomColor, 0.82);
@@ -690,6 +696,7 @@ export class ExpeditionScene extends Scene {
         const nextPanel = new PreparationPanel(this, {
             stash: this.expeditionState.persistentStash,
             metadata: this.deckbuilderCardMetadata,
+            routeBriefing: this.getEntryRouteBriefing('preparation'),
             onConfirm: () => this.startFreshRun(),
             onDeckSelect: (deckId) => this.handleDeckSelect(deckId),
             onOpenDeckManager: () => this.showDeckManagementPanel(),
@@ -718,6 +725,7 @@ export class ExpeditionScene extends Scene {
         const nextPanel = new DeckManagementPanel(this, {
             stash: this.expeditionState.persistentStash,
             metadata: this.deckbuilderCardMetadata,
+            routeBriefing: this.getEntryRouteBriefing('deckManager'),
             onStashChange: (newStash) => {
                 this.expeditionState.persistentStash = newStash;
                 this.expeditionState.persistCurrentStash();
