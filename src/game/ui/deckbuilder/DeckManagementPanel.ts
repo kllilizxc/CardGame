@@ -56,6 +56,16 @@ const KIND_LABEL: Record<string, string> = {
     pill: '丹药',
 };
 
+const DEFAULT_BROWSER_SORT_FIELD: CardCollectionSortField = 'id';
+const DEFAULT_BROWSER_SORT_DIRECTION: 'asc' | 'desc' = 'asc';
+const BROWSER_SORT_FIELDS: CardCollectionSortField[] = ['id', 'count', 'kind', 'name'];
+const SORT_FIELD_LABEL: Record<CardCollectionSortField, string> = {
+    id: '编号',
+    count: '库存',
+    kind: '种类',
+    name: '名称',
+};
+
 const DECK_LIST_SUMMARY_HEIGHT = 74;
 const DECK_ROW_HEIGHT = 84;
 const EDITOR_ROW_HEIGHT = 72;
@@ -602,6 +612,10 @@ function getQuickAddCount(available: number, slotsRemainingToMax: number): numbe
     return Math.max(0, Math.min(Math.max(available, 0), Math.max(slotsRemainingToMax, 0)));
 }
 
+function getSortFieldLabel(field: CardCollectionSortField): string {
+    return SORT_FIELD_LABEL[field] ?? field;
+}
+
 function summarizeDeckStatus(
     deck: SavedDeck,
     stashCards: readonly ExpeditionCardStack[],
@@ -1013,8 +1027,8 @@ export class DeckManagementPanel extends GameObjects.Container {
     private filterQuery = '';
     private filterHideZero = true;
     private filterKind: CardKind | undefined = undefined;
-    private sortField: CardCollectionSortField = 'id';
-    private sortDirection: 'asc' | 'desc' = 'asc';
+    private sortField: CardCollectionSortField = DEFAULT_BROWSER_SORT_FIELD;
+    private sortDirection: 'asc' | 'desc' = DEFAULT_BROWSER_SORT_DIRECTION;
 
     private renameMode = false;
     private renameBuffer = '';
@@ -1038,12 +1052,15 @@ export class DeckManagementPanel extends GameObjects.Container {
     private deleteDeckBtn?: GameObjects.Rectangle;
     private deleteDeckLabel?: GameObjects.Text;
 
+    private kindBtn?: GameObjects.Rectangle;
     private kindBtnText?: GameObjects.Text;
     private hideZeroBtn?: GameObjects.Rectangle;
     private hideZeroBtnText?: GameObjects.Text;
+    private sortFieldBtn?: GameObjects.Rectangle;
     private sortFieldBtnText?: GameObjects.Text;
+    private sortDirBtn?: GameObjects.Rectangle;
     private sortDirBtnText?: GameObjects.Text;
-    private browserSummaryText?: GameObjects.Text;
+    private browserSummaryContainer?: GameObjects.Container;
     private browserPosText?: GameObjects.Text;
     private detailPaneContainer?: GameObjects.Container;
     private detailPaneContent?: GameObjects.Container;
@@ -1058,6 +1075,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     private deckListArea = { x: 0, y: 0, w: 0, h: 0 };
     private editorArea = { x: 0, y: 0, w: 0, h: 0 };
     private browserArea = { x: 0, y: 0, w: 0, h: 0 };
+    private browserSummaryArea = { x: 0, y: 0, w: 0, h: 0 };
     private editorContentWidth = 0;
     private editorContentHeight = 0;
     private detailPaneWidth = 0;
@@ -1746,6 +1764,8 @@ export class DeckManagementPanel extends GameObjects.Container {
     private updateSearchDisplay(): void {
         if (!this.queryText || !this.queryBg) return;
 
+        const hasQuery = this.filterQuery.trim().length > 0;
+
         if (this.searchFocus) {
             const cursor = this.cursorVisible ? '|' : '';
             this.queryText.setText(`${this.filterQuery}${cursor}`);
@@ -1754,13 +1774,145 @@ export class DeckManagementPanel extends GameObjects.Container {
             this.queryBg.setStrokeStyle(2, PANEL_ACCENT, 0.95);
         } else {
             this.queryText.setText(this.filterQuery || '搜索卡牌、编号或名称');
-            this.queryText.setColor(this.filterQuery ? '#f8fafc' : '#64748b');
-            this.queryBg.setFillStyle(0x0f172a, 1);
-            this.queryBg.setStrokeStyle(1, SECTION_BORDER, 0.9);
+            this.queryText.setColor(hasQuery ? '#e2e8f0' : '#64748b');
+            this.queryBg.setFillStyle(hasQuery ? 0x112338 : 0x0f172a, 1);
+            this.queryBg.setStrokeStyle(1, hasQuery ? SELECTED_ACCENT : SECTION_BORDER, hasQuery ? 0.95 : 0.9);
         }
 
         if (this.queryClearBtn) {
             this.queryClearBtn.setVisible(this.filterQuery.length > 0);
+            this.queryClearBtn.setColor(this.searchFocus ? '#e2e8f0' : '#94a3b8');
+        }
+    }
+
+    private hasModifiedBrowserControls(): boolean {
+        return this.filterQuery.trim().length > 0
+            || this.filterKind !== undefined
+            || !this.filterHideZero
+            || this.sortField !== DEFAULT_BROWSER_SORT_FIELD
+            || this.sortDirection !== DEFAULT_BROWSER_SORT_DIRECTION;
+    }
+
+    private resetBrowserControls(): void {
+        this.filterQuery = '';
+        this.filterHideZero = true;
+        this.filterKind = undefined;
+        this.sortField = DEFAULT_BROWSER_SORT_FIELD;
+        this.sortDirection = DEFAULT_BROWSER_SORT_DIRECTION;
+        this.setSearchFocus(false);
+        this.refreshBrowser();
+    }
+
+    private refreshBrowserSummary(
+        resultCount: number,
+        matchedCount: number,
+        totalCount: number,
+        selectedDeck: SavedDeck | null,
+        selectedSummary: DeckStatusSummary | null,
+    ): void {
+        if (!this.browserSummaryContainer) {
+            return;
+        }
+
+        this.browserSummaryContainer.removeAll(true);
+
+        const hasModifiedControls = this.hasModifiedBrowserControls();
+        const hasSearchOrKindFilter = this.filterQuery.trim().length > 0 || this.filterKind !== undefined;
+        const hiddenZeroCount = Math.max(0, matchedCount - resultCount);
+        const resultBaseline = hasSearchOrKindFilter ? matchedCount : totalCount;
+
+        let fillColor = 0x10251a;
+        let borderColor = VALID_ACCENT;
+        let accentColor = 0x4ade80;
+        let titleColor = '#dcfce7';
+        let detailColor = '#bbf7d0';
+
+        if (resultCount === 0 && (hasModifiedControls || matchedCount > 0)) {
+            fillColor = 0x271b0b;
+            borderColor = WARNING_ACCENT;
+            accentColor = 0xfbbf24;
+            titleColor = '#fde68a';
+            detailColor = '#fcd34d';
+        } else if (resultCount === 0) {
+            fillColor = 0x1f1722;
+            borderColor = SECTION_BORDER;
+            accentColor = INVALID_ACCENT;
+            titleColor = '#fecaca';
+            detailColor = '#cbd5e1';
+        } else if (hasModifiedControls) {
+            fillColor = 0x111c33;
+            borderColor = SELECTED_ACCENT;
+            accentColor = 0x93c5fd;
+            titleColor = '#dbeafe';
+            detailColor = '#bfdbfe';
+        }
+
+        const headlineSuffix = this.filterHideZero && hiddenZeroCount > 0
+            ? `零张隐藏 ${hiddenZeroCount}`
+            : selectedDeck
+                ? `当前卡组：${selectedSummary?.count ?? 0} 张`
+                : '先选卡组';
+        const headline = `结果 ${resultCount} / ${resultBaseline} · ${headlineSuffix}`;
+        const detail = [
+            `搜 ${this.filterQuery.trim().length > 0 ? `「${truncateLabel(this.filterQuery.trim(), 10)}」` : '全部'}`,
+            `类 ${KIND_LABEL[String(this.filterKind)]}`,
+            `零 ${this.filterHideZero ? '隐藏' : '显示'}`,
+            `序 ${getSortFieldLabel(this.sortField)}${this.sortDirection === 'asc' ? '↑' : '↓'}`,
+        ].join(' · ');
+
+        const summaryBg = this.scene.add.rectangle(
+            this.browserSummaryArea.w / 2,
+            this.browserSummaryArea.h / 2,
+            this.browserSummaryArea.w,
+            this.browserSummaryArea.h,
+            fillColor,
+            0.98,
+        );
+        summaryBg.setStrokeStyle(1, borderColor, 0.92);
+        const summaryAccent = this.scene.add.rectangle(5, this.browserSummaryArea.h / 2, 6, this.browserSummaryArea.h - 12, accentColor, 0.95)
+            .setOrigin(0, 0.5);
+
+        const headlineText = this.scene.add.text(18, 9, headline, {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: titleColor,
+            fontStyle: 'bold',
+        });
+        const detailText = this.scene.add.text(18, 26, detail, {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: detailColor,
+        });
+        headlineText.setText(truncateLabel(headlineText.text, 28));
+        detailText.setText(truncateLabel(detailText.text, 34));
+        this.browserSummaryContainer.add([summaryBg, summaryAccent, headlineText, detailText]);
+
+        if (hasModifiedControls) {
+            const resetButton = this.createButton(
+                this.browserSummaryArea.w - 54,
+                this.browserSummaryArea.h / 2,
+                92,
+                24,
+                '恢复默认',
+                0x4338ca,
+                () => this.resetBrowserControls(),
+                false,
+                {
+                    hoverFillColor: 0x5b4ce1,
+                    strokeColor: 0xc4b5fd,
+                    fontSize: '11px',
+                },
+            );
+            this.browserSummaryContainer.add(resetButton);
+        } else {
+            const defaultPill = this.createRightAlignedPill(
+                this.browserSummaryArea.w - 12,
+                this.browserSummaryArea.h / 2,
+                '默认浏览',
+                0x1e293b,
+                '#cbd5e1',
+            );
+            this.browserSummaryContainer.add(defaultPill);
         }
     }
 
@@ -1893,11 +2045,19 @@ export class DeckManagementPanel extends GameObjects.Container {
             1,
         );
         button.setStrokeStyle(1, disabled ? disabledStrokeColor : strokeColor, disabled ? 0.9 : 0.95);
+        button.setData('baseFillColor', disabled ? disabledFillColor : fillColor);
+        button.setData('hoverFillColor', disabled ? disabledFillColor : hoverFillColor);
 
         if (!disabled) {
             button.setInteractive({ useHandCursor: true });
-            button.on('pointerover', () => button.setFillStyle(hoverFillColor, 1));
-            button.on('pointerout', () => button.setFillStyle(fillColor, 1));
+            button.on('pointerover', () => {
+                const nextFillColor = Number(button.getData('hoverFillColor') ?? hoverFillColor);
+                button.setFillStyle(nextFillColor, 1);
+            });
+            button.on('pointerout', () => {
+                const nextFillColor = Number(button.getData('baseFillColor') ?? fillColor);
+                button.setFillStyle(nextFillColor, 1);
+            });
             button.on('pointerdown', onClick);
         } else {
             button.setAlpha(0.78);
@@ -1911,6 +2071,27 @@ export class DeckManagementPanel extends GameObjects.Container {
         }).setOrigin(0.5);
 
         return [button, text];
+    }
+
+    private setButtonVisualState(
+        button: GameObjects.Rectangle | undefined,
+        text: GameObjects.Text | undefined,
+        config: {
+            fillColor: number;
+            hoverFillColor: number;
+            strokeColor: number;
+            textColor?: string;
+        },
+    ): void {
+        if (!button || !text) {
+            return;
+        }
+
+        button.setFillStyle(config.fillColor, 1);
+        button.setStrokeStyle(1, config.strokeColor, 0.95);
+        button.setData('baseFillColor', config.fillColor);
+        button.setData('hoverFillColor', config.hoverFillColor);
+        text.setColor(config.textColor ?? '#f8fafc');
     }
 
     private createPill(
@@ -3025,22 +3206,43 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createBrowserColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '储物袋浏览', '筛选库存卡牌，并按单张或一键加满的方式补入当前卡组；悬停条目可在中栏查看更大的牌面预览。', VALID_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '储物袋浏览', '筛选库存卡牌，并按单张或一键加满的方式补入当前卡组；上方会同步提示当前浏览条件、剩余结果与恢复默认入口。', VALID_ACCENT));
 
         const innerX = x + 16;
         const innerW = colW - 32;
-        const searchY = y + 84;
-        const toggleY = y + 120;
-        const sortY = y + 156;
-        const summaryY = y + 192;
+        const railTop = y + 66;
+        const railHeight = 112;
+        const searchY = railTop + 36;
+        const toggleY = railTop + 68;
+        const sortY = railTop + 96;
+        const summaryY = railTop + railHeight + 10;
+        const summaryHeight = 44;
         const deleteY = y + colH - 28;
         const scrollBtnY = deleteY - 42;
-        const listTop = summaryY + 42;
+        const listTop = summaryY + summaryHeight + 8;
         const listBottom = scrollBtnY - 18;
         const listH = Math.max(120, listBottom - listTop);
 
         this.browserArea = { x: innerX, y: listTop, w: innerW, h: listH };
         this.browserVisibleRows = Math.max(1, Math.floor(listH / BROWSER_ROW_HEIGHT));
+        this.browserSummaryArea = { x: innerX, y: summaryY, w: innerW, h: summaryHeight };
+
+        const railBg = this.scene.add.rectangle(innerX + innerW / 2, railTop + railHeight / 2, innerW, railHeight, 0x0f172a, 0.98);
+        railBg.setStrokeStyle(1, SECTION_BORDER, 0.92);
+        const railAccent = this.scene.add.rectangle(innerX + 5, railTop + railHeight / 2, 6, railHeight - 16, 0x4ade80, 0.9)
+            .setOrigin(0, 0.5);
+        const railLabel = this.scene.add.text(innerX + 16, railTop + 8, '浏览控制', {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: '#cbd5e1',
+            fontStyle: 'bold',
+        });
+        const railHint = this.scene.add.text(innerX + innerW - 14, railTop + 8, '搜索 / 筛选 / 排序', {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: '#64748b',
+            fontStyle: 'bold',
+        }).setOrigin(1, 0);
 
         this.queryBg = this.scene.add.rectangle(innerX + innerW / 2, searchY, innerW, 30, 0x0f172a, 1);
         this.queryBg.setStrokeStyle(1, SECTION_BORDER, 0.9);
@@ -3053,12 +3255,12 @@ export class DeckManagementPanel extends GameObjects.Container {
             color: this.filterQuery ? '#f8fafc' : '#64748b',
         }).setOrigin(0, 0.5);
 
-        this.queryClearBtn = this.scene.add.text(innerX + innerW - 14, searchY, '✕', {
+        this.queryClearBtn = this.scene.add.text(innerX + innerW - 12, searchY, '清空', {
             fontFamily: 'Arial',
-            fontSize: '14px',
+            fontSize: '12px',
             color: '#94a3b8',
             fontStyle: 'bold',
-        }).setOrigin(0.5);
+        }).setOrigin(1, 0.5);
         this.queryClearBtn.setInteractive({ useHandCursor: true });
         this.queryClearBtn.on('pointerdown', () => {
             this.filterQuery = '';
@@ -3073,7 +3275,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             toggleY,
             156,
             28,
-            `种类: ${KIND_LABEL[String(this.filterKind)]}`,
+            `种类：${KIND_LABEL[String(this.filterKind)]}`,
             0x312e81,
             () => {
                 const idx = KIND_CYCLE.indexOf(this.filterKind);
@@ -3087,6 +3289,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                 fontSize: '13px',
             },
         );
+        this.kindBtn = kindButton[0];
         this.kindBtnText = kindButton[1];
 
         const hideZeroButton = this.createButton(
@@ -3094,7 +3297,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             toggleY,
             152,
             28,
-            this.filterHideZero ? '✓ 隐藏零张' : '☐ 显示零张',
+            this.filterHideZero ? '零库存：已隐藏' : '零库存：已显示',
             this.filterHideZero ? 0x1d4ed8 : 0x1f2937,
             () => {
                 this.filterHideZero = !this.filterHideZero;
@@ -3115,17 +3318,17 @@ export class DeckManagementPanel extends GameObjects.Container {
             sortY,
             120,
             28,
-            `排序: ${this.sortField}`,
+            `排序：${getSortFieldLabel(this.sortField)}`,
             0x1f2937,
             () => {
-                const fields: CardCollectionSortField[] = ['id', 'count', 'kind', 'name'];
-                const idx = fields.indexOf(this.sortField);
-                this.sortField = fields[(idx + 1) % fields.length];
+                const idx = BROWSER_SORT_FIELDS.indexOf(this.sortField);
+                this.sortField = BROWSER_SORT_FIELDS[(idx + 1) % BROWSER_SORT_FIELDS.length];
                 this.refreshBrowser();
             },
             false,
             { hoverFillColor: 0x334155, strokeColor: 0x475569, fontSize: '13px' },
         );
+        this.sortFieldBtn = sortFieldButton[0];
         this.sortFieldBtnText = sortFieldButton[1];
 
         const sortDirButton = this.createButton(
@@ -3142,16 +3345,16 @@ export class DeckManagementPanel extends GameObjects.Container {
             false,
             { hoverFillColor: 0x334155, strokeColor: 0x475569, fontSize: '13px' },
         );
+        this.sortDirBtn = sortDirButton[0];
         this.sortDirBtnText = sortDirButton[1];
 
-        this.browserSummaryText = this.scene.add.text(innerX, summaryY, '', {
-            fontFamily: 'Arial',
-            fontSize: '13px',
-            color: '#cbd5e1',
-            wordWrap: { width: innerW },
-        });
+        this.browserSummaryContainer = this.scene.add.container(innerX, summaryY);
 
         this.add([
+            railBg,
+            railAccent,
+            railLabel,
+            railHint,
             this.queryBg,
             this.queryText,
             this.queryClearBtn,
@@ -3159,7 +3362,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             ...hideZeroButton,
             ...sortFieldButton,
             ...sortDirButton,
-            this.browserSummaryText,
+            this.browserSummaryContainer,
         ]);
 
         const maskGraphics = this.scene.make.graphics({});
@@ -3219,32 +3422,49 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.browserSpotlightRows.clear();
 
         if (this.kindBtnText) {
-            this.kindBtnText.setText(`种类: ${KIND_LABEL[String(this.filterKind)]}`);
+            this.kindBtnText.setText(`种类：${KIND_LABEL[String(this.filterKind)]}`);
         }
 
-        if (this.hideZeroBtn) {
-            this.hideZeroBtn.setFillStyle(this.filterHideZero ? 0x1d4ed8 : 0x1f2937, 1);
-            this.hideZeroBtn.setStrokeStyle(1, this.filterHideZero ? 0x93c5fd : 0x475569, 0.95);
+        this.setButtonVisualState(this.kindBtn, this.kindBtnText, {
+            fillColor: this.filterKind === undefined ? 0x241f49 : 0x4338ca,
+            hoverFillColor: this.filterKind === undefined ? 0x312e81 : 0x5b4ce1,
+            strokeColor: this.filterKind === undefined ? 0x6d5bd0 : 0xc4b5fd,
         }
+        );
 
         if (this.hideZeroBtnText) {
-            this.hideZeroBtnText.setText(this.filterHideZero ? '✓ 隐藏零张' : '☐ 显示零张');
+            this.hideZeroBtnText.setText(this.filterHideZero ? '零库存：已隐藏' : '零库存：已显示');
         }
+        this.setButtonVisualState(this.hideZeroBtn, this.hideZeroBtnText, {
+            fillColor: this.filterHideZero ? 0x1d4ed8 : 0x1f2937,
+            hoverFillColor: this.filterHideZero ? 0x2563eb : 0x334155,
+            strokeColor: this.filterHideZero ? 0x93c5fd : 0x475569,
+        });
 
         if (this.sortFieldBtnText) {
-            this.sortFieldBtnText.setText(`排序: ${this.sortField}`);
+            this.sortFieldBtnText.setText(`排序：${getSortFieldLabel(this.sortField)}`);
         }
+        this.setButtonVisualState(this.sortFieldBtn, this.sortFieldBtnText, {
+            fillColor: this.sortField === DEFAULT_BROWSER_SORT_FIELD ? 0x1f2937 : 0x134e4a,
+            hoverFillColor: this.sortField === DEFAULT_BROWSER_SORT_FIELD ? 0x334155 : 0x0f766e,
+            strokeColor: this.sortField === DEFAULT_BROWSER_SORT_FIELD ? 0x475569 : 0x5eead4,
+        });
 
         if (this.sortDirBtnText) {
             this.sortDirBtnText.setText(this.sortDirection === 'asc' ? '↑ 升序' : '↓ 降序');
         }
+        this.setButtonVisualState(this.sortDirBtn, this.sortDirBtnText, {
+            fillColor: this.sortDirection === DEFAULT_BROWSER_SORT_DIRECTION ? 0x1f2937 : 0x1d4ed8,
+            hoverFillColor: this.sortDirection === DEFAULT_BROWSER_SORT_DIRECTION ? 0x334155 : 0x2563eb,
+            strokeColor: this.sortDirection === DEFAULT_BROWSER_SORT_DIRECTION ? 0x475569 : 0x93c5fd,
+        });
 
         this.browserInner.removeAll(true);
 
-        const filters: CardCollectionFilters = {
+        const baseFilters: CardCollectionFilters = {
             query: this.filterQuery || undefined,
             kind: this.filterKind,
-            hideZeroCount: this.filterHideZero,
+            hideZeroCount: false,
         };
         const sort: CardCollectionSortConfig = {
             field: this.sortField,
@@ -3253,7 +3473,19 @@ export class DeckManagementPanel extends GameObjects.Container {
 
         const rows = computeCardCollectionViewModel(this.stash.cards, {
             metadata: this.config.metadata,
-            filters,
+            filters: {
+                ...baseFilters,
+                hideZeroCount: this.filterHideZero,
+            },
+            sort,
+        });
+        const matchedRows = computeCardCollectionViewModel(this.stash.cards, {
+            metadata: this.config.metadata,
+            filters: baseFilters,
+            sort,
+        });
+        const totalRows = computeCardCollectionViewModel(this.stash.cards, {
+            metadata: this.config.metadata,
             sort,
         });
 
@@ -3264,36 +3496,51 @@ export class DeckManagementPanel extends GameObjects.Container {
         const deckCards = selectedDeck?.cards ?? [];
         const selectedSummary = this.getSelectedDeckStatus();
         const selectedCapacity = selectedDeck ? summarizeDeckCapacity(deckCards) : null;
-
-        if (this.browserSummaryText) {
-            const summaryParts = [`显示 ${rows.length} 张库存条目`];
-            if (selectedDeck) {
-                summaryParts.push(`当前卡组：${selectedSummary?.count ?? 0} 张 · ${selectedSummary?.statusLabel ?? '未选择'}`);
-                if (selectedCapacity) {
-                    summaryParts.push(getDeckCapacityBrowserLabel(selectedCapacity));
-                }
-            } else {
-                summaryParts.push('未选择卡组');
-            }
-            this.browserSummaryText.setText(summaryParts.join(' · '));
-        }
+        this.refreshBrowserSummary(rows.length, matchedRows.length, totalRows.length, selectedDeck, selectedSummary);
 
         if (rows.length === 0) {
-            const emptyTitle = this.filterQuery
-                ? '没有匹配当前搜索的卡牌'
-                : this.filterHideZero
-                    ? '没有符合筛选的可用卡牌'
-                    : '储物袋中还没有卡牌';
-            const emptyBody = !selectedDeck
-                ? '先在左侧创建并选择一个卡组，再决定要加入哪些卡牌。'
-                : '试试切换种类、排序或零张显示方式。';
+            const hasModifiedControls = this.hasModifiedBrowserControls();
+            let emptyTitle = '储物袋中还没有卡牌';
+            let emptyBody = '当前库存为空，暂时没有可加入卡组的卡牌。';
+            let emptyFillColor = 0x0f172a;
+            let emptyBorderColor = SECTION_BORDER;
+            let emptyTitleColor = '#e2e8f0';
+            let emptyBodyColor = '#94a3b8';
 
-            const emptyCard = this.scene.add.rectangle(this.browserArea.w / 2, 78, this.browserArea.w, 124, 0x0f172a, 0.98);
-            emptyCard.setStrokeStyle(1, SECTION_BORDER, 0.9);
+            if (!selectedDeck) {
+                emptyTitle = '先选择一个要带入的卡组';
+                emptyBody = hasModifiedControls
+                    ? '左侧选定卡组后，再决定是否保持当前浏览条件，或点击上方“恢复默认”回到完整库存。'
+                    : '左侧选定卡组后，这里会继续显示可加入的库存卡牌与一键加满入口。';
+            } else if (matchedRows.length > 0 && this.filterHideZero) {
+                emptyTitle = '命中条目都为零张';
+                emptyBody = '当前搜索或种类条件有命中，但它们都被“零库存：已隐藏”筛掉了；可切换显示，或点击上方“恢复默认”。';
+                emptyFillColor = 0x271b0b;
+                emptyBorderColor = WARNING_ACCENT;
+                emptyTitleColor = '#fde68a';
+                emptyBodyColor = '#fcd34d';
+            } else if (this.filterQuery.trim().length > 0 || this.filterKind !== undefined) {
+                emptyTitle = '当前浏览条件没有命中卡牌';
+                emptyBody = '可调整搜索词、切换种类，或点击上方“恢复默认”重新查看全部库存。';
+                emptyFillColor = 0x111c33;
+                emptyBorderColor = SELECTED_ACCENT;
+                emptyTitleColor = '#dbeafe';
+                emptyBodyColor = '#bfdbfe';
+            } else if (hasModifiedControls) {
+                emptyTitle = '当前没有可加入的库存条目';
+                emptyBody = '试试切换零库存显示方式，或点击上方“恢复默认”回到默认浏览。';
+                emptyFillColor = 0x271b0b;
+                emptyBorderColor = WARNING_ACCENT;
+                emptyTitleColor = '#fde68a';
+                emptyBodyColor = '#fcd34d';
+            }
+
+            const emptyCard = this.scene.add.rectangle(this.browserArea.w / 2, 78, this.browserArea.w, 124, emptyFillColor, 0.98);
+            emptyCard.setStrokeStyle(1, emptyBorderColor, 0.92);
             const title = this.scene.add.text(this.browserArea.w / 2, 56, emptyTitle, {
                 fontFamily: 'Arial',
                 fontSize: '18px',
-                color: '#e2e8f0',
+                color: emptyTitleColor,
                 fontStyle: 'bold',
                 align: 'center',
                 wordWrap: { width: this.browserArea.w - 40 },
@@ -3301,7 +3548,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             const body = this.scene.add.text(this.browserArea.w / 2, 92, emptyBody, {
                 fontFamily: 'Arial',
                 fontSize: '13px',
-                color: '#94a3b8',
+                color: emptyBodyColor,
                 align: 'center',
                 wordWrap: { width: this.browserArea.w - 40 },
             }).setOrigin(0.5);
@@ -3492,7 +3739,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             const total = rows.length;
             const start = total === 0 ? 0 : this.browserScrollOffset + 1;
             const end = total === 0 ? 0 : Math.min(this.browserScrollOffset + this.browserVisibleRows, total);
-            this.browserPosText.setText(`显示 ${start}-${end} / ${total}`);
+            this.browserPosText.setText(total === 0 ? '当前无结果' : `显示 ${start}-${end} / ${total}`);
         }
     }
 

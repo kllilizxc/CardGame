@@ -103,6 +103,19 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).toContain('失效');
     });
 
+    it('uses Chinese browser-control labels in the deck management panel', () => {
+        const panel = read('src/game/ui/deckbuilder/DeckManagementPanel.ts');
+
+        expect(panel).toContain('浏览控制');
+        expect(panel).toContain('清空');
+        expect(panel).toContain('零库存：已隐藏');
+        expect(panel).toContain('零库存：已显示');
+        expect(panel).toContain('恢复默认');
+        expect(panel).toContain('默认浏览');
+        expect(panel).toContain('命中条目都为零张');
+        expect(panel).toContain('当前浏览条件没有命中卡牌');
+    });
+
     it('uses Chinese run HUD labels', () => {
         const hud = read('src/game/ui/expedition/RunHud.ts');
 
