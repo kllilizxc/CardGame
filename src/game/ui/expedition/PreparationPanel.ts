@@ -7,6 +7,7 @@ import {
     formatPreparationValidationLines,
     formatPreparationValidationStatusText,
     type ExpeditionRouteBriefingSummary,
+    type PreparationDeckContext,
     type PreparationFocusChip,
     type PreparationDeckHandoffSummary,
     type PreparationSelectedLoadoutSummary,
@@ -41,6 +42,11 @@ export interface PreparationPanelConfig {
     onDeckSelect: (deckId: string) => void;
     onOpenDeckManager?: () => void;
     deckHandoffSummary?: PreparationDeckHandoffSummary | null;
+}
+
+export interface PreparationPanelDeckSwitchFeedback {
+    before: PreparationDeckContext;
+    after: PreparationDeckContext;
 }
 
 interface DeckDisplayState {
@@ -93,6 +99,68 @@ interface SelectedLoadoutColors {
     headlineColor: string;
     detailColor: string;
     mutedColor: string;
+}
+
+interface ActionButtonColors {
+    fill: number;
+    hover: number;
+    stroke: number;
+    text: string;
+}
+
+interface ActionHierarchyColors {
+    barFillColor: number;
+    barBorderColor: number;
+    barAccentColor: number;
+    titleColor: string;
+    summaryColor: string;
+    stateBadgeLabel: string;
+    stateBadgeColor: string;
+    stateBadgeBackgroundColor: string;
+    confirmButtonColors: ActionButtonColors;
+    manageButtonColors: ActionButtonColors;
+    confirmGlowColor: number;
+    confirmGlowAlpha: number;
+    actionGlowColor: number;
+    actionGlowAlpha: number;
+}
+
+interface DeckSwitchRenderOptions {
+    deckSwitchFeedback?: PreparationPanelDeckSwitchFeedback;
+    initialScrollX?: number;
+}
+
+interface DeckCardAnimationRefs {
+    deckId: string;
+    container: GameObjects.Container;
+    baseY: number;
+    spotlight?: GameObjects.Rectangle;
+    accent: GameObjects.Rectangle;
+    background: GameObjects.Rectangle;
+    footerBackground: GameObjects.Rectangle;
+    isSelected: boolean;
+    valid: boolean;
+}
+
+interface DeckCardRowBuild {
+    elements: Phaser.GameObjects.GameObject[];
+    selectedCard?: DeckCardAnimationRefs;
+    targetScrollX: number;
+}
+
+interface PreparationPanelAnimationRefs {
+    selectedCard?: DeckCardAnimationRefs;
+    validationContainer?: GameObjects.Container;
+    selectedLoadoutContainer?: GameObjects.Container;
+    carriedReadinessContainer?: GameObjects.Container;
+    actionContainer?: GameObjects.Container;
+    confirmButton?: GameObjects.Container;
+    manageDeckButton?: GameObjects.Container;
+    validationGlow?: GameObjects.Rectangle;
+    selectedLoadoutGlow?: GameObjects.Rectangle;
+    actionGlow?: GameObjects.Rectangle;
+    confirmGlow?: GameObjects.Rectangle;
+    targetScrollX: number;
 }
 
 const DECK_CARD_WIDTH = 252;
@@ -491,6 +559,122 @@ function getSelectedLoadoutColors(
     }
 }
 
+function getActionHierarchyColors(
+    summary: PreparationSelectedLoadoutSummary,
+): ActionHierarchyColors {
+    switch (summary.readiness) {
+        case 'ready':
+            return {
+                barFillColor: 0x0f2142,
+                barBorderColor: 0x60a5fa,
+                barAccentColor: 0x38bdf8,
+                titleColor: '#eff6ff',
+                summaryColor: '#bfdbfe',
+                stateBadgeLabel: '可确认',
+                stateBadgeColor: '#dbeafe',
+                stateBadgeBackgroundColor: '#1d4ed8',
+                confirmButtonColors: {
+                    fill: 0x2563eb,
+                    hover: 0x3b82f6,
+                    stroke: 0xbfdbfe,
+                    text: '#f8fafc',
+                },
+                manageButtonColors: {
+                    fill: 0x18263b,
+                    hover: 0x25364e,
+                    stroke: 0x64748b,
+                    text: '#e2e8f0',
+                },
+                confirmGlowColor: 0x38bdf8,
+                confirmGlowAlpha: 0.18,
+                actionGlowColor: 0x2563eb,
+                actionGlowAlpha: 0.08,
+            };
+        case 'too-few-cards':
+            return {
+                barFillColor: 0x23180d,
+                barBorderColor: 0xf59e0b,
+                barAccentColor: 0xf59e0b,
+                titleColor: '#fffbeb',
+                summaryColor: '#fde68a',
+                stateBadgeLabel: '需整理',
+                stateBadgeColor: '#fef3c7',
+                stateBadgeBackgroundColor: '#92400e',
+                confirmButtonColors: {
+                    fill: 0x3f3321,
+                    hover: 0x3f3321,
+                    stroke: 0x7c5b1f,
+                    text: '#f8fafc',
+                },
+                manageButtonColors: {
+                    fill: 0x3b2416,
+                    hover: 0x4b2f1b,
+                    stroke: 0xfbbf24,
+                    text: '#fffbeb',
+                },
+                confirmGlowColor: 0xf59e0b,
+                confirmGlowAlpha: 0,
+                actionGlowColor: 0xf59e0b,
+                actionGlowAlpha: 0.1,
+            };
+        case 'too-many-cards':
+        case 'insufficient-copies':
+            return {
+                barFillColor: 0x261320,
+                barBorderColor: 0xef4444,
+                barAccentColor: 0xf97316,
+                titleColor: '#fff1f2',
+                summaryColor: '#fecaca',
+                stateBadgeLabel: '需整理',
+                stateBadgeColor: '#fee2e2',
+                stateBadgeBackgroundColor: '#b91c1c',
+                confirmButtonColors: {
+                    fill: 0x312330,
+                    hover: 0x312330,
+                    stroke: 0x7f1d1d,
+                    text: '#f8fafc',
+                },
+                manageButtonColors: {
+                    fill: 0x3b1624,
+                    hover: 0x4a1c2e,
+                    stroke: 0xf97316,
+                    text: '#fff1f2',
+                },
+                confirmGlowColor: 0xef4444,
+                confirmGlowAlpha: 0,
+                actionGlowColor: 0xf97316,
+                actionGlowAlpha: 0.1,
+            };
+        case 'none':
+            return {
+                barFillColor: 0x111827,
+                barBorderColor: 0x475569,
+                barAccentColor: 0x64748b,
+                titleColor: '#f8fafc',
+                summaryColor: '#cbd5e1',
+                stateBadgeLabel: '未就绪',
+                stateBadgeColor: '#e2e8f0',
+                stateBadgeBackgroundColor: '#334155',
+                confirmButtonColors: {
+                    fill: 0x374151,
+                    hover: 0x374151,
+                    stroke: 0x6b7280,
+                    text: '#f8fafc',
+                },
+                manageButtonColors: {
+                    fill: 0x1e293b,
+                    hover: 0x334155,
+                    stroke: 0x94a3b8,
+                    text: '#f8fafc',
+                },
+                confirmGlowColor: 0x64748b,
+                confirmGlowAlpha: 0,
+                actionGlowColor: 0x64748b,
+                actionGlowAlpha: 0.06,
+            };
+    }
+}
+
 function createActionButton(
     scene: Scene,
     x: number,
@@ -498,11 +682,11 @@ function createActionButton(
     width: number,
     height: number,
     label: string,
-    colors: { fill: number; hover: number; stroke: number; text: string },
+    colors: ActionButtonColors,
     onClick: () => void,
     enabled = true,
-): { background: GameObjects.Rectangle; label: GameObjects.Text } {
-    const background = scene.add.rectangle(x, y, width, height, colors.fill, 1);
+): { container: GameObjects.Container; background: GameObjects.Rectangle; label: GameObjects.Text } {
+    const background = scene.add.rectangle(0, 0, width, height, colors.fill, 1);
     background.setStrokeStyle(2, colors.stroke, enabled ? 0.95 : 0.38);
 
     if (enabled) {
@@ -514,7 +698,7 @@ function createActionButton(
         background.setAlpha(0.55);
     }
 
-    const text = scene.add.text(x, y, label, {
+    const text = scene.add.text(0, 0, label, {
         fontFamily: 'Arial',
         fontSize: '20px',
         color: colors.text,
@@ -525,7 +709,9 @@ function createActionButton(
         text.setAlpha(0.76);
     }
 
-    return { background, label: text };
+    const container = scene.add.container(x, y, [background, text]);
+
+    return { container, background, label: text };
 }
 
 function createMetricChip(
@@ -601,13 +787,13 @@ function getDeckHandoffBannerColors(
 }
 
 export class PreparationPanel extends GameObjects.Container {
-    private readonly stash: PersistentStash;
+    private stash: PersistentStash;
     private readonly metadata?: CardMetadataMap;
     private readonly routeBriefing?: ExpeditionRouteBriefingSummary;
     private readonly onConfirm: () => void;
     private readonly onDeckSelect: (deckId: string) => void;
     private readonly onOpenDeckManager?: () => void;
-    private readonly deckHandoffSummary?: PreparationDeckHandoffSummary | null;
+    private deckHandoffSummary?: PreparationDeckHandoffSummary | null;
 
     private scrollX = 0;
     private maxScrollX = 0;
@@ -618,6 +804,7 @@ export class PreparationPanel extends GameObjects.Container {
     private scrollContainer?: GameObjects.Container;
     private leftIndicator?: GameObjects.Text;
     private rightIndicator?: GameObjects.Text;
+    private readonly scrollTweenState = { value: 0 };
     private wheelHandler?: (
         pointer: Phaser.Input.Pointer,
         gameObjects: unknown[],
@@ -638,12 +825,34 @@ export class PreparationPanel extends GameObjects.Container {
         this.onOpenDeckManager = config.onOpenDeckManager;
         this.deckHandoffSummary = config.deckHandoffSummary;
 
-        this.createPanel();
+        this.renderPanel();
         this.once(Phaser.GameObjects.Events.DESTROY, () => this.teardownScrollInteraction());
         scene.add.existing(this);
     }
 
-    private createPanel(): void {
+    updateStash(
+        stash: PersistentStash,
+        deckSwitchFeedback?: PreparationPanelDeckSwitchFeedback,
+    ): void {
+        this.stash = stash;
+        this.deckHandoffSummary = null;
+        this.renderPanel({
+            deckSwitchFeedback,
+            initialScrollX: this.scrollX,
+        });
+    }
+
+    private renderPanel(options: DeckSwitchRenderOptions = {}): void {
+        this.teardownScrollInteraction();
+        this.scene.tweens.killTweensOf(this.scrollTweenState);
+        this.removeAll(true);
+        this.scrollContainer = undefined;
+        this.leftIndicator = undefined;
+        this.rightIndicator = undefined;
+        this.isDragging = false;
+        this.dragMoved = false;
+        this.pendingDeckClick = null;
+
         const { width, height } = this.scene.scale;
         const panelWidth = Math.min(980, width * 0.82);
         const panelX = width / 2;
@@ -793,12 +1002,13 @@ export class PreparationPanel extends GameObjects.Container {
             handoffElements.push(banner, bannerTitle, bannerDetail);
         }
 
-        const deckCardElements = this.createDeckCardRow(
+        const deckCardRow = this.createDeckCardRow(
             contentLeft,
             deckSelectorY,
             contentWidth,
             selectedDeckId,
             deckCardHeight,
+            options.initialScrollX,
         );
 
         const scrollHint = this.maxScrollX > 0
@@ -812,6 +1022,14 @@ export class PreparationPanel extends GameObjects.Container {
                 fontSize: '15px',
                 color: '#94a3b8',
             });
+        const validationGlow = this.scene.add.rectangle(
+            panelX,
+            validationTop + validationHeight / 2,
+            contentWidth + 10,
+            validationHeight + 10,
+            isDeckValid ? 0x22c55e : 0xef4444,
+            isDeckValid ? 0.08 : 0.12,
+        );
         const validationCard = this.scene.add.rectangle(
             panelX,
             validationTop + validationHeight / 2,
@@ -844,6 +1062,21 @@ export class PreparationPanel extends GameObjects.Container {
             color: isDeckValid ? '#86efac' : '#fca5a5',
             wordWrap: { width: contentWidth - 36 },
         });
+        const validationContainer = this.scene.add.container(0, 0, [
+            validationGlow,
+            validationCard,
+            validationBadge,
+            validationText,
+            validationSubtext,
+        ]);
+        const selectedLoadoutGlow = this.scene.add.rectangle(
+            contentLeft + selectedDeckSummaryWidth / 2,
+            loadoutTop + loadoutSummaryHeight / 2,
+            selectedDeckSummaryWidth + 12,
+            loadoutSummaryHeight + 12,
+            selectedLoadoutColors.accentColor,
+            selectedLoadoutSummary.readiness === 'ready' ? 0.1 : 0.14,
+        );
         const selectedDeckSummaryCard = this.scene.add.rectangle(
             contentLeft + selectedDeckSummaryWidth / 2,
             loadoutTop + loadoutSummaryHeight / 2,
@@ -989,6 +1222,24 @@ export class PreparationPanel extends GameObjects.Container {
                 wordWrap: { width: selectedDeckSummaryWidth - 36 },
             },
         ).setOrigin(0, 1);
+        const selectedLoadoutContainer = this.scene.add.container(0, 0, [
+            selectedLoadoutGlow,
+            selectedDeckSummaryCard,
+            selectedDeckSummaryAccent,
+            selectedDeckHeading,
+            selectedDeckStatusBadge,
+            selectedDeckNameText,
+            ...selectedDeckCountChip,
+            ...selectedDeckUniqueChip,
+            ...selectedDeckFocusChip,
+            selectedDeckReadinessPanel,
+            selectedDeckReadinessLabel,
+            selectedDeckReadinessText,
+            selectedDeckCompositionPanel,
+            selectedDeckCompositionLabel,
+            selectedDeckComposition,
+            selectedDeckFooter,
+        ]);
 
         const carriedLoadoutLeft = contentLeft + selectedDeckSummaryWidth + loadoutGap;
         const carriedLoadoutCard = this.scene.add.rectangle(
@@ -1150,21 +1401,64 @@ export class PreparationPanel extends GameObjects.Container {
                 wordWrap: { width: utilityColumnWidth - 24 },
             },
         );
+        const carriedReadinessContainer = this.scene.add.container(0, 0, [
+            carriedReadinessPanel,
+            readinessPanelTitle,
+            readinessPanelBadge,
+            readinessPanelBody,
+        ]);
 
         const actionTop = loadoutTop + loadoutSummaryHeight + 16;
         const actionHeight = 82;
-        const actionBar = this.scene.add.rectangle(panelX, actionTop + actionHeight / 2, contentWidth, actionHeight, 0x111827, 0.98);
-        actionBar.setStrokeStyle(2, 0x334155, 0.88);
+        const actionColors = getActionHierarchyColors(selectedLoadoutSummary);
+        const actionGlow = this.scene.add.rectangle(
+            panelX,
+            actionTop + actionHeight / 2,
+            contentWidth + 14,
+            actionHeight + 14,
+            actionColors.actionGlowColor,
+            actionColors.actionGlowAlpha,
+        );
+        const actionBar = this.scene.add.rectangle(
+            panelX,
+            actionTop + actionHeight / 2,
+            contentWidth,
+            actionHeight,
+            actionColors.barFillColor,
+            0.98,
+        );
+        actionBar.setStrokeStyle(2, actionColors.barBorderColor, 0.9);
+        const actionAccent = this.scene.add.rectangle(
+            panelX,
+            actionTop + 6,
+            contentWidth - 24,
+            5,
+            actionColors.barAccentColor,
+            0.96,
+        ).setOrigin(0.5, 0);
         const actionTitle = this.scene.add.text(contentLeft + 20, actionTop + 18, `当前带入：${selectedLoadoutSummary.selectedDeckName}`, {
             fontFamily: 'Arial',
             fontSize: '20px',
-            color: '#f8fafc',
+            color: actionColors.titleColor,
             fontStyle: 'bold',
         });
+        const actionStateBadge = this.scene.add.text(
+            actionTitle.x + actionTitle.width + 18,
+            actionTop + 20,
+            actionColors.stateBadgeLabel,
+            {
+                fontFamily: 'Arial',
+                fontSize: '12px',
+                color: actionColors.stateBadgeColor,
+                fontStyle: 'bold',
+                backgroundColor: actionColors.stateBadgeBackgroundColor,
+                padding: { left: 10, right: 10, top: 5, bottom: 5 },
+            },
+        );
         const actionSummary = this.scene.add.text(contentLeft + 20, actionTitle.y + 32, `${selectedLoadoutSummary.readinessLabel} · ${selectedLoadoutSummary.focusChip.label} ${selectedLoadoutSummary.focusChip.value} · ${summary.itemCount} 件道具 · ${summary.spiritStones} 枚灵石`, {
             fontFamily: 'Arial',
             fontSize: '16px',
-            color: '#94a3b8',
+            color: actionColors.summaryColor,
             wordWrap: { width: contentWidth - 420 },
         });
 
@@ -1175,15 +1469,18 @@ export class PreparationPanel extends GameObjects.Container {
             180,
             56,
             '管理卡组',
-            {
-                fill: 0x1e293b,
-                hover: 0x334155,
-                stroke: 0x94a3b8,
-                text: '#f8fafc',
-            },
+            actionColors.manageButtonColors,
             () => this.openDeckManager(),
         );
 
+        const confirmGlow = this.scene.add.rectangle(
+            panelX + contentWidth / 2 - 110,
+            actionBar.y,
+            238,
+            74,
+            actionColors.confirmGlowColor,
+            actionColors.confirmGlowAlpha,
+        );
         const confirmButton = createActionButton(
             this.scene,
             panelX + contentWidth / 2 - 110,
@@ -1191,15 +1488,21 @@ export class PreparationPanel extends GameObjects.Container {
             220,
             60,
             '确认带入',
-            {
-                fill: isDeckValid ? 0x2563eb : 0x374151,
-                hover: isDeckValid ? 0x3b82f6 : 0x374151,
-                stroke: isDeckValid ? 0xbfdbfe : 0x6b7280,
-                text: '#f8fafc',
-            },
+            actionColors.confirmButtonColors,
             () => this.confirmLoadout(),
             isDeckValid,
         );
+        const actionContainer = this.scene.add.container(0, 0, [
+            actionGlow,
+            actionBar,
+            actionAccent,
+            actionTitle,
+            actionStateBadge,
+            actionSummary,
+            deckManagerButton.container,
+            confirmGlow,
+            confirmButton.container,
+        ]);
 
         this.add([
             overlay,
@@ -1210,27 +1513,10 @@ export class PreparationPanel extends GameObjects.Container {
             subtitle,
             ...routeBriefingElements,
             ...handoffElements,
-            ...deckCardElements,
+            ...deckCardRow.elements,
             scrollHint,
-            validationCard,
-            validationBadge,
-            validationText,
-            validationSubtext,
-            selectedDeckSummaryCard,
-            selectedDeckSummaryAccent,
-            selectedDeckHeading,
-            selectedDeckStatusBadge,
-            selectedDeckNameText,
-            ...selectedDeckCountChip,
-            ...selectedDeckUniqueChip,
-            ...selectedDeckFocusChip,
-            selectedDeckReadinessPanel,
-            selectedDeckReadinessLabel,
-            selectedDeckReadinessText,
-            selectedDeckCompositionPanel,
-            selectedDeckCompositionLabel,
-            selectedDeckComposition,
-            selectedDeckFooter,
+            validationContainer,
+            selectedLoadoutContainer,
             carriedLoadoutCard,
             carriedLoadoutAccent,
             carriedLoadoutHeading,
@@ -1245,17 +1531,8 @@ export class PreparationPanel extends GameObjects.Container {
             carriedItemsPanel,
             carriedItemsHeading,
             carriedItemsPreview,
-            carriedReadinessPanel,
-            readinessPanelTitle,
-            readinessPanelBadge,
-            readinessPanelBody,
-            actionBar,
-            actionTitle,
-            actionSummary,
-            deckManagerButton.background,
-            deckManagerButton.label,
-            confirmButton.background,
-            confirmButton.label,
+            carriedReadinessContainer,
+            actionContainer,
         ]);
 
         if (this.maxScrollX > 0) {
@@ -1263,6 +1540,23 @@ export class PreparationPanel extends GameObjects.Container {
         }
 
         this.setDepth(1000);
+
+        if (options.deckSwitchFeedback) {
+            this.playDeckSwitchFeedback(options.deckSwitchFeedback, {
+                selectedCard: deckCardRow.selectedCard,
+                validationContainer,
+                selectedLoadoutContainer,
+                carriedReadinessContainer,
+                actionContainer,
+                confirmButton: confirmButton.container,
+                manageDeckButton: deckManagerButton.container,
+                validationGlow,
+                selectedLoadoutGlow,
+                actionGlow,
+                confirmGlow,
+                targetScrollX: deckCardRow.targetScrollX,
+            });
+        }
     }
 
     private createDeckCardRow(
@@ -1271,11 +1565,13 @@ export class PreparationPanel extends GameObjects.Container {
         maxWidth: number,
         selectedDeckId: string | null,
         cardHeight: number,
-    ): Phaser.GameObjects.GameObject[] {
+        initialScrollX?: number,
+    ): DeckCardRowBuild {
         const elements: Phaser.GameObjects.GameObject[] = [];
         const decks = this.stash.savedDecks;
         const cardWidth = DECK_CARD_WIDTH;
         const cardGap = DECK_CARD_GAP;
+        let selectedCard: DeckCardAnimationRefs | undefined;
 
         if (decks.length === 0) {
             this.maxScrollX = 0;
@@ -1296,21 +1592,26 @@ export class PreparationPanel extends GameObjects.Container {
                 wordWrap: { width: maxWidth - 40 },
             });
             elements.push(emptyState, emptyTitle, emptyBody);
-            return elements;
+            return {
+                elements,
+                targetScrollX: 0,
+            };
         }
 
         const totalContentWidth = decks.length * cardWidth + Math.max(0, decks.length - 1) * cardGap;
         const needsScroll = totalContentWidth > maxWidth;
         const selectedDeckIndex = Math.max(0, decks.findIndex((deck) => deck.id === selectedDeckId));
+        const targetScrollX = Math.max(0, Phaser.Math.Clamp(
+            selectedDeckIndex * (cardWidth + cardGap) - (maxWidth - cardWidth) / 2,
+            0,
+            Math.max(0, totalContentWidth - maxWidth),
+        ));
 
         this.maxScrollX = Math.max(0, totalContentWidth - maxWidth);
         this.scrollX = this.maxScrollX > 0
-            ? Phaser.Math.Clamp(
-                selectedDeckIndex * (cardWidth + cardGap) - (maxWidth - cardWidth) / 2,
-                0,
-                this.maxScrollX,
-            )
+            ? Phaser.Math.Clamp(initialScrollX ?? targetScrollX, 0, this.maxScrollX)
             : 0;
+        this.scrollTweenState.value = this.scrollX;
 
         const maskGraphics = this.scene.make.graphics({});
         maskGraphics.fillStyle(0xffffff);
@@ -1333,24 +1634,18 @@ export class PreparationPanel extends GameObjects.Container {
             const isSelected = deck.id === selectedDeckId;
             const displayState = createDeckDisplayState(deck, this.stash.cards, isSelected, this.metadata);
             const cardCount = countDeckCards(deck.cards);
+            const selectedLift = isSelected ? -8 : 0;
             const spotlight = isSelected
-                ? this.scene.add.rectangle(cardX, cardY, cardWidth + 12, cardHeight + 12, displayState.borderColor, 0.08)
+                ? this.scene.add.rectangle(0, 0, cardWidth + 12, cardHeight + 12, displayState.borderColor, 0.08)
                 : undefined;
-
-            const shadow = this.scene.add.rectangle(
-                cardX + 4,
-                cardY + 6,
-                cardWidth,
-                cardHeight,
-                displayState.shadowColor,
-                displayState.shadowAlpha,
-            );
+            const cardContainer = this.scene.add.container(cardX, cardY + selectedLift);
+            const shadow = this.scene.add.rectangle(4, 6, cardWidth, cardHeight, displayState.shadowColor, displayState.shadowAlpha);
             spotlight?.setStrokeStyle(1, displayState.borderColor, 0.32);
-            const bg = this.scene.add.rectangle(cardX, cardY, cardWidth, cardHeight, displayState.fillColor, 0.98);
+            const bg = this.scene.add.rectangle(0, 0, cardWidth, cardHeight, displayState.fillColor, 0.98);
             bg.setStrokeStyle(isSelected ? 3 : 2, displayState.borderColor, 1);
 
-            const accent = this.scene.add.rectangle(cardX, cardY - cardHeight / 2 + 5, cardWidth - 12, 6, displayState.accentColor, 1).setOrigin(0.5, 0);
-            const selection = this.scene.add.text(cardX - cardWidth / 2 + 16, cardY - cardHeight / 2 + 16, displayState.selectionLabel, {
+            const accent = this.scene.add.rectangle(0, -cardHeight / 2 + 5, cardWidth - 12, 6, displayState.accentColor, 1).setOrigin(0.5, 0);
+            const selection = this.scene.add.text(-cardWidth / 2 + 16, -cardHeight / 2 + 16, displayState.selectionLabel, {
                 fontFamily: 'Arial',
                 fontSize: '12px',
                 color: displayState.selectionBadgeColor,
@@ -1358,7 +1653,7 @@ export class PreparationPanel extends GameObjects.Container {
                 backgroundColor: displayState.selectionBadgeBackgroundColor,
                 padding: { left: 8, right: 8, top: 4, bottom: 4 },
             });
-            const status = this.scene.add.text(cardX + cardWidth / 2 - 16, cardY - cardHeight / 2 + 16, displayState.statusLabel, {
+            const status = this.scene.add.text(cardWidth / 2 - 16, -cardHeight / 2 + 16, displayState.statusLabel, {
                 fontFamily: 'Arial',
                 fontSize: '12px',
                 color: displayState.statusBadgeColor,
@@ -1366,7 +1661,7 @@ export class PreparationPanel extends GameObjects.Container {
                 backgroundColor: displayState.statusBadgeBackgroundColor,
                 padding: { left: 8, right: 8, top: 4, bottom: 4 },
             }).setOrigin(1, 0);
-            const deckName = this.scene.add.text(cardX - cardWidth / 2 + 16, selection.y + 28, deck.name, {
+            const deckName = this.scene.add.text(-cardWidth / 2 + 16, selection.y + 28, deck.name, {
                 fontFamily: 'Arial',
                 fontSize: '18px',
                 color: '#f8fafc',
@@ -1374,7 +1669,7 @@ export class PreparationPanel extends GameObjects.Container {
                 wordWrap: { width: cardWidth - 32 },
             });
             const countText = this.scene.add.text(
-                cardX - cardWidth / 2 + 16,
+                -cardWidth / 2 + 16,
                 deckName.y + deckName.height + 6,
                 `${cardCount} / ${DECK_CARD_MIN}-${DECK_CARD_MAX} · ${displayState.uniqueCardCount} 种卡`,
                 {
@@ -1388,7 +1683,7 @@ export class PreparationPanel extends GameObjects.Container {
             const chipY = countText.y + 18;
             const deckCountChip = createCompactChip(
                 this.scene,
-                cardX - cardWidth / 2 + 16 + chipWidth / 2,
+                -cardWidth / 2 + 16 + chipWidth / 2,
                 chipY,
                 chipWidth,
                 `张数 ${cardCount}`,
@@ -1400,7 +1695,7 @@ export class PreparationPanel extends GameObjects.Container {
             );
             const uniqueCountChip = createCompactChip(
                 this.scene,
-                cardX - cardWidth / 2 + 16 + chipWidth * 1.5 + 6,
+                -cardWidth / 2 + 16 + chipWidth * 1.5 + 6,
                 chipY,
                 chipWidth,
                 `种类 ${displayState.uniqueCardCount}`,
@@ -1412,7 +1707,7 @@ export class PreparationPanel extends GameObjects.Container {
             );
             const focusChip = createCompactChip(
                 this.scene,
-                cardX - cardWidth / 2 + 16 + chipWidth * 2.5 + 12,
+                -cardWidth / 2 + 16 + chipWidth * 2.5 + 12,
                 chipY,
                 chipWidth,
                 `${displayState.focusChip.label} ${displayState.focusChip.value}`,
@@ -1423,8 +1718,8 @@ export class PreparationPanel extends GameObjects.Container {
                 },
             );
             const footerBg = this.scene.add.rectangle(
-                cardX,
-                cardY + cardHeight / 2 - 18,
+                0,
+                cardHeight / 2 - 18,
                 cardWidth - 2,
                 34,
                 displayState.footerFillColor,
@@ -1436,7 +1731,7 @@ export class PreparationPanel extends GameObjects.Container {
             const comparisonWidth = cardWidth - 32;
             const comparisonColumnWidth = (comparisonWidth - comparisonGap) / 2;
             const compositionPanel = this.scene.add.rectangle(
-                cardX - comparisonColumnWidth / 2 - comparisonGap / 2,
+                -comparisonColumnWidth / 2 - comparisonGap / 2,
                 comparisonTop + comparisonHeight / 2,
                 comparisonColumnWidth,
                 comparisonHeight,
@@ -1444,13 +1739,13 @@ export class PreparationPanel extends GameObjects.Container {
                 0.96,
             );
             compositionPanel.setStrokeStyle(1, displayState.previewBorderColor, 0.55);
-            const compositionLabel = this.scene.add.text(cardX - cardWidth / 2 + 24, comparisonTop + 8, '构成分布', {
+            const compositionLabel = this.scene.add.text(-cardWidth / 2 + 24, comparisonTop + 8, '构成分布', {
                 fontFamily: 'Arial',
                 fontSize: '11px',
                 color: displayState.previewLabelColor,
                 fontStyle: 'bold',
             });
-            const compositionText = this.scene.add.text(cardX - cardWidth / 2 + 24, compositionLabel.y + 16, formatBulletLines(displayState.compositionLines, 3), {
+            const compositionText = this.scene.add.text(-cardWidth / 2 + 24, compositionLabel.y + 16, formatBulletLines(displayState.compositionLines, 3), {
                 fontFamily: 'Arial',
                 fontSize: '11px',
                 color: displayState.previewTextColor,
@@ -1458,7 +1753,7 @@ export class PreparationPanel extends GameObjects.Container {
                 lineSpacing: 2,
             });
             const comparisonPanel = this.scene.add.rectangle(
-                cardX + comparisonColumnWidth / 2 + comparisonGap / 2,
+                comparisonColumnWidth / 2 + comparisonGap / 2,
                 comparisonTop + comparisonHeight / 2,
                 comparisonColumnWidth,
                 comparisonHeight,
@@ -1467,7 +1762,7 @@ export class PreparationPanel extends GameObjects.Container {
             );
             comparisonPanel.setStrokeStyle(1, displayState.previewBorderColor, 0.55);
             const comparisonLabel = this.scene.add.text(
-                cardX - cardWidth / 2 + 24 + comparisonColumnWidth + comparisonGap,
+                -cardWidth / 2 + 24 + comparisonColumnWidth + comparisonGap,
                 comparisonTop + 8,
                 displayState.comparisonLabel,
                 {
@@ -1489,7 +1784,7 @@ export class PreparationPanel extends GameObjects.Container {
                     lineSpacing: 2,
                 },
             );
-            const footerText = this.scene.add.text(cardX - cardWidth / 2 + 16, footerBg.y, displayState.footerText, {
+            const footerText = this.scene.add.text(-cardWidth / 2 + 16, footerBg.y, displayState.footerText, {
                 fontFamily: 'Arial',
                 fontSize: '11px',
                 color: displayState.footerTextColor,
@@ -1505,7 +1800,7 @@ export class PreparationPanel extends GameObjects.Container {
                 this.dragMoved = false;
             });
 
-            innerContainer.add([
+            cardContainer.add([
                 ...(spotlight ? [spotlight] : []),
                 shadow,
                 bg,
@@ -1526,6 +1821,22 @@ export class PreparationPanel extends GameObjects.Container {
                 footerBg,
                 footerText,
             ]);
+
+            innerContainer.add(cardContainer);
+
+            if (isSelected) {
+                selectedCard = {
+                    deckId: deck.id,
+                    container: cardContainer,
+                    baseY: cardY + selectedLift,
+                    spotlight,
+                    accent,
+                    background: bg,
+                    footerBackground: footerBg,
+                    isSelected,
+                    valid: displayState.valid,
+                };
+            }
         });
 
         if (needsScroll) {
@@ -1551,7 +1862,181 @@ export class PreparationPanel extends GameObjects.Container {
             elements.push(this.leftIndicator, this.rightIndicator);
         }
 
-        return elements;
+        return {
+            elements,
+            selectedCard,
+            targetScrollX,
+        };
+    }
+
+    private playDeckSwitchFeedback(
+        feedback: PreparationPanelDeckSwitchFeedback,
+        refs: PreparationPanelAnimationRefs,
+    ): void {
+        const deckChanged = feedback.before.selectedDeckId !== feedback.after.selectedDeckId;
+        const readinessChanged = feedback.before.readiness !== feedback.after.readiness;
+        const becameReady = feedback.before.readiness !== 'ready' && feedback.after.readiness === 'ready';
+        const becameInvalid = feedback.before.readiness === 'ready' && feedback.after.readiness !== 'ready';
+
+        if (deckChanged && refs.selectedCard) {
+            refs.selectedCard.container.setAlpha(0.84);
+            refs.selectedCard.container.setScale(0.95);
+            refs.selectedCard.container.setY(refs.selectedCard.baseY + 14);
+            refs.selectedCard.background.setAlpha(0.9);
+            refs.selectedCard.footerBackground.setAlpha(0.82);
+            refs.selectedCard.accent.setScale(0.78, 1);
+            refs.selectedCard.spotlight?.setAlpha(0);
+
+            this.scene.tweens.add({
+                targets: refs.selectedCard.container,
+                alpha: 1,
+                scaleX: 1,
+                scaleY: 1,
+                y: refs.selectedCard.baseY,
+                duration: 260,
+                ease: 'Back.easeOut',
+            });
+            this.scene.tweens.add({
+                targets: [refs.selectedCard.background, refs.selectedCard.footerBackground],
+                alpha: 0.98,
+                duration: 220,
+                ease: 'Cubic.easeOut',
+            });
+            this.scene.tweens.add({
+                targets: refs.selectedCard.accent,
+                scaleX: 1,
+                duration: 240,
+                ease: 'Cubic.easeOut',
+            });
+
+            if (refs.selectedCard.spotlight) {
+                this.scene.tweens.add({
+                    targets: refs.selectedCard.spotlight,
+                    alpha: refs.selectedCard.valid ? 0.22 : 0.28,
+                    duration: 180,
+                    ease: 'Cubic.easeOut',
+                    yoyo: true,
+                    hold: 90,
+                });
+            }
+        }
+
+        [
+            refs.validationContainer,
+            refs.selectedLoadoutContainer,
+            refs.carriedReadinessContainer,
+            refs.actionContainer,
+        ].forEach((target, index) => {
+            if (!target) {
+                return;
+            }
+
+            target.setAlpha(0.68);
+            target.setY(12 + index * 3);
+            this.scene.tweens.add({
+                targets: target,
+                alpha: 1,
+                y: 0,
+                duration: 220 + index * 30,
+                ease: 'Cubic.easeOut',
+                delay: 40 + index * 20,
+            });
+        });
+
+        if (Math.abs(refs.targetScrollX - this.scrollX) > 1) {
+            this.animateScrollTo(refs.targetScrollX, 260);
+        }
+
+        if (becameReady) {
+            refs.confirmButton?.setScale(0.95);
+            refs.confirmGlow?.setAlpha(0);
+            refs.actionGlow?.setAlpha(0.04);
+
+            this.scene.tweens.add({
+                targets: refs.confirmButton,
+                scaleX: 1,
+                scaleY: 1,
+                duration: 260,
+                ease: 'Back.easeOut',
+                delay: 120,
+            });
+            this.scene.tweens.add({
+                targets: refs.confirmGlow,
+                alpha: 0.26,
+                duration: 180,
+                ease: 'Cubic.easeOut',
+                yoyo: true,
+                hold: 140,
+                delay: 100,
+            });
+            this.scene.tweens.add({
+                targets: refs.actionGlow,
+                alpha: 0.14,
+                duration: 180,
+                ease: 'Cubic.easeOut',
+                yoyo: true,
+                hold: 140,
+                delay: 60,
+            });
+            return;
+        }
+
+        if (becameInvalid) {
+            refs.manageDeckButton?.setScale(0.96);
+            refs.validationGlow?.setAlpha(0.06);
+            refs.selectedLoadoutGlow?.setAlpha(0.08);
+            refs.actionGlow?.setAlpha(0.04);
+
+            this.scene.tweens.add({
+                targets: refs.manageDeckButton,
+                scaleX: 1,
+                scaleY: 1,
+                duration: 240,
+                ease: 'Back.easeOut',
+                delay: 120,
+            });
+            this.scene.tweens.add({
+                targets: [refs.validationGlow, refs.selectedLoadoutGlow, refs.actionGlow].filter(Boolean),
+                alpha: 0.18,
+                duration: 170,
+                ease: 'Cubic.easeOut',
+                yoyo: true,
+                hold: 120,
+                delay: 80,
+            });
+            return;
+        }
+
+        if (readinessChanged) {
+            this.scene.tweens.add({
+                targets: [refs.validationGlow, refs.selectedLoadoutGlow, refs.actionGlow].filter(Boolean),
+                alpha: '+=0.08',
+                duration: 150,
+                ease: 'Cubic.easeOut',
+                yoyo: true,
+                hold: 100,
+                delay: 70,
+            });
+        }
+    }
+
+    private animateScrollTo(targetScrollX: number, duration: number): void {
+        const clampedTarget = Phaser.Math.Clamp(targetScrollX, 0, this.maxScrollX);
+
+        if (!this.scrollContainer || Math.abs(clampedTarget - this.scrollX) <= 0.5) {
+            this.applyScroll(clampedTarget, true);
+            return;
+        }
+
+        this.scene.tweens.killTweensOf(this.scrollTweenState);
+        this.scrollTweenState.value = this.scrollX;
+        this.scene.tweens.add({
+            targets: this.scrollTweenState,
+            value: clampedTarget,
+            duration,
+            ease: 'Cubic.easeOut',
+            onUpdate: () => this.applyScroll(this.scrollTweenState.value, true),
+        });
     }
 
     private setupScrollInteraction(): void {
@@ -1600,6 +2085,8 @@ export class PreparationPanel extends GameObjects.Container {
     }
 
     private teardownScrollInteraction(): void {
+        this.scene.tweens.killTweensOf(this.scrollTweenState);
+
         if (this.wheelHandler) {
             this.scene.input.off('wheel', this.wheelHandler);
             this.wheelHandler = undefined;
@@ -1616,8 +2103,13 @@ export class PreparationPanel extends GameObjects.Container {
         }
     }
 
-    private applyScroll(desired: number): void {
+    private applyScroll(desired: number, skipTweenKill = false): void {
+        if (!skipTweenKill) {
+            this.scene.tweens.killTweensOf(this.scrollTweenState);
+        }
+
         this.scrollX = Phaser.Math.Clamp(desired, 0, this.maxScrollX);
+        this.scrollTweenState.value = this.scrollX;
 
         if (this.scrollContainer) {
             this.scrollContainer.setX(-this.scrollX);

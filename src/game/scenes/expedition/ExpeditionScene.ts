@@ -714,8 +714,24 @@ export class ExpeditionScene extends Scene {
     }
 
     private handleDeckSelect(deckId: string): void {
+        const beforeContext = createPreparationDeckContext(this.expeditionState.persistentStash);
+
+        if (beforeContext.selectedDeckId === deckId) {
+            return;
+        }
+
         this.expeditionState.persistentStash = selectDeckInStash(this.expeditionState.persistentStash, deckId);
         this.expeditionState.persistCurrentStash();
+        const afterContext = createPreparationDeckContext(this.expeditionState.persistentStash);
+
+        if (this.preparationPanel) {
+            this.preparationPanel.updateStash(this.expeditionState.persistentStash, {
+                before: beforeContext,
+                after: afterContext,
+            });
+            return;
+        }
+
         this.showPreparationPanel();
     }
 
