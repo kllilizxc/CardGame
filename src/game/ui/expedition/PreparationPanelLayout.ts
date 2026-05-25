@@ -28,12 +28,17 @@ export function calculateActionRailHeight(
     headlineHeight: number,
     detailHeight: number,
     nextStepHeight: number,
+    shortcutHintHeight = 0,
 ): number {
+    const shortcutContribution = shortcutHintHeight > 0
+        ? 6 + shortcutHintHeight
+        : 0;
+
     return Math.max(
         ACTION_RAIL_MIN_HEIGHT,
         Math.max(
             ACTION_RAIL_BUTTON_STACK_MIN_HEIGHT,
-            68 + headlineHeight + detailHeight + nextStepHeight,
+            68 + headlineHeight + detailHeight + nextStepHeight + shortcutContribution,
         ),
     );
 }

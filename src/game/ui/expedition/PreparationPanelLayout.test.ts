@@ -31,11 +31,16 @@ describe('PreparationPanel layout helpers', () => {
     });
 
     it('gives the departure readiness rail enough room for wrapped copy and stacked CTAs', () => {
-        for (const [headlineHeight, detailHeight, nextStepHeight] of [[27, 18, 18], [54, 36, 36]] as const) {
-            const railHeight = calculateActionRailHeight(headlineHeight, detailHeight, nextStepHeight);
-            const nextStepBottom = 38 + headlineHeight + 6 + detailHeight + 6 + nextStepHeight;
+        for (const [headlineHeight, detailHeight, nextStepHeight, shortcutHintHeight] of [[27, 18, 18, 18], [54, 36, 36, 36]] as const) {
+            const railHeight = calculateActionRailHeight(
+                headlineHeight,
+                detailHeight,
+                nextStepHeight,
+                shortcutHintHeight,
+            );
+            const shortcutHintBottom = 38 + headlineHeight + 6 + detailHeight + 6 + nextStepHeight + 6 + shortcutHintHeight;
 
-            expect(railHeight - 18 - nextStepBottom).toBeGreaterThanOrEqual(0);
+            expect(railHeight - 18 - shortcutHintBottom).toBeGreaterThanOrEqual(0);
             expect(railHeight).toBeGreaterThanOrEqual(148);
         }
     });

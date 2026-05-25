@@ -38,9 +38,11 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).toContain('卡组序列');
         expect(loadoutCopy).toContain('卡组总览');
         expect(panel).toContain('浏览进度');
+        expect(panel).toContain('点按卡片或按 ← / → 切换当前带入');
         expect(panel).toContain('构成速览');
         expect(panel).toContain('出发校验');
         expect(panel).toContain('出发准备栏');
+        expect(panel).toContain('快捷操作：Enter 触发主操作 · M 管理卡组');
         expect(panel).toContain('确认带入并出发');
         expect(panel).toContain('暂不可确认带入');
         expect(panel).toContain('继续管理卡组');

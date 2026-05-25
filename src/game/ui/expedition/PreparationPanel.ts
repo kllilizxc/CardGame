@@ -33,6 +33,10 @@ import {
     calculateDeckCardHeight,
     calculateSelectedLoadoutSummaryHeight,
 } from './PreparationPanelLayout';
+import {
+    getAdjacentPreparationDeckId,
+    getPreparationKeyboardShortcut,
+} from './preparationPanelKeyboard';
 import { createRouteBriefingStrip, measureRouteBriefingStripHeight } from './routeBriefingStrip';
 
 export interface PreparationPanelConfig {
@@ -120,6 +124,7 @@ interface ActionHierarchyColors {
     headline: string;
     detail: string;
     nextStepLabel: string;
+    shortcutHint: string;
     stateBadgeLabel: string;
     stateBadgeColor: string;
     stateBadgeBackgroundColor: string;
@@ -781,6 +786,7 @@ function getActionHierarchyColors(
                 headline: `当前带入「${summary.selectedDeckName}」已通过出发校验`,
                 detail: inventoryDetail,
                 nextStepLabel: '下一步：确认带入后立即创建秘境快照并进入秘境。',
+                shortcutHint: '快捷操作：Enter 触发主操作 · M 管理卡组',
                 stateBadgeLabel: '可出发',
                 stateBadgeColor: '#dbeafe',
                 stateBadgeBackgroundColor: '#1d4ed8',
@@ -818,6 +824,7 @@ function getActionHierarchyColors(
                 headline: `当前带入「${summary.selectedDeckName}」还差 ${missingCards} 张才能出发`,
                 detail: inventoryDetail,
                 nextStepLabel: `下一步：先去管理卡组补足到 ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张，返回这里后才能确认带入。`,
+                shortcutHint: '快捷操作：Enter 触发主操作 · M 管理卡组',
                 stateBadgeLabel: `差 ${missingCards} 张`,
                 stateBadgeColor: '#fef3c7',
                 stateBadgeBackgroundColor: '#92400e',
@@ -856,6 +863,7 @@ function getActionHierarchyColors(
                 headline: `当前带入「${summary.selectedDeckName}」超出上限 ${extraCards} 张`,
                 detail: inventoryDetail,
                 nextStepLabel: `下一步：先去管理卡组精简到 ${DECK_CARD_MAX} 张内，返回这里后才能确认带入。`,
+                shortcutHint: '快捷操作：Enter 触发主操作 · M 管理卡组',
                 stateBadgeLabel: `超 ${extraCards} 张`,
                 stateBadgeColor: '#fee2e2',
                 stateBadgeBackgroundColor: '#b91c1c',
@@ -892,6 +900,7 @@ function getActionHierarchyColors(
                 headline: `当前带入「${summary.selectedDeckName}」仍缺 ${Math.max(1, summary.shortageCardCopies)} 张库存卡`,
                 detail: inventoryDetail,
                 nextStepLabel: '下一步：先去管理卡组补齐缺口，返回这里后才能确认带入。',
+                shortcutHint: '快捷操作：Enter 触发主操作 · M 管理卡组',
                 stateBadgeLabel: `缺 ${Math.max(1, summary.shortageCardCopies)} 张`,
                 stateBadgeColor: '#fee2e2',
                 stateBadgeBackgroundColor: '#b91c1c',
@@ -927,6 +936,7 @@ function getActionHierarchyColors(
                 headline: '尚未选定本次带入卡组',
                 detail: `当前随行物资：${summary.itemCount} 件道具 · ${summary.spiritStones} 枚灵石。`,
                 nextStepLabel: '下一步：先去管理卡组创建或选择一套可带入卡组，再返回这里确认出发。',
+                shortcutHint: '快捷操作：Enter 触发主操作 · M 管理卡组',
                 stateBadgeLabel: '待选卡组',
                 stateBadgeColor: '#e2e8f0',
                 stateBadgeBackgroundColor: '#334155',
@@ -1092,6 +1102,7 @@ export class PreparationPanel extends GameObjects.Container {
     ) => void;
     private pointerMoveHandler?: (pointer: Phaser.Input.Pointer) => void;
     private pointerUpHandler?: () => void;
+    private keydownHandler?: (event: KeyboardEvent) => void;
 
     constructor(scene: Scene, config: PreparationPanelConfig) {
         super(scene, 0, 0);
@@ -1105,7 +1116,12 @@ export class PreparationPanel extends GameObjects.Container {
         this.deckHandoffSummary = config.deckHandoffSummary;
 
         this.renderPanel();
-        this.once(Phaser.GameObjects.Events.DESTROY, () => this.teardownScrollInteraction());
+        this.keydownHandler = this.handleKeyDown.bind(this);
+        scene.input.keyboard?.on('keydown', this.keydownHandler);
+        this.once(Phaser.GameObjects.Events.DESTROY, () => {
+            this.teardownScrollInteraction();
+            this.teardownKeyboardShortcuts();
+        });
         scene.add.existing(this);
     }
 
@@ -1201,10 +1217,17 @@ export class PreparationPanel extends GameObjects.Container {
             lineSpacing: 3,
             wordWrap: { width: actionTextWidth },
         });
+        const actionShortcutHeight = measureTextHeight(this.scene, actionColors.shortcutHint, {
+            fontFamily: 'Arial',
+            fontSize: '12px',
+            lineSpacing: 3,
+            wordWrap: { width: actionTextWidth },
+        });
         const actionHeight = calculateActionRailHeight(
             actionHeadlineHeight,
             actionDetailHeight,
             actionNextStepHeight,
+            actionShortcutHeight,
         );
         const subtitleHeight = measureTextHeight(
             this.scene,
@@ -1907,6 +1930,18 @@ export class PreparationPanel extends GameObjects.Container {
             lineSpacing: 3,
             wordWrap: { width: actionTextWidth },
         });
+        const actionShortcutHint = this.scene.add.text(
+            contentLeft + 20,
+            actionNextStep.y + actionNextStep.height + 6,
+            actionColors.shortcutHint,
+            {
+                fontFamily: 'Arial',
+                fontSize: '12px',
+                color: actionColors.supportColor,
+                lineSpacing: 3,
+                wordWrap: { width: actionTextWidth },
+            },
+        );
 
         const buttonColumnLeft = contentLeft + contentWidth - ACTION_BUTTON_COLUMN_WIDTH - 20;
         const buttonStackHeight = ACTION_BUTTON_PRIMARY_HEIGHT + ACTION_BUTTON_GAP + ACTION_BUTTON_SECONDARY_HEIGHT;
@@ -1961,6 +1996,7 @@ export class PreparationPanel extends GameObjects.Container {
             actionHeadline,
             actionSummary,
             actionNextStep,
+            actionShortcutHint,
             deckManagerButton.container,
             confirmGlow,
             confirmButton.container,
@@ -2628,12 +2664,84 @@ export class PreparationPanel extends GameObjects.Container {
             progressText.setText(deckCount === 0
                 ? '暂无卡组可浏览 · 请先去管理卡组整理一套。'
                 : this.maxScrollX > 0
-                    ? `浏览进度 ${Math.round(progressRatio * 100)}% · 当前可见 ${visibleStart}-${visibleEnd} / ${deckCount} 套 · 拖动/滚轮/箭头浏览`
-                    : `全部卡组已展开 · 当前可见 ${visibleStart}-${visibleEnd} / ${deckCount} 套 · 点按卡片即可切换`);
+                    ? `浏览进度 ${Math.round(progressRatio * 100)}% · 当前可见 ${visibleStart}-${visibleEnd} / ${deckCount} 套 · 拖动/滚轮/点按，或按 ← / → 切换当前带入`
+                    : `全部卡组已展开 · 当前可见 ${visibleStart}-${visibleEnd} / ${deckCount} 套 · 点按卡片或按 ← / → 切换当前带入`);
         }
     }
 
+    private handleKeyDown(event: KeyboardEvent): void {
+        if (!this.visible) {
+            return;
+        }
+
+        const shortcut = getPreparationKeyboardShortcut(event);
+        if (!shortcut) {
+            return;
+        }
+
+        if (event.repeat && shortcut !== 'previous-deck' && shortcut !== 'next-deck') {
+            return;
+        }
+
+        event.preventDefault();
+
+        switch (shortcut) {
+            case 'previous-deck':
+                this.selectAdjacentDeck(-1);
+                return;
+            case 'next-deck':
+                this.selectAdjacentDeck(1);
+                return;
+            case 'primary-action':
+                this.triggerPrimaryAction();
+                return;
+            case 'manage':
+                this.openDeckManager();
+                return;
+            default:
+                return;
+        }
+    }
+
+    private teardownKeyboardShortcuts(): void {
+        if (this.keydownHandler) {
+            this.scene.input.keyboard?.off('keydown', this.keydownHandler);
+            this.keydownHandler = undefined;
+        }
+    }
+
+    private selectAdjacentDeck(direction: -1 | 1): void {
+        const nextDeckId = getAdjacentPreparationDeckId(
+            this.stash.savedDecks,
+            this.stash.selectedDeckId,
+            direction,
+        );
+
+        if (!nextDeckId || nextDeckId === this.stash.selectedDeckId) {
+            return;
+        }
+
+        this.onDeckSelect(nextDeckId);
+    }
+
+    private canConfirmLoadout(): boolean {
+        return validateExpeditionLoadout(this.stash).valid;
+    }
+
+    private triggerPrimaryAction(): void {
+        if (this.canConfirmLoadout()) {
+            this.confirmLoadout();
+            return;
+        }
+
+        this.openDeckManager();
+    }
+
     private confirmLoadout(): void {
+        if (!this.canConfirmLoadout()) {
+            return;
+        }
+
         this.onConfirm();
     }
 
