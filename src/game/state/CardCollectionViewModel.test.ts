@@ -29,6 +29,24 @@ const METADATA: CardMetadataMap = {
     TL_001: { kind: 'talisman' as CardKind, name: 'Lightning Talisman' },
 };
 
+const LOCALIZED_METADATA: CardMetadataMap = {
+    CR_001: { kind: 'unit' as CardKind, name: '青云山灵狐' },
+    CR_002: { kind: 'unit' as CardKind, name: '青云外门师兄' },
+    CR_003: { kind: 'unit' as CardKind, name: '雷鸣幼鹰' },
+    AR_001: { kind: 'artifact' as CardKind, name: '青云剑' },
+    AR_002: { kind: 'artifact' as CardKind, name: '聚灵小坠' },
+    TL_001: { kind: 'talisman' as CardKind, name: '火球符' },
+};
+
+const LOCALIZED_NAME_SORT_ROWS: CardCollectionRow[] = [
+    { id: 'TL_001', count: 1, name: '引雷符' },
+    { id: 'AR_002', count: 1, name: '玄铁剑' },
+    { id: 'AR_001', count: 1, name: '白虎机关匣' },
+    { id: 'CR_004', count: 1, name: '阿青' },
+    { id: 'CR_003', count: 1, name: '雷鸣幼鹰' },
+    { id: 'CR_001', count: 1, name: '青云山灵狐' },
+];
+
 function ids(rows: readonly CardCollectionRow[]): string[] {
     return rows.map((r) => r.id);
 }
@@ -136,6 +154,18 @@ describe('applyCardCollectionFilters', () => {
             expect(ids(applyCardCollectionFilters(rows, { query: '' }))).toEqual(ids(rows));
             expect(ids(applyCardCollectionFilters(rows, { query: '   ' }))).toEqual(ids(rows));
         });
+
+        it('matches localized Chinese name substrings', () => {
+            const localizedRows = buildCardCollectionRows(STACKS, LOCALIZED_METADATA);
+            const result = applyCardCollectionFilters(localizedRows, { query: '青云' });
+            expect(ids(result)).toEqual(['CR_001', 'CR_002', 'AR_001']);
+        });
+
+        it('preserves raw id matching when metadata names are localized', () => {
+            const localizedRows = buildCardCollectionRows(STACKS, LOCALIZED_METADATA);
+            const result = applyCardCollectionFilters(localizedRows, { query: 'ar_002' });
+            expect(ids(result)).toEqual(['AR_002']);
+        });
     });
 
     describe('kind filter', () => {
@@ -191,6 +221,16 @@ describe('applyCardCollectionFilters', () => {
                 hideZeroCount: true,
             });
             expect(ids(result)).toEqual(['AR_001']);
+        });
+
+        it('keeps Chinese name filtering compatible with kind and hide-zero filters', () => {
+            const localizedRows = buildCardCollectionRows(STACKS, LOCALIZED_METADATA);
+            const result = applyCardCollectionFilters(localizedRows, {
+                kind: 'unit' as CardKind,
+                query: '雷',
+                hideZeroCount: true,
+            });
+            expect(result).toEqual([]);
         });
     });
 });
@@ -309,6 +349,49 @@ describe('applyCardCollectionSort', () => {
             const result = applyCardCollectionSort(mixed, { field: 'name', direction: 'asc' });
             expect(ids(result)).toEqual(['Z', 'Y', 'A', 'B']);
         });
+
+        it('uses explicit Chinese collation instead of host-default ordering', () => {
+            const originalLocaleCompare = String.prototype.localeCompare;
+
+            String.prototype.localeCompare = function localeCompareWithForcedEnglishDefault(
+                compareString: string,
+                locales?: string | string[],
+                options?: Intl.CollatorOptions,
+            ): number {
+                return originalLocaleCompare.call(
+                    this,
+                    compareString,
+                    locales ?? 'en-US',
+                    options,
+                );
+            };
+
+            try {
+                const result = applyCardCollectionSort(LOCALIZED_NAME_SORT_ROWS, { field: 'name', direction: 'asc' });
+                expect(ids(result)).toEqual([
+                    'CR_004', // 阿青
+                    'AR_001', // 白虎机关匣
+                    'CR_003', // 雷鸣幼鹰
+                    'CR_001', // 青云山灵狐
+                    'AR_002', // 玄铁剑
+                    'TL_001', // 引雷符
+                ]);
+            } finally {
+                String.prototype.localeCompare = originalLocaleCompare;
+            }
+        });
+
+        it('keeps localized names in explicit Chinese descending order', () => {
+            const result = applyCardCollectionSort(LOCALIZED_NAME_SORT_ROWS, { field: 'name', direction: 'desc' });
+            expect(ids(result)).toEqual([
+                'TL_001', // 引雷符
+                'AR_002', // 玄铁剑
+                'CR_001', // 青云山灵狐
+                'CR_003', // 雷鸣幼鹰
+                'AR_001', // 白虎机关匣
+                'CR_004', // 阿青
+            ]);
+        });
     });
 
     describe('sort stability', () => {
@@ -368,5 +451,22 @@ describe('computeCardCollectionViewModel', () => {
             sort: { field: 'name', direction: 'asc' },
         });
         expect(meta).toEqual(METADATA);
+    });
+
+    it('runs the localized deck-browser pipeline with Chinese name filtering and sorting', () => {
+        const result = computeCardCollectionViewModel(STACKS, {
+            metadata: LOCALIZED_METADATA,
+            filters: {
+                hideZeroCount: true,
+                query: '青云',
+            },
+            sort: { field: 'name', direction: 'asc' },
+        });
+
+        expect(ids(result)).toEqual([
+            'AR_001', // 青云剑
+            'CR_001', // 青云山灵狐
+            'CR_002', // 青云外门师兄
+        ]);
     });
 });

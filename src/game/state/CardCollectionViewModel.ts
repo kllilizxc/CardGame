@@ -10,7 +10,7 @@ export interface CardCollectionSortConfig {
 }
 
 export interface CardCollectionFilters {
-    /** Case-insensitive substring match against card id and name (when metadata is available). */
+    /** Locale-stable substring match against card id and name (when metadata is available). */
     query?: string;
     /** If set, only include cards whose kind matches (requires metadata). */
     kind?: CardKind;
@@ -72,6 +72,36 @@ export function buildCardCollectionRows(
     });
 }
 
+const CARD_COLLECTION_MACHINE_TEXT_LOCALE = 'en-US';
+const CARD_COLLECTION_NAME_SORT_LOCALE = 'zh-Hans-CN';
+
+const CARD_COLLECTION_MACHINE_TEXT_COLLATOR = new Intl.Collator(CARD_COLLECTION_MACHINE_TEXT_LOCALE, {
+    usage: 'sort',
+    sensitivity: 'variant',
+    numeric: true,
+});
+
+const CARD_COLLECTION_NAME_COLLATOR = new Intl.Collator(CARD_COLLECTION_NAME_SORT_LOCALE, {
+    usage: 'sort',
+    sensitivity: 'variant',
+});
+
+function normalizeSearchableText(value: string): string {
+    return value.normalize('NFKC').toLocaleLowerCase(CARD_COLLECTION_MACHINE_TEXT_LOCALE);
+}
+
+function matchesNormalizedQuery(value: string | undefined, normalizedQuery: string): boolean {
+    return value !== undefined && normalizeSearchableText(value).includes(normalizedQuery);
+}
+
+function compareMachineText(left: string, right: string): number {
+    return CARD_COLLECTION_MACHINE_TEXT_COLLATOR.compare(left, right);
+}
+
+function compareLocalizedName(left: string | undefined, right: string | undefined): number {
+    return CARD_COLLECTION_NAME_COLLATOR.compare(left ?? '', right ?? '');
+}
+
 export function applyCardCollectionFilters(
     rows: readonly CardCollectionRow[],
     filters: CardCollectionFilters | undefined,
@@ -89,10 +119,10 @@ export function applyCardCollectionFilters(
     }
 
     if (filters.query !== undefined && filters.query.trim().length > 0) {
-        const q = filters.query.trim().toLowerCase();
+        const q = normalizeSearchableText(filters.query.trim());
         result = result.filter((row) => {
-            if (row.id.toLowerCase().includes(q)) return true;
-            if (row.name !== undefined && row.name.toLowerCase().includes(q)) return true;
+            if (matchesNormalizedQuery(row.id, q)) return true;
+            if (matchesNormalizedQuery(row.name, q)) return true;
             return false;
         });
     }
@@ -112,17 +142,17 @@ const CARD_KIND_SORT_ORDER: Record<CardKind, number> = {
 function compareByField(a: CardCollectionRow, b: CardCollectionRow, field: CardCollectionSortField): number {
     switch (field) {
         case 'id':
-            return a.id.localeCompare(b.id);
+            return compareMachineText(a.id, b.id);
         case 'count':
             return a.count - b.count;
         case 'kind': {
             const ka = a.kind !== undefined ? (CARD_KIND_SORT_ORDER[a.kind] ?? 99) : 99;
             const kb = b.kind !== undefined ? (CARD_KIND_SORT_ORDER[b.kind] ?? 99) : 99;
             if (ka !== kb) return ka - kb;
-            return (a.kind ?? '').localeCompare(b.kind ?? '');
+            return compareMachineText(a.kind ?? '', b.kind ?? '');
         }
         case 'name':
-            return (a.name ?? '').localeCompare(b.name ?? '');
+            return compareLocalizedName(a.name, b.name);
     }
 }
 
