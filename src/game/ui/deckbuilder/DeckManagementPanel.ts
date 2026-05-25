@@ -151,12 +151,23 @@ interface CardPreviewTheme {
     badgeTextColor: string;
 }
 
+interface CardSpotlightMetric {
+    label: string;
+    value: string;
+    fillColor: number;
+    borderColor: number;
+    valueColor: string;
+    labelColor: string;
+}
+
 interface CardDetailViewModel {
     displayName: string;
     metaLabel: string;
     contextLabel: string;
-    descriptionLabel: string;
-    effectSummaryLabel: string | null;
+    primaryCopyTitle: string;
+    primaryCopyLabel: string;
+    secondaryCopyTitle: string | null;
+    secondaryCopyLabel: string | null;
     statusLabel: string;
     accentColor: number;
     fillColor: number;
@@ -167,10 +178,21 @@ interface CardDetailViewModel {
     rarityLabel: string;
     rarityColor: number;
     previewTheme: CardPreviewTheme;
-    ownershipLabels: string[];
+    ownershipStats: CardSpotlightMetric[];
     factsLabel: string | null;
     rulesLabel: string | null;
     footerLabel: string;
+}
+
+interface SpotlightRowHandle {
+    cardId: string;
+    bg: GameObjects.Rectangle;
+    baseFillColor: number;
+    hoverFillColor: number;
+    activeFillColor: number;
+    baseBorderColor: number;
+    activeBorderColor: number;
+    baseBorderAlpha: number;
 }
 
 function getPreviewTheme(kind?: CardKind): CardPreviewTheme {
@@ -274,6 +296,22 @@ function truncateLabel(value: string, maxLength: number): string {
     }
 
     return `${value.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+}
+
+function blendColor(baseColor: number, overlayColor: number, overlayWeight: number): number {
+    const weight = Phaser.Math.Clamp(overlayWeight, 0, 1);
+    const baseRed = (baseColor >> 16) & 0xff;
+    const baseGreen = (baseColor >> 8) & 0xff;
+    const baseBlue = baseColor & 0xff;
+    const overlayRed = (overlayColor >> 16) & 0xff;
+    const overlayGreen = (overlayColor >> 8) & 0xff;
+    const overlayBlue = overlayColor & 0xff;
+
+    const red = Math.round(baseRed + (overlayRed - baseRed) * weight);
+    const green = Math.round(baseGreen + (overlayGreen - baseGreen) * weight);
+    const blue = Math.round(baseBlue + (overlayBlue - baseBlue) * weight);
+
+    return (red << 16) | (green << 8) | blue;
 }
 
 function joinPreviewFacts(parts: (string | null | undefined)[], maxLength = 50): string | null {
@@ -509,14 +547,19 @@ function buildCardDetailViewModel(
     metadata?: CardMetadataMap,
 ): CardDetailViewModel {
     if (!cardId) {
+        const previewTheme = getPreviewTheme(undefined);
         return {
             displayName: '悬停卡牌查看详情',
             metaLabel: '当前卡组与储物袋条目会同步在这里展示',
             contextLabel: deckCards.length > 0
                 ? `当前卡组 ${countDeckCards(deckCards)} 张 · ${deckCards.length} 个条目`
                 : '可先在右侧储物袋中浏览可用卡牌',
-            descriptionLabel: '从当前卡组清单或储物袋浏览中悬停或点击任一条目，即可切换这里的牌面预览。',
-            effectSummaryLabel: null,
+            primaryCopyTitle: '查看方式',
+            primaryCopyLabel: '从当前卡组清单或储物袋浏览中悬停或点击任一条目，即可切换这里的牌面焦点。',
+            secondaryCopyTitle: '同步说明',
+            secondaryCopyLabel: deckCards.length > 0
+                ? '详情会保留最近查看的卡牌，方便一边滚动列表一边确认配置。'
+                : '右侧储物袋支持搜索、种类筛选与一键加满；这里会同步显示当前查看的牌面。',
             statusLabel: '等待查看',
             accentColor: PANEL_ACCENT,
             fillColor: 0x0f172a,
@@ -526,24 +569,57 @@ function buildCardDetailViewModel(
             kindGlyph: '览',
             rarityLabel: '预览面板',
             rarityColor: PANEL_ACCENT,
-            previewTheme: getPreviewTheme(undefined),
-            ownershipLabels: [
-                `当前卡组 ${countDeckCards(deckCards)} 张`,
-                `库存条目 ${stashCards.length}`,
-                deckCards.length > 0 ? `${deckCards.length} 个条目` : '先从右侧挑卡',
+            previewTheme,
+            ownershipStats: [
+                {
+                    label: '卡组',
+                    value: String(countDeckCards(deckCards)),
+                    fillColor: blendColor(0x0f172a, previewTheme.headerFillColor, 0.72),
+                    borderColor: previewTheme.borderColor,
+                    valueColor: '#f8fafc',
+                    labelColor: '#cbd5e1',
+                },
+                {
+                    label: '库存',
+                    value: String(stashCards.length),
+                    fillColor: blendColor(0x0f172a, previewTheme.heroFillColor, 0.76),
+                    borderColor: previewTheme.accentColor,
+                    valueColor: '#f8fafc',
+                    labelColor: '#cbd5e1',
+                },
+                {
+                    label: '焦点',
+                    value: '待选',
+                    fillColor: 0x111827,
+                    borderColor: SECTION_BORDER,
+                    valueColor: '#cbd5e1',
+                    labelColor: '#94a3b8',
+                },
+                {
+                    label: '切换',
+                    value: '悬停',
+                    fillColor: 0x111827,
+                    borderColor: SECTION_BORDER,
+                    valueColor: '#cbd5e1',
+                    labelColor: '#94a3b8',
+                },
             ],
             factsLabel: deckCards.length > 0
-                ? '详情会保留最近查看的卡牌，方便一边滚动列表一边确认配置。'
-                : '右侧储物袋支持搜索、种类筛选与一键加满；这里会同步显示当前查看的牌面。',
+                ? '最近焦点会保留在这里，方便边滚动边核对。'
+                : '右侧储物袋支持搜索、筛选与一键加满。',
             rulesLabel: '缺少完整内容时也会回退到编号、类型与库存信息。',
-            footerLabel: '悬停卡组或储物袋条目即可切换预览',
+            footerLabel: '悬停卡组或储物袋条目即可切换焦点牌面',
         };
     }
 
     const entry = metadata?.[cardId];
     const displayName = getCardDisplayName(cardId, metadata);
     const kindLabel = getCardKindLabel(entry?.kind);
-    const metaLabel = getCardMetaLabel(cardId, metadata);
+    const metaLabel = joinPreviewFacts([
+        displayName !== cardId ? cardId : null,
+        entry?.gradeLabel,
+        entry?.kind ? KIND_LABEL[entry.kind] : null,
+    ], 42) ?? cardId;
     const description = entry?.description?.trim() || undefined;
     const effectSummary = entry?.effectSummary?.trim() || undefined;
     const ownedCount = getStackCount(stashCards, cardId);
@@ -583,19 +659,28 @@ function buildCardDetailViewModel(
 
     const previewTheme = getPreviewTheme(entry?.kind);
     const rarityColor = getRarityAccentColor(entry?.rarity);
-    const ownershipLabels = [
-        `袋中 ${ownedCount}`,
-        `卡组 ${deckCount}`,
-        shortageCount > 0
-            ? `缺口 ${shortageCount}`
-            : availableCount > 0
-                ? `可加 ${availableCount}`
-                : deckCount > 0
-                    ? '已占满'
-                    : '库存 0',
-    ];
     const factsLabel = formatCardFactsLine(cardId, metadata);
     const rulesLabel = formatCardRulesLine(cardId, metadata);
+    const spotlightContext = factsLabel ?? contextParts.join(' · ');
+    const primaryCopyTitle = effectSummary ? '效果要点' : description ? '卡牌简介' : factsLabel ? '牌面要点' : '预览提示';
+    const primaryCopyLabel = effectSummary
+        ?? description
+        ?? factsLabel
+        ?? '未找到描述或效果摘要，仍可按编号与数量管理此卡。';
+    let secondaryCopyTitle: string | null = null;
+    let secondaryCopyLabel: string | null = null;
+
+    if (effectSummary && description && description !== effectSummary) {
+        secondaryCopyTitle = '卡牌简介';
+        secondaryCopyLabel = description;
+    } else if (factsLabel && factsLabel !== primaryCopyLabel) {
+        secondaryCopyTitle = '牌面要点';
+        secondaryCopyLabel = factsLabel;
+    } else if (spotlightContext !== primaryCopyLabel) {
+        secondaryCopyTitle = '持有情况';
+        secondaryCopyLabel = spotlightContext;
+    }
+
     const footerLabel = entry
         ? truncateLabel(
             joinPreviewFacts([
@@ -610,11 +695,11 @@ function buildCardDetailViewModel(
     return {
         displayName,
         metaLabel,
-        contextLabel: contextParts.join(' · '),
-        descriptionLabel: description ?? effectSummary ?? '未找到描述或效果摘要，仍可按编号与数量管理此卡。',
-        effectSummaryLabel: description && effectSummary && effectSummary !== description
-            ? `效果：${effectSummary}`
-            : factsLabel,
+        contextLabel: spotlightContext,
+        primaryCopyTitle,
+        primaryCopyLabel,
+        secondaryCopyTitle,
+        secondaryCopyLabel,
         statusLabel,
         accentColor,
         fillColor,
@@ -625,7 +710,40 @@ function buildCardDetailViewModel(
         rarityLabel: getRarityLabel(entry?.rarity),
         rarityColor,
         previewTheme,
-        ownershipLabels,
+        ownershipStats: [
+            {
+                label: '袋中',
+                value: String(ownedCount),
+                fillColor: blendColor(0x0f172a, previewTheme.headerFillColor, 0.72),
+                borderColor: previewTheme.borderColor,
+                valueColor: '#f8fafc',
+                labelColor: '#cbd5e1',
+            },
+            {
+                label: '卡组',
+                value: String(deckCount),
+                fillColor: blendColor(0x0f172a, previewTheme.heroFillColor, 0.78),
+                borderColor: previewTheme.accentColor,
+                valueColor: '#f8fafc',
+                labelColor: '#cbd5e1',
+            },
+            {
+                label: '剩余',
+                value: String(availableCount),
+                fillColor: availableCount > 0 ? 0x0d2a1d : 0x111827,
+                borderColor: availableCount > 0 ? VALID_ACCENT : SECTION_BORDER,
+                valueColor: availableCount > 0 ? '#bbf7d0' : '#cbd5e1',
+                labelColor: availableCount > 0 ? '#bbf7d0' : '#94a3b8',
+            },
+            {
+                label: '缺口',
+                value: String(shortageCount),
+                fillColor: shortageCount > 0 ? 0x2b1418 : 0x111827,
+                borderColor: shortageCount > 0 ? INVALID_ACCENT : SECTION_BORDER,
+                valueColor: shortageCount > 0 ? '#fecaca' : '#cbd5e1',
+                labelColor: shortageCount > 0 ? '#fecaca' : '#94a3b8',
+            },
+        ],
         factsLabel,
         rulesLabel,
         footerLabel,
@@ -734,6 +852,8 @@ export class DeckManagementPanel extends GameObjects.Container {
     private browserSummaryText?: GameObjects.Text;
     private browserPosText?: GameObjects.Text;
     private detailPaneContainer?: GameObjects.Container;
+    private readonly editorSpotlightRows = new Map<string, SpotlightRowHandle>();
+    private readonly browserSpotlightRows = new Map<string, SpotlightRowHandle>();
 
     private keydownHandler?: (event: KeyboardEvent) => void;
     private wheelHandler?: (pointer: Phaser.Input.Pointer, _gameObjects: unknown[], deltaX: number, deltaY: number) => void;
@@ -838,6 +958,22 @@ export class DeckManagementPanel extends GameObjects.Container {
 
         this.detailCardId = cardId;
         this.refreshDetailPane();
+        this.refreshSpotlightRowStates();
+    }
+
+    private applySpotlightRowState(row: SpotlightRowHandle, active: boolean): void {
+        row.bg.setFillStyle(active ? row.activeFillColor : row.baseFillColor, 0.98);
+        row.bg.setStrokeStyle(active ? 2 : 1, active ? row.activeBorderColor : row.baseBorderColor, active ? 0.98 : row.baseBorderAlpha);
+    }
+
+    private registerSpotlightRow(target: Map<string, SpotlightRowHandle>, row: SpotlightRowHandle): void {
+        target.set(row.cardId, row);
+        this.applySpotlightRowState(row, this.detailCardId === row.cardId);
+    }
+
+    private refreshSpotlightRowStates(): void {
+        this.editorSpotlightRows.forEach((row) => this.applySpotlightRowState(row, this.detailCardId === row.cardId));
+        this.browserSpotlightRows.forEach((row) => this.applySpotlightRowState(row, this.detailCardId === row.cardId));
     }
 
     private refreshDetailPane(): void {
@@ -857,22 +993,46 @@ export class DeckManagementPanel extends GameObjects.Container {
         const previewWidth = this.detailPaneWidth;
         const previewHeight = this.detailPaneHeight;
         const previewTheme = detail.previewTheme;
-        const innerWidth = previewWidth - 24;
-        const headerHeight = 28;
-        const heroHeight = Phaser.Math.Clamp(previewHeight - 104, 44, 76);
-        const heroTop = headerHeight + 12;
-        const chipsY = heroTop + heroHeight + 14;
-        const descriptionY = chipsY + 18;
-        const footerY = previewHeight - 14;
-        const showSecondaryLine = previewHeight >= 164;
-        const descriptionCopy = truncateLabel(
-            detail.descriptionLabel,
-            detail.effectSummaryLabel ? (showSecondaryLine ? 88 : 70) : 96,
+        const compactPreview = previewHeight < 170;
+        const innerWidth = previewWidth - 20;
+        const contentLeft = 10;
+        const verticalGap = previewHeight >= 184 ? 8 : 6;
+        const headerHeight = compactPreview ? 20 : previewHeight >= 184 ? 24 : 22;
+        const footerHeight = compactPreview ? 18 : previewHeight >= 184 ? 22 : 18;
+        const workingHeight = Math.max(compactPreview ? 64 : 74, previewHeight - headerHeight - footerHeight - verticalGap * 2 - 8);
+        const heroHeight = Phaser.Math.Clamp(
+            Math.floor(workingHeight * (compactPreview ? 0.34 : 0.42)),
+            compactPreview ? 34 : 42,
+            compactPreview ? 50 : 58,
         );
-        const secondaryCopy = showSecondaryLine && detail.effectSummaryLabel
-            ? truncateLabel(detail.effectSummaryLabel, 72)
+        const metricHeight = Phaser.Math.Clamp(
+            Math.floor(workingHeight * (compactPreview ? 0.18 : 0.24)),
+            compactPreview ? 20 : 24,
+            compactPreview ? 26 : 30,
+        );
+        const copyHeight = Math.max(compactPreview ? 14 : 22, workingHeight - heroHeight - metricHeight);
+        const heroTop = headerHeight + verticalGap;
+        const metricsTop = heroTop + heroHeight + verticalGap;
+        const copyTop = metricsTop + metricHeight + verticalGap;
+        const availableCopyHeight = previewHeight - footerHeight - 8 - copyTop;
+        const copyPanelHeight = Math.max(22, Math.min(copyHeight, availableCopyHeight));
+        const footerTop = previewHeight - footerHeight - 8;
+        const metricGap = 4;
+        const metricWidth = (innerWidth - metricGap * 3) / 4;
+        const showSecondaryCopy = Boolean(detail.secondaryCopyLabel) && copyPanelHeight >= 46;
+        const showHeroSupport = !compactPreview && heroHeight >= 52;
+        const primaryCopy = truncateLabel(
+            detail.primaryCopyLabel,
+            showSecondaryCopy ? 48 : copyPanelHeight >= 54 ? 84 : 68,
+        );
+        const secondaryCopy = showSecondaryCopy
+            ? truncateLabel(detail.secondaryCopyLabel ?? '', copyPanelHeight >= 58 ? 54 : 42)
             : null;
-        const footerCopy = truncateLabel(detail.rulesLabel ?? detail.footerLabel, 62);
+        const supportLine = truncateLabel(detail.contextLabel, 38);
+        const footerCopy = truncateLabel(
+            joinPreviewFacts([detail.metaLabel, detail.rulesLabel ?? detail.footerLabel], 72) ?? detail.footerLabel,
+            72,
+        );
 
         const createBadge = (
             x: number,
@@ -897,6 +1057,16 @@ export class DeckManagementPanel extends GameObjects.Container {
             return [bg, text, width];
         };
 
+        const shadow = this.scene.add.rectangle(
+            previewWidth / 2,
+            previewHeight / 2 + 4,
+            previewWidth + 6,
+            previewHeight + 6,
+            previewTheme.heroGlowColor,
+            0.12,
+        );
+        shadow.setStrokeStyle(1, previewTheme.heroGlowColor, 0.12);
+
         const outerCard = this.scene.add.rectangle(
             previewWidth / 2,
             previewHeight / 2,
@@ -906,6 +1076,15 @@ export class DeckManagementPanel extends GameObjects.Container {
             0.99,
         );
         outerCard.setStrokeStyle(2, detail.accentColor, 0.95);
+        const innerFrame = this.scene.add.rectangle(
+            previewWidth / 2,
+            previewHeight / 2,
+            previewWidth - 8,
+            previewHeight - 8,
+            0x000000,
+            0,
+        );
+        innerFrame.setStrokeStyle(1, previewTheme.borderColor, 0.28);
 
         const header = this.scene.add.rectangle(
             previewWidth / 2,
@@ -916,6 +1095,14 @@ export class DeckManagementPanel extends GameObjects.Container {
             1,
         );
         header.setStrokeStyle(1, previewTheme.borderColor, 0.5);
+        const headerGlow = this.scene.add.rectangle(
+            previewWidth / 2,
+            headerHeight,
+            previewWidth - 18,
+            8,
+            previewTheme.heroGlowColor,
+            0.12,
+        );
 
         const hero = this.scene.add.rectangle(
             previewWidth / 2,
@@ -926,111 +1113,179 @@ export class DeckManagementPanel extends GameObjects.Container {
             1,
         );
         hero.setStrokeStyle(1, previewTheme.heroGlowColor, 0.6);
+        const heroAccent = this.scene.add.rectangle(
+            contentLeft + 4,
+            heroTop + heroHeight / 2,
+            6,
+            heroHeight - 12,
+            previewTheme.accentColor,
+            0.9,
+        ).setOrigin(0, 0.5);
 
         const heroGlow = this.scene.add.rectangle(
-            previewWidth - 44,
+            previewWidth - 40,
             heroTop + heroHeight / 2,
-            62,
-            heroHeight - 10,
+            56,
+            heroHeight - 8,
             previewTheme.heroGlowColor,
-            0.16,
+            0.18,
         );
 
-        const headerTitle = this.scene.add.text(12, 14, '卡牌预览', {
+        const headerTitle = this.scene.add.text(12, headerHeight / 2, '焦点牌面', {
             fontFamily: 'Arial',
             fontSize: '11px',
             color: '#cbd5e1',
             fontStyle: 'bold',
         }).setOrigin(0, 0.5);
         const [kindBadgeBg, kindBadgeText] = createBadge(
-            12,
-            42,
+            18,
+            heroTop + 12,
             detail.kindLabel,
             previewTheme.badgeFillColor,
             previewTheme.badgeTextColor,
         );
         const [rarityBadgeBg, rarityBadgeText] = createBadge(
-            previewWidth - 12,
-            42,
+            previewWidth - 18,
+            heroTop + 12,
             detail.rarityLabel,
             detail.rarityColor,
             '#f8fafc',
             'right',
         );
 
-        const heroName = this.scene.add.text(22, heroTop + 10, detail.displayName, {
+        const heroName = this.scene.add.text(18, heroTop + 22, detail.displayName, {
             fontFamily: 'Arial',
-            fontSize: '17px',
+            fontSize: previewHeight >= 184 ? '18px' : compactPreview ? '15px' : '16px',
             color: '#f8fafc',
             fontStyle: 'bold',
-            wordWrap: { width: innerWidth - 78 },
+            wordWrap: { width: innerWidth - 68 },
         });
-        const heroMeta = this.scene.add.text(22, heroTop + 34, detail.metaLabel, {
+        const heroSupport = this.scene.add.text(18, heroTop + heroHeight - 24, supportLine, {
             fontFamily: 'Arial',
             fontSize: '10px',
             color: '#cbd5e1',
-            wordWrap: { width: innerWidth - 78 },
-        });
-        const heroStatus = this.scene.add.text(22, heroTop + heroHeight - 14, detail.statusLabel, {
+            fontStyle: 'bold',
+            wordWrap: { width: innerWidth - 74 },
+        }).setOrigin(0, 1).setVisible(showHeroSupport);
+
+        const heroGlyph = this.scene.add.text(previewWidth - 38, heroTop + heroHeight / 2 + 1, detail.kindGlyph, {
+            fontFamily: 'Arial',
+            fontSize: previewHeight >= 184 ? '52px' : compactPreview ? '44px' : '48px',
+            color: '#ffffff',
+            fontStyle: 'bold',
+        }).setOrigin(0.5).setAlpha(0.2);
+
+        const statusRibbon = this.scene.add.rectangle(
+            previewWidth / 2,
+            heroTop + heroHeight - 8,
+            innerWidth - 16,
+            16,
+            blendColor(previewTheme.heroFillColor, detail.accentColor, 0.45),
+            0.68,
+        );
+        statusRibbon.setStrokeStyle(1, detail.accentColor, 0.55);
+        const statusText = this.scene.add.text(previewWidth / 2, heroTop + heroHeight - 8, truncateLabel(detail.statusLabel, 18), {
             fontFamily: 'Arial',
             fontSize: '10px',
             color: detail.statusColor,
             fontStyle: 'bold',
-            wordWrap: { width: innerWidth - 78 },
-        }).setOrigin(0, 1);
+        }).setOrigin(0.5);
 
-        const heroGlyph = this.scene.add.text(previewWidth - 40, heroTop + heroHeight / 2, detail.kindGlyph, {
-            fontFamily: 'Arial',
-            fontSize: '54px',
-            color: '#ffffff',
-            fontStyle: 'bold',
-        }).setOrigin(0.5).setAlpha(0.18);
-
-        const ownershipLine = this.scene.add.text(12, chipsY, detail.ownershipLabels.join(' · '), {
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: '#e2e8f0',
-            fontStyle: 'bold',
-            wordWrap: { width: innerWidth },
+        const metricBoxes: GameObjects.GameObject[] = [];
+        detail.ownershipStats.forEach((metric, index) => {
+            const metricLeft = contentLeft + index * (metricWidth + metricGap);
+            const metricBg = this.scene.add.rectangle(
+                metricLeft + metricWidth / 2,
+                metricsTop + metricHeight / 2,
+                metricWidth,
+                metricHeight,
+                metric.fillColor,
+                0.98,
+            );
+            metricBg.setStrokeStyle(1, metric.borderColor, 0.75);
+            const metricLabel = this.scene.add.text(metricLeft + metricWidth / 2, metricsTop + 7, metric.label, {
+                fontFamily: 'Arial',
+                fontSize: '8px',
+                color: metric.labelColor,
+                fontStyle: 'bold',
+            }).setOrigin(0.5, 0);
+            const metricValue = this.scene.add.text(metricLeft + metricWidth / 2, metricsTop + metricHeight - 6, metric.value, {
+                fontFamily: 'Arial',
+                fontSize: previewHeight >= 184 ? '14px' : '13px',
+                color: metric.valueColor,
+                fontStyle: 'bold',
+            }).setOrigin(0.5, 1);
+            metricBoxes.push(metricBg, metricLabel, metricValue);
         });
 
-        const descriptionText = this.scene.add.text(12, descriptionY, descriptionCopy, {
+        const copyPanel = this.scene.add.rectangle(
+            previewWidth / 2,
+            copyTop + copyPanelHeight / 2,
+            innerWidth,
+            copyPanelHeight,
+            0x0b1220,
+            0.98,
+        );
+        copyPanel.setStrokeStyle(1, previewTheme.borderColor, 0.4);
+        const copyAccent = this.scene.add.rectangle(
+            contentLeft + 3,
+            copyTop + copyPanelHeight / 2,
+            4,
+            Math.max(22, copyPanelHeight - 10),
+            previewTheme.accentColor,
+            0.9,
+        ).setOrigin(0, 0.5);
+        const copyTitle = this.scene.add.text(contentLeft + 12, copyTop + 8, detail.primaryCopyTitle, {
+            fontFamily: 'Arial',
+            fontSize: '9px',
+            color: '#cbd5e1',
+            fontStyle: 'bold',
+        });
+        const copyBody = this.scene.add.text(contentLeft + 12, copyTop + 22, primaryCopy, {
             fontFamily: 'Arial',
             fontSize: '11px',
             color: detail.bodyColor,
             lineSpacing: 2,
-            wordWrap: { width: innerWidth },
+            wordWrap: { width: innerWidth - 22 },
         });
 
-        const secondaryText = this.scene.add.text(12, descriptionY + 28, secondaryCopy ?? '', {
+        const secondaryTitle = this.scene.add.text(contentLeft + 12, copyTop + copyPanelHeight - 26, detail.secondaryCopyTitle ?? '', {
             fontFamily: 'Arial',
-            fontSize: '10px',
+            fontSize: '8px',
             color: '#93c5fd',
-            lineSpacing: 2,
-            wordWrap: { width: innerWidth },
+            fontStyle: 'bold',
+        }).setVisible(Boolean(secondaryCopy));
+        const secondaryText = this.scene.add.text(contentLeft + 54, copyTop + copyPanelHeight - 26, secondaryCopy ?? '', {
+            fontFamily: 'Arial',
+            fontSize: '8px',
+            color: '#bfdbfe',
+            wordWrap: { width: innerWidth - 66 },
         });
         secondaryText.setVisible(Boolean(secondaryCopy));
 
         const footerSeparator = this.scene.add.rectangle(
             previewWidth / 2,
-            previewHeight - 22,
+            footerTop - 4,
             innerWidth,
             1,
             detail.accentColor,
             0.45,
         );
-        const footerText = this.scene.add.text(12, previewHeight - 14, footerCopy, {
+        const footerText = this.scene.add.text(contentLeft, footerTop, footerCopy, {
             fontFamily: 'Arial',
             fontSize: '10px',
             color: '#94a3b8',
             wordWrap: { width: innerWidth },
         }).setOrigin(0, 1);
-        footerSeparator.setY(Math.min(previewHeight - 22, footerY - (showSecondaryLine ? 18 : 8)));
 
         this.detailPaneContainer.add([
+            shadow,
             outerCard,
+            innerFrame,
             header,
+            headerGlow,
             hero,
+            heroAccent,
             heroGlow,
             headerTitle,
             kindBadgeBg,
@@ -1038,11 +1293,16 @@ export class DeckManagementPanel extends GameObjects.Container {
             rarityBadgeBg,
             rarityBadgeText,
             heroName,
-            heroMeta,
-            heroStatus,
+            heroSupport,
             heroGlyph,
-            ownershipLine,
-            descriptionText,
+            statusRibbon,
+            statusText,
+            ...metricBoxes,
+            copyPanel,
+            copyAccent,
+            copyTitle,
+            copyBody,
+            secondaryTitle,
             secondaryText,
             footerSeparator,
             footerText,
@@ -1684,6 +1944,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.detailPaneContainer = undefined;
         this.detailPaneWidth = 0;
         this.detailPaneHeight = 0;
+        this.editorSpotlightRows.clear();
 
         const localX = 0;
         const summaryW = this.editorContentWidth;
@@ -2068,16 +2329,34 @@ export class DeckManagementPanel extends GameObjects.Container {
                     : remainingCount === 0
                         ? '#fde68a'
                         : '#bbf7d0';
+                const spotlightTheme = getPreviewTheme(this.config.metadata?.[stack.id]?.kind);
+                const hoverFillColor = shortageCount > 0
+                    ? 0x27141c
+                    : remainingCount === 0
+                        ? 0x252015
+                        : 0x172033;
+                const activeFillColor = blendColor(rowFillColor, spotlightTheme.headerFillColor, 0.52);
 
                 const rowBg = this.scene.add.rectangle(summaryW / 2, rowY + EDITOR_ROW_HEIGHT / 2, summaryW, EDITOR_ROW_HEIGHT - 6, rowFillColor, 0.98);
                 rowBg.setStrokeStyle(1, rowBorderColor, shortageCount > 0 ? 0.95 : 0.82);
+                const spotlightRow: SpotlightRowHandle = {
+                    cardId: stack.id,
+                    bg: rowBg,
+                    baseFillColor: rowFillColor,
+                    hoverFillColor,
+                    activeFillColor,
+                    baseBorderColor: rowBorderColor,
+                    activeBorderColor: spotlightTheme.borderColor,
+                    baseBorderAlpha: shortageCount > 0 ? 0.95 : 0.82,
+                };
                 rowBg.setInteractive({ useHandCursor: true });
                 rowBg.on('pointerover', () => {
-                    rowBg.setFillStyle(shortageCount > 0 ? 0x27141c : remainingCount === 0 ? 0x252015 : 0x172033, 1);
+                    rowBg.setFillStyle(spotlightRow.hoverFillColor, 1);
                     this.setDetailCardId(stack.id);
                 });
-                rowBg.on('pointerout', () => rowBg.setFillStyle(rowFillColor, 0.98));
+                rowBg.on('pointerout', () => this.applySpotlightRowState(spotlightRow, this.detailCardId === stack.id));
                 rowBg.on('pointerdown', () => this.setDetailCardId(stack.id));
+                this.registerSpotlightRow(this.editorSpotlightRows, spotlightRow);
                 const accent = this.scene.add.rectangle(5, rowY + EDITOR_ROW_HEIGHT / 2, 6, EDITOR_ROW_HEIGHT - 14, rowAccentColor, 1)
                     .setOrigin(0, 0.5);
 
@@ -2380,6 +2659,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         if (!this.browserInner) return;
 
         this.updateSearchDisplay();
+        this.browserSpotlightRows.clear();
 
         if (this.kindBtnText) {
             this.kindBtnText.setText(`种类: ${KIND_LABEL[String(this.filterKind)]}`);
@@ -2541,16 +2821,30 @@ export class DeckManagementPanel extends GameObjects.Container {
                     disabledStrokeColor = 0xfca5a5;
                     disabledTextColor = '#fecaca';
                 }
+                const spotlightTheme = getPreviewTheme(this.config.metadata?.[row.id]?.kind);
+                const hoverFillColor = !hasDeck ? 0x172033 : deckFull ? 0x252016 : available <= 0 ? 0x27141c : 0x102017;
+                const activeFillColor = blendColor(fillColor, spotlightTheme.headerFillColor, 0.54);
 
                 const rowBg = this.scene.add.rectangle(this.browserArea.w / 2, rowY + BROWSER_ROW_HEIGHT / 2, this.browserArea.w, BROWSER_ROW_HEIGHT - 6, fillColor, 0.98);
                 rowBg.setStrokeStyle(1, borderColor, canAdd ? 0.9 : 0.65);
+                const spotlightRow: SpotlightRowHandle = {
+                    cardId: row.id,
+                    bg: rowBg,
+                    baseFillColor: fillColor,
+                    hoverFillColor,
+                    activeFillColor,
+                    baseBorderColor: borderColor,
+                    activeBorderColor: spotlightTheme.borderColor,
+                    baseBorderAlpha: canAdd ? 0.9 : 0.65,
+                };
                 rowBg.setInteractive({ useHandCursor: true });
                 rowBg.on('pointerover', () => {
-                    rowBg.setFillStyle(!hasDeck ? 0x172033 : deckFull ? 0x252016 : available <= 0 ? 0x27141c : 0x102017, 1);
+                    rowBg.setFillStyle(spotlightRow.hoverFillColor, 1);
                     this.setDetailCardId(row.id);
                 });
-                rowBg.on('pointerout', () => rowBg.setFillStyle(fillColor, 0.98));
+                rowBg.on('pointerout', () => this.applySpotlightRowState(spotlightRow, this.detailCardId === row.id));
                 rowBg.on('pointerdown', () => this.setDetailCardId(row.id));
+                this.registerSpotlightRow(this.browserSpotlightRows, spotlightRow);
                 const accent = this.scene.add.rectangle(5, rowY + BROWSER_ROW_HEIGHT / 2, 6, BROWSER_ROW_HEIGHT - 14, borderColor, 1)
                     .setOrigin(0, 0.5);
 

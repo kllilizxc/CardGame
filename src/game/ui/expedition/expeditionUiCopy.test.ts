@@ -68,6 +68,15 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).not.toContain('Exit summary');
     });
 
+    it('uses Chinese spotlight labels in the deck management panel', () => {
+        const panel = read('src/game/ui/deckbuilder/DeckManagementPanel.ts');
+
+        expect(panel).toContain('焦点牌面');
+        expect(panel).toContain('效果要点');
+        expect(panel).toContain('剩余');
+        expect(panel).toContain('缺口');
+    });
+
     it('uses Chinese run HUD labels', () => {
         const hud = read('src/game/ui/expedition/RunHud.ts');
 
