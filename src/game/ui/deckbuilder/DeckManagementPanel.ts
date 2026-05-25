@@ -195,6 +195,15 @@ interface SpotlightRowHandle {
     baseBorderAlpha: number;
 }
 
+type DeckReadinessTier = 'invalid' | 'warning' | 'ready';
+type TweenableMotionTarget = GameObjects.Container | GameObjects.Rectangle | GameObjects.Text;
+
+interface DeckFeedbackSnapshot {
+    deckId: string;
+    count: number;
+    readinessTier: DeckReadinessTier;
+}
+
 function getPreviewTheme(kind?: CardKind): CardPreviewTheme {
     switch (kind) {
         case 'unit':
@@ -402,6 +411,18 @@ function getDeckCapacityBrowserLabel(capacity: DeckCapacityMetrics): string {
     }
 
     return `已达 ${DECK_CARD_MIN} 张出征线 · 空位 ${capacity.slotsRemainingToMax} 张`;
+}
+
+function getDeckReadinessTier(summary: DeckStatusSummary): DeckReadinessTier {
+    if (summary.availabilityIssues.length > 0 || summary.sizeIssue?.kind === 'too-many-cards') {
+        return 'invalid';
+    }
+
+    if (summary.sizeIssue?.kind === 'too-few-cards') {
+        return 'warning';
+    }
+
+    return summary.isValid ? 'ready' : 'invalid';
 }
 
 function getQuickAddCount(available: number, slotsRemainingToMax: number): number {
@@ -852,8 +873,11 @@ export class DeckManagementPanel extends GameObjects.Container {
     private browserSummaryText?: GameObjects.Text;
     private browserPosText?: GameObjects.Text;
     private detailPaneContainer?: GameObjects.Container;
+    private detailPaneContent?: GameObjects.Container;
     private readonly editorSpotlightRows = new Map<string, SpotlightRowHandle>();
     private readonly browserSpotlightRows = new Map<string, SpotlightRowHandle>();
+    private pendingSelectedDeckMotionId: string | null = null;
+    private lastEditorFeedback?: DeckFeedbackSnapshot;
 
     private keydownHandler?: (event: KeyboardEvent) => void;
     private wheelHandler?: (pointer: Phaser.Input.Pointer, _gameObjects: unknown[], deltaX: number, deltaY: number) => void;
@@ -957,13 +981,70 @@ export class DeckManagementPanel extends GameObjects.Container {
         }
 
         this.detailCardId = cardId;
-        this.refreshDetailPane();
-        this.refreshSpotlightRowStates();
+        this.refreshDetailPane(true);
+        this.refreshSpotlightRowStates(true);
     }
 
-    private applySpotlightRowState(row: SpotlightRowHandle, active: boolean): void {
+    private playMotionPulse(
+        targets: (TweenableMotionTarget | null | undefined)[],
+        config: {
+            alphaFrom?: number;
+            scaleXFrom?: number;
+            scaleYFrom?: number;
+            duration?: number;
+            ease?: string;
+        } = {},
+    ): void {
+        const liveTargets = targets.filter((target): target is TweenableMotionTarget => Boolean(target));
+        if (liveTargets.length === 0) {
+            return;
+        }
+
+        const {
+            alphaFrom = 0.76,
+            scaleXFrom = 0.985,
+            scaleYFrom = scaleXFrom,
+            duration = 180,
+            ease = 'Cubic.easeOut',
+        } = config;
+
+        liveTargets.forEach((target) => {
+            this.scene.tweens.killTweensOf(target);
+            target.setAlpha(alphaFrom);
+            target.setScale(scaleXFrom, scaleYFrom);
+        });
+
+        this.scene.tweens.add({
+            targets: liveTargets,
+            alpha: 1,
+            scaleX: 1,
+            scaleY: 1,
+            duration,
+            ease,
+        });
+    }
+
+    private applySpotlightRowState(row: SpotlightRowHandle, active: boolean, animate = false): void {
+        this.scene.tweens.killTweensOf(row.bg);
         row.bg.setFillStyle(active ? row.activeFillColor : row.baseFillColor, 0.98);
         row.bg.setStrokeStyle(active ? 2 : 1, active ? row.activeBorderColor : row.baseBorderColor, active ? 0.98 : row.baseBorderAlpha);
+
+        if (animate) {
+            if (active) {
+                row.bg.setScale(0.985, 0.94);
+            }
+
+            this.scene.tweens.add({
+                targets: row.bg,
+                scaleX: 1,
+                scaleY: 1,
+                duration: active ? 170 : 120,
+                ease: 'Cubic.easeOut',
+            });
+            return;
+        }
+
+        row.bg.setScale(1, 1);
     }
 
     private registerSpotlightRow(target: Map<string, SpotlightRowHandle>, row: SpotlightRowHandle): void {
@@ -971,17 +1052,22 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.applySpotlightRowState(row, this.detailCardId === row.cardId);
     }
 
-    private refreshSpotlightRowStates(): void {
-        this.editorSpotlightRows.forEach((row) => this.applySpotlightRowState(row, this.detailCardId === row.cardId));
-        this.browserSpotlightRows.forEach((row) => this.applySpotlightRowState(row, this.detailCardId === row.cardId));
+    private refreshSpotlightRowStates(animate = false): void {
+        this.editorSpotlightRows.forEach((row) => this.applySpotlightRowState(row, this.detailCardId === row.cardId, animate));
+        this.browserSpotlightRows.forEach((row) => this.applySpotlightRowState(row, this.detailCardId === row.cardId, animate));
     }
 
-    private refreshDetailPane(): void {
+    private refreshDetailPane(animate = false): void {
         if (!this.detailPaneContainer) {
             return;
         }
 
-        this.detailPaneContainer.removeAll(true);
+        this.detailPaneContainer.list.slice().forEach((child) => {
+            if (child !== this.detailPaneContent) {
+                this.scene.tweens.killTweensOf(child);
+                child.destroy();
+            }
+        });
 
         const detail = buildCardDetailViewModel(
             this.detailCardId,
@@ -989,6 +1075,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             this.getSelectedDeck()?.cards ?? [],
             this.config.metadata,
         );
+        const nextContent = this.scene.add.container(0, 0);
 
         const previewWidth = this.detailPaneWidth;
         const previewHeight = this.detailPaneHeight;
@@ -1278,7 +1365,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             wordWrap: { width: innerWidth },
         }).setOrigin(0, 1);
 
-        this.detailPaneContainer.add([
+        nextContent.add([
             shadow,
             outerCard,
             innerFrame,
@@ -1307,6 +1394,44 @@ export class DeckManagementPanel extends GameObjects.Container {
             footerSeparator,
             footerText,
         ]);
+
+        const previousContent = this.detailPaneContent;
+        this.detailPaneContent = nextContent;
+
+        if (!animate || !previousContent) {
+            this.detailPaneContainer.removeAll(true);
+            this.detailPaneContainer.add(nextContent);
+            nextContent.setAlpha(1);
+            nextContent.setScale(1, 1);
+            return;
+        }
+
+        this.detailPaneContainer.add(nextContent);
+        nextContent.setAlpha(0);
+        nextContent.setScale(0.975, 0.975);
+        previousContent.setAlpha(1);
+        previousContent.setScale(1, 1);
+
+        this.scene.tweens.killTweensOf(previousContent);
+        this.scene.tweens.killTweensOf(nextContent);
+
+        this.scene.tweens.add({
+            targets: previousContent,
+            alpha: 0,
+            scaleX: 1.02,
+            scaleY: 1.02,
+            duration: 110,
+            ease: 'Cubic.easeIn',
+            onComplete: () => previousContent.destroy(),
+        });
+        this.scene.tweens.add({
+            targets: nextContent,
+            alpha: 1,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 170,
+            ease: 'Cubic.easeOut',
+        });
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
@@ -1467,9 +1592,14 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private applyStashChange(newStash: PersistentStash): void {
+        const nextSelectedDeckId = newStash.selectedDeckId ?? newStash.savedDecks[0]?.id ?? null;
+        if (this.selectedDeckId !== nextSelectedDeckId) {
+            this.pendingSelectedDeckMotionId = nextSelectedDeckId;
+        }
+
         this.stash = newStash;
         this.config.onStashChange(this.stash);
-        this.selectedDeckId = this.stash.selectedDeckId ?? this.stash.savedDecks[0]?.id ?? null;
+        this.selectedDeckId = nextSelectedDeckId;
         this.ensureDetailCardSelection();
     }
 
@@ -1477,6 +1607,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.refreshDeckList();
         this.refreshEditor();
         this.refreshBrowser();
+        this.pendingSelectedDeckMotionId = null;
     }
 
     private updateDeckCards(deckId: string, cards: readonly ExpeditionCardStack[]): void {
@@ -1693,9 +1824,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                 const selectedStash = selectDeckInStash(createdStash, id);
                 this.applyStashChange(selectedStash);
                 this.deckListScrollOffset = Math.max(0, selectedStash.savedDecks.length - this.deckListVisibleRows);
-                this.refreshDeckList();
-                this.refreshEditor();
-                this.refreshBrowser();
+                this.refreshDeckViews();
             },
             false,
             {
@@ -1876,9 +2005,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                 bg.on('pointerout', () => bg.setFillStyle(bgFill, 1));
                 bg.on('pointerdown', () => {
                     this.applyStashChange(selectDeckInStash(this.stash, deck.id));
-                    this.refreshDeckList();
-                    this.refreshEditor();
-                    this.refreshBrowser();
+                    this.refreshDeckViews();
                 });
 
                 this.deckListInner.add([
@@ -1890,6 +2017,18 @@ export class DeckManagementPanel extends GameObjects.Container {
                     statusPillText,
                     ...(selectedBadge ?? []),
                 ]);
+
+                if (isSelected && this.pendingSelectedDeckMotionId === deck.id) {
+                    this.playMotionPulse(
+                        [bg, accent, name, detail, statusPillBg, statusPillText, ...(selectedBadge ?? [])],
+                        {
+                            alphaFrom: 0.54,
+                            scaleXFrom: 0.975,
+                            scaleYFrom: 0.92,
+                            duration: 210,
+                        },
+                    );
+                }
             }
         }
 
@@ -1942,6 +2081,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         if (!this.editorContainer) return;
         this.editorContainer.removeAll(true);
         this.detailPaneContainer = undefined;
+        this.detailPaneContent = undefined;
         this.detailPaneWidth = 0;
         this.detailPaneHeight = 0;
         this.editorSpotlightRows.clear();
@@ -1969,6 +2109,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         const deck = this.getSelectedDeck();
 
         if (!deck) {
+            this.lastEditorFeedback = undefined;
             const emptyCard = this.scene.add.rectangle(localX + summaryW / 2, 84, summaryW, 168, 0x0f172a, 0.98);
             emptyCard.setStrokeStyle(1, SECTION_BORDER, 0.9);
             const emptyTitle = this.scene.add.text(localX + summaryW / 2, 62, '先选择一个卡组', {
@@ -1992,6 +2133,11 @@ export class DeckManagementPanel extends GameObjects.Container {
         const capacity = summarizeDeckCapacity(deck.cards);
         const capacityAccentColor = getDeckCapacityAccentColor(capacity);
         const capacityTextColor = getDeckCapacityTextColor(capacity);
+        const readinessTier = getDeckReadinessTier(summary);
+        const previousFeedback = this.lastEditorFeedback;
+        const deckSelectionChanged = this.pendingSelectedDeckMotionId === deck.id;
+        const countChanged = previousFeedback?.deckId === deck.id && previousFeedback.count !== summary.count;
+        const readinessChanged = previousFeedback?.deckId === deck.id && previousFeedback.readinessTier !== readinessTier;
         const summaryCard = this.scene.add.rectangle(localX + summaryW / 2, summaryH / 2, summaryW, summaryH, 0x0f172a, 0.98);
         summaryCard.setStrokeStyle(1, summary.accentColor, 0.9);
         this.editorContainer.add(summaryCard);
@@ -2102,6 +2248,9 @@ export class DeckManagementPanel extends GameObjects.Container {
         const capacityTrackW = leftSummaryW;
         const capacityTrackH = 14;
         const capacityFillWidth = capacityTrackW * Phaser.Math.Clamp(capacity.count / DECK_CARD_MAX, 0, 1);
+        const previousCapacityFillWidth = previousFeedback?.deckId === deck.id
+            ? capacityTrackW * Phaser.Math.Clamp(previousFeedback.count / DECK_CARD_MAX, 0, 1)
+            : 0;
         const capacityTrackBg = this.scene.add.rectangle(
             capacityTrackX + capacityTrackW / 2,
             capacityTrackY,
@@ -2113,15 +2262,16 @@ export class DeckManagementPanel extends GameObjects.Container {
         capacityTrackBg.setStrokeStyle(1, SECTION_BORDER, 0.9);
         this.editorContainer.add(capacityTrackBg);
 
+        let capacityFill: GameObjects.Rectangle | undefined;
         if (capacityFillWidth > 0) {
-            const capacityFill = this.scene.add.rectangle(
-                capacityTrackX + capacityFillWidth / 2,
+            capacityFill = this.scene.add.rectangle(
+                capacityTrackX,
                 capacityTrackY,
                 capacityFillWidth,
                 capacityTrackH - 4,
                 capacityAccentColor,
                 1,
-            );
+            ).setOrigin(0, 0.5);
             this.editorContainer.add(capacityFill);
         }
 
@@ -2233,7 +2383,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.detailPaneWidth = detailPaneW;
         this.detailPaneHeight = detailPaneH;
         this.editorContainer.add(this.detailPaneContainer);
-        this.refreshDetailPane();
+        this.refreshDetailPane(deckSelectionChanged);
 
         const cardListTitle = this.scene.add.text(localX, listHeaderY, `卡牌清单 · ${deck.cards.length} 个条目 / ${summary.count} 张`, {
             fontFamily: 'Arial',
@@ -2465,6 +2615,98 @@ export class DeckManagementPanel extends GameObjects.Container {
         );
 
         this.editorContainer.add([posText, ...scrollUpButton, ...scrollDownButton]);
+
+        if (capacityFill && (deckSelectionChanged || countChanged)) {
+            const startingScaleX = deckSelectionChanged
+                ? 0
+                : capacityFillWidth > 0
+                    ? Phaser.Math.Clamp(previousCapacityFillWidth / capacityFillWidth, 0, 1.35)
+                    : 0;
+            capacityFill.setScale(startingScaleX, 1);
+            this.scene.tweens.add({
+                targets: capacityFill,
+                scaleX: 1,
+                duration: deckSelectionChanged ? 210 : 170,
+                ease: 'Cubic.easeOut',
+            });
+        }
+
+        if (deckSelectionChanged) {
+            this.playMotionPulse(
+                [
+                    summaryCard,
+                    countText,
+                    statusPillBg,
+                    statusPillText,
+                    detailText,
+                    issueText,
+                    exitStrip,
+                    exitHeader,
+                    exitSummary,
+                    ctaButton,
+                    ctaLabel,
+                    ctaSubLabel,
+                    this.detailPaneContainer,
+                    cardListTitle,
+                    cardListSubtitle,
+                    cardsOuter,
+                ],
+                {
+                    alphaFrom: 0.58,
+                    scaleXFrom: 0.976,
+                    scaleYFrom: 0.94,
+                    duration: 210,
+                },
+            );
+        } else {
+            if (countChanged) {
+                this.playMotionPulse(
+                    [
+                        countText,
+                        detailText,
+                        capacityProgressText,
+                        capacityHeadroomText,
+                        issueText,
+                        exitSummary,
+                        ctaSubLabel,
+                    ],
+                    {
+                        alphaFrom: 0.52,
+                        scaleXFrom: 0.99,
+                        scaleYFrom: 0.99,
+                        duration: 160,
+                    },
+                );
+            }
+
+            if (readinessChanged) {
+                this.playMotionPulse(
+                    [
+                        summaryCard,
+                        statusPillBg,
+                        statusPillText,
+                        exitStrip,
+                        exitHeader,
+                        exitSummary,
+                        ctaButton,
+                        ctaLabel,
+                        ctaSubLabel,
+                    ],
+                    {
+                        alphaFrom: 0.48,
+                        scaleXFrom: 0.975,
+                        scaleYFrom: 0.92,
+                        duration: 210,
+                    },
+                );
+            }
+        }
+
+        this.lastEditorFeedback = {
+            deckId: deck.id,
+            count: summary.count,
+            readinessTier,
+        };
     }
 
     private createBrowserColumn(x: number, y: number, colW: number, colH: number): void {
@@ -2918,6 +3160,19 @@ export class DeckManagementPanel extends GameObjects.Container {
             }
         }
 
+        if (selectedDeck && this.pendingSelectedDeckMotionId === selectedDeck.id) {
+            this.playMotionPulse([this.browserInner], {
+                alphaFrom: 0.62,
+                scaleXFrom: 0.985,
+                scaleYFrom: 0.96,
+                duration: 190,
+            });
+        }
+
+        if (this.pendingSelectedDeckMotionId !== null) {
+            this.refreshSpotlightRowStates(true);
+        }
+
         if (this.browserPosText) {
             const total = rows.length;
             const start = total === 0 ? 0 : this.browserScrollOffset + 1;
@@ -3000,9 +3255,7 @@ export class DeckManagementPanel extends GameObjects.Container {
 
         const newStash = deleteSavedDeckFromStash(this.stash, this.selectedDeckId);
         this.applyStashChange(newStash);
-        this.refreshDeckList();
-        this.refreshEditor();
-        this.refreshBrowser();
+        this.refreshDeckViews();
         this.hideDeleteConfirmation();
     }
 }
