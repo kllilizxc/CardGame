@@ -20,6 +20,8 @@ describe('expedition UI Chinese copy', () => {
         expect(sceneCopy).toContain('卡组管理');
         expect(sceneCopy).toContain('可出发');
         expect(sceneCopy).toContain('可返回确认');
+        expect(sceneCopy).toContain('继续进入秘境');
+        expect(sceneCopy).toContain('点按任意处或按 Enter / Space 继续；首层视图会保留路线与带入提示。');
         expect(sceneCopy).not.toContain('Phase 01 · Expedition Entry Flow');
     });
 
@@ -128,10 +130,14 @@ describe('expedition UI Chinese copy', () => {
 
     it('uses Chinese run HUD labels', () => {
         const hud = read('src/game/ui/expedition/RunHud.ts');
+        const model = read('src/game/scenes/expedition/entryFlowModel.ts');
+        const hudCopy = `${hud}\n${model}`;
 
         expect(hud).toContain('携带卡牌：0');
         expect(hud).toContain('携带道具：0');
         expect(hud).toContain('灵石：0');
+        expect(hudCopy).toContain('抵达提示');
+        expect(hudCopy).toContain('首个分路已高亮；点按节点后收起此提示。');
         expect(hud).not.toContain("'carriedDeck: 0'");
         expect(hud).not.toContain("'carriedItems: 0'");
         expect(hud).not.toContain("'spiritStones: 0'");

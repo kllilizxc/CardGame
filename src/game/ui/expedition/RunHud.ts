@@ -1,6 +1,7 @@
 import { GameObjects, Scene } from 'phaser';
 
 import {
+    type ExpeditionArrivalCueSummary,
     createRunResolutionSummaryView,
     createRunSummary,
 } from '../../scenes/expedition/entryFlowModel';
@@ -11,6 +12,7 @@ export class RunHud extends GameObjects.Container {
     private carriedDeckValue!: GameObjects.Text;
     private carriedItemsValue!: GameObjects.Text;
     private spiritStonesValue!: GameObjects.Text;
+    private arrivalCueOverlay?: GameObjects.Container;
     private summaryOverlay?: GameObjects.Container;
 
     constructor(scene: Scene) {
@@ -73,7 +75,97 @@ export class RunHud extends GameObjects.Container {
         this.spiritStonesValue.setText(`灵石：${spiritStones}`);
     }
 
+    public showArrivalCue(summary: ExpeditionArrivalCueSummary): void {
+        this.hideArrivalCue();
+
+        const { width } = this.scene.scale;
+        const panelWidth = Math.min(width - 160, 1060);
+        const panelX = width / 2;
+        const panelY = 146;
+        const panelHeight = 118;
+        const panelLeft = panelX - panelWidth / 2 + 28;
+        const overlay = this.scene.add.container(0, 0);
+        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.96);
+        panel.setStrokeStyle(2, 0x38bdf8, 0.84);
+        const accent = this.scene.add.rectangle(panelX, panelY - panelHeight / 2 + 8, panelWidth - 64, 4, 0x38bdf8, 1);
+        const badge = this.scene.add.text(panelLeft, panelY - panelHeight / 2 + 16, summary.badgeLabel, {
+            fontFamily: 'Arial',
+            fontSize: '12px',
+            color: '#dbeafe',
+            fontStyle: 'bold',
+            backgroundColor: '#1d4ed8',
+            padding: { left: 10, right: 10, top: 5, bottom: 5 },
+        }).setOrigin(0, 0);
+        const headline = this.scene.add.text(panelLeft + 108, panelY - panelHeight / 2 + 18, summary.headline, {
+            fontFamily: 'Arial',
+            fontSize: '22px',
+            color: '#f8fafc',
+            fontStyle: 'bold',
+            wordWrap: { width: panelWidth - 164 },
+        }).setOrigin(0, 0);
+        const detail = this.scene.add.text(panelLeft, panelY - 6, summary.detail, {
+            fontFamily: 'Arial',
+            fontSize: '15px',
+            color: '#bfdbfe',
+            wordWrap: { width: panelWidth - 56 },
+        }).setOrigin(0, 0.5);
+        const routeLine = this.scene.add.text(panelLeft, panelY + 26, summary.routeLine, {
+            fontFamily: 'Arial',
+            fontSize: '15px',
+            color: '#e0f2fe',
+            fontStyle: 'bold',
+            wordWrap: { width: panelWidth - 56 },
+        }).setOrigin(0, 0.5);
+        const loadoutLine = this.scene.add.text(panelLeft, panelY + 52, summary.loadoutLine, {
+            fontFamily: 'Arial',
+            fontSize: '15px',
+            color: '#d1fae5',
+            fontStyle: 'bold',
+            wordWrap: { width: panelWidth - 56 },
+        }).setOrigin(0, 0.5);
+
+        overlay.add([panel, accent, badge, headline, detail, routeLine, loadoutLine]);
+        overlay.setAlpha(0);
+        overlay.setY(10);
+
+        this.add(overlay);
+        this.arrivalCueOverlay = overlay;
+
+        this.scene.tweens.add({
+            targets: overlay,
+            alpha: 1,
+            y: 0,
+            duration: 220,
+            ease: 'Cubic.easeOut',
+        });
+    }
+
+    public hideArrivalCue(animate = false): void {
+        if (!this.arrivalCueOverlay) {
+            return;
+        }
+
+        const overlay = this.arrivalCueOverlay;
+        this.arrivalCueOverlay = undefined;
+        this.scene.tweens.killTweensOf(overlay);
+
+        if (!animate) {
+            overlay.destroy();
+            return;
+        }
+
+        this.scene.tweens.add({
+            targets: overlay,
+            alpha: 0,
+            y: -10,
+            duration: 160,
+            ease: 'Cubic.easeIn',
+            onComplete: () => overlay.destroy(),
+        });
+    }
+
     public showPostRunSummary(summary: RunResolutionSummary, onAcknowledge: () => void): void {
+        this.hideArrivalCue();
         this.hidePostRunSummary();
 
         const { width, height } = this.scene.scale;

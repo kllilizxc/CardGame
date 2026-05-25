@@ -39,6 +39,7 @@ import {
 } from '../../ui/expedition/routeTelemetryChips';
 import { createWorldMapReturnIntent } from '../worldmap/worldMap';
 import {
+    createExpeditionArrivalCueSummary,
     createExpeditionDepartureHandoffSummary,
     createExpeditionPreflightStatusSummary,
     createExpeditionRouteBriefingSummary,
@@ -48,6 +49,7 @@ import {
     createPreparationSummary,
     createRunSummary,
     type ExpeditionDepartureHandoffSummary,
+    type ExpeditionArrivalCueSummary,
     type PreparationDeckContext,
     type PreparationDeckHandoffSummary,
     type RunSummaryMode,
@@ -202,7 +204,7 @@ export class ExpeditionScene extends Scene {
     private entryShell?: EntryShellVisuals;
     private entryTransitionBlocker?: Phaser.GameObjects.Rectangle;
     private departureHandoffOverlay?: Phaser.GameObjects.Container;
-    private departureHandoffTimer?: Phaser.Time.TimerEvent;
+    private departureHandoffKeydownHandler?: (event: KeyboardEvent) => void;
 
     constructor() {
         super('ExpeditionScene');
@@ -954,8 +956,10 @@ export class ExpeditionScene extends Scene {
     }
 
     private destroyDepartureHandoffOverlay(): void {
-        this.departureHandoffTimer?.remove(false);
-        this.departureHandoffTimer = undefined;
+        if (this.departureHandoffKeydownHandler) {
+            this.input.keyboard?.off('keydown', this.departureHandoffKeydownHandler);
+            this.departureHandoffKeydownHandler = undefined;
+        }
 
         if (this.departureHandoffOverlay) {
             this.tweens.killTweensOf(this.departureHandoffOverlay);
@@ -966,17 +970,28 @@ export class ExpeditionScene extends Scene {
         this.setEntryTransitionBlocker(false);
     }
 
-    private playDepartureHandoff(summary: ExpeditionDepartureHandoffSummary): void {
+    private isDepartureHandoffConfirmInput(event: KeyboardEvent): boolean {
+        return event.key === 'Enter'
+            || event.key === ' '
+            || event.key === 'Spacebar'
+            || event.code === 'Space';
+    }
+
+    private playDepartureHandoff(
+        summary: ExpeditionDepartureHandoffSummary,
+        onAcknowledge: () => void,
+    ): void {
         this.destroyDepartureHandoffOverlay();
 
         const { width, height } = this.scale;
         const panelWidth = Math.min(820, width * 0.72);
-        const panelHeight = 286;
+        const panelHeight = 352;
         const panelX = width / 2;
         const panelY = height / 2 + 26;
         const panelLeft = panelX - panelWidth / 2 + 42;
         const container = this.add.container(0, 0);
         const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.76);
+        overlay.setInteractive({ useHandCursor: true });
         const shadow = this.add.rectangle(panelX, panelY + 10, panelWidth, panelHeight, 0x01040a, 0.42);
         const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.97);
         panel.setStrokeStyle(2, 0x38bdf8, 0.9);
@@ -1019,11 +1034,68 @@ export class ExpeditionScene extends Scene {
             color: '#d1fae5',
             fontStyle: 'bold',
         }).setOrigin(0, 0.5);
-        const footer = this.add.text(panelX, loadoutPlate.y + 38, '路线与带入已锁定，首个探索视图正在展开。', {
+        let acknowledge: () => void = () => undefined;
+        const continueButton = this.createButton({
+            x: panelX,
+            y: loadoutPlate.y + 58,
+            width: 286,
+            height: 52,
+            label: '继续进入秘境',
+            fillColor: 0x1d4ed8,
+            onClick: () => acknowledge(),
+        });
+        const footer = this.add.text(panelX, continueButton[0].y + 44, '点按任意处或按 Enter / Space 继续；首层视图会保留路线与带入提示。', {
             fontFamily: 'Arial',
             fontSize: '15px',
             color: '#cbd5e1',
+            align: 'center',
+            wordWrap: { width: panelWidth - 88 },
         }).setOrigin(0.5);
+
+        let acknowledged = false;
+        acknowledge = () => {
+            if (acknowledged) {
+                return;
+            }
+
+            acknowledged = true;
+            overlay.disableInteractive();
+            continueButton[0].disableInteractive();
+
+            if (this.departureHandoffKeydownHandler) {
+                this.input.keyboard?.off('keydown', this.departureHandoffKeydownHandler);
+                this.departureHandoffKeydownHandler = undefined;
+            }
+
+            this.tweens.killTweensOf(container);
+            this.tweens.add({
+                targets: container,
+                alpha: 0,
+                y: -18,
+                duration: 220,
+                ease: 'Cubic.easeIn',
+                onComplete: () => {
+                    if (this.departureHandoffOverlay === container) {
+                        this.departureHandoffOverlay.destroy();
+                        this.departureHandoffOverlay = undefined;
+                    }
+
+                    this.setEntryTransitionBlocker(false);
+                    onAcknowledge();
+                },
+            });
+        };
+
+        overlay.on('pointerdown', () => acknowledge());
+        this.departureHandoffKeydownHandler = (event: KeyboardEvent) => {
+            if (event.repeat || !this.isDepartureHandoffConfirmInput(event)) {
+                return;
+            }
+
+            event.preventDefault();
+            acknowledge();
+        };
+        this.input.keyboard?.on('keydown', this.departureHandoffKeydownHandler);
 
         container.add([
             overlay,
@@ -1038,6 +1110,7 @@ export class ExpeditionScene extends Scene {
             routeText,
             loadoutPlate,
             loadoutText,
+            ...continueButton,
             footer,
         ]);
         container.setDepth(1460);
@@ -1052,25 +1125,6 @@ export class ExpeditionScene extends Scene {
             y: 0,
             duration: 220,
             ease: 'Cubic.easeOut',
-        });
-
-        this.departureHandoffTimer = this.time.delayedCall(1100, () => {
-            this.departureHandoffTimer = undefined;
-            this.tweens.add({
-                targets: container,
-                alpha: 0,
-                y: -18,
-                duration: 280,
-                ease: 'Cubic.easeIn',
-                onComplete: () => {
-                    if (this.departureHandoffOverlay === container) {
-                        this.departureHandoffOverlay.destroy();
-                        this.departureHandoffOverlay = undefined;
-                    }
-
-                    this.setEntryTransitionBlocker(false);
-                },
-            });
         });
     }
 
@@ -1208,6 +1262,7 @@ export class ExpeditionScene extends Scene {
     private showPreparationPanel(): void {
         const currentPanel = this.getCurrentEntryPanel();
         this.destroyDepartureHandoffOverlay();
+        this.runHud.hideArrivalCue();
         this.runHud.setVisible(false);
         this.clearMapViews();
         this.destroyNodeMenu();
@@ -1300,12 +1355,20 @@ export class ExpeditionScene extends Scene {
             confirmedView.activeRun,
             { currentNodeLabel },
         );
+        const arrivalCue = createExpeditionArrivalCueSummary(
+            this.mapDefinition,
+            this.expeditionState.persistentStash,
+            confirmedView.activeRun,
+            { currentNodeLabel },
+        );
 
         this.dismissEntryPanels(() => {
-            this.showActiveRun(confirmedView.activeRun, 'started', {
-                statusTextOverride: departureHandoff.revealStatusText,
+            this.playDepartureHandoff(departureHandoff, () => {
+                this.showActiveRun(confirmedView.activeRun, 'started', {
+                    statusTextOverride: departureHandoff.revealStatusText,
+                    arrivalCueSummary: arrivalCue,
+                });
             });
-            this.playDepartureHandoff(departureHandoff);
         });
     }
 
@@ -1314,6 +1377,7 @@ export class ExpeditionScene extends Scene {
         mode: RunSummaryMode,
         options?: {
             statusTextOverride?: string;
+            arrivalCueSummary?: ExpeditionArrivalCueSummary;
         },
     ): void {
         const currentNodeLabel = this.getNodeLabel(activeRun.currentNodeId);
@@ -1328,6 +1392,11 @@ export class ExpeditionScene extends Scene {
 
         this.runHud.setVisible(true);
         this.runHud.updateFromRun(activeRun, currentNodeLabel);
+        if (options?.arrivalCueSummary) {
+            this.runHud.showArrivalCue(options.arrivalCueSummary);
+        } else {
+            this.runHud.hideArrivalCue();
+        }
         this.statusText.setText(options?.statusTextOverride ?? summary.statusText);
         this.renderMap(activeRun);
         this.renderNodeMenu(activeRun);
@@ -1435,6 +1504,7 @@ export class ExpeditionScene extends Scene {
     }
 
     private handleMapNodeSelected(nodeId: string): void {
+        this.runHud.hideArrivalCue(true);
         const activeRun = this.expeditionState.activeRun;
         const node = this.mapDefinition.nodes.find((candidate) => candidate.id === nodeId);
         const canReopenNode = !!node && this.canReopenNonCombatNode(activeRun, node);
@@ -1544,6 +1614,7 @@ export class ExpeditionScene extends Scene {
     }
 
     private handleNonCombatNodeSelected(node: NonCombatMapNode): void {
+        this.runHud.hideArrivalCue(true);
         const activeRun = this.expeditionState.activeRun;
 
         if (!activeRun) {
