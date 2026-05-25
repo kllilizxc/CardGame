@@ -39,6 +39,7 @@ import {
 } from '../../ui/expedition/routeTelemetryChips';
 import { createWorldMapReturnIntent } from '../worldmap/worldMap';
 import {
+    createExpeditionDepartureHandoffSummary,
     createExpeditionPreflightStatusSummary,
     createExpeditionRouteBriefingSummary,
     createPreparationDeckContext,
@@ -46,6 +47,7 @@ import {
     createPostRunEntranceStatus,
     createPreparationSummary,
     createRunSummary,
+    type ExpeditionDepartureHandoffSummary,
     type PreparationDeckContext,
     type PreparationDeckHandoffSummary,
     type RunSummaryMode,
@@ -199,12 +201,15 @@ export class ExpeditionScene extends Scene {
     private deckbuilderCardMetadata: CardMetadataMap = {};
     private entryShell?: EntryShellVisuals;
     private entryTransitionBlocker?: Phaser.GameObjects.Rectangle;
+    private departureHandoffOverlay?: Phaser.GameObjects.Container;
+    private departureHandoffTimer?: Phaser.Time.TimerEvent;
 
     constructor() {
         super('ExpeditionScene');
     }
 
     init(data?: ExpeditionSceneLaunchData): void {
+        this.destroyDepartureHandoffOverlay();
         this.launchData = normalizeExpeditionSceneLaunchData(data);
         this.expeditionResources = undefined;
         this.pendingBattleResult = this.launchData.battleResult ?? null;
@@ -948,6 +953,127 @@ export class ExpeditionScene extends Scene {
         }
     }
 
+    private destroyDepartureHandoffOverlay(): void {
+        this.departureHandoffTimer?.remove(false);
+        this.departureHandoffTimer = undefined;
+
+        if (this.departureHandoffOverlay) {
+            this.tweens.killTweensOf(this.departureHandoffOverlay);
+            this.departureHandoffOverlay.destroy();
+            this.departureHandoffOverlay = undefined;
+        }
+
+        this.setEntryTransitionBlocker(false);
+    }
+
+    private playDepartureHandoff(summary: ExpeditionDepartureHandoffSummary): void {
+        this.destroyDepartureHandoffOverlay();
+
+        const { width, height } = this.scale;
+        const panelWidth = Math.min(820, width * 0.72);
+        const panelHeight = 286;
+        const panelX = width / 2;
+        const panelY = height / 2 + 26;
+        const panelLeft = panelX - panelWidth / 2 + 42;
+        const container = this.add.container(0, 0);
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.76);
+        const shadow = this.add.rectangle(panelX, panelY + 10, panelWidth, panelHeight, 0x01040a, 0.42);
+        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.97);
+        panel.setStrokeStyle(2, 0x38bdf8, 0.9);
+        const accentTop = this.add.rectangle(panelX, panelY - panelHeight / 2 + 10, panelWidth - 56, 4, 0x38bdf8, 1);
+        const accentBottom = this.add.rectangle(panelX, panelY + panelHeight / 2 - 14, panelWidth - 128, 2, 0x8b5cf6, 0.92);
+        const badge = this.add.text(panelLeft, panelY - panelHeight / 2 + 26, summary.badgeLabel, {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#dbeafe',
+            fontStyle: 'bold',
+            backgroundColor: '#1d4ed8',
+            padding: { left: 12, right: 12, top: 6, bottom: 6 },
+        }).setOrigin(0, 0);
+        const headline = this.add.text(panelLeft, badge.y + 38, summary.headline, {
+            fontFamily: 'Arial',
+            fontSize: '28px',
+            color: '#f8fafc',
+            fontStyle: 'bold',
+            wordWrap: { width: panelWidth - 84 },
+        }).setOrigin(0, 0);
+        const detail = this.add.text(panelLeft, headline.y + headline.height + 10, summary.detail, {
+            fontFamily: 'Arial',
+            fontSize: '17px',
+            color: '#bfdbfe',
+            wordWrap: { width: panelWidth - 84 },
+        }).setOrigin(0, 0);
+        const routePlate = this.add.rectangle(panelX, detail.y + detail.height + 32, panelWidth - 80, 54, 0x0d1b31, 0.98);
+        routePlate.setStrokeStyle(1, 0x2563eb, 0.88);
+        const routeText = this.add.text(panelLeft + 14, routePlate.y, summary.routeLine, {
+            fontFamily: 'Arial',
+            fontSize: '18px',
+            color: '#e0f2fe',
+            fontStyle: 'bold',
+        }).setOrigin(0, 0.5);
+        const loadoutPlate = this.add.rectangle(panelX, routePlate.y + 62, panelWidth - 80, 46, 0x10241f, 0.98);
+        loadoutPlate.setStrokeStyle(1, 0x34d399, 0.88);
+        const loadoutText = this.add.text(panelLeft + 14, loadoutPlate.y, summary.loadoutLine, {
+            fontFamily: 'Arial',
+            fontSize: '17px',
+            color: '#d1fae5',
+            fontStyle: 'bold',
+        }).setOrigin(0, 0.5);
+        const footer = this.add.text(panelX, loadoutPlate.y + 38, '路线与带入已锁定，首个探索视图正在展开。', {
+            fontFamily: 'Arial',
+            fontSize: '15px',
+            color: '#cbd5e1',
+        }).setOrigin(0.5);
+
+        container.add([
+            overlay,
+            shadow,
+            panel,
+            accentTop,
+            accentBottom,
+            badge,
+            headline,
+            detail,
+            routePlate,
+            routeText,
+            loadoutPlate,
+            loadoutText,
+            footer,
+        ]);
+        container.setDepth(1460);
+        container.setAlpha(0);
+        container.setY(18);
+        this.departureHandoffOverlay = container;
+        this.setEntryTransitionBlocker(true);
+
+        this.tweens.add({
+            targets: container,
+            alpha: 1,
+            y: 0,
+            duration: 220,
+            ease: 'Cubic.easeOut',
+        });
+
+        this.departureHandoffTimer = this.time.delayedCall(1100, () => {
+            this.departureHandoffTimer = undefined;
+            this.tweens.add({
+                targets: container,
+                alpha: 0,
+                y: -18,
+                duration: 280,
+                ease: 'Cubic.easeIn',
+                onComplete: () => {
+                    if (this.departureHandoffOverlay === container) {
+                        this.departureHandoffOverlay.destroy();
+                        this.departureHandoffOverlay = undefined;
+                    }
+
+                    this.setEntryTransitionBlocker(false);
+                },
+            });
+        });
+    }
+
     private getCurrentEntryPanel(): EntryPanel | undefined {
         return this.deckManagementPanel ?? this.preparationPanel;
     }
@@ -1070,6 +1196,7 @@ export class ExpeditionScene extends Scene {
     }
 
     private returnToWorldMap(): void {
+        this.destroyDepartureHandoffOverlay();
         const intent = createWorldMapReturnIntent({
             source: 'expedition',
             statusText: `已从${this.mapDefinition.name}返回大地图；再次进入秘境会继续当前探索。`,
@@ -1080,6 +1207,7 @@ export class ExpeditionScene extends Scene {
 
     private showPreparationPanel(): void {
         const currentPanel = this.getCurrentEntryPanel();
+        this.destroyDepartureHandoffOverlay();
         this.runHud.setVisible(false);
         this.clearMapViews();
         this.destroyNodeMenu();
@@ -1165,13 +1293,29 @@ export class ExpeditionScene extends Scene {
             mapId: this.launchData.mapId,
             entryNodeId: this.mapDefinition.entryNodeId,
         });
+        const currentNodeLabel = this.getNodeLabel(confirmedView.activeRun.currentNodeId);
+        const departureHandoff = createExpeditionDepartureHandoffSummary(
+            this.mapDefinition,
+            this.expeditionState.persistentStash,
+            confirmedView.activeRun,
+            { currentNodeLabel },
+        );
 
         this.dismissEntryPanels(() => {
-            this.showActiveRun(confirmedView.activeRun, 'started');
+            this.showActiveRun(confirmedView.activeRun, 'started', {
+                statusTextOverride: departureHandoff.revealStatusText,
+            });
+            this.playDepartureHandoff(departureHandoff);
         });
     }
 
-    private showActiveRun(activeRun: RunSnapshot, mode: RunSummaryMode): void {
+    private showActiveRun(
+        activeRun: RunSnapshot,
+        mode: RunSummaryMode,
+        options?: {
+            statusTextOverride?: string;
+        },
+    ): void {
         const currentNodeLabel = this.getNodeLabel(activeRun.currentNodeId);
         const summary = createRunSummary(activeRun, {
             mode,
@@ -1184,7 +1328,7 @@ export class ExpeditionScene extends Scene {
 
         this.runHud.setVisible(true);
         this.runHud.updateFromRun(activeRun, currentNodeLabel);
-        this.statusText.setText(summary.statusText);
+        this.statusText.setText(options?.statusTextOverride ?? summary.statusText);
         this.renderMap(activeRun);
         this.renderNodeMenu(activeRun);
     }

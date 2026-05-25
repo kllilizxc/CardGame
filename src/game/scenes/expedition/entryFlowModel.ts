@@ -174,6 +174,15 @@ export interface ExpeditionPreflightStatusSummary {
     tone: PreparationDeckHandoffSummary['tone'];
 }
 
+export interface ExpeditionDepartureHandoffSummary {
+    badgeLabel: string;
+    headline: string;
+    detail: string;
+    routeLine: string;
+    loadoutLine: string;
+    revealStatusText: string;
+}
+
 export interface PreparationLoadoutValidationResult {
     valid: boolean;
     sizeIssue: DeckValidityReason | null;
@@ -940,6 +949,39 @@ export function createExpeditionPreflightStatusSummary(
         headline: formatExpeditionPreflightHeadline(context),
         detail: createExpeditionPreflightDetail(mode, stash, context.readiness, sizeIssue, availabilityIssues),
         tone: getExpeditionPreflightTone(context.readiness),
+    };
+}
+
+export function createExpeditionDepartureHandoffSummary(
+    map: ExpeditionMapDefinition,
+    stash: PersistentStash,
+    run: RunSnapshot,
+    options: RunSummaryOptions = {},
+): ExpeditionDepartureHandoffSummary {
+    const entryNode = map.nodes.find((node) => node.id === map.entryNodeId);
+    const entryLabel = options.currentNodeLabel ?? entryNode?.label ?? run.currentNodeId;
+    const openingNodes = getRouteOpeningNodes(map, entryNode);
+    const terminalNodes = getRouteTerminalNodes(map);
+    const openingSummary = formatRouteNodeLabels(openingNodes, {
+        limit: 2,
+        emptyLabel: '入口后的推进顺序',
+    });
+    const terminalSummary = formatRouteNodeLabels(terminalNodes, {
+        limit: 2,
+        emptyLabel: '终段节点',
+    });
+    const selectedDeckName = getSelectedSavedDeck(stash)?.name?.trim();
+    const deckLabel = selectedDeckName && selectedDeckName.length > 0 ? `「${selectedDeckName}」` : '当前卡组';
+    const carriedDeckCount = countStacks(run.carriedDeck);
+    const carriedItemCount = countStacks(run.carriedItems);
+
+    return {
+        badgeLabel: '出发交接',
+        headline: `${deckLabel}已封装，即将从${entryLabel}踏入${map.name}`,
+        detail: `开局先看${openingSummary}，收官节点为${terminalSummary}。`,
+        routeLine: `路线：${entryLabel} → ${openingSummary} → ${terminalSummary}`,
+        loadoutLine: `带入：${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
+        revealStatusText: `已从${entryLabel}踏入${map.name}：带入${deckLabel}共 ${carriedDeckCount} 张卡、${carriedItemCount} 件道具、${run.spiritStones} 枚灵石；开局先看${openingSummary}。`,
     };
 }
 

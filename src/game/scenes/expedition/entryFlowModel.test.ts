@@ -11,6 +11,7 @@ import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import { ExpeditionState } from '../../state/ExpeditionState';
 import { validateExpeditionLoadout } from './expeditionEntryFlow';
 import {
+    createExpeditionDepartureHandoffSummary,
     createPreparationDeckCarouselSummary,
     createPreparationDeckCardPreview,
     createPreparationDeckContext,
@@ -180,6 +181,32 @@ describe('entryFlowModel', () => {
             headline: '当前带入「缺牌卡组」 · 20 张',
             detail: '有 3 种卡牌库存不足，共缺 15 张；同行 0 件道具 · 18 枚灵石。',
             tone: 'warning',
+        });
+    });
+
+    it('builds a departure handoff that carries route and deck context into the first run reveal', () => {
+        const state = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+        });
+        const run = state.createRunSnapshot({
+            expeditionId: 'phase01-first-playable-expedition',
+            mapId: 'phase01-prototype-map',
+            entryNodeId: 'entrance.mountain-gate',
+        });
+
+        expect(createExpeditionDepartureHandoffSummary(
+            prototypeMapJson,
+            state.persistentStash,
+            run,
+            { currentNodeLabel: '山门入口' },
+        )).toEqual({
+            badgeLabel: '出发交接',
+            headline: '「功能测试卡组」已封装，即将从山门入口踏入青云外山试炼',
+            detail: '开局先看雾林伏击 / 弃置行囊，收官节点为悬桥撤离点 / 封印守关者。',
+            routeLine: '路线：山门入口 → 雾林伏击 / 弃置行囊 → 悬桥撤离点 / 封印守关者',
+            loadoutLine: '带入：20 张卡 · 3 件道具 · 36 枚灵石',
+            revealStatusText: '已从山门入口踏入青云外山试炼：带入「功能测试卡组」共 20 张卡、3 件道具、36 枚灵石；开局先看雾林伏击 / 弃置行囊。',
         });
     });
 
