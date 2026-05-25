@@ -14,6 +14,10 @@ describe('expedition UI Chinese copy', () => {
         expect(sceneCopy).toContain('两步出发校验 · 先确认路线，再选定带入');
         expect(sceneCopy).toContain('两步出发校验 · 整理卡组后返回确认');
         expect(sceneCopy).toContain('路线简报');
+        expect(sceneCopy).toContain('确认路线与带入');
+        expect(sceneCopy).toContain('卡组管理');
+        expect(sceneCopy).toContain('可出发');
+        expect(sceneCopy).toContain('可返回确认');
         expect(sceneCopy).not.toContain('Phase 01 · Expedition Entry Flow');
     });
 

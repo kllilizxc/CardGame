@@ -34,6 +34,7 @@ import { PreparationPanel } from '../../ui/expedition/PreparationPanel';
 import { RunHud } from '../../ui/expedition/RunHud';
 import { createWorldMapReturnIntent } from '../worldmap/worldMap';
 import {
+    createExpeditionPreflightStatusSummary,
     createExpeditionRouteBriefingSummary,
     createPreparationDeckContext,
     createPreparationDeckHandoffSummary,
@@ -94,6 +95,16 @@ interface EntryShellVisuals {
     subtitleText: Phaser.GameObjects.Text;
     modeBadgeText: Phaser.GameObjects.Text;
     topRail: Phaser.GameObjects.Rectangle;
+    topRailProgress: Phaser.GameObjects.Rectangle;
+    stepOnePill: Phaser.GameObjects.Rectangle;
+    stepOneText: Phaser.GameObjects.Text;
+    stepTwoPill: Phaser.GameObjects.Rectangle;
+    stepTwoText: Phaser.GameObjects.Text;
+    statusStrip: Phaser.GameObjects.Rectangle;
+    statusStripAccent: Phaser.GameObjects.Rectangle;
+    statusStripBadgeText: Phaser.GameObjects.Text;
+    statusStripHeadlineText: Phaser.GameObjects.Text;
+    statusStripDetailText: Phaser.GameObjects.Text;
     leftAccentBar: Phaser.GameObjects.Rectangle;
     rightAccentBar: Phaser.GameObjects.Rectangle;
     corners: EntryShellCorners;
@@ -282,9 +293,9 @@ export class ExpeditionScene extends Scene {
         const container = this.add.container(0, 0);
         const routeBriefing = this.getEntryRouteBriefing('preparation');
 
-        const headerPlate = this.add.rectangle(width / 2, 48, 680, 78, 0x091423, 0.94);
+        const headerPlate = this.add.rectangle(width / 2, 48, 704, 78, 0x091423, 0.94);
         headerPlate.setStrokeStyle(2, 0x3b82f6, 0.72);
-        const headerAccent = this.add.rectangle(width / 2, 16, 604, 5, 0x38bdf8, 1).setOrigin(0.5, 0);
+        const headerAccent = this.add.rectangle(width / 2, 16, 628, 5, 0x38bdf8, 1).setOrigin(0.5, 0);
         const titleText = this.add.text(width / 2, 42, this.mapDefinition.name, {
             fontFamily: 'Arial',
             fontSize: '30px',
@@ -304,7 +315,46 @@ export class ExpeditionScene extends Scene {
             backgroundColor: '#1d4ed8',
             padding: { left: 12, right: 12, top: 6, bottom: 6 },
         }).setOrigin(0, 0.5);
-        const topRail = this.add.rectangle(width / 2, 100, 420, 4, 0x38bdf8, 0.9);
+        const statusStrip = this.add.rectangle(width / 2, 114, 752, 56, 0x112131, 0.96);
+        statusStrip.setStrokeStyle(1, 0x34d399, 0.82);
+        const statusStripAccent = this.add.rectangle(width / 2 - 370, 114, 4, 40, 0x34d399, 1);
+        const statusStripBadgeText = this.add.text(width / 2 - 344, 99, '', {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#d1fae5',
+            fontStyle: 'bold',
+            backgroundColor: '#065f46',
+            padding: { left: 10, right: 10, top: 5, bottom: 5 },
+        }).setOrigin(0, 0);
+        const statusStripHeadlineText = this.add.text(width / 2 - 232, 97, '', {
+            fontFamily: 'Arial',
+            fontSize: '16px',
+            color: '#f8fafc',
+            fontStyle: 'bold',
+        }).setOrigin(0, 0);
+        const statusStripDetailText = this.add.text(width / 2 - 232, 119, '', {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#a7f3d0',
+        }).setOrigin(0, 0);
+        const topRail = this.add.rectangle(width / 2, 152, 420, 6, 0x1e293b, 0.94);
+        const topRailProgress = this.add.rectangle(width / 2 - 210, 152, 0, 6, 0x38bdf8, 1).setOrigin(0, 0.5);
+        const stepOnePill = this.add.rectangle(width / 2 - 146, 152, 210, 34, 0x1d4ed8, 0.96);
+        stepOnePill.setStrokeStyle(1, 0x60a5fa, 0.92);
+        const stepOneText = this.add.text(width / 2 - 146, 152, '1 确认路线与带入', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#dbeafe',
+            fontStyle: 'bold',
+        }).setOrigin(0.5);
+        const stepTwoPill = this.add.rectangle(width / 2 + 146, 152, 188, 34, 0x0f172a, 0.96);
+        stepTwoPill.setStrokeStyle(1, 0x334155, 0.68);
+        const stepTwoText = this.add.text(width / 2 + 146, 152, '2 卡组管理', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#94a3b8',
+            fontStyle: 'bold',
+        }).setOrigin(0.5);
         const leftAccentBar = this.add.rectangle(0, 0, 4, 92, 0x38bdf8, 0.82);
         const rightAccentBar = this.add.rectangle(0, 0, 4, 92, 0x8b5cf6, 0.82);
         const corners: EntryShellCorners = {
@@ -324,7 +374,17 @@ export class ExpeditionScene extends Scene {
             titleText,
             subtitleText,
             modeBadgeText,
+            statusStrip,
+            statusStripAccent,
+            statusStripBadgeText,
+            statusStripHeadlineText,
+            statusStripDetailText,
             topRail,
+            topRailProgress,
+            stepOnePill,
+            stepOneText,
+            stepTwoPill,
+            stepTwoText,
             leftAccentBar,
             rightAccentBar,
             corners.topLeftHorizontal,
@@ -348,6 +408,16 @@ export class ExpeditionScene extends Scene {
             subtitleText,
             modeBadgeText,
             topRail,
+            topRailProgress,
+            stepOnePill,
+            stepOneText,
+            stepTwoPill,
+            stepTwoText,
+            statusStrip,
+            statusStripAccent,
+            statusStripBadgeText,
+            statusStripHeadlineText,
+            statusStripDetailText,
             leftAccentBar,
             rightAccentBar,
             corners,
@@ -364,6 +434,89 @@ export class ExpeditionScene extends Scene {
 
     private getEntryRouteBriefing(mode: EntryShellMode) {
         return createExpeditionRouteBriefingSummary(this.mapDefinition, mode);
+    }
+
+    private getEntryShellStatusToneColors(tone: PreparationDeckHandoffSummary['tone']) {
+        switch (tone) {
+            case 'positive':
+                return {
+                    fillColor: 0x10241f,
+                    borderColor: 0x34d399,
+                    accentColor: 0x34d399,
+                    badgeColor: '#d1fae5',
+                    badgeBackgroundColor: '#065f46',
+                    headlineColor: '#ecfdf5',
+                    detailColor: '#a7f3d0',
+                };
+            case 'warning':
+                return {
+                    fillColor: 0x2b190d,
+                    borderColor: 0xf59e0b,
+                    accentColor: 0xfbbf24,
+                    badgeColor: '#fef3c7',
+                    badgeBackgroundColor: '#92400e',
+                    headlineColor: '#fffbeb',
+                    detailColor: '#fcd34d',
+                };
+            case 'neutral':
+                return {
+                    fillColor: 0x111c2f,
+                    borderColor: 0x60a5fa,
+                    accentColor: 0x60a5fa,
+                    badgeColor: '#dbeafe',
+                    badgeBackgroundColor: '#1d4ed8',
+                    headlineColor: '#eff6ff',
+                    detailColor: '#bfdbfe',
+                };
+        }
+    }
+
+    private getEntryShellStepColors(
+        state: 'current' | 'complete' | 'upcoming',
+        modeConfig: {
+            stepCurrentFillColor: number;
+            stepCurrentStrokeColor: number;
+            stepCurrentTextColor: string;
+            stepCompleteFillColor: number;
+            stepCompleteStrokeColor: number;
+            stepCompleteTextColor: string;
+            stepStandbyFillColor: number;
+            stepStandbyStrokeColor: number;
+            stepStandbyTextColor: string;
+        },
+    ) {
+        if (state === 'current') {
+            return {
+                fillColor: modeConfig.stepCurrentFillColor,
+                strokeColor: modeConfig.stepCurrentStrokeColor,
+                textColor: modeConfig.stepCurrentTextColor,
+                strokeAlpha: 0.92,
+            };
+        }
+
+        if (state === 'complete') {
+            return {
+                fillColor: modeConfig.stepCompleteFillColor,
+                strokeColor: modeConfig.stepCompleteStrokeColor,
+                textColor: modeConfig.stepCompleteTextColor,
+                strokeAlpha: 0.9,
+            };
+        }
+
+        return {
+            fillColor: modeConfig.stepStandbyFillColor,
+            strokeColor: modeConfig.stepStandbyStrokeColor,
+            textColor: modeConfig.stepStandbyTextColor,
+            strokeAlpha: 0.68,
+        };
+    }
+
+    private formatEntryShellStepLabel(
+        index: 1 | 2,
+        label: string,
+        state: 'current' | 'complete' | 'upcoming',
+    ): string {
+        return state === 'complete' ? `✓ ${label}` : `${index} ${label}`;
     }
 
     private createWorldMapReturnButton(): void {
@@ -395,6 +548,7 @@ export class ExpeditionScene extends Scene {
         }
 
         const routeBriefing = this.getEntryRouteBriefing(mode);
+        const preflightStatus = createExpeditionPreflightStatusSummary(this.expeditionState.persistentStash, mode);
         const modeConfig = mode === 'deckManager'
             ? {
                 badgeBackgroundColor: '#4c1d95',
@@ -403,6 +557,17 @@ export class ExpeditionScene extends Scene {
                 accentColor: 0xc084fc,
                 cornerTopColor: 0xc084fc,
                 cornerBottomColor: 0x60a5fa,
+                railTrackColor: 0x1f1a43,
+                railProgressColor: 0xc084fc,
+                stepCurrentFillColor: 0x4c1d95,
+                stepCurrentStrokeColor: 0xc084fc,
+                stepCurrentTextColor: '#ede9fe',
+                stepCompleteFillColor: 0x12315b,
+                stepCompleteStrokeColor: 0x60a5fa,
+                stepCompleteTextColor: '#dbeafe',
+                stepStandbyFillColor: 0x0f172a,
+                stepStandbyStrokeColor: 0x334155,
+                stepStandbyTextColor: '#94a3b8',
             }
             : {
                 badgeBackgroundColor: '#1d4ed8',
@@ -411,7 +576,22 @@ export class ExpeditionScene extends Scene {
                 accentColor: 0x38bdf8,
                 cornerTopColor: 0x38bdf8,
                 cornerBottomColor: 0x8b5cf6,
+                railTrackColor: 0x132235,
+                railProgressColor: 0x38bdf8,
+                stepCurrentFillColor: 0x1d4ed8,
+                stepCurrentStrokeColor: 0x60a5fa,
+                stepCurrentTextColor: '#dbeafe',
+                stepCompleteFillColor: 0x14532d,
+                stepCompleteStrokeColor: 0x34d399,
+                stepCompleteTextColor: '#d1fae5',
+                stepStandbyFillColor: 0x0f172a,
+                stepStandbyStrokeColor: 0x334155,
+                stepStandbyTextColor: '#94a3b8',
             };
+        const statusToneConfig = this.getEntryShellStatusToneColors(preflightStatus.tone);
+        const [firstStep, secondStep] = preflightStatus.steps;
+        const firstStepColors = this.getEntryShellStepColors(firstStep.state, modeConfig);
+        const secondStepColors = this.getEntryShellStepColors(secondStep.state, modeConfig);
 
         this.entryShell.headerPlate.setStrokeStyle(2, modeConfig.borderColor, 0.72);
         this.entryShell.headerAccent.setFillStyle(modeConfig.accentColor, 1);
@@ -421,7 +601,28 @@ export class ExpeditionScene extends Scene {
             backgroundColor: modeConfig.badgeBackgroundColor,
         });
         this.entryShell.subtitleText.setText(routeBriefing.shellSubtitle);
-        this.entryShell.topRail.setFillStyle(modeConfig.accentColor, 0.9);
+        this.entryShell.statusStrip.setFillStyle(statusToneConfig.fillColor, 0.96);
+        this.entryShell.statusStrip.setStrokeStyle(1, statusToneConfig.borderColor, 0.86);
+        this.entryShell.statusStripAccent.setFillStyle(statusToneConfig.accentColor, 1);
+        this.entryShell.statusStripBadgeText.setText(preflightStatus.badgeLabel);
+        this.entryShell.statusStripBadgeText.setStyle({
+            color: statusToneConfig.badgeColor,
+            backgroundColor: statusToneConfig.badgeBackgroundColor,
+        });
+        this.entryShell.statusStripHeadlineText.setText(preflightStatus.headline);
+        this.entryShell.statusStripHeadlineText.setColor(statusToneConfig.headlineColor);
+        this.entryShell.statusStripDetailText.setText(preflightStatus.detail);
+        this.entryShell.statusStripDetailText.setColor(statusToneConfig.detailColor);
+        this.entryShell.topRail.setFillStyle(modeConfig.railTrackColor, 0.94);
+        this.entryShell.topRailProgress.setFillStyle(modeConfig.railProgressColor, 1);
+        this.entryShell.stepOnePill.setFillStyle(firstStepColors.fillColor, 0.96);
+        this.entryShell.stepOnePill.setStrokeStyle(1, firstStepColors.strokeColor, firstStepColors.strokeAlpha);
+        this.entryShell.stepOneText.setText(this.formatEntryShellStepLabel(firstStep.index, firstStep.label, firstStep.state));
+        this.entryShell.stepOneText.setColor(firstStepColors.textColor);
+        this.entryShell.stepTwoPill.setFillStyle(secondStepColors.fillColor, 0.96);
+        this.entryShell.stepTwoPill.setStrokeStyle(1, secondStepColors.strokeColor, secondStepColors.strokeAlpha);
+        this.entryShell.stepTwoText.setText(this.formatEntryShellStepLabel(secondStep.index, secondStep.label, secondStep.state));
+        this.entryShell.stepTwoText.setColor(secondStepColors.textColor);
         this.entryShell.leftAccentBar.setFillStyle(modeConfig.cornerTopColor, 0.82);
         this.entryShell.rightAccentBar.setFillStyle(modeConfig.cornerBottomColor, 0.82);
         this.entryShell.corners.topLeftHorizontal.setFillStyle(modeConfig.cornerTopColor, 0.98);
@@ -456,10 +657,26 @@ export class ExpeditionScene extends Scene {
         const centerY = panelY;
         const cornerLength = 54;
         const sideBarHeight = mode === 'deckManager' ? 80 : 92;
-        const topRailY = panelY - panelHeight / 2 + 10;
-        const topRailWidth = Math.max(320, Math.min(panelWidth - 160, 520));
+        const topRailY = top + 22;
+        const topRailWidth = Math.max(340, Math.min(panelWidth - 260, 470));
+        const statusWidth = Math.max(640, Math.min(panelWidth - 80, 820));
+        const statusLeft = panelX - statusWidth / 2;
+        const statusY = top - 18;
+        const statusTextX = statusLeft + 132;
+        const progressWidth = mode === 'deckManager'
+            ? topRailWidth
+            : Math.max(86, Math.round(topRailWidth * 0.34));
+        const stepOneWidth = 214;
+        const stepTwoWidth = 188;
+        const firstStepX = panelX - topRailWidth / 2;
+        const secondStepX = panelX + topRailWidth / 2;
         const shellTargets: Array<[Phaser.GameObjects.Rectangle, number, number, number, number]> = [
-            [this.entryShell.topRail, panelX, topRailY, topRailWidth, 4],
+            [this.entryShell.statusStrip, panelX, statusY, statusWidth, 56],
+            [this.entryShell.statusStripAccent, statusLeft + 18, statusY, 4, 40],
+            [this.entryShell.topRail, panelX, topRailY, topRailWidth, 6],
+            [this.entryShell.topRailProgress, firstStepX, topRailY, progressWidth, 6],
+            [this.entryShell.stepOnePill, firstStepX, topRailY, stepOneWidth, 34],
+            [this.entryShell.stepTwoPill, secondStepX, topRailY, stepTwoWidth, 34],
             [this.entryShell.leftAccentBar, left - 10, centerY, 4, sideBarHeight],
             [this.entryShell.rightAccentBar, right + 10, centerY, 4, sideBarHeight],
             [this.entryShell.corners.topLeftHorizontal, left + cornerLength / 2, top, cornerLength, 4],
@@ -471,12 +688,23 @@ export class ExpeditionScene extends Scene {
             [this.entryShell.corners.bottomRightHorizontal, right - cornerLength / 2, bottom, cornerLength, 4],
             [this.entryShell.corners.bottomRightVertical, right, bottom - cornerLength / 2, 4, cornerLength],
         ];
+        const textTargets: Array<[Phaser.GameObjects.Text, number, number]> = [
+            [this.entryShell.statusStripBadgeText, statusLeft + 28, statusY - 14],
+            [this.entryShell.statusStripHeadlineText, statusTextX, statusY - 18],
+            [this.entryShell.statusStripDetailText, statusTextX, statusY + 4],
+            [this.entryShell.stepOneText, firstStepX, topRailY],
+            [this.entryShell.stepTwoText, secondStepX, topRailY],
+        ];
+
+        this.entryShell.statusStripHeadlineText.setWordWrapWidth(statusWidth - 154);
+        this.entryShell.statusStripDetailText.setWordWrapWidth(statusWidth - 154);
 
         if (!animate) {
             shellTargets.forEach(([target, x, y, displayWidth, displayHeight]) => {
                 target.setPosition(x, y);
                 target.setDisplaySize(displayWidth, displayHeight);
             });
+            textTargets.forEach(([target, x, y]) => target.setPosition(x, y));
             return;
         }
 
@@ -488,6 +716,16 @@ export class ExpeditionScene extends Scene {
                 y,
                 displayWidth,
                 displayHeight,
+                duration: 240,
+                ease: 'Cubic.easeOut',
+            });
+        });
+        textTargets.forEach(([target, x, y]) => {
+            this.tweens.killTweensOf(target);
+            this.tweens.add({
+                targets: target,
+                x,
+                y,
                 duration: 240,
                 ease: 'Cubic.easeOut',
             });
@@ -745,6 +983,7 @@ export class ExpeditionScene extends Scene {
             onStashChange: (newStash) => {
                 this.expeditionState.persistentStash = newStash;
                 this.expeditionState.persistCurrentStash();
+                this.updateEntryShellMode('deckManager');
             },
             onClose: () => {
                 if (this.deckManagerEntryContext) {
