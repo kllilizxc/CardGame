@@ -229,6 +229,8 @@ interface DeckFeedbackSnapshot {
     readinessTier: DeckReadinessTier;
 }
 
+type DeckNamingMode = 'create' | 'rename';
+
 function getPreviewTheme(kind?: CardKind): CardPreviewTheme {
     switch (kind) {
         case 'unit':
@@ -1030,7 +1032,8 @@ export class DeckManagementPanel extends GameObjects.Container {
     private sortField: CardCollectionSortField = DEFAULT_BROWSER_SORT_FIELD;
     private sortDirection: 'asc' | 'desc' = DEFAULT_BROWSER_SORT_DIRECTION;
 
-    private renameMode = false;
+    private namingMode: DeckNamingMode | null = null;
+    private namingDeckId: string | null = null;
     private renameBuffer = '';
 
     private searchFocus = false;
@@ -1129,6 +1132,22 @@ export class DeckManagementPanel extends GameObjects.Container {
     private getSelectedDeckStatus(): DeckStatusSummary | null {
         const deck = this.getSelectedDeck();
         return deck ? summarizeDeckStatus(deck, this.stash.cards) : null;
+    }
+
+    private isDeckNamingActive(deck?: SavedDeck | null): boolean {
+        return Boolean(deck && this.namingMode !== null && this.namingDeckId === deck.id);
+    }
+
+    private beginDeckNaming(mode: DeckNamingMode, deckId: string, initialName: string): void {
+        this.namingMode = mode;
+        this.namingDeckId = deckId;
+        this.renameBuffer = initialName;
+    }
+
+    private resetDeckNamingState(): void {
+        this.namingMode = null;
+        this.namingDeckId = null;
+        this.renameBuffer = '';
     }
 
     private isCardKnownToPanel(cardId: string): boolean {
@@ -1635,15 +1654,17 @@ export class DeckManagementPanel extends GameObjects.Container {
             return;
         }
 
-        if (this.renameMode) {
+        if (this.namingMode) {
             if (event.key === 'Enter') {
                 this.confirmRename();
             } else if (event.key === 'Escape') {
                 this.cancelRename();
             } else if (event.key === 'Backspace') {
+                event.preventDefault();
                 this.renameBuffer = this.renameBuffer.slice(0, -1);
                 this.refreshEditor();
             } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+                event.preventDefault();
                 this.renameBuffer += event.key;
                 this.refreshEditor();
             }
@@ -1693,21 +1714,28 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private confirmRename(): void {
-        if (!this.renameMode || !this.selectedDeckId) return;
+        if (!this.namingMode || !this.namingDeckId) return;
 
+        const deck = this.stash.savedDecks.find((savedDeck) => savedDeck.id === this.namingDeckId);
         const trimmed = this.renameBuffer.trim();
-        if (trimmed.length > 0) {
-            this.stash = renameSavedDeckInStash(this.stash, this.selectedDeckId, trimmed);
-            this.config.onStashChange(this.stash);
+        if (trimmed.length === 0) {
+            this.refreshEditor();
+            return;
         }
 
-        this.renameMode = false;
-        this.refreshEditor();
-        this.refreshDeckList();
+        this.resetDeckNamingState();
+
+        if (!deck || deck.name === trimmed) {
+            this.refreshDeckViews();
+            return;
+        }
+
+        this.applyStashChange(renameSavedDeckInStash(this.stash, deck.id, trimmed));
+        this.refreshDeckViews();
     }
 
     private cancelRename(): void {
-        this.renameMode = false;
+        this.resetDeckNamingState();
         this.refreshEditor();
     }
 
@@ -1716,7 +1744,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.searchFocus = focused;
 
         if (focused) {
-            if (this.renameMode) {
+            if (this.namingMode) {
                 this.cancelRename();
             }
 
@@ -1920,6 +1948,14 @@ export class DeckManagementPanel extends GameObjects.Container {
         const nextSelectedDeckId = newStash.selectedDeckId ?? newStash.savedDecks[0]?.id ?? null;
         if (this.selectedDeckId !== nextSelectedDeckId) {
             this.pendingSelectedDeckMotionId = nextSelectedDeckId;
+        }
+
+        const shouldKeepDeckNaming = this.namingMode !== null
+            && this.namingDeckId !== null
+            && this.namingDeckId === nextSelectedDeckId
+            && newStash.savedDecks.some((savedDeck) => savedDeck.id === this.namingDeckId);
+        if (!shouldKeepDeckNaming) {
+            this.resetDeckNamingState();
         }
 
         this.stash = newStash;
@@ -2187,7 +2223,9 @@ export class DeckManagementPanel extends GameObjects.Container {
                 const id = createDeckId();
                 const createdStash = addSavedDeckToStash(this.stash, id, null, []);
                 const selectedStash = selectDeckInStash(createdStash, id);
+                const createdDeck = selectedStash.savedDecks.find((savedDeck) => savedDeck.id === id);
                 this.applyStashChange(selectedStash);
+                this.beginDeckNaming('create', id, createdDeck?.name ?? '');
                 this.deckListScrollOffset = Math.max(0, selectedStash.savedDecks.length - this.deckListVisibleRows);
                 this.refreshDeckViews();
             },
@@ -2565,7 +2603,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createEditorColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '卡组编辑', '重命名、校验，并以单张或整行清空的方式快速调整当前卡组；摘要区可直接返回远征准备，右侧牌面预览会跟随当前查看的卡牌更新。', PANEL_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '卡组编辑', '新建卡组会先进入命名流程；你也可以随时重命名、校验，并以单张或整行清空的方式快速调整当前卡组。', PANEL_ACCENT));
         this.editorContentWidth = colW - 32;
         this.editorContentHeight = colH - 72;
         this.editorContainer = this.scene.add.container(x + 16, y + 70);
@@ -2585,7 +2623,9 @@ export class DeckManagementPanel extends GameObjects.Container {
         const localX = 0;
         const summaryW = this.editorContentWidth;
         const contentH = this.editorContentHeight;
-        const targetSummaryH = this.renameMode ? 332 : 308;
+        const deck = this.getSelectedDeck();
+        const namingActive = this.isDeckNamingActive(deck);
+        const targetSummaryH = namingActive ? 356 : 308;
         const summaryH = Math.min(targetSummaryH, Math.max(176, contentH - 150));
         const listHeaderY = summaryH + 10;
         const scrollBtnY = contentH - 12;
@@ -2601,8 +2641,6 @@ export class DeckManagementPanel extends GameObjects.Container {
         };
         this.editorVisibleRows = Math.max(1, Math.floor(listH / EDITOR_ROW_HEIGHT));
         this.ensureDetailCardSelection();
-
-        const deck = this.getSelectedDeck();
 
         if (!deck) {
             this.lastEditorFeedback = undefined;
@@ -2638,7 +2676,9 @@ export class DeckManagementPanel extends GameObjects.Container {
         summaryCard.setStrokeStyle(1, summary.accentColor, 0.9);
         this.editorContainer.add(summaryCard);
 
-        const eyebrow = this.scene.add.text(localX + 16, 16, '当前卡组', {
+        const eyebrow = this.scene.add.text(localX + 16, 16, namingActive
+            ? (this.namingMode === 'create' ? '新卡组命名' : '重命名流程')
+            : '当前卡组', {
             fontFamily: 'Arial',
             fontSize: '12px',
             color: '#93c5fd',
@@ -2646,21 +2686,94 @@ export class DeckManagementPanel extends GameObjects.Container {
         });
         this.editorContainer.add(eyebrow);
 
-        if (this.renameMode) {
-            const renameHint = this.scene.add.text(localX + summaryW - 16, 18, 'Enter 确认 · Esc 取消', {
+        if (namingActive) {
+            const namingTitle = this.scene.add.text(localX + 16, 38, this.namingMode === 'create' ? '给新卡组起个名字' : '修改卡组名称', {
+                fontFamily: 'Arial',
+                fontSize: '24px',
+                color: '#f8fafc',
+                fontStyle: 'bold',
+            });
+            const namingBody = this.scene.add.text(
+                localX + 16,
+                66,
+                this.namingMode === 'create'
+                    ? '新卡组已经建好；现在确认一个玩家可见名称，之后随时还能再改。'
+                    : '这里只会修改玩家可见名称，内部保存编号会继续保持稳定。',
+                {
+                    fontFamily: 'Arial',
+                    fontSize: '12px',
+                    color: '#cbd5e1',
+                    wordWrap: { width: summaryW - 32 },
+                },
+            );
+            const renameHint = this.scene.add.text(localX + summaryW - 16, 18, '键盘输入 · Enter 确认 · Esc 取消', {
                 fontFamily: 'Arial',
                 fontSize: '12px',
                 color: '#fde68a',
             }).setOrigin(1, 0);
-            const inputBg = this.scene.add.rectangle(localX + summaryW / 2, 58, summaryW - 32, 36, 0x111827, 1);
+            const inputWidth = Math.max(168, summaryW - 272);
+            const inputBg = this.scene.add.rectangle(localX + 16 + inputWidth / 2, 104, inputWidth, 38, 0x111827, 1);
             inputBg.setStrokeStyle(1, PANEL_ACCENT, 0.95);
-            const inputText = this.scene.add.text(localX + 18, 58, `${this.renameBuffer}|`, {
+            const inputValue = this.renameBuffer.length > 0 ? this.renameBuffer : '输入卡组名称';
+            const inputText = this.scene.add.text(localX + 18, 104, `${inputValue}|`, {
                 fontFamily: 'Courier New',
-                fontSize: '20px',
-                color: '#f8fafc',
+                fontSize: '18px',
+                color: this.renameBuffer.trim().length > 0 ? '#f8fafc' : '#64748b',
                 fontStyle: 'bold',
             }).setOrigin(0, 0.5);
-            this.editorContainer.add([renameHint, inputBg, inputText]);
+            const namingWarning = this.scene.add.text(
+                localX + 16,
+                126,
+                this.renameBuffer.trim().length > 0
+                    ? (this.namingMode === 'create' ? '确认后会保留这套新卡组，并继续在左侧列表中选中它。' : '确认后会立刻更新左侧列表和远征带入名称。')
+                    : '请输入至少 1 个字符，或按 Esc 退出本次命名。',
+                {
+                    fontFamily: 'Arial',
+                    fontSize: '11px',
+                    color: this.renameBuffer.trim().length > 0 ? '#93c5fd' : '#fca5a5',
+                    wordWrap: { width: summaryW - 32 },
+                },
+            );
+            const confirmButton = this.createButton(
+                localX + summaryW - 176,
+                104,
+                120,
+                34,
+                this.namingMode === 'create' ? '确认名称' : '确认重命名',
+                0x2563eb,
+                () => this.confirmRename(),
+                this.renameBuffer.trim().length === 0,
+                {
+                    hoverFillColor: 0x3b82f6,
+                    strokeColor: 0x93c5fd,
+                    fontSize: '14px',
+                },
+            );
+            const cancelButton = this.createButton(
+                localX + summaryW - 60,
+                104,
+                104,
+                34,
+                this.namingMode === 'create' ? '保留默认名' : '取消',
+                0x334155,
+                () => this.cancelRename(),
+                false,
+                {
+                    hoverFillColor: 0x475569,
+                    strokeColor: 0x94a3b8,
+                    fontSize: '14px',
+                },
+            );
+            this.editorContainer.add([
+                namingTitle,
+                namingBody,
+                renameHint,
+                inputBg,
+                inputText,
+                namingWarning,
+                ...confirmButton,
+                ...cancelButton,
+            ]);
         } else {
             const nameText = this.scene.add.text(localX + 16, 38, deck.name, {
                 fontFamily: 'Arial',
@@ -2676,8 +2789,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                 '重命名',
                 0x312e81,
                 () => {
-                    this.renameMode = true;
-                    this.renameBuffer = deck.name;
+                    this.beginDeckNaming('rename', deck.id, deck.name);
                     this.refreshEditor();
                 },
                 false,
@@ -2689,17 +2801,16 @@ export class DeckManagementPanel extends GameObjects.Container {
             );
             nameText.setInteractive({ useHandCursor: true });
             nameText.on('pointerdown', () => {
-                this.renameMode = true;
-                this.renameBuffer = deck.name;
+                this.beginDeckNaming('rename', deck.id, deck.name);
                 this.refreshEditor();
             });
             this.editorContainer.add([nameText, ...renameButton]);
         }
 
-        const detailY = this.renameMode ? 86 : 66;
+        const detailY = namingActive ? 136 : 66;
         const detailPaneW = 186;
         const detailPaneX = localX + summaryW - detailPaneW - 16;
-        const detailPaneY = this.renameMode ? 84 : 44;
+        const detailPaneY = namingActive ? 130 : 44;
         const leftSummaryW = detailPaneX - (localX + 24);
         const countText = this.scene.add.text(localX + 16, detailY, `${summary.count} / ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, {
             fontFamily: 'Arial',

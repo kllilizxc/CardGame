@@ -6,6 +6,7 @@ import type {
 
 export const DEFAULT_SAVED_DECK_ID = 'starter-deck';
 export const DEFAULT_SAVED_DECK_NAME = 'Starter Deck';
+export const DEFAULT_CUSTOM_SAVED_DECK_NAME = '新卡组';
 
 export const DECK_CARD_MIN = 20;
 export const DECK_CARD_MAX = 40;
@@ -26,6 +27,27 @@ function normalizeDeckIdentityValue(value: string | null | undefined, fallback: 
     const normalized = value?.trim();
 
     return normalized && normalized.length > 0 ? normalized : fallback;
+}
+
+export function suggestNewSavedDeckName(
+    savedDecks: readonly SavedDeck[],
+    baseName = DEFAULT_CUSTOM_SAVED_DECK_NAME,
+): string {
+    const normalizedExistingNames = new Set(
+        savedDecks
+            .map((savedDeck) => savedDeck.name.trim())
+            .filter((savedDeckName) => savedDeckName.length > 0),
+    );
+
+    let index = 1;
+    let candidate = baseName;
+
+    while (normalizedExistingNames.has(candidate)) {
+        index += 1;
+        candidate = `${baseName} ${index}`;
+    }
+
+    return candidate;
 }
 
 export function cloneDeckCardStacks(stacks: readonly ExpeditionCardStack[]): ExpeditionCardStack[] {
@@ -235,7 +257,11 @@ export function addSavedDeckToStash(
     name: string | null | undefined,
     cards: readonly ExpeditionCardStack[],
 ): PersistentStash {
-    const savedDeck = createSavedDeck(id, name, cards);
+    const normalizedDeckId = id?.trim();
+    const defaultName = !normalizedDeckId || normalizedDeckId === DEFAULT_SAVED_DECK_ID
+        ? DEFAULT_SAVED_DECK_NAME
+        : suggestNewSavedDeckName(stash.savedDecks);
+    const savedDeck = createSavedDeck(id, normalizeDeckIdentityValue(name, defaultName), cards);
     const savedDecks = [...cloneSavedDecks(stash.savedDecks), savedDeck];
 
     return {
@@ -279,7 +305,12 @@ export function renameSavedDeckInStash(
     name: string,
 ): PersistentStash {
     const trimmedName = name.trim();
-    const effectiveName = trimmedName.length > 0 ? trimmedName : deckId;
+    const existingDeck = stash.savedDecks.find((savedDeck) => savedDeck.id === deckId);
+    const fallbackName = normalizeDeckIdentityValue(
+        existingDeck?.name,
+        deckId === DEFAULT_SAVED_DECK_ID ? DEFAULT_SAVED_DECK_NAME : suggestNewSavedDeckName(stash.savedDecks),
+    );
+    const effectiveName = trimmedName.length > 0 ? trimmedName : fallbackName;
 
     const savedDecks = stash.savedDecks.map((savedDeck) =>
         savedDeck.id === deckId

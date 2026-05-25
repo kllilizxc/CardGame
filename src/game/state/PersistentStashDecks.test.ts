@@ -299,6 +299,23 @@ describe('addSavedDeckToStash', () => {
         expect(result.selectedDeckId).toBe('deck-new');
     });
 
+    it('gives unnamed new decks a player-facing default name instead of the generated id', () => {
+        const stash = createStash({
+            savedDecks: [
+                { id: 'deck-1', name: 'Deck One', cards: stacks(['CARD_A', 1]) },
+                { id: 'deck-2', name: '新卡组', cards: stacks(['CARD_B', 1]) },
+            ],
+            selectedDeckId: 'deck-1',
+        });
+        const result = addSavedDeckToStash(stash, 'deck-generated-id', undefined, stacks(['CARD_A', 1]));
+
+        expect(result.savedDecks[2]).toEqual({
+            id: 'deck-generated-id',
+            name: '新卡组 2',
+            cards: stacks(['CARD_A', 1]),
+        });
+    });
+
     it('falls back to the default id and name when given null/undefined identity', () => {
         const stash = createStash({ savedDecks: [], selectedDeckId: null });
         const result = addSavedDeckToStash(stash, null, undefined, stacks(['CARD_A', 1]));
@@ -410,13 +427,13 @@ describe('renameSavedDeckInStash', () => {
         expect(result.savedDecks[1]).toEqual(stash.savedDecks[1]);
     });
 
-    it('falls back to deckId when given an empty or whitespace-only name', () => {
+    it('keeps the current player-facing name when given an empty or whitespace-only name', () => {
         const stash = createStash();
         const emptyResult = renameSavedDeckInStash(stash, 'deck-1', '');
         const whitespaceResult = renameSavedDeckInStash(stash, 'deck-1', '   ');
 
-        expect(emptyResult.savedDecks[0].name).toBe('deck-1');
-        expect(whitespaceResult.savedDecks[0].name).toBe('deck-1');
+        expect(emptyResult.savedDecks[0].name).toBe('Deck One');
+        expect(whitespaceResult.savedDecks[0].name).toBe('Deck One');
     });
 
     it('preserves other stash properties', () => {
