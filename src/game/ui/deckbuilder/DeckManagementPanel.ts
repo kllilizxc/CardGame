@@ -27,6 +27,11 @@ import {
     type DeckCapacitySummary as DeckCapacityMetrics,
 } from '../../state/PersistentStashDecks';
 import type { ExpeditionCardStack, PersistentStash, SavedDeck } from '../../types/expedition';
+import {
+    NativeTextEntryOverlay,
+    insetNativeTextEntryRect,
+    type NativeTextEntryRect,
+} from '../common/NativeTextEntryOverlay';
 import { createRouteBriefingStrip } from '../expedition/routeBriefingStrip';
 
 export interface DeckManagementPanelConfig {
@@ -71,6 +76,8 @@ const DECK_LIST_SUMMARY_HEIGHT = 74;
 const DECK_ROW_HEIGHT = 84;
 const EDITOR_ROW_HEIGHT = 72;
 const BROWSER_ROW_HEIGHT = 72;
+const DECK_NAMING_TEXT_ENTRY_SESSION_ID = 'deck-name';
+const DECK_SEARCH_TEXT_ENTRY_SESSION_ID = 'deck-search';
 
 const PANEL_FILL = 0x0b1220;
 const SECTION_FILL = 0x111827;
@@ -670,7 +677,7 @@ function createKeyboardGuideCopy(
             fillColor: 0x241b4d,
             accentColor: PANEL_ACCENT,
             headline: options.namingMode === 'create' ? '键盘焦点：新卡组命名' : '键盘焦点：重命名输入',
-            detail: '直接键入名称 · Enter 确认 · Esc 取消；命名期间不会触发列表导航或编辑快捷键。',
+            detail: '直接键入名称或粘贴内容 · Enter 确认 · Esc 取消；支持输入法，命名期间不会触发列表导航或编辑快捷键。',
             headlineColor: '#ede9fe',
             detailColor: '#c4b5fd',
         };
@@ -681,7 +688,7 @@ function createKeyboardGuideCopy(
             fillColor: 0x172554,
             accentColor: SELECTED_ACCENT,
             headline: '键盘焦点：搜索输入',
-            detail: '直接键入搜索词 · Backspace 删除字符 · Enter / Esc 退出搜索；浏览快捷键会先暂停。',
+            detail: '直接键入搜索词或粘贴内容 · Enter / Esc 退出搜索；支持输入法，浏览快捷键会先暂停。',
             headlineColor: '#dbeafe',
             detailColor: '#bfdbfe',
         };
@@ -1133,6 +1140,7 @@ function createReturnCtaState(summary: DeckStatusSummary): ReturnCtaState {
 export class DeckManagementPanel extends GameObjects.Container {
     private stash: PersistentStash;
     private readonly config: DeckManagementPanelConfig;
+    private readonly nativeTextEntry: NativeTextEntryOverlay;
     private selectedDeckId: string | null = null;
     private detailCardId: string | null = null;
 
@@ -1153,10 +1161,10 @@ export class DeckManagementPanel extends GameObjects.Container {
     private namingMode: DeckNamingMode | null = null;
     private namingDeckId: string | null = null;
     private renameBuffer = '';
+    private namingInputBg?: GameObjects.Rectangle;
+    private namingInputText?: GameObjects.Text;
 
     private searchFocus = false;
-    private cursorVisible = true;
-    private cursorTimer?: Phaser.Time.TimerEvent;
     private keyboardZone: DeckbuilderKeyboardZone = 'decks';
 
     private queryBg?: GameObjects.Rectangle;
@@ -1216,6 +1224,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         super(scene, 0, 0);
         this.stash = config.stash;
         this.config = config;
+        this.nativeTextEntry = new NativeTextEntryOverlay(scene);
         this.selectedDeckId = config.stash.selectedDeckId ?? config.stash.savedDecks[0]?.id ?? null;
         this.detailCardId = this.resolveFallbackDetailCardId();
 
@@ -1234,17 +1243,13 @@ export class DeckManagementPanel extends GameObjects.Container {
             this.scene.input.keyboard?.off('keydown', this.keydownHandler);
         }
 
-        if (this.cursorTimer) {
-            this.cursorTimer.destroy();
-            this.cursorTimer = undefined;
-        }
-
         this.scene.input.off('pointerdown', this.handleSearchClickOutside, this);
 
         if (this.wheelHandler) {
             this.scene.input.off('wheel', this.wheelHandler);
         }
 
+        this.nativeTextEntry.destroy();
         this.dialogObjects.forEach((obj) => obj.destroy());
         this.dialogObjects = [];
         super.destroy(fromScene);
@@ -1271,6 +1276,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private resetDeckNamingState(): void {
+        this.nativeTextEntry.deactivate(DECK_NAMING_TEXT_ENTRY_SESSION_ID);
         this.namingMode = null;
         this.namingDeckId = null;
         this.renameBuffer = '';
@@ -1364,6 +1370,87 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.keyboardGuidePillText.setColor(copy.headlineColor);
         this.keyboardGuidePillBg.setFillStyle(0x0f172a, 1);
         this.keyboardGuidePillBg.setStrokeStyle(1, copy.accentColor, 0.28);
+    }
+
+    private getNamingTextEntryBounds(): NativeTextEntryRect | null {
+        if (!this.namingInputBg) {
+            return null;
+        }
+
+        return insetNativeTextEntryRect(this.namingInputBg.getBounds(), {
+            left: 8,
+            right: 8,
+            top: 4,
+            bottom: 4,
+        });
+    }
+
+    private updateNamingTextDisplay(): void {
+        if (!this.namingInputText) {
+            return;
+        }
+
+        const nativeNamingActive = this.nativeTextEntry.isActive(DECK_NAMING_TEXT_ENTRY_SESSION_ID);
+        this.namingInputText.setVisible(!nativeNamingActive);
+
+        if (nativeNamingActive) {
+            return;
+        }
+
+        this.namingInputText.setText(this.renameBuffer.length > 0 ? this.renameBuffer : '输入卡组名称');
+        this.namingInputText.setColor(this.renameBuffer.trim().length > 0 ? '#f8fafc' : '#64748b');
+    }
+
+    private syncNamingTextEntry(): void {
+        if (!this.namingMode || !this.namingInputBg) {
+            this.nativeTextEntry.deactivate(DECK_NAMING_TEXT_ENTRY_SESSION_ID);
+            this.updateNamingTextDisplay();
+            return;
+        }
+
+        this.nativeTextEntry.activate({
+            id: DECK_NAMING_TEXT_ENTRY_SESSION_ID,
+            ariaLabel: this.namingMode === 'create' ? '新卡组名称输入' : '卡组重命名输入',
+            value: this.renameBuffer,
+            placeholder: '输入卡组名称',
+            selectAllOnFocus: true,
+            getBounds: () => this.getNamingTextEntryBounds(),
+            style: {
+                fontFamily: 'Courier New',
+                fontSize: 18,
+                fontWeight: 'bold',
+                color: '#f8fafc',
+                placeholderColor: '#64748b',
+                lineHeight: 28,
+            },
+            onValueChange: (value) => {
+                this.renameBuffer = value;
+                this.refreshEditor();
+            },
+            onConfirm: (value) => {
+                this.renameBuffer = value;
+                this.confirmRename();
+            },
+            onCancel: () => this.cancelRename(),
+        });
+        this.updateNamingTextDisplay();
+    }
+
+    private getSearchTextEntryBounds(): NativeTextEntryRect | null {
+        if (!this.queryBg) {
+            return null;
+        }
+
+        return insetNativeTextEntryRect(this.queryBg.getBounds(), {
+            left: 10,
+            right: 56,
+            top: 4,
+            bottom: 4,
+        });
+    }
+
+    private focusSearchTextEntry(): void {
+        this.nativeTextEntry.focus(DECK_SEARCH_TEXT_ENTRY_SESSION_ID);
     }
 
     private ensureSelectedDeckVisible(): boolean {
@@ -2004,38 +2091,28 @@ export class DeckManagementPanel extends GameObjects.Container {
         }
 
         if (this.namingMode) {
+            if (this.nativeTextEntry.isFocused(DECK_NAMING_TEXT_ENTRY_SESSION_ID)) {
+                return;
+            }
+
             if (event.key === 'Enter') {
                 event.preventDefault();
                 this.confirmRename();
             } else if (event.key === 'Escape') {
                 event.preventDefault();
                 this.cancelRename();
-            } else if (event.key === 'Backspace') {
-                event.preventDefault();
-                this.renameBuffer = this.renameBuffer.slice(0, -1);
-                this.refreshEditor();
-            } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-                event.preventDefault();
-                this.renameBuffer += event.key;
-                this.refreshEditor();
             }
             return;
         }
 
         if (this.searchFocus) {
+            if (this.nativeTextEntry.isFocused(DECK_SEARCH_TEXT_ENTRY_SESSION_ID)) {
+                return;
+            }
+
             if (event.key === 'Escape' || event.key === 'Enter') {
                 event.preventDefault();
                 this.setSearchFocus(false);
-            } else if (event.key === 'Backspace') {
-                event.preventDefault();
-                this.filterQuery = this.filterQuery.slice(0, -1);
-                this.refreshBrowser();
-                this.updateSearchDisplay();
-            } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-                event.preventDefault();
-                this.filterQuery += event.key;
-                this.refreshBrowser();
-                this.updateSearchDisplay();
             }
             return;
         }
@@ -2215,21 +2292,38 @@ export class DeckManagementPanel extends GameObjects.Container {
                 this.cancelRename();
             }
 
-            this.cursorVisible = true;
-            this.cursorTimer = this.scene.time.addEvent({
-                delay: 530,
-                loop: true,
-                callback: () => {
-                    this.cursorVisible = !this.cursorVisible;
+            this.nativeTextEntry.activate({
+                id: DECK_SEARCH_TEXT_ENTRY_SESSION_ID,
+                ariaLabel: '储物袋搜索输入',
+                value: this.filterQuery,
+                placeholder: '搜索卡牌、编号或名称',
+                getBounds: () => this.getSearchTextEntryBounds(),
+                style: {
+                    fontFamily: 'Arial',
+                    fontSize: 14,
+                    color: '#f8fafc',
+                    placeholderColor: '#64748b',
+                    lineHeight: 20,
+                },
+                onValueChange: (value) => {
+                    this.filterQuery = value;
+                    this.refreshBrowser();
                     this.updateSearchDisplay();
+                },
+                onConfirm: (value) => {
+                    this.filterQuery = value;
+                    this.setSearchFocus(false);
+                },
+                onCancel: () => this.setSearchFocus(false),
+                onBlur: () => {
+                    if (this.searchFocus) {
+                        this.setSearchFocus(false);
+                    }
                 },
             });
             this.scene.input.on('pointerdown', this.handleSearchClickOutside, this);
         } else {
-            if (this.cursorTimer) {
-                this.cursorTimer.destroy();
-                this.cursorTimer = undefined;
-            }
+            this.nativeTextEntry.deactivate(DECK_SEARCH_TEXT_ENTRY_SESSION_ID);
             this.scene.input.off('pointerdown', this.handleSearchClickOutside, this);
         }
 
@@ -2261,11 +2355,14 @@ export class DeckManagementPanel extends GameObjects.Container {
         if (!this.queryText || !this.queryBg) return;
 
         const hasQuery = this.filterQuery.trim().length > 0;
+        const nativeSearchActive = this.nativeTextEntry.isActive(DECK_SEARCH_TEXT_ENTRY_SESSION_ID);
+        this.queryText.setVisible(!nativeSearchActive);
 
         if (this.searchFocus) {
-            const cursor = this.cursorVisible ? '|' : '';
-            this.queryText.setText(`${this.filterQuery}${cursor}`);
-            this.queryText.setColor('#f8fafc');
+            if (!nativeSearchActive) {
+                this.queryText.setText(this.filterQuery || '搜索卡牌、编号或名称');
+                this.queryText.setColor(hasQuery ? '#f8fafc' : '#64748b');
+            }
             this.queryBg.setFillStyle(0x172554, 1);
             this.queryBg.setStrokeStyle(2, PANEL_ACCENT, 0.95);
         } else {
@@ -3271,6 +3368,8 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.detailPaneContent = undefined;
         this.detailPaneWidth = 0;
         this.detailPaneHeight = 0;
+        this.namingInputBg = undefined;
+        this.namingInputText = undefined;
         this.editorSpotlightRows.clear();
 
         const localX = 0;
@@ -3359,7 +3458,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                     wordWrap: { width: summaryW - 32 },
                 },
             );
-            const renameHint = this.scene.add.text(localX + summaryW - 16, 18, '键盘输入 · Enter 确认 · Esc 取消', {
+            const renameHint = this.scene.add.text(localX + summaryW - 16, 18, '键盘输入 · Enter 确认 · Esc 取消 · 支持输入法 / 粘贴', {
                 fontFamily: 'Arial',
                 fontSize: '12px',
                 color: '#fde68a',
@@ -3367,13 +3466,15 @@ export class DeckManagementPanel extends GameObjects.Container {
             const inputWidth = Math.max(168, summaryW - 272);
             const inputBg = this.scene.add.rectangle(localX + 16 + inputWidth / 2, 104, inputWidth, 38, 0x111827, 1);
             inputBg.setStrokeStyle(1, PANEL_ACCENT, 0.95);
-            const inputValue = this.renameBuffer.length > 0 ? this.renameBuffer : '输入卡组名称';
-            const inputText = this.scene.add.text(localX + 18, 104, `${inputValue}|`, {
+            const inputText = this.scene.add.text(localX + 18, 104, '', {
                 fontFamily: 'Courier New',
                 fontSize: '18px',
-                color: this.renameBuffer.trim().length > 0 ? '#f8fafc' : '#64748b',
+                color: '#f8fafc',
                 fontStyle: 'bold',
             }).setOrigin(0, 0.5);
+            this.namingInputBg = inputBg;
+            this.namingInputText = inputText;
+            this.updateNamingTextDisplay();
             const namingWarning = this.scene.add.text(
                 localX + 16,
                 126,
@@ -3427,7 +3528,9 @@ export class DeckManagementPanel extends GameObjects.Container {
                 ...confirmButton,
                 ...cancelButton,
             ]);
+            this.syncNamingTextEntry();
         } else {
+            this.nativeTextEntry.deactivate(DECK_NAMING_TEXT_ENTRY_SESSION_ID);
             const nameText = this.scene.add.text(localX + 16, 38, deck.name, {
                 fontFamily: 'Arial',
                 fontSize: '25px',
@@ -4019,7 +4122,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             color: '#cbd5e1',
             fontStyle: 'bold',
         });
-        const railHint = this.scene.add.text(innerX + innerW - 14, railTop + 8, '搜索 / 筛选 / 排序', {
+        const railHint = this.scene.add.text(innerX + innerW - 14, railTop + 8, '搜索 / 筛选 / 排序 · 支持输入法 / 粘贴', {
             fontFamily: 'Arial',
             fontSize: '11px',
             color: '#64748b',
@@ -4031,6 +4134,11 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.queryBg.setInteractive({ useHandCursor: true });
         this.queryBg.on('pointerdown', () => {
             this.setKeyboardZone('browser');
+            if (this.searchFocus) {
+                this.focusSearchTextEntry();
+                return;
+            }
+
             this.setSearchFocus(true);
         });
 
@@ -4511,6 +4619,14 @@ export class DeckManagementPanel extends GameObjects.Container {
         if (this.stash.savedDecks.length <= 1) return;
         const deck = this.getSelectedDeck();
         if (!deck || !this.selectedDeckId) return;
+
+        if (this.searchFocus) {
+            this.setSearchFocus(false);
+        }
+
+        if (this.namingMode) {
+            this.cancelRename();
+        }
 
         this.dialogMode = true;
         this.setKeyboardZone('decks');

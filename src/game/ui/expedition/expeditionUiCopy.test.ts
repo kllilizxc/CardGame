@@ -93,6 +93,7 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).toContain('卡组 ×');
         expect(panel).toContain('一键加满');
         expect(panel).toContain('全部移除');
+        expect(panel).toContain('支持输入法');
         expect(deckManagerCopy).toContain('当前阶段：整理卡组并返回远征准备');
         expect(panel).toContain('张出征线还差');
         expect(panel).toContain('张上限还剩');
