@@ -85,6 +85,9 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).toContain('效果要点');
         expect(panel).toContain('剩余');
         expect(panel).toContain('缺口');
+        expect(panel).toContain('当前带入卡组');
+        expect(panel).toContain('待补');
+        expect(panel).toContain('失效');
     });
 
     it('uses Chinese run HUD labels', () => {

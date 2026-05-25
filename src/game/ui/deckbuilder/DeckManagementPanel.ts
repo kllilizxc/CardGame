@@ -56,7 +56,8 @@ const KIND_LABEL: Record<string, string> = {
     pill: '丹药',
 };
 
-const DECK_ROW_HEIGHT = 58;
+const DECK_LIST_SUMMARY_HEIGHT = 74;
+const DECK_ROW_HEIGHT = 84;
 const EDITOR_ROW_HEIGHT = 72;
 const BROWSER_ROW_HEIGHT = 72;
 
@@ -128,6 +129,20 @@ interface DeckStatusSummary {
     pillTextColor: string;
     statusLabel: string;
     detailLabel: string;
+}
+
+interface DeckRosterSnapshot {
+    uniqueCardCount: number;
+    metaLabel: string;
+    detailLabel: string;
+    summaryLine: string;
+    pressureLabel: string;
+}
+
+interface DeckRosterHealthSummary {
+    readyCount: number;
+    warningCount: number;
+    invalidCount: number;
 }
 
 interface ReturnCtaState {
@@ -423,6 +438,164 @@ function getDeckReadinessTier(summary: DeckStatusSummary): DeckReadinessTier {
     }
 
     return summary.isValid ? 'ready' : 'invalid';
+}
+
+function getDeckShortageCopyCount(issues: readonly DeckAvailabilityIssue[]): number {
+    let shortageCount = 0;
+
+    for (let i = 0; i < issues.length; i += 1) {
+        shortageCount += Math.max(issues[i].required - issues[i].available, 0);
+    }
+
+    return shortageCount;
+}
+
+function summarizeDeckKindMix(
+    cards: readonly ExpeditionCardStack[],
+    metadata?: CardMetadataMap,
+    maxKinds = 2,
+): string | null {
+    const kindCounts = new Map<string, number>();
+    let untypedCount = 0;
+
+    for (let i = 0; i < cards.length; i += 1) {
+        const stack = cards[i];
+        if (stack.count <= 0) {
+            continue;
+        }
+
+        const kind = metadata?.[stack.id]?.kind;
+        if (!kind) {
+            untypedCount += stack.count;
+            continue;
+        }
+
+        kindCounts.set(kind, (kindCounts.get(kind) ?? 0) + stack.count);
+    }
+
+    const rankedKinds = Array.from(kindCounts.entries()).sort((left, right) => {
+        if (right[1] !== left[1]) {
+            return right[1] - left[1];
+        }
+
+        const leftLabel = KIND_LABEL[left[0]] ?? left[0];
+        const rightLabel = KIND_LABEL[right[0]] ?? right[0];
+        return leftLabel.localeCompare(rightLabel);
+    });
+
+    if (untypedCount > 0) {
+        rankedKinds.push(['unknown', untypedCount]);
+    }
+
+    if (rankedKinds.length === 0) {
+        return null;
+    }
+
+    const labels = rankedKinds.slice(0, maxKinds).map(([kind, count]) => {
+        const label = kind === 'unknown' ? '未标注' : KIND_LABEL[kind] ?? kind;
+        return `${label} ${count}`;
+    });
+    const hiddenKinds = rankedKinds.length - labels.length;
+
+    if (hiddenKinds > 0) {
+        labels.push(`+${hiddenKinds} 类`);
+    }
+
+    return labels.join(' · ');
+}
+
+function getDeckRosterPressureLabel(summary: DeckStatusSummary, capacity: DeckCapacityMetrics): string {
+    if (summary.availabilityIssues.length > 0) {
+        const shortageCopies = getDeckShortageCopyCount(summary.availabilityIssues);
+        return `缺 ${summary.availabilityIssues.length} 种 / ${shortageCopies} 张`;
+    }
+
+    if (summary.sizeIssue?.kind === 'too-few-cards') {
+        return `还差 ${summary.sizeIssue.min - summary.sizeIssue.count} 张`;
+    }
+
+    if (summary.sizeIssue?.kind === 'too-many-cards') {
+        return `超限 ${summary.sizeIssue.count - summary.sizeIssue.max} 张`;
+    }
+
+    if (capacity.slotsRemainingToMax === 0) {
+        return `已到 ${DECK_CARD_MAX} 张上限`;
+    }
+
+    return `空位 ${capacity.slotsRemainingToMax} 张`;
+}
+
+function buildDeckRosterSnapshot(
+    deck: SavedDeck,
+    summary: DeckStatusSummary,
+    metadata?: CardMetadataMap,
+): DeckRosterSnapshot {
+    const capacity = summarizeDeckCapacity(deck.cards);
+    const uniqueCardCount = deck.cards.filter((stack) => stack.count > 0).length;
+    const kindMixLabel = summarizeDeckKindMix(deck.cards, metadata);
+    const pressureLabel = getDeckRosterPressureLabel(summary, capacity);
+    const metaLabel = `${summary.count} 张 · ${uniqueCardCount} 种卡`;
+    const detailLabel = kindMixLabel ? `${kindMixLabel} · ${pressureLabel}` : pressureLabel;
+
+    return {
+        uniqueCardCount,
+        metaLabel,
+        detailLabel,
+        summaryLine: kindMixLabel ? `${metaLabel} · ${kindMixLabel}` : metaLabel,
+        pressureLabel,
+    };
+}
+
+function summarizeDeckRosterHealth(
+    decks: readonly SavedDeck[],
+    stashCards: readonly ExpeditionCardStack[],
+): DeckRosterHealthSummary {
+    let readyCount = 0;
+    let warningCount = 0;
+    let invalidCount = 0;
+
+    for (let i = 0; i < decks.length; i += 1) {
+        switch (getDeckReadinessTier(summarizeDeckStatus(decks[i], stashCards))) {
+            case 'ready':
+                readyCount += 1;
+                break;
+            case 'warning':
+                warningCount += 1;
+                break;
+            case 'invalid':
+            default:
+                invalidCount += 1;
+                break;
+        }
+    }
+
+    return {
+        readyCount,
+        warningCount,
+        invalidCount,
+    };
+}
+
+function formatDeckRosterHealthLabel(summary: DeckRosterHealthSummary, totalDecks: number): string {
+    if (totalDecks === 0) {
+        return '尚无已保存卡组';
+    }
+
+    const parts = [`共 ${totalDecks} 套`];
+
+    if (summary.readyCount > 0) {
+        parts.push(`就绪 ${summary.readyCount} 套`);
+    }
+
+    if (summary.warningCount > 0) {
+        parts.push(`待补 ${summary.warningCount} 套`);
+    }
+
+    if (summary.invalidCount > 0) {
+        parts.push(`失效 ${summary.invalidCount} 套`);
+    }
+
+    return parts.join(' · ');
 }
 
 function getQuickAddCount(available: number, slotsRemainingToMax: number): number {
@@ -860,7 +1033,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     private browserOuter?: GameObjects.Container;
     private browserInner?: GameObjects.Container;
 
-    private deckListSummaryText?: GameObjects.Text;
+    private deckListSummaryContainer?: GameObjects.Container;
     private deckListPosText?: GameObjects.Text;
     private deleteDeckBtn?: GameObjects.Rectangle;
     private deleteDeckLabel?: GameObjects.Text;
@@ -1760,6 +1933,20 @@ export class DeckManagementPanel extends GameObjects.Container {
         return [bg, text];
     }
 
+    private createRightAlignedPill(
+        rightX: number,
+        y: number,
+        label: string,
+        fillColor: number,
+        textColor = '#f8fafc',
+    ): [GameObjects.Rectangle, GameObjects.Text] {
+        const [bg, text] = this.createPill(0, y, label, fillColor, textColor);
+        const width = bg.width;
+        bg.setX(rightX - width / 2);
+        text.setX(rightX - width + 10);
+        return [bg, text];
+    }
+
     private createSectionFrame(
         x: number,
         y: number,
@@ -1790,11 +1977,12 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createDeckListColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '卡组列表', '选择要编辑与带入远征的卡组。', SELECTED_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '卡组列表', '选择要编辑与带入远征的卡组，并快速扫描当前失效状态。', SELECTED_ACCENT));
 
         const innerX = x + 16;
         const innerW = colW - 32;
-        const newDeckY = y + 86;
+        const summaryY = y + 68;
+        const newDeckY = summaryY + DECK_LIST_SUMMARY_HEIGHT + 14;
         const deleteY = y + colH - 28;
         const scrollBtnY = deleteY - 42;
         const listTop = newDeckY + 34;
@@ -1804,12 +1992,8 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.deckListArea = { x: innerX, y: listTop, w: innerW, h: listH };
         this.deckListVisibleRows = Math.max(1, Math.floor(listH / DECK_ROW_HEIGHT));
 
-        this.deckListSummaryText = this.scene.add.text(innerX, y + 68, '', {
-            fontFamily: 'Arial',
-            fontSize: '13px',
-            color: '#cbd5e1',
-        });
-        this.add(this.deckListSummaryText);
+        this.deckListSummaryContainer = this.scene.add.container(innerX, summaryY);
+        this.add(this.deckListSummaryContainer);
 
         const newDeckButton = this.createButton(
             innerX + innerW / 2,
@@ -1913,13 +2097,113 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.deckListScrollOffset = Phaser.Math.Clamp(this.deckListScrollOffset, 0, maxOffset);
 
         const selectedDeck = this.getSelectedDeck();
-        if (this.deckListSummaryText) {
-            const selectedSummary = selectedDeck ? summarizeDeckStatus(selectedDeck, this.stash.cards) : null;
-            this.deckListSummaryText.setText(
-                selectedDeck
-                    ? `共 ${decks.length} 套 · 当前 ${selectedSummary?.count ?? 0} 张 · ${selectedSummary?.statusLabel ?? '未选择'}`
-                    : `共 ${decks.length} 套 · 请选择或新建卡组`,
+        const selectedDeckSummary = selectedDeck ? summarizeDeckStatus(selectedDeck, this.stash.cards) : null;
+        if (this.deckListSummaryContainer) {
+            this.deckListSummaryContainer.removeAll(true);
+
+            const rosterHealth = summarizeDeckRosterHealth(decks, this.stash.cards);
+            const currentDeckAccentColor = selectedDeckSummary
+                ? blendColor(SELECTED_ACCENT, selectedDeckSummary.accentColor, selectedDeckSummary.isValid ? 0.18 : 0.55)
+                : SECTION_BORDER;
+            const summaryBg = this.scene.add.rectangle(
+                this.deckListArea.w / 2,
+                DECK_LIST_SUMMARY_HEIGHT / 2,
+                this.deckListArea.w,
+                DECK_LIST_SUMMARY_HEIGHT,
+                selectedDeck ? 0x102344 : 0x0f172a,
+                0.99,
             );
+            summaryBg.setStrokeStyle(1, selectedDeck ? currentDeckAccentColor : SECTION_BORDER, 0.95);
+            const summaryAccent = this.scene.add.rectangle(
+                5,
+                DECK_LIST_SUMMARY_HEIGHT / 2,
+                6,
+                DECK_LIST_SUMMARY_HEIGHT - 18,
+                selectedDeck ? currentDeckAccentColor : SECTION_BORDER,
+                1,
+            ).setOrigin(0, 0.5);
+
+            if (selectedDeck && selectedDeckSummary) {
+                const selectedSummary = selectedDeckSummary;
+                const selectedSnapshot = buildDeckRosterSnapshot(selectedDeck, selectedSummary, this.config.metadata);
+                const [statusPillBg, statusPillText] = this.createRightAlignedPill(
+                    this.deckListArea.w - 12,
+                    17,
+                    selectedSummary.statusLabel,
+                    selectedSummary.pillFillColor,
+                    selectedSummary.pillTextColor,
+                );
+                const eyebrow = this.scene.add.text(16, 8, '当前带入卡组', {
+                    fontFamily: 'Arial',
+                    fontSize: '10px',
+                    color: '#93c5fd',
+                    fontStyle: 'bold',
+                });
+                const deckName = this.scene.add.text(16, 22, truncateLabel(selectedDeck.name, 18), {
+                    fontFamily: 'Arial',
+                    fontSize: '18px',
+                    color: '#f8fafc',
+                    fontStyle: 'bold',
+                });
+                const meta = this.scene.add.text(16, 43, truncateLabel(selectedSnapshot.summaryLine, 34), {
+                    fontFamily: 'Arial',
+                    fontSize: '11px',
+                    color: '#dbeafe',
+                    wordWrap: { width: this.deckListArea.w - 28 },
+                });
+                const rosterLine = this.scene.add.text(
+                    16,
+                    58,
+                    truncateLabel(
+                        `${selectedSnapshot.pressureLabel} · ${formatDeckRosterHealthLabel(rosterHealth, decks.length)}`,
+                        42,
+                    ),
+                    {
+                        fontFamily: 'Arial',
+                        fontSize: '10px',
+                        color: selectedSummary.isValid ? '#cbd5e1' : selectedSummary.pillTextColor,
+                        wordWrap: { width: this.deckListArea.w - 28 },
+                    },
+                );
+
+                this.deckListSummaryContainer.add([
+                    summaryBg,
+                    summaryAccent,
+                    eyebrow,
+                    deckName,
+                    meta,
+                    rosterLine,
+                    statusPillBg,
+                    statusPillText,
+                ]);
+            } else {
+                const eyebrow = this.scene.add.text(16, 8, '当前带入卡组', {
+                    fontFamily: 'Arial',
+                    fontSize: '10px',
+                    color: '#93c5fd',
+                    fontStyle: 'bold',
+                });
+                const deckName = this.scene.add.text(16, 22, '尚未选择卡组', {
+                    fontFamily: 'Arial',
+                    fontSize: '18px',
+                    color: '#f8fafc',
+                    fontStyle: 'bold',
+                });
+                const meta = this.scene.add.text(16, 43, '新建或从下方列表切换一套卡组。', {
+                    fontFamily: 'Arial',
+                    fontSize: '11px',
+                    color: '#cbd5e1',
+                    wordWrap: { width: this.deckListArea.w - 28 },
+                });
+                const rosterLine = this.scene.add.text(16, 58, formatDeckRosterHealthLabel(rosterHealth, decks.length), {
+                    fontFamily: 'Arial',
+                    fontSize: '10px',
+                    color: '#94a3b8',
+                    wordWrap: { width: this.deckListArea.w - 28 },
+                });
+
+                this.deckListSummaryContainer.add([summaryBg, summaryAccent, eyebrow, deckName, meta, rosterLine]);
+            }
         }
 
         if (decks.length === 0) {
@@ -1951,57 +2235,86 @@ export class DeckManagementPanel extends GameObjects.Container {
                 const rowY = (index - start) * DECK_ROW_HEIGHT;
                 const isSelected = deck.id === this.selectedDeckId;
                 const summary = summarizeDeckStatus(deck, this.stash.cards);
-                const bgFill = isSelected ? 0x172554 : 0x0f172a;
-                const borderColor = isSelected ? SELECTED_ACCENT : SECTION_BORDER;
-                const secondaryColor = summary.isValid ? '#93c5fd' : summary.pillTextColor;
+                const snapshot = buildDeckRosterSnapshot(deck, summary, this.config.metadata);
+                const bgFill = isSelected ? 0x102750 : 0x0f172a;
+                const hoverFill = isSelected ? 0x17346a : 0x172033;
+                const selectionAccentColor = isSelected
+                    ? blendColor(SELECTED_ACCENT, summary.accentColor, summary.isValid ? 0.18 : 0.55)
+                    : summary.accentColor;
+                const borderColor = isSelected ? selectionAccentColor : SECTION_BORDER;
+                const secondaryColor = isSelected ? '#dbeafe' : '#cbd5e1';
+                const detailColor = summary.isValid ? (isSelected ? '#bfdbfe' : '#93c5fd') : summary.pillTextColor;
 
                 const bg = this.scene.add.rectangle(
                     this.deckListArea.w / 2,
                     rowY + DECK_ROW_HEIGHT / 2,
                     this.deckListArea.w,
-                    DECK_ROW_HEIGHT - 6,
+                    DECK_ROW_HEIGHT - 8,
                     bgFill,
                     0.98,
                 );
-                bg.setStrokeStyle(1, borderColor, isSelected ? 0.95 : 0.65);
+                bg.setStrokeStyle(isSelected ? 2 : 1, borderColor, isSelected ? 0.95 : 0.72);
 
-                const accent = this.scene.add.rectangle(5, rowY + DECK_ROW_HEIGHT / 2, 6, DECK_ROW_HEIGHT - 14, summary.accentColor, 1)
+                const accent = this.scene.add.rectangle(
+                    5,
+                    rowY + DECK_ROW_HEIGHT / 2,
+                    6,
+                    DECK_ROW_HEIGHT - 18,
+                    selectionAccentColor,
+                    1,
+                )
                     .setOrigin(0, 0.5);
 
-                const name = this.scene.add.text(16, rowY + 18, deck.name, {
+                const detailStrip = this.scene.add.rectangle(
+                    this.deckListArea.w / 2,
+                    rowY + DECK_ROW_HEIGHT - 18,
+                    this.deckListArea.w - 18,
+                    20,
+                    blendColor(bgFill, summary.accentColor, isSelected ? 0.22 : 0.16),
+                    0.98,
+                );
+                detailStrip.setStrokeStyle(1, summary.accentColor, 0.22);
+
+                let currentLabel: GameObjects.Text | undefined;
+                if (isSelected) {
+                    currentLabel = this.scene.add.text(16, rowY + 8, '当前带入', {
+                        fontFamily: 'Arial',
+                        fontSize: '10px',
+                        color: '#93c5fd',
+                        fontStyle: 'bold',
+                    });
+                }
+
+                const name = this.scene.add.text(16, rowY + (isSelected ? 22 : 16), truncateLabel(deck.name, 18), {
                     fontFamily: 'Arial',
-                    fontSize: '16px',
+                    fontSize: isSelected ? '17px' : '16px',
                     color: '#f8fafc',
                     fontStyle: 'bold',
                 });
 
-                const detail = this.scene.add.text(16, rowY + 39, `${summary.count} 张 · ${summary.detailLabel}`, {
+                const meta = this.scene.add.text(16, rowY + (isSelected ? 42 : 38), snapshot.metaLabel, {
                     fontFamily: 'Arial',
-                    fontSize: '12px',
+                    fontSize: '11px',
                     color: secondaryColor,
                 });
 
-                const [statusPillBg, statusPillText] = this.createPill(
-                    this.deckListArea.w - 76,
+                const detail = this.scene.add.text(16, rowY + (isSelected ? 58 : 57), truncateLabel(snapshot.detailLabel, 32), {
+                    fontFamily: 'Arial',
+                    fontSize: '10px',
+                    color: detailColor,
+                    fontStyle: isSelected ? 'bold' : 'normal',
+                });
+
+                const [statusPillBg, statusPillText] = this.createRightAlignedPill(
+                    this.deckListArea.w - 12,
                     rowY + 18,
                     summary.statusLabel,
                     summary.pillFillColor,
                     summary.pillTextColor,
                 );
 
-                let selectedBadge: [GameObjects.Rectangle, GameObjects.Text] | null = null;
-                if (isSelected) {
-                    selectedBadge = this.createPill(
-                        this.deckListArea.w - 100,
-                        rowY + 40,
-                        '当前选中',
-                        0x1d4ed8,
-                        '#dbeafe',
-                    );
-                }
-
                 bg.setInteractive({ useHandCursor: true });
-                bg.on('pointerover', () => bg.setFillStyle(isSelected ? 0x1e3a8a : 0x172033, 1));
+                bg.on('pointerover', () => bg.setFillStyle(hoverFill, 1));
                 bg.on('pointerout', () => bg.setFillStyle(bgFill, 1));
                 bg.on('pointerdown', () => {
                     this.applyStashChange(selectDeckInStash(this.stash, deck.id));
@@ -2011,16 +2324,18 @@ export class DeckManagementPanel extends GameObjects.Container {
                 this.deckListInner.add([
                     bg,
                     accent,
+                    detailStrip,
+                    ...(currentLabel ? [currentLabel] : []),
                     name,
+                    meta,
                     detail,
                     statusPillBg,
                     statusPillText,
-                    ...(selectedBadge ?? []),
                 ]);
 
                 if (isSelected && this.pendingSelectedDeckMotionId === deck.id) {
                     this.playMotionPulse(
-                        [bg, accent, name, detail, statusPillBg, statusPillText, ...(selectedBadge ?? [])],
+                        [bg, accent, detailStrip, currentLabel, name, meta, detail, statusPillBg, statusPillText],
                         {
                             alphaFrom: 0.54,
                             scaleXFrom: 0.975,
