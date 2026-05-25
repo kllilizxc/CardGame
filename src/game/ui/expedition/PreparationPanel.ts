@@ -1,6 +1,7 @@
 import { GameObjects, Scene } from 'phaser';
 
 import {
+    createPreparationDeckCarouselSummary,
     createPreparationDeckCardPreview,
     createPreparationSummary,
     createPreparationSelectedLoadoutSummary,
@@ -165,6 +166,16 @@ interface DeckCardRowBuild {
     targetScrollX: number;
 }
 
+interface DeckCarouselWayfindingRefs {
+    progressFill: GameObjects.Rectangle;
+    progressText: GameObjects.Text;
+    progressTrackX: number;
+    progressTrackWidth: number;
+    deckCount: number;
+    viewportWidth: number;
+    slotWidth: number;
+}
+
 interface PreparationPanelAnimationRefs {
     selectedCard?: DeckCardAnimationRefs;
     validationContainer?: GameObjects.Container;
@@ -207,6 +218,7 @@ const DECK_CARD_GAP = 14;
 const PANEL_MIN_HEIGHT = 820;
 const PANEL_MAX_HEIGHT = 1020;
 const PANEL_MAX_HEIGHT_RATIO = 0.95;
+const DECK_CAROUSEL_WAYFINDING_HEIGHT = 84;
 const ACTION_BUTTON_COLUMN_WIDTH = 252;
 const ACTION_BUTTON_PRIMARY_HEIGHT = 62;
 const ACTION_BUTTON_SECONDARY_HEIGHT = 44;
@@ -263,6 +275,14 @@ function formatBulletLines(lines: string[], maxLines = Number.POSITIVE_INFINITY)
         .slice(0, maxLines)
         .map((line) => line.startsWith('• ') ? line : `• ${line}`)
         .join('\n');
+}
+
+function truncateLabel(value: string, maxLength: number): string {
+    if (value.length <= maxLength) {
+        return value;
+    }
+
+    return `${value.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
 }
 
 function measureTextHeight(
@@ -1084,6 +1104,7 @@ export class PreparationPanel extends GameObjects.Container {
     private scrollContainer?: GameObjects.Container;
     private leftIndicator?: GameObjects.Text;
     private rightIndicator?: GameObjects.Text;
+    private deckCarouselWayfinding?: DeckCarouselWayfindingRefs;
     private readonly scrollTweenState = { value: 0 };
     private wheelHandler?: (
         pointer: Phaser.Input.Pointer,
@@ -1129,6 +1150,7 @@ export class PreparationPanel extends GameObjects.Container {
         this.scrollContainer = undefined;
         this.leftIndicator = undefined;
         this.rightIndicator = undefined;
+        this.deckCarouselWayfinding = undefined;
         this.isDragging = false;
         this.dragMoved = false;
         this.pendingDeckClick = null;
@@ -1138,6 +1160,7 @@ export class PreparationPanel extends GameObjects.Container {
         const panelX = width / 2;
         const summary = createPreparationSummary(this.stash);
         const selectedLoadoutSummary = createPreparationSelectedLoadoutSummary(this.stash, this.metadata);
+        const deckCarouselSummary = createPreparationDeckCarouselSummary(this.stash);
         const validation = validateExpeditionLoadout(this.stash);
         const isDeckValid = validation.valid;
         const selectedDeck = getSelectedSavedDeck(this.stash);
@@ -1214,16 +1237,6 @@ export class PreparationPanel extends GameObjects.Container {
                 wordWrap: { width: contentWidth },
             },
         );
-        const scrollHintHeight = measureTextHeight(
-            this.scene,
-            this.stash.savedDecks.length > 1
-                ? '拖动或滚轮浏览更多卡组，点按卡片即可切换本次带入卡组。'
-                : '点按卡片即可切换本次带入卡组。',
-            {
-                fontFamily: 'Arial',
-                fontSize: '15px',
-            },
-        );
         const titleTop = 34;
         const subtitleTop = titleTop + 48;
         const subtitleBottom = subtitleTop + subtitleHeight;
@@ -1243,8 +1256,8 @@ export class PreparationPanel extends GameObjects.Container {
             : this.routeBriefing
                 ? (routeBriefingTopOffset ?? subtitleBottom) + routeBriefingHeight + 16
                 : subtitleBottom + 26;
-        const scrollHintOffsetY = deckSelectorOffsetY + deckCardHeight + 10;
-        const validationOffsetY = scrollHintOffsetY + scrollHintHeight + 12;
+        const carouselWayfindingOffsetY = deckSelectorOffsetY + deckCardHeight + 10;
+        const validationOffsetY = carouselWayfindingOffsetY + DECK_CAROUSEL_WAYFINDING_HEIGHT + 12;
         const loadoutOffsetY = validationOffsetY + validationHeight + 16;
         const actionOffsetY = loadoutOffsetY + loadoutSummaryHeight + 16;
         const panelHeight = Math.min(
@@ -1259,7 +1272,7 @@ export class PreparationPanel extends GameObjects.Container {
             ? panelTop + routeBriefingTopOffset
             : null;
         const deckSelectorY = panelTop + deckSelectorOffsetY;
-        const scrollHintY = panelTop + scrollHintOffsetY;
+        const carouselWayfindingY = panelTop + carouselWayfindingOffsetY;
         const validationTop = panelTop + validationOffsetY;
         const loadoutTop = panelTop + loadoutOffsetY;
 
@@ -1339,17 +1352,100 @@ export class PreparationPanel extends GameObjects.Container {
             options.initialScrollX,
         );
 
-        const scrollHint = this.maxScrollX > 0
-            ? this.scene.add.text(contentLeft, scrollHintY, '拖动或滚轮浏览更多卡组，点按卡片即可切换本次带入卡组。', {
+        const carouselWayfindingCard = this.scene.add.rectangle(
+            panelX,
+            carouselWayfindingY + DECK_CAROUSEL_WAYFINDING_HEIGHT / 2,
+            contentWidth,
+            DECK_CAROUSEL_WAYFINDING_HEIGHT,
+            selectedLoadoutSummary.readiness === 'none' ? 0x0b1220 : selectedLoadoutColors.fillColor,
+            0.94,
+        );
+        carouselWayfindingCard.setStrokeStyle(2, selectedLoadoutColors.borderColor, 0.72);
+        const carouselWayfindingAccent = this.scene.add.rectangle(
+            panelX,
+            carouselWayfindingY + 5,
+            contentWidth - 24,
+            5,
+            selectedLoadoutColors.accentColor,
+            0.96,
+        ).setOrigin(0.5, 0);
+        const carouselWayfindingBadge = this.scene.add.text(contentLeft + 18, carouselWayfindingY + 12, '卡组序列', {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: selectedLoadoutColors.badgeColor,
+            fontStyle: 'bold',
+            backgroundColor: selectedLoadoutColors.badgeBackgroundColor,
+            padding: { left: 10, right: 10, top: 5, bottom: 5 },
+        });
+        const carouselWayfindingTitle = this.scene.add.text(
+            carouselWayfindingBadge.x + carouselWayfindingBadge.width + 12,
+            carouselWayfindingY + 13,
+            deckCarouselSummary.savedDeckCount > 0
+                ? `当前带入：${truncateLabel(deckCarouselSummary.selectedDeckName, 20)} · ${deckCarouselSummary.selectedDeckStatusLabel}`
+                : '当前带入：请先创建一套可带入卡组',
+            {
                 fontFamily: 'Arial',
-                fontSize: '15px',
-                color: '#a78bfa',
-            })
-            : this.scene.add.text(contentLeft, scrollHintY, '点按卡片即可切换本次带入卡组。', {
+                fontSize: '16px',
+                color: selectedLoadoutColors.headlineColor,
+                fontStyle: 'bold',
+            },
+        );
+        const carouselWayfindingPosition = this.scene.add.text(
+            contentLeft + contentWidth - 18,
+            carouselWayfindingY + 12,
+            deckCarouselSummary.positionLabel,
+            {
                 fontFamily: 'Arial',
-                fontSize: '15px',
-                color: '#94a3b8',
-            });
+                fontSize: '12px',
+                color: '#ede9fe',
+                fontStyle: 'bold',
+                backgroundColor: '#312e81',
+                padding: { left: 10, right: 10, top: 5, bottom: 5 },
+            },
+        ).setOrigin(1, 0);
+        const carouselWayfindingSummary = this.scene.add.text(
+            contentLeft + 18,
+            carouselWayfindingY + 42,
+            deckCarouselSummary.rosterSummaryLine,
+            {
+                fontFamily: 'Arial',
+                fontSize: '12px',
+                color: selectedLoadoutColors.detailColor,
+                wordWrap: { width: contentWidth - 36 },
+            },
+        );
+        const carouselProgressText = this.scene.add.text(contentLeft + 18, carouselWayfindingY + 58, '', {
+            fontFamily: 'Arial',
+            fontSize: '12px',
+            color: this.maxScrollX > 0 ? '#c4b5fd' : selectedLoadoutColors.mutedColor,
+            wordWrap: { width: contentWidth - 36 },
+        });
+        const carouselProgressTrack = this.scene.add.rectangle(
+            contentLeft + 18,
+            carouselWayfindingY + DECK_CAROUSEL_WAYFINDING_HEIGHT - 10,
+            contentWidth - 36,
+            4,
+            0x1e293b,
+            1,
+        ).setOrigin(0, 0.5);
+        const carouselProgressFill = this.scene.add.rectangle(
+            contentLeft + 18,
+            carouselProgressTrack.y,
+            contentWidth - 36,
+            4,
+            selectedLoadoutColors.accentColor,
+            1,
+        ).setOrigin(0, 0.5);
+        carouselProgressFill.setScale(0, 1);
+        this.deckCarouselWayfinding = {
+            progressFill: carouselProgressFill,
+            progressText: carouselProgressText,
+            progressTrackX: contentLeft + 18,
+            progressTrackWidth: contentWidth - 36,
+            deckCount: this.stash.savedDecks.length,
+            viewportWidth: contentWidth,
+            slotWidth: DECK_CARD_WIDTH + DECK_CARD_GAP,
+        };
         const validationGlow = this.scene.add.rectangle(
             panelX,
             validationTop + validationHeight / 2,
@@ -1902,7 +1998,15 @@ export class PreparationPanel extends GameObjects.Container {
             ...routeBriefingElements,
             ...handoffElements,
             ...deckCardRow.elements,
-            scrollHint,
+            carouselWayfindingCard,
+            carouselWayfindingAccent,
+            carouselWayfindingBadge,
+            carouselWayfindingTitle,
+            carouselWayfindingPosition,
+            carouselWayfindingSummary,
+            carouselProgressText,
+            carouselProgressTrack,
+            carouselProgressFill,
             validationContainer,
             selectedLoadoutContainer,
             carriedLoadoutCard,
@@ -1919,6 +2023,8 @@ export class PreparationPanel extends GameObjects.Container {
             carriedReadinessContainer,
             actionContainer,
         ]);
+
+        this.updateScrollIndicators();
 
         if (this.maxScrollX > 0) {
             this.setupScrollInteraction();
@@ -2510,6 +2616,42 @@ export class PreparationPanel extends GameObjects.Container {
 
         if (this.rightIndicator) {
             this.rightIndicator.setAlpha(this.scrollX < this.maxScrollX - 1 ? 1 : 0.25);
+        }
+
+        if (this.deckCarouselWayfinding) {
+            const {
+                progressFill,
+                progressText,
+                progressTrackX,
+                progressTrackWidth,
+                deckCount,
+                viewportWidth,
+                slotWidth,
+            } = this.deckCarouselWayfinding;
+            const totalContentWidth = deckCount > 0
+                ? deckCount * slotWidth - DECK_CARD_GAP
+                : 0;
+            const progressRatio = this.maxScrollX <= 1 ? 0 : Phaser.Math.Clamp(this.scrollX / this.maxScrollX, 0, 1);
+            const thumbRatio = totalContentWidth > 0
+                ? Phaser.Math.Clamp(viewportWidth / totalContentWidth, 0.14, 1)
+                : 0;
+            const thumbWidth = progressTrackWidth * thumbRatio;
+            const thumbTravel = Math.max(0, progressTrackWidth - thumbWidth);
+            const visibleStart = deckCount === 0
+                ? 0
+                : Math.min(deckCount, Math.floor(this.scrollX / slotWidth) + 1);
+            const visibleEnd = deckCount === 0
+                ? 0
+                : Math.min(deckCount, Math.max(visibleStart, Math.ceil((this.scrollX + viewportWidth) / slotWidth)));
+
+            progressFill.setScale(deckCount === 0 ? 0 : thumbRatio, 1);
+            progressFill.setX(progressTrackX + thumbTravel * progressRatio);
+            progressText.setColor(this.maxScrollX > 0 ? '#c4b5fd' : '#94a3b8');
+            progressText.setText(deckCount === 0
+                ? '暂无卡组可浏览 · 请先去管理卡组整理一套。'
+                : this.maxScrollX > 0
+                    ? `浏览进度 ${Math.round(progressRatio * 100)}% · 当前可见 ${visibleStart}-${visibleEnd} / ${deckCount} 套 · 拖动/滚轮/箭头浏览`
+                    : `全部卡组已展开 · 当前可见 ${visibleStart}-${visibleEnd} / ${deckCount} 套 · 点按卡片即可切换`);
         }
     }
 

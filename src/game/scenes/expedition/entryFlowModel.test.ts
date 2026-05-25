@@ -11,6 +11,7 @@ import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import { ExpeditionState } from '../../state/ExpeditionState';
 import { validateExpeditionLoadout } from './expeditionEntryFlow';
 import {
+    createPreparationDeckCarouselSummary,
     createPreparationDeckCardPreview,
     createPreparationDeckContext,
     createPreparationDeckHandoffSummary,
@@ -211,6 +212,83 @@ describe('entryFlowModel', () => {
                 'tool.return-rope ×1',
                 'consumable.spirit-salve ×2',
             ],
+        });
+    });
+
+    it('summarizes saved-deck carousel position and roster readiness counts', () => {
+        const stash = {
+            stashId: 'phase01.starter-stash',
+            cards: [
+                { id: 'AR_001', count: 22 },
+                { id: 'AR_002', count: 1 },
+            ],
+            savedDecks: [
+                {
+                    id: 'ready',
+                    name: '可出发卡组',
+                    cards: [{ id: 'AR_001', count: 20 }],
+                },
+                {
+                    id: 'short',
+                    name: '缺张卡组',
+                    cards: [{ id: 'AR_001', count: 18 }],
+                },
+                {
+                    id: 'overflow',
+                    name: '超限卡组',
+                    cards: [{ id: 'AR_001', count: 41 }],
+                },
+                {
+                    id: 'shortage',
+                    name: '缺库存卡组',
+                    cards: [
+                        { id: 'AR_001', count: 18 },
+                        { id: 'AR_002', count: 2 },
+                    ],
+                },
+            ],
+            selectedDeckId: 'shortage',
+            items: [],
+            spiritStones: 18,
+            lastRunSummary: null,
+        };
+
+        expect(createPreparationDeckCarouselSummary(stash)).toEqual({
+            savedDeckCount: 4,
+            selectedDeckName: '缺库存卡组',
+            selectedDeckPosition: 4,
+            selectedDeckStatusLabel: '缺少库存卡牌',
+            positionLabel: '第 4 / 4 套',
+            readyDeckCount: 1,
+            tooFewDeckCount: 1,
+            tooManyDeckCount: 1,
+            insufficientCopiesDeckCount: 1,
+            invalidDeckCount: 3,
+            rosterSummaryLine: '卡组总览：就绪 1 套 · 缺张 1 套 · 超限 1 套 · 缺库存 1 套',
+        });
+    });
+
+    it('keeps the carousel summary actionable when no saved decks exist yet', () => {
+        expect(createPreparationDeckCarouselSummary({
+            stashId: 'phase01.starter-stash',
+            cards: [],
+            savedDecks: [],
+            selectedDeckId: null,
+            items: [],
+            spiritStones: 0,
+            lastRunSummary: null,
+        })).toEqual({
+            savedDeckCount: 0,
+            selectedDeckName: '未选择卡组',
+            selectedDeckPosition: 0,
+            selectedDeckStatusLabel: '未选择卡组',
+            positionLabel: '等待创建',
+            readyDeckCount: 0,
+            tooFewDeckCount: 0,
+            tooManyDeckCount: 0,
+            insufficientCopiesDeckCount: 0,
+            invalidDeckCount: 0,
+            rosterSummaryLine: '卡组总览：暂无存档卡组，先去管理卡组整理一套。',
         });
     });
 

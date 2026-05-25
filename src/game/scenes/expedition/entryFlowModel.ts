@@ -45,6 +45,20 @@ export interface PreparationDeckHandoffSummary {
     tone: 'positive' | 'neutral' | 'warning';
 }
 
+export interface PreparationDeckCarouselSummary {
+    savedDeckCount: number;
+    selectedDeckName: string;
+    selectedDeckPosition: number;
+    selectedDeckStatusLabel: string;
+    positionLabel: string;
+    readyDeckCount: number;
+    tooFewDeckCount: number;
+    tooManyDeckCount: number;
+    insufficientCopiesDeckCount: number;
+    invalidDeckCount: number;
+    rosterSummaryLine: string;
+}
+
 export interface PreparationFocusChip {
     label: string;
     value: string;
@@ -993,6 +1007,81 @@ export function createPreparationDeckHandoffSummary(
         title: selectedDeckChanged ? '当前带入已切换' : '卡组改动已同步',
         detail: detailParts.join(''),
         tone,
+    };
+}
+
+export function createPreparationDeckCarouselSummary(
+    stash: PersistentStash,
+): PreparationDeckCarouselSummary {
+    let readyDeckCount = 0;
+    let tooFewDeckCount = 0;
+    let tooManyDeckCount = 0;
+    let insufficientCopiesDeckCount = 0;
+    let selectedDeckStatusLabel = getPreparationDeckReadinessLabel('none');
+    let selectedDeckPosition = 0;
+
+    stash.savedDecks.forEach((deck, index) => {
+        const readiness = getDeckReadinessFromValidation(
+            validateDeckSize(deck.cards),
+            validateDeckAvailability(deck.cards, stash.cards),
+        );
+
+        switch (readiness) {
+            case 'ready':
+                readyDeckCount += 1;
+                break;
+            case 'too-few-cards':
+                tooFewDeckCount += 1;
+                break;
+            case 'too-many-cards':
+                tooManyDeckCount += 1;
+                break;
+            case 'insufficient-copies':
+                insufficientCopiesDeckCount += 1;
+                break;
+            case 'none':
+                break;
+        }
+
+        if (deck.id === stash.selectedDeckId) {
+            selectedDeckPosition = index + 1;
+            selectedDeckStatusLabel = getPreparationDeckReadinessLabel(readiness);
+        }
+    });
+
+    const invalidDeckCount = stash.savedDecks.length - readyDeckCount;
+    const rosterSegments = [`就绪 ${readyDeckCount} 套`];
+
+    if (tooFewDeckCount > 0) {
+        rosterSegments.push(`缺张 ${tooFewDeckCount} 套`);
+    }
+
+    if (tooManyDeckCount > 0) {
+        rosterSegments.push(`超限 ${tooManyDeckCount} 套`);
+    }
+
+    if (insufficientCopiesDeckCount > 0) {
+        rosterSegments.push(`缺库存 ${insufficientCopiesDeckCount} 套`);
+    }
+
+    return {
+        savedDeckCount: stash.savedDecks.length,
+        selectedDeckName: getSelectedSavedDeck(stash)?.name ?? '未选择卡组',
+        selectedDeckPosition,
+        selectedDeckStatusLabel,
+        positionLabel: stash.savedDecks.length === 0
+            ? '等待创建'
+            : selectedDeckPosition > 0
+                ? `第 ${selectedDeckPosition} / ${stash.savedDecks.length} 套`
+                : `待选 / ${stash.savedDecks.length} 套`,
+        readyDeckCount,
+        tooFewDeckCount,
+        tooManyDeckCount,
+        insufficientCopiesDeckCount,
+        invalidDeckCount,
+        rosterSummaryLine: stash.savedDecks.length === 0
+            ? '卡组总览：暂无存档卡组，先去管理卡组整理一套。'
+            : `卡组总览：${rosterSegments.join(' · ')}`,
     };
 }
 

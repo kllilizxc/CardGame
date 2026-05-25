@@ -35,6 +35,9 @@ describe('expedition UI Chinese copy', () => {
         expect(loadoutCopy).toContain('卡组数量超限');
         expect(panel).toContain('库存不足');
         expect(panel).toContain('当前带入卡组');
+        expect(panel).toContain('卡组序列');
+        expect(loadoutCopy).toContain('卡组总览');
+        expect(panel).toContain('浏览进度');
         expect(panel).toContain('构成速览');
         expect(panel).toContain('出发校验');
         expect(panel).toContain('出发准备栏');
