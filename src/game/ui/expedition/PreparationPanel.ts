@@ -33,7 +33,7 @@ import {
     calculateDeckCardHeight,
     calculateSelectedLoadoutSummaryHeight,
 } from './PreparationPanelLayout';
-import { createRouteBriefingStrip } from './routeBriefingStrip';
+import { createRouteBriefingStrip, measureRouteBriefingStripHeight } from './routeBriefingStrip';
 
 export interface PreparationPanelConfig {
     stash: PersistentStash;
@@ -337,29 +337,7 @@ function getRouteBriefingHeight(
     briefing: ExpeditionRouteBriefingSummary,
     width: number,
 ): number {
-    const descriptionHeight = measureTextHeight(scene, briefing.description, {
-        fontFamily: 'Arial',
-        fontSize: '15px',
-        lineSpacing: 4,
-        wordWrap: { width: width - 36 },
-    });
-    const glanceTitleHeight = measureTextHeight(scene, briefing.glanceTitle, {
-        fontFamily: 'Arial',
-        fontSize: '13px',
-        fontStyle: 'bold',
-    });
-    const glanceTextHeight = measureTextHeight(
-        scene,
-        briefing.glanceLines.map((line) => `• ${line}`).join('\n'),
-        {
-            fontFamily: 'Arial',
-            fontSize: '13px',
-            lineSpacing: 3,
-            wordWrap: { width: width - 36 },
-        },
-    );
-
-    return 88 + descriptionHeight + glanceTitleHeight + glanceTextHeight;
+    return measureRouteBriefingStripHeight(scene, width, briefing);
 }
 
 function createManifestPanel(

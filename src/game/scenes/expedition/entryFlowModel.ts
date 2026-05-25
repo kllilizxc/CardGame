@@ -139,6 +139,11 @@ export interface ExpeditionRouteBriefingHighlight {
     value: string;
 }
 
+export interface ExpeditionRouteBriefingTelemetryChip {
+    label: string;
+    value: string;
+}
+
 export interface ExpeditionRouteBriefingSummary {
     mode: ExpeditionRouteBriefingMode;
     shellBadgeLabel: string;
@@ -147,6 +152,7 @@ export interface ExpeditionRouteBriefingSummary {
     panelStageLabel: string;
     description: string;
     highlights: ExpeditionRouteBriefingHighlight[];
+    telemetryChips: ExpeditionRouteBriefingTelemetryChip[];
     glanceTitle: string;
     glanceLines: string[];
 }
@@ -598,7 +604,7 @@ function createDeckCountDeltaText(before: number, after: number): string {
 }
 
 function getRouteDepth(map: ExpeditionMapDefinition): number {
-    return map.nodes.reduce((maxLayer, node) => Math.max(maxLayer, node.layer), 0) + 1;
+    return getRouteLayerGroups(map).length;
 }
 
 function createRouteNodeLookup(map: ExpeditionMapDefinition): Map<string, ExpeditionMapDefinition['nodes'][number]> {
@@ -691,6 +697,46 @@ function createRouteGlanceLines(map: ExpeditionMapDefinition): string[] {
     return layerGroups.map((nodes, index) => `${getRouteLayerLabel(index, layerGroups.length)}：${formatRouteNodeLabels(nodes, {
         includeType: true,
     })}`);
+}
+
+function createRouteLayerWidthProfile(map: ExpeditionMapDefinition): string {
+    const layerGroups = getRouteLayerGroups(map);
+
+    return layerGroups.length > 0
+        ? layerGroups.map((nodes) => nodes.length).join('-')
+        : '入口';
+}
+
+function countRouteNodesByType(map: ExpeditionMapDefinition): Record<Exclude<ExpeditionNodeType, 'entrance'>, number> {
+    const counts: Record<Exclude<ExpeditionNodeType, 'entrance'>, number> = {
+        battle: 0,
+        boss: 0,
+        event: 0,
+        shop: 0,
+        extract: 0,
+    };
+
+    for (const node of map.nodes) {
+        if (node.type === 'entrance') {
+            continue;
+        }
+
+        counts[node.type] += 1;
+    }
+
+    return counts;
+}
+
+function createRouteTelemetryChips(map: ExpeditionMapDefinition): ExpeditionRouteBriefingTelemetryChip[] {
+    const routeDepth = getRouteDepth(map);
+    const nodeCounts = countRouteNodesByType(map);
+
+    return [
+        { label: '层深', value: `${routeDepth}层` },
+        { label: '层宽', value: createRouteLayerWidthProfile(map) },
+        { label: '战/首', value: `${nodeCounts.battle}/${nodeCounts.boss}` },
+        { label: '事/店/撤', value: `${nodeCounts.event}/${nodeCounts.shop}/${nodeCounts.extract}` },
+    ];
 }
 
 function createRouteShellSubtitle(
@@ -872,6 +918,7 @@ export function createExpeditionRouteBriefingSummary(
                 }),
             },
         ],
+        telemetryChips: createRouteTelemetryChips(map),
         glanceTitle: '路线速览',
         glanceLines: createRouteGlanceLines(map),
     };

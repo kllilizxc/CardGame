@@ -32,6 +32,11 @@ import { MapNodeView } from '../../ui/expedition/MapNodeView';
 import { DeckManagementPanel } from '../../ui/deckbuilder/DeckManagementPanel';
 import { PreparationPanel } from '../../ui/expedition/PreparationPanel';
 import { RunHud } from '../../ui/expedition/RunHud';
+import {
+    createRouteTelemetryChipRow,
+    type RouteTelemetryChipLayoutOptions,
+    type RouteTelemetryChipView,
+} from '../../ui/expedition/routeTelemetryChips';
 import { createWorldMapReturnIntent } from '../worldmap/worldMap';
 import {
     createExpeditionPreflightStatusSummary,
@@ -90,8 +95,7 @@ interface EntryShellCorners {
 interface EntryShellRouteSlate {
     plate: Phaser.GameObjects.Rectangle;
     accent: Phaser.GameObjects.Rectangle;
-    labelTexts: [Phaser.GameObjects.Text, Phaser.GameObjects.Text, Phaser.GameObjects.Text];
-    valueTexts: [Phaser.GameObjects.Text, Phaser.GameObjects.Text, Phaser.GameObjects.Text];
+    chips: RouteTelemetryChipView[];
 }
 
 interface EntryShellVisuals {
@@ -132,6 +136,8 @@ interface EntryShellModeVisualConfig {
     routePlateFillColor: number;
     routePlateBorderColor: number;
     routePlateAccentColor: number;
+    routeChipFillColor: number;
+    routeChipBorderColor: number;
     routeLabelColor: string;
     routeValueColor: string;
     cornerTopColor: number;
@@ -152,6 +158,24 @@ interface EntryShellModeVisualConfig {
     stepStandbyStrokeColor: number;
     stepStandbyTextColor: string;
 }
+
+const ENTRY_SHELL_ROUTE_TELEMETRY_CHIP_OPTIONS: RouteTelemetryChipLayoutOptions = {
+    chipHeight: 22,
+    gapX: 6,
+    gapY: 4,
+    paddingX: 8,
+    labelValueGap: 8,
+    labelTextStyle: {
+        fontFamily: 'Arial',
+        fontSize: '9px',
+        fontStyle: 'bold',
+    },
+    valueTextStyle: {
+        fontFamily: 'Arial',
+        fontSize: '10px',
+        fontStyle: 'bold',
+    },
+};
 
 export class ExpeditionScene extends Scene {
     private launchData: NormalizedExpeditionSceneLaunchData = normalizeExpeditionSceneLaunchData();
@@ -369,48 +393,26 @@ export class ExpeditionScene extends Scene {
             backgroundColor: '#1d4ed8',
             padding: { left: 12, right: 12, top: 6, bottom: 6 },
         }).setOrigin(0, 0);
-        const routeSlateLeft = headerRight - 246;
-        const routeSlateValueX = routeSlateLeft + 46;
+        const routeSlateLeft = headerRight - 238;
+        const routeSlateTop = headerY - 30;
+        const routeSlateTelemetry = createRouteTelemetryChipRow(
+            this,
+            routeSlateLeft + 22,
+            routeSlateTop + 7,
+            190,
+            routeBriefing.telemetryChips,
+            {
+                fillColor: 0x0f2847,
+                borderColor: 0x2563eb,
+                labelColor: '#7dd3fc',
+                valueColor: '#e0f2fe',
+            },
+            ENTRY_SHELL_ROUTE_TELEMETRY_CHIP_OPTIONS,
+        );
         const routeSlate = {
             plate: this.add.rectangle(headerRight - 119, headerY, 238, 60, 0x0d1b31, 0.98),
             accent: this.add.rectangle(headerRight - 119, headerY - 27, 206, 3, 0x38bdf8, 1),
-            labelTexts: [
-                this.add.text(routeSlateLeft + 16, headerY - 18, routeBriefing.highlights[0]?.label ?? '入口', {
-                    fontFamily: 'Arial',
-                    fontSize: '11px',
-                    color: '#7dd3fc',
-                    fontStyle: 'bold',
-                }).setOrigin(0, 0.5),
-                this.add.text(routeSlateLeft + 16, headerY, routeBriefing.highlights[1]?.label ?? '路线', {
-                    fontFamily: 'Arial',
-                    fontSize: '11px',
-                    color: '#7dd3fc',
-                    fontStyle: 'bold',
-                }).setOrigin(0, 0.5),
-                this.add.text(routeSlateLeft + 16, headerY + 18, routeBriefing.highlights[2]?.label ?? '终点', {
-                    fontFamily: 'Arial',
-                    fontSize: '11px',
-                    color: '#7dd3fc',
-                    fontStyle: 'bold',
-                }).setOrigin(0, 0.5),
-            ] as [Phaser.GameObjects.Text, Phaser.GameObjects.Text, Phaser.GameObjects.Text],
-            valueTexts: [
-                this.add.text(routeSlateValueX, headerY - 18, routeBriefing.highlights[0]?.value ?? this.mapDefinition.entryNodeId, {
-                    fontFamily: 'Arial',
-                    fontSize: '11px',
-                    color: '#e0f2fe',
-                }).setOrigin(0, 0.5),
-                this.add.text(routeSlateValueX, headerY, routeBriefing.highlights[1]?.value ?? '', {
-                    fontFamily: 'Arial',
-                    fontSize: '11px',
-                    color: '#e0f2fe',
-                }).setOrigin(0, 0.5),
-                this.add.text(routeSlateValueX, headerY + 18, routeBriefing.highlights[2]?.value ?? '', {
-                    fontFamily: 'Arial',
-                    fontSize: '11px',
-                    color: '#e0f2fe',
-                }).setOrigin(0, 0.5),
-            ] as [Phaser.GameObjects.Text, Phaser.GameObjects.Text, Phaser.GameObjects.Text],
+            chips: routeSlateTelemetry.chips,
         } satisfies EntryShellRouteSlate;
         routeSlate.plate.setStrokeStyle(1, 0x2563eb, 0.82);
         const statusStrip = this.add.rectangle(width / 2, 114, 752, 56, 0x112131, 0.96);
@@ -477,8 +479,7 @@ export class ExpeditionScene extends Scene {
             modeBadgeText,
             routeSlate.plate,
             routeSlate.accent,
-            ...routeSlate.labelTexts,
-            ...routeSlate.valueTexts,
+            ...routeSlateTelemetry.elements,
             statusStrip,
             statusStripAccent,
             statusStripBadgeText,
@@ -593,6 +594,8 @@ export class ExpeditionScene extends Scene {
                 routePlateFillColor: 0x1a1234,
                 routePlateBorderColor: 0xa855f7,
                 routePlateAccentColor: 0xc084fc,
+                routeChipFillColor: 0x24123f,
+                routeChipBorderColor: 0x7c3aed,
                 routeLabelColor: '#c4b5fd',
                 routeValueColor: '#ede9fe',
                 cornerTopColor: 0xc084fc,
@@ -626,6 +629,8 @@ export class ExpeditionScene extends Scene {
             routePlateFillColor: 0x0d1b31,
             routePlateBorderColor: 0x2563eb,
             routePlateAccentColor: 0x38bdf8,
+            routeChipFillColor: 0x0f2847,
+            routeChipBorderColor: 0x2563eb,
             routeLabelColor: '#7dd3fc',
             routeValueColor: '#e0f2fe',
             cornerTopColor: 0x38bdf8,
@@ -721,11 +726,6 @@ export class ExpeditionScene extends Scene {
         const [firstStep, secondStep] = preflightStatus.steps;
         const firstStepColors = this.getEntryShellStepColors(firstStep.state, modeConfig);
         const secondStepColors = this.getEntryShellStepColors(secondStep.state, modeConfig);
-        const routeHighlights = [
-            routeBriefing.highlights[0] ?? { label: '入口', value: this.mapDefinition.entryNodeId },
-            routeBriefing.highlights[1] ?? { label: '路线', value: '' },
-            routeBriefing.highlights[2] ?? { label: '终点', value: '' },
-        ] as const;
 
         this.entryShell.frameOuter.setStrokeStyle(2, modeConfig.frameOuterColor, modeConfig.frameOuterAlpha);
         this.entryShell.frameInner.setStrokeStyle(1, modeConfig.frameInnerColor, modeConfig.frameInnerAlpha);
@@ -743,11 +743,11 @@ export class ExpeditionScene extends Scene {
         this.entryShell.routeSlate.plate.setFillStyle(modeConfig.routePlateFillColor, 0.98);
         this.entryShell.routeSlate.plate.setStrokeStyle(1, modeConfig.routePlateBorderColor, 0.82);
         this.entryShell.routeSlate.accent.setFillStyle(modeConfig.routePlateAccentColor, 1);
-        routeHighlights.forEach((highlight, index) => {
-            this.entryShell.routeSlate.labelTexts[index].setText(highlight.label);
-            this.entryShell.routeSlate.labelTexts[index].setColor(modeConfig.routeLabelColor);
-            this.entryShell.routeSlate.valueTexts[index].setText(highlight.value);
-            this.entryShell.routeSlate.valueTexts[index].setColor(modeConfig.routeValueColor);
+        this.entryShell.routeSlate.chips.forEach((chip) => {
+            chip.background.setFillStyle(modeConfig.routeChipFillColor, 0.96);
+            chip.background.setStrokeStyle(1, modeConfig.routeChipBorderColor, 0.92);
+            chip.labelText.setColor(modeConfig.routeLabelColor);
+            chip.valueText.setColor(modeConfig.routeValueColor);
         });
         this.entryShell.statusStrip.setFillStyle(statusToneConfig.fillColor, 0.96);
         this.entryShell.statusStrip.setStrokeStyle(1, statusToneConfig.borderColor, 0.86);

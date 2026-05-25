@@ -1,6 +1,11 @@
 import type { Scene } from 'phaser';
 
 import type { ExpeditionRouteBriefingSummary } from '../../scenes/expedition/entryFlowModel';
+import {
+    createRouteTelemetryChipRow,
+    measureRouteTelemetryChipHeight,
+    type RouteTelemetryChipLayoutOptions,
+} from './routeTelemetryChips';
 
 export interface RouteBriefingStripRenderResult {
     elements: Phaser.GameObjects.GameObject[];
@@ -17,7 +22,29 @@ interface RouteBriefingStripTheme {
     descriptionColor: string;
     glanceTitleColor: string;
     glanceTextColor: string;
+    chipFillColor: number;
+    chipBorderColor: number;
+    chipLabelColor: string;
+    chipValueColor: string;
 }
+
+const ROUTE_BRIEFING_TELEMETRY_CHIP_OPTIONS: RouteTelemetryChipLayoutOptions = {
+    chipHeight: 28,
+    gapX: 8,
+    gapY: 8,
+    paddingX: 10,
+    labelValueGap: 10,
+    labelTextStyle: {
+        fontFamily: 'Arial',
+        fontSize: '11px',
+        fontStyle: 'bold',
+    },
+    valueTextStyle: {
+        fontFamily: 'Arial',
+        fontSize: '12px',
+        fontStyle: 'bold',
+    },
+};
 
 function getRouteBriefingStripTheme(briefing: ExpeditionRouteBriefingSummary): RouteBriefingStripTheme {
     if (briefing.mode === 'deckManager') {
@@ -31,6 +58,10 @@ function getRouteBriefingStripTheme(briefing: ExpeditionRouteBriefingSummary): R
             descriptionColor: '#ede9fe',
             glanceTitleColor: '#d8b4fe',
             glanceTextColor: '#c4b5fd',
+            chipFillColor: 0x24123f,
+            chipBorderColor: 0x7c3aed,
+            chipLabelColor: '#d8b4fe',
+            chipValueColor: '#f5f3ff',
         };
     }
 
@@ -44,7 +75,59 @@ function getRouteBriefingStripTheme(briefing: ExpeditionRouteBriefingSummary): R
         descriptionColor: '#eff6ff',
         glanceTitleColor: '#bfdbfe',
         glanceTextColor: '#93c5fd',
+        chipFillColor: 0x0f2847,
+        chipBorderColor: 0x2563eb,
+        chipLabelColor: '#7dd3fc',
+        chipValueColor: '#eff6ff',
     };
+}
+
+function measureTextHeight(
+    scene: Scene,
+    text: string,
+    style: Phaser.Types.GameObjects.Text.TextStyle,
+): number {
+    const measurement = scene.add.text(-10_000, -10_000, text, style).setVisible(false);
+    const height = measurement.height;
+    measurement.destroy();
+
+    return height;
+}
+
+export function measureRouteBriefingStripHeight(
+    scene: Scene,
+    width: number,
+    briefing: ExpeditionRouteBriefingSummary,
+): number {
+    const descriptionHeight = measureTextHeight(scene, briefing.description, {
+        fontFamily: 'Arial',
+        fontSize: '15px',
+        lineSpacing: 4,
+        wordWrap: { width: width - 36 },
+    });
+    const telemetryHeight = measureRouteTelemetryChipHeight(
+        scene,
+        width - 36,
+        briefing.telemetryChips,
+        ROUTE_BRIEFING_TELEMETRY_CHIP_OPTIONS,
+    );
+    const glanceTitleHeight = measureTextHeight(scene, briefing.glanceTitle, {
+        fontFamily: 'Arial',
+        fontSize: '13px',
+        fontStyle: 'bold',
+    });
+    const glanceTextHeight = measureTextHeight(
+        scene,
+        briefing.glanceLines.map((line) => `• ${line}`).join('\n'),
+        {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            lineSpacing: 3,
+            wordWrap: { width: width - 36 },
+        },
+    );
+
+    return 96 + descriptionHeight + telemetryHeight + glanceTitleHeight + glanceTextHeight;
 }
 
 export function createRouteBriefingStrip(
@@ -76,7 +159,21 @@ export function createRouteBriefingStrip(
         lineSpacing: 4,
         wordWrap: { width: width - 36 },
     });
-    const glanceTitle = scene.add.text(left + 18, description.y + description.height + 12, briefing.glanceTitle, {
+    const telemetry = createRouteTelemetryChipRow(
+        scene,
+        left + 18,
+        description.y + description.height + 12,
+        width - 36,
+        briefing.telemetryChips,
+        {
+            fillColor: theme.chipFillColor,
+            borderColor: theme.chipBorderColor,
+            labelColor: theme.chipLabelColor,
+            valueColor: theme.chipValueColor,
+        },
+        ROUTE_BRIEFING_TELEMETRY_CHIP_OPTIONS,
+    );
+    const glanceTitle = scene.add.text(left + 18, description.y + description.height + 20 + telemetry.height, briefing.glanceTitle, {
         fontFamily: 'Arial',
         fontSize: '13px',
         color: theme.glanceTitleColor,
@@ -106,6 +203,7 @@ export function createRouteBriefingStrip(
             badge,
             stageText,
             description,
+            ...telemetry.elements,
             glanceTitle,
             glanceText,
         ],
