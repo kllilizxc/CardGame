@@ -189,6 +189,14 @@ describe('entryFlowModel', () => {
             focusSummaryLine: '库存齐备，可直接确认出发。',
             focusChip: { label: '状态', value: '齐备' },
             issuePreviewLines: [],
+            readinessChecklistLines: [
+                '张数 20 张，符合 20-40 张范围。',
+                '8 种卡牌已完成库存核对。',
+            ],
+            guidanceLines: [
+                '确认后立即创建本次秘境快照。',
+                '按当前清单带入 20 张卡、3 件道具与 36 枚灵石。',
+            ],
             deckPreviewLines: [
                 'SX_YJZ_001 ×3',
                 'SX_YJS_001 ×3',
@@ -248,6 +256,15 @@ describe('entryFlowModel', () => {
                 'AR_003 还差 13 张',
                 'AR_001 还差 1 张',
                 'AR_002 还差 1 张',
+            ],
+            readinessChecklistLines: [
+                'AR_003 还差 13 张',
+                'AR_001 还差 1 张',
+                'AR_002 还差 1 张',
+            ],
+            guidanceLines: [
+                '先补齐 3 种缺牌，共 15 张。',
+                '返回这里后才能确认带入。',
             ],
         });
     });

@@ -18,13 +18,15 @@ describe('PreparationPanel layout helpers', () => {
         }
     });
 
-    it('gives the selected-loadout summary enough room for the footer below the readiness and composition stack', () => {
-        for (const [nameHeight, footerHeight] of [[29, 30], [58, 30]] as const) {
-            const summaryHeight = calculateSelectedLoadoutSummaryHeight(nameHeight, footerHeight);
+    it('gives the selected-loadout summary enough room for the footer and carried-manifest utility stack', () => {
+        for (const [nameHeight, footerHeight, manifestStackHeight] of [[29, 30, 224], [58, 30, 236]] as const) {
+            const summaryHeight = calculateSelectedLoadoutSummaryHeight(nameHeight, footerHeight, manifestStackHeight);
             const compositionBottom = 200 + nameHeight;
             const footerTop = summaryHeight - 18 - footerHeight;
+            const previewPanelHeight = summaryHeight - 96;
 
             expect(footerTop - compositionBottom).toBeGreaterThanOrEqual(8);
+            expect(previewPanelHeight).toBeGreaterThanOrEqual(manifestStackHeight);
         }
     });
 

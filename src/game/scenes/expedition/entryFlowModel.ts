@@ -69,6 +69,8 @@ export interface PreparationSelectedLoadoutSummary {
     focusSummaryLine: string;
     focusChip: PreparationFocusChip;
     issuePreviewLines: string[];
+    readinessChecklistLines: string[];
+    guidanceLines: string[];
     deckPreviewLines: string[];
     itemPreviewLines: string[];
 }
@@ -474,6 +476,75 @@ function createPreparationFocusSummaryLine(
         }
         case 'none':
             return '请先选择一套可带入的卡组。';
+    }
+}
+
+function createPreparationReadinessChecklistLines(
+    readiness: PreparationDeckReadiness,
+    deckCount: number,
+    uniqueCardCount: number,
+    sizeIssue: DeckValidityReason | null,
+    availabilityIssues: DeckValidityReason[],
+    metadata?: CardMetadataMap,
+): string[] {
+    switch (readiness) {
+        case 'ready':
+            return [
+                `张数 ${deckCount} 张，符合 ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张范围。`,
+                `${uniqueCardCount} 种卡牌已完成库存核对。`,
+            ];
+        case 'too-few-cards':
+            return [
+                `当前仅 ${deckCount} 张，还差 ${sizeIssue?.kind === 'too-few-cards' ? sizeIssue.min - sizeIssue.count : DECK_CARD_MIN - deckCount} 张达到出发线。`,
+            ];
+        case 'too-many-cards':
+            return [
+                `当前 ${deckCount} 张，超出上限 ${sizeIssue?.kind === 'too-many-cards' ? sizeIssue.count - sizeIssue.max : deckCount - DECK_CARD_MAX} 张。`,
+            ];
+        case 'insufficient-copies':
+            return createPreparationIssuePreviewLines(readiness, sizeIssue, availabilityIssues, metadata).slice(0, 3);
+        case 'none':
+            return ['尚未选中可带入卡组。'];
+    }
+}
+
+function createPreparationGuidanceLines(
+    readiness: PreparationDeckReadiness,
+    deckCount: number,
+    itemCount: number,
+    spiritStones: number,
+    sizeIssue: DeckValidityReason | null,
+    shortageCardKinds: number,
+    shortageCardCopies: number,
+): string[] {
+    switch (readiness) {
+        case 'ready':
+            return [
+                '确认后立即创建本次秘境快照。',
+                `按当前清单带入 ${deckCount} 张卡、${itemCount} 件道具与 ${spiritStones} 枚灵石。`,
+            ];
+        case 'too-few-cards':
+            return [
+                `先去管理卡组补足 ${sizeIssue?.kind === 'too-few-cards' ? sizeIssue.min - sizeIssue.count : DECK_CARD_MIN - deckCount} 张，达到 ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张。`,
+                '返回这里后才能确认带入。',
+            ];
+        case 'too-many-cards':
+            return [
+                `先去管理卡组精简 ${sizeIssue?.kind === 'too-many-cards' ? sizeIssue.count - sizeIssue.max : deckCount - DECK_CARD_MAX} 张，压回 ${DECK_CARD_MAX} 张内。`,
+                '返回这里后才能确认带入。',
+            ];
+        case 'insufficient-copies':
+            return [
+                shortageCardKinds === 1
+                    ? `先补齐 1 种缺牌，共 ${shortageCardCopies} 张。`
+                    : `先补齐 ${shortageCardKinds} 种缺牌，共 ${shortageCardCopies} 张。`,
+                '返回这里后才能确认带入。',
+            ];
+        case 'none':
+            return [
+                '先去管理卡组创建或选择一套卡组。',
+                '满足带入条件后才会创建秘境快照。',
+            ];
     }
 }
 
@@ -981,8 +1052,25 @@ export function createPreparationSelectedLoadoutSummary(
         availabilityIssues,
         metadata,
     );
+    const readinessChecklistLines = createPreparationReadinessChecklistLines(
+        readiness,
+        deckCount,
+        uniqueCardCount,
+        sizeIssue,
+        availabilityIssues,
+        metadata,
+    );
     const focusSummaryLine = createPreparationFocusSummaryLine(readiness, sizeIssue, availabilityIssues);
     const focusChip = createPreparationFocusChip(readiness, sizeIssue, availabilityIssues);
+    const guidanceLines = createPreparationGuidanceLines(
+        readiness,
+        deckCount,
+        itemCount,
+        stash.spiritStones,
+        sizeIssue,
+        shortageCardKinds,
+        shortageCardCopies,
+    );
 
     return {
         selectedDeckName: selectedDeck?.name ?? '未选择卡组',
@@ -1003,6 +1091,8 @@ export function createPreparationSelectedLoadoutSummary(
         focusSummaryLine,
         focusChip,
         issuePreviewLines,
+        readinessChecklistLines,
+        guidanceLines,
         deckPreviewLines,
         itemPreviewLines: stash.items.length > 0
             ? stash.items.map((stack) => formatPreparationPreviewLine(stack))
