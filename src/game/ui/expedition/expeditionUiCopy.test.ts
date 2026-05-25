@@ -35,6 +35,12 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).toContain('当前带入卡组');
         expect(panel).toContain('构成速览');
         expect(panel).toContain('出发校验');
+        expect(panel).toContain('出发准备栏');
+        expect(panel).toContain('确认带入并出发');
+        expect(panel).toContain('暂不可确认带入');
+        expect(panel).toContain('继续管理卡组');
+        expect(panel).toContain('去管理卡组补足');
+        expect(panel).toContain('下一步：确认带入后立即创建秘境快照并进入秘境。');
         expect(panel).toContain('缺口重点');
         expect(panel).toContain('本次携带一览');
         expect(loadoutCopy).toContain('当前阶段：确认路线并选定本次带入');

@@ -29,6 +29,7 @@ import type {
     SavedDeck,
 } from '../../types/expedition';
 import {
+    calculateActionRailHeight,
     calculateDeckCardHeight,
     calculateSelectedLoadoutSummaryHeight,
 } from './PreparationPanelLayout';
@@ -112,11 +113,19 @@ interface ActionHierarchyColors {
     barFillColor: number;
     barBorderColor: number;
     barAccentColor: number;
+    railLabel: string;
     titleColor: string;
     summaryColor: string;
+    supportColor: string;
+    headline: string;
+    detail: string;
+    nextStepLabel: string;
     stateBadgeLabel: string;
     stateBadgeColor: string;
     stateBadgeBackgroundColor: string;
+    primaryAction: 'confirm' | 'manage';
+    confirmButtonLabel: string;
+    manageButtonLabel: string;
     confirmButtonColors: ActionButtonColors;
     manageButtonColors: ActionButtonColors;
     confirmGlowColor: number;
@@ -168,6 +177,10 @@ const DECK_CARD_GAP = 14;
 const PANEL_MIN_HEIGHT = 820;
 const PANEL_MAX_HEIGHT = 1020;
 const PANEL_MAX_HEIGHT_RATIO = 0.95;
+const ACTION_BUTTON_COLUMN_WIDTH = 252;
+const ACTION_BUTTON_PRIMARY_HEIGHT = 62;
+const ACTION_BUTTON_SECONDARY_HEIGHT = 44;
+const ACTION_BUTTON_GAP = 10;
 
 function validateDeckForDisplay(
     deck: SavedDeck,
@@ -562,17 +575,27 @@ function getSelectedLoadoutColors(
 function getActionHierarchyColors(
     summary: PreparationSelectedLoadoutSummary,
 ): ActionHierarchyColors {
+    const inventoryDetail = `带入明细：${summary.deckCount} 张卡 · ${summary.itemCount} 件道具 · ${summary.spiritStones} 枚灵石。`;
+
     switch (summary.readiness) {
         case 'ready':
             return {
                 barFillColor: 0x0f2142,
                 barBorderColor: 0x60a5fa,
                 barAccentColor: 0x38bdf8,
+                railLabel: '出发准备栏',
                 titleColor: '#eff6ff',
                 summaryColor: '#bfdbfe',
-                stateBadgeLabel: '可确认',
+                supportColor: '#93c5fd',
+                headline: `当前带入「${summary.selectedDeckName}」已通过出发校验`,
+                detail: inventoryDetail,
+                nextStepLabel: '下一步：确认带入后立即创建秘境快照并进入秘境。',
+                stateBadgeLabel: '可出发',
                 stateBadgeColor: '#dbeafe',
                 stateBadgeBackgroundColor: '#1d4ed8',
+                primaryAction: 'confirm',
+                confirmButtonLabel: '确认带入并出发',
+                manageButtonLabel: '继续管理卡组',
                 confirmButtonColors: {
                     fill: 0x2563eb,
                     hover: 0x3b82f6,
@@ -590,16 +613,26 @@ function getActionHierarchyColors(
                 actionGlowColor: 0x2563eb,
                 actionGlowAlpha: 0.08,
             };
-        case 'too-few-cards':
+        case 'too-few-cards': {
+            const missingCards = Math.max(1, DECK_CARD_MIN - summary.deckCount);
+
             return {
                 barFillColor: 0x23180d,
                 barBorderColor: 0xf59e0b,
                 barAccentColor: 0xf59e0b,
+                railLabel: '出发准备栏',
                 titleColor: '#fffbeb',
                 summaryColor: '#fde68a',
-                stateBadgeLabel: '需整理',
+                supportColor: '#fcd34d',
+                headline: `当前带入「${summary.selectedDeckName}」还差 ${missingCards} 张才能出发`,
+                detail: inventoryDetail,
+                nextStepLabel: `下一步：先去管理卡组补足到 ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张，返回这里后才能确认带入。`,
+                stateBadgeLabel: `差 ${missingCards} 张`,
                 stateBadgeColor: '#fef3c7',
                 stateBadgeBackgroundColor: '#92400e',
+                primaryAction: 'manage',
+                confirmButtonLabel: '暂不可确认带入',
+                manageButtonLabel: '去管理卡组补足',
                 confirmButtonColors: {
                     fill: 0x3f3321,
                     hover: 0x3f3321,
@@ -607,9 +640,9 @@ function getActionHierarchyColors(
                     text: '#f8fafc',
                 },
                 manageButtonColors: {
-                    fill: 0x3b2416,
-                    hover: 0x4b2f1b,
-                    stroke: 0xfbbf24,
+                    fill: 0xb45309,
+                    hover: 0xd97706,
+                    stroke: 0xfef3c7,
                     text: '#fffbeb',
                 },
                 confirmGlowColor: 0xf59e0b,
@@ -617,17 +650,27 @@ function getActionHierarchyColors(
                 actionGlowColor: 0xf59e0b,
                 actionGlowAlpha: 0.1,
             };
-        case 'too-many-cards':
-        case 'insufficient-copies':
+        }
+        case 'too-many-cards': {
+            const extraCards = Math.max(1, summary.deckCount - DECK_CARD_MAX);
+
             return {
                 barFillColor: 0x261320,
                 barBorderColor: 0xef4444,
                 barAccentColor: 0xf97316,
+                railLabel: '出发准备栏',
                 titleColor: '#fff1f2',
                 summaryColor: '#fecaca',
-                stateBadgeLabel: '需整理',
+                supportColor: '#fda4af',
+                headline: `当前带入「${summary.selectedDeckName}」超出上限 ${extraCards} 张`,
+                detail: inventoryDetail,
+                nextStepLabel: `下一步：先去管理卡组精简到 ${DECK_CARD_MAX} 张内，返回这里后才能确认带入。`,
+                stateBadgeLabel: `超 ${extraCards} 张`,
                 stateBadgeColor: '#fee2e2',
                 stateBadgeBackgroundColor: '#b91c1c',
+                primaryAction: 'manage',
+                confirmButtonLabel: '暂不可确认带入',
+                manageButtonLabel: '去管理卡组精简',
                 confirmButtonColors: {
                     fill: 0x312330,
                     hover: 0x312330,
@@ -635,9 +678,45 @@ function getActionHierarchyColors(
                     text: '#f8fafc',
                 },
                 manageButtonColors: {
-                    fill: 0x3b1624,
-                    hover: 0x4a1c2e,
-                    stroke: 0xf97316,
+                    fill: 0xbe123c,
+                    hover: 0xe11d48,
+                    stroke: 0xfecdd3,
+                    text: '#fff1f2',
+                },
+                confirmGlowColor: 0xef4444,
+                confirmGlowAlpha: 0,
+                actionGlowColor: 0xf97316,
+                actionGlowAlpha: 0.1,
+            };
+        }
+        case 'insufficient-copies':
+            return {
+                barFillColor: 0x261320,
+                barBorderColor: 0xef4444,
+                barAccentColor: 0xf97316,
+                railLabel: '出发准备栏',
+                titleColor: '#fff1f2',
+                summaryColor: '#fecaca',
+                supportColor: '#fda4af',
+                headline: `当前带入「${summary.selectedDeckName}」仍缺 ${Math.max(1, summary.shortageCardCopies)} 张库存卡`,
+                detail: inventoryDetail,
+                nextStepLabel: '下一步：先去管理卡组补齐缺口，返回这里后才能确认带入。',
+                stateBadgeLabel: `缺 ${Math.max(1, summary.shortageCardCopies)} 张`,
+                stateBadgeColor: '#fee2e2',
+                stateBadgeBackgroundColor: '#b91c1c',
+                primaryAction: 'manage',
+                confirmButtonLabel: '暂不可确认带入',
+                manageButtonLabel: '去管理卡组补齐',
+                confirmButtonColors: {
+                    fill: 0x312330,
+                    hover: 0x312330,
+                    stroke: 0x7f1d1d,
+                    text: '#f8fafc',
+                },
+                manageButtonColors: {
+                    fill: 0xbe123c,
+                    hover: 0xe11d48,
+                    stroke: 0xfecdd3,
                     text: '#fff1f2',
                 },
                 confirmGlowColor: 0xef4444,
@@ -650,11 +729,19 @@ function getActionHierarchyColors(
                 barFillColor: 0x111827,
                 barBorderColor: 0x475569,
                 barAccentColor: 0x64748b,
+                railLabel: '出发准备栏',
                 titleColor: '#f8fafc',
                 summaryColor: '#cbd5e1',
-                stateBadgeLabel: '未就绪',
+                supportColor: '#94a3b8',
+                headline: '尚未选定本次带入卡组',
+                detail: `当前随行物资：${summary.itemCount} 件道具 · ${summary.spiritStones} 枚灵石。`,
+                nextStepLabel: '下一步：先去管理卡组创建或选择一套可带入卡组，再返回这里确认出发。',
+                stateBadgeLabel: '待选卡组',
                 stateBadgeColor: '#e2e8f0',
                 stateBadgeBackgroundColor: '#334155',
+                primaryAction: 'manage',
+                confirmButtonLabel: '暂不可确认带入',
+                manageButtonLabel: '去管理卡组选择',
                 confirmButtonColors: {
                     fill: 0x374151,
                     hover: 0x374151,
@@ -700,7 +787,7 @@ function createActionButton(
 
     const text = scene.add.text(0, 0, label, {
         fontFamily: 'Arial',
-        fontSize: '20px',
+        fontSize: height >= 56 ? '20px' : '18px',
         color: colors.text,
         fontStyle: 'bold',
     }).setOrigin(0.5);
@@ -865,16 +952,41 @@ export class PreparationPanel extends GameObjects.Container {
         const selectedDeck = getSelectedSavedDeck(this.stash);
         const selectedDeckId = selectedDeck?.id ?? null;
         const selectedLoadoutColors = getSelectedLoadoutColors(selectedLoadoutSummary);
+        const actionColors = getActionHierarchyColors(selectedLoadoutSummary);
         const deckPreviewColumns = splitPreviewColumns(selectedLoadoutSummary.deckPreviewLines, 8, 2);
         const itemPreviewText = formatPreviewBulletList(selectedLoadoutSummary.itemPreviewLines, 3);
         const selectedDeckSummaryWidth = 308;
         const loadoutGap = 18;
         const contentWidth = panelWidth - 96;
+        const actionTextWidth = Math.max(280, contentWidth - ACTION_BUTTON_COLUMN_WIDTH - 68);
         const deckCardHeight = getDeckCardHeight(this.scene, this.stash.savedDecks);
         const loadoutSummaryHeight = getSelectedLoadoutSummaryHeight(
             this.scene,
             selectedLoadoutSummary,
             selectedDeckSummaryWidth,
+        );
+        const actionHeadlineHeight = measureTextHeight(this.scene, actionColors.headline, {
+            fontFamily: 'Arial',
+            fontSize: '22px',
+            fontStyle: 'bold',
+            wordWrap: { width: actionTextWidth },
+        });
+        const actionDetailHeight = measureTextHeight(this.scene, actionColors.detail, {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            lineSpacing: 3,
+            wordWrap: { width: actionTextWidth },
+        });
+        const actionNextStepHeight = measureTextHeight(this.scene, actionColors.nextStepLabel, {
+            fontFamily: 'Arial',
+            fontSize: '12px',
+            lineSpacing: 3,
+            wordWrap: { width: actionTextWidth },
+        });
+        const actionHeight = calculateActionRailHeight(
+            actionHeadlineHeight,
+            actionDetailHeight,
+            actionNextStepHeight,
         );
         const subtitleHeight = measureTextHeight(
             this.scene,
@@ -919,7 +1031,7 @@ export class PreparationPanel extends GameObjects.Container {
         const loadoutOffsetY = validationOffsetY + validationHeight + 16;
         const actionOffsetY = loadoutOffsetY + loadoutSummaryHeight + 16;
         const panelHeight = Math.min(
-            Math.max(PANEL_MIN_HEIGHT, actionOffsetY + 82 + 34),
+            Math.max(PANEL_MIN_HEIGHT, actionOffsetY + actionHeight + 34),
             Math.min(PANEL_MAX_HEIGHT, Math.floor(height * PANEL_MAX_HEIGHT_RATIO)),
         );
         const panelY = height / 2 + (panelHeight > 920 ? 10 : 24);
@@ -1409,13 +1521,11 @@ export class PreparationPanel extends GameObjects.Container {
         ]);
 
         const actionTop = loadoutTop + loadoutSummaryHeight + 16;
-        const actionHeight = 82;
-        const actionColors = getActionHierarchyColors(selectedLoadoutSummary);
         const actionGlow = this.scene.add.rectangle(
             panelX,
             actionTop + actionHeight / 2,
             contentWidth + 14,
-            actionHeight + 14,
+            actionHeight + 16,
             actionColors.actionGlowColor,
             actionColors.actionGlowAlpha,
         );
@@ -1436,15 +1546,15 @@ export class PreparationPanel extends GameObjects.Container {
             actionColors.barAccentColor,
             0.96,
         ).setOrigin(0.5, 0);
-        const actionTitle = this.scene.add.text(contentLeft + 20, actionTop + 18, `当前带入：${selectedLoadoutSummary.selectedDeckName}`, {
+        const actionRailLabel = this.scene.add.text(contentLeft + 20, actionTop + 16, actionColors.railLabel, {
             fontFamily: 'Arial',
-            fontSize: '20px',
-            color: actionColors.titleColor,
+            fontSize: '12px',
+            color: actionColors.supportColor,
             fontStyle: 'bold',
         });
         const actionStateBadge = this.scene.add.text(
-            actionTitle.x + actionTitle.width + 18,
-            actionTop + 20,
+            contentLeft + 20 + actionTextWidth,
+            actionTop + 16,
             actionColors.stateBadgeLabel,
             {
                 fontFamily: 'Arial',
@@ -1454,40 +1564,69 @@ export class PreparationPanel extends GameObjects.Container {
                 backgroundColor: actionColors.stateBadgeBackgroundColor,
                 padding: { left: 10, right: 10, top: 5, bottom: 5 },
             },
-        );
-        const actionSummary = this.scene.add.text(contentLeft + 20, actionTitle.y + 32, `${selectedLoadoutSummary.readinessLabel} · ${selectedLoadoutSummary.focusChip.label} ${selectedLoadoutSummary.focusChip.value} · ${summary.itemCount} 件道具 · ${summary.spiritStones} 枚灵石`, {
+        ).setOrigin(1, 0);
+        const actionHeadline = this.scene.add.text(contentLeft + 20, actionTop + 38, actionColors.headline, {
             fontFamily: 'Arial',
-            fontSize: '16px',
-            color: actionColors.summaryColor,
-            wordWrap: { width: contentWidth - 420 },
+            fontSize: '22px',
+            color: actionColors.titleColor,
+            fontStyle: 'bold',
+            wordWrap: { width: actionTextWidth },
         });
+        const actionSummary = this.scene.add.text(contentLeft + 20, actionHeadline.y + actionHeadline.height + 6, actionColors.detail, {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: actionColors.summaryColor,
+            lineSpacing: 3,
+            wordWrap: { width: actionTextWidth },
+        });
+        const actionNextStep = this.scene.add.text(contentLeft + 20, actionSummary.y + actionSummary.height + 6, actionColors.nextStepLabel, {
+            fontFamily: 'Arial',
+            fontSize: '12px',
+            color: actionColors.supportColor,
+            lineSpacing: 3,
+            wordWrap: { width: actionTextWidth },
+        });
+
+        const buttonColumnLeft = contentLeft + contentWidth - ACTION_BUTTON_COLUMN_WIDTH - 20;
+        const buttonStackHeight = ACTION_BUTTON_PRIMARY_HEIGHT + ACTION_BUTTON_GAP + ACTION_BUTTON_SECONDARY_HEIGHT;
+        const buttonStackTop = actionTop + Math.max(16, Math.floor((actionHeight - buttonStackHeight) / 2));
+        const primaryButtonY = buttonStackTop + ACTION_BUTTON_PRIMARY_HEIGHT / 2;
+        const secondaryButtonY = buttonStackTop + ACTION_BUTTON_PRIMARY_HEIGHT + ACTION_BUTTON_GAP + ACTION_BUTTON_SECONDARY_HEIGHT / 2;
+        const manageButtonHeight = actionColors.primaryAction === 'manage'
+            ? ACTION_BUTTON_PRIMARY_HEIGHT
+            : ACTION_BUTTON_SECONDARY_HEIGHT;
+        const confirmButtonHeight = actionColors.primaryAction === 'confirm'
+            ? ACTION_BUTTON_PRIMARY_HEIGHT
+            : ACTION_BUTTON_SECONDARY_HEIGHT;
+        const manageButtonY = actionColors.primaryAction === 'manage' ? primaryButtonY : secondaryButtonY;
+        const confirmButtonY = actionColors.primaryAction === 'confirm' ? primaryButtonY : secondaryButtonY;
 
         const deckManagerButton = createActionButton(
             this.scene,
-            panelX + contentWidth / 2 - 288,
-            actionBar.y,
-            180,
-            56,
-            '管理卡组',
+            buttonColumnLeft + ACTION_BUTTON_COLUMN_WIDTH / 2,
+            manageButtonY,
+            ACTION_BUTTON_COLUMN_WIDTH,
+            manageButtonHeight,
+            actionColors.manageButtonLabel,
             actionColors.manageButtonColors,
             () => this.openDeckManager(),
         );
 
         const confirmGlow = this.scene.add.rectangle(
-            panelX + contentWidth / 2 - 110,
-            actionBar.y,
-            238,
-            74,
+            buttonColumnLeft + ACTION_BUTTON_COLUMN_WIDTH / 2,
+            confirmButtonY,
+            ACTION_BUTTON_COLUMN_WIDTH + 18,
+            confirmButtonHeight + 14,
             actionColors.confirmGlowColor,
             actionColors.confirmGlowAlpha,
         );
         const confirmButton = createActionButton(
             this.scene,
-            panelX + contentWidth / 2 - 110,
-            actionBar.y,
-            220,
-            60,
-            '确认带入',
+            buttonColumnLeft + ACTION_BUTTON_COLUMN_WIDTH / 2,
+            confirmButtonY,
+            ACTION_BUTTON_COLUMN_WIDTH,
+            confirmButtonHeight,
+            actionColors.confirmButtonLabel,
             actionColors.confirmButtonColors,
             () => this.confirmLoadout(),
             isDeckValid,
@@ -1496,9 +1635,11 @@ export class PreparationPanel extends GameObjects.Container {
             actionGlow,
             actionBar,
             actionAccent,
-            actionTitle,
+            actionRailLabel,
             actionStateBadge,
+            actionHeadline,
             actionSummary,
+            actionNextStep,
             deckManagerButton.container,
             confirmGlow,
             confirmButton.container,

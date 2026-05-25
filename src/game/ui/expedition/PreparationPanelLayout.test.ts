@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import {
+    calculateActionRailHeight,
     calculateDeckCardHeight,
     calculateSelectedLoadoutSummaryHeight,
 } from './PreparationPanelLayout';
@@ -24,6 +25,16 @@ describe('PreparationPanel layout helpers', () => {
             const footerTop = summaryHeight - 18 - footerHeight;
 
             expect(footerTop - compositionBottom).toBeGreaterThanOrEqual(8);
+        }
+    });
+
+    it('gives the departure readiness rail enough room for wrapped copy and stacked CTAs', () => {
+        for (const [headlineHeight, detailHeight, nextStepHeight] of [[27, 18, 18], [54, 36, 36]] as const) {
+            const railHeight = calculateActionRailHeight(headlineHeight, detailHeight, nextStepHeight);
+            const nextStepBottom = 38 + headlineHeight + 6 + detailHeight + 6 + nextStepHeight;
+
+            expect(railHeight - 18 - nextStepBottom).toBeGreaterThanOrEqual(0);
+            expect(railHeight).toBeGreaterThanOrEqual(148);
         }
     });
 });
