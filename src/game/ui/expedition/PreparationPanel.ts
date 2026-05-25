@@ -7,6 +7,7 @@ import {
     formatPreparationValidationLines,
     formatPreparationValidationStatusText,
     type ExpeditionRouteBriefingSummary,
+    type PreparationFocusChip,
     type PreparationDeckHandoffSummary,
     type PreparationSelectedLoadoutSummary,
 } from '../../scenes/expedition/entryFlowModel';
@@ -26,6 +27,10 @@ import type {
     PersistentStash,
     SavedDeck,
 } from '../../types/expedition';
+import {
+    calculateDeckCardHeight,
+    calculateSelectedLoadoutSummaryHeight,
+} from './PreparationPanelLayout';
 import { createRouteBriefingStrip } from './routeBriefingStrip';
 
 export interface PreparationPanelConfig {
@@ -43,8 +48,11 @@ interface DeckDisplayState {
     uniqueCardCount: number;
     selectionLabel: string;
     statusLabel: string;
-    previewLabel: string;
-    previewText: string;
+    compositionLines: string[];
+    comparisonLabel: string;
+    comparisonLines: string[];
+    focusChip: PreparationFocusChip;
+    focusSummaryLine: string;
     footerText: string;
     fillColor: number;
     hoverFillColor: number;
@@ -59,6 +67,9 @@ interface DeckDisplayState {
     previewTextColor: string;
     previewFillColor: number;
     previewBorderColor: number;
+    chipFillColor: number;
+    chipBorderColor: number;
+    chipTextColor: string;
     footerFillColor: number;
     footerTextColor: string;
     shadowColor: number;
@@ -84,10 +95,11 @@ interface SelectedLoadoutColors {
     mutedColor: string;
 }
 
-const DECK_CARD_WIDTH = 244;
-const DECK_CARD_HEIGHT = 166;
+const DECK_CARD_WIDTH = 252;
 const DECK_CARD_GAP = 14;
-const LOADOUT_SUMMARY_HEIGHT = 224;
+const PANEL_MIN_HEIGHT = 820;
+const PANEL_MAX_HEIGHT = 1020;
+const PANEL_MAX_HEIGHT_RATIO = 0.95;
 
 function validateDeckForDisplay(
     deck: SavedDeck,
@@ -127,6 +139,88 @@ function formatPreviewBulletList(lines: string[], maxLines: number): string {
     return formatPreviewList(lines.map((line) => `• ${line}`), maxLines);
 }
 
+function formatBulletLines(lines: string[], maxLines = Number.POSITIVE_INFINITY): string {
+    if (lines.length === 0) {
+        return '• 无';
+    }
+
+    return lines
+        .slice(0, maxLines)
+        .map((line) => line.startsWith('• ') ? line : `• ${line}`)
+        .join('\n');
+}
+
+function measureTextHeight(
+    scene: Scene,
+    text: string,
+    style: Phaser.Types.GameObjects.Text.TextStyle,
+): number {
+    const measurement = scene.add.text(-10_000, -10_000, text, style).setVisible(false);
+    const height = measurement.height;
+    measurement.destroy();
+
+    return height;
+}
+
+function getDeckCardHeight(scene: Scene, decks: readonly SavedDeck[]): number {
+    const maxDeckNameHeight = decks.reduce((maxHeight, deck) => Math.max(
+        maxHeight,
+        measureTextHeight(scene, deck.name, {
+            fontFamily: 'Arial',
+            fontSize: '18px',
+            fontStyle: 'bold',
+            wordWrap: { width: DECK_CARD_WIDTH - 32 },
+        }),
+    ), 0);
+
+    return calculateDeckCardHeight(maxDeckNameHeight);
+}
+
+function getSelectedLoadoutSummaryHeight(
+    scene: Scene,
+    summary: PreparationSelectedLoadoutSummary,
+    width: number,
+): number {
+    const nameHeight = measureTextHeight(scene, summary.selectedDeckName, {
+        fontFamily: 'Arial',
+        fontSize: '24px',
+        fontStyle: 'bold',
+        wordWrap: { width: width - 36 },
+    });
+    const footerHeight = measureTextHeight(scene, summary.footer, {
+        fontFamily: 'Arial',
+        fontSize: '12px',
+        wordWrap: { width: width - 36 },
+    });
+
+    return calculateSelectedLoadoutSummaryHeight(nameHeight, footerHeight);
+}
+
+function getRouteBriefingHeight(
+    scene: Scene,
+    briefing: ExpeditionRouteBriefingSummary,
+    width: number,
+): number {
+    const descriptionHeight = measureTextHeight(scene, briefing.description, {
+        fontFamily: 'Arial',
+        fontSize: '15px',
+        lineSpacing: 4,
+        wordWrap: { width: width - 36 },
+    });
+    const highlightHeight = measureTextHeight(
+        scene,
+        briefing.highlights.map((highlight) => `${highlight.label}：${highlight.value}`).join(' · '),
+        {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            lineSpacing: 3,
+            wordWrap: { width: width - 36 },
+        },
+    );
+
+    return 80 + descriptionHeight + highlightHeight;
+}
+
 function splitPreviewColumns(
     lines: string[],
     maxVisibleLines: number,
@@ -159,6 +253,15 @@ function createDeckDisplayState(
         (sum, issue) => sum + (issue.kind === 'insufficient-copies' ? Math.max(0, issue.required - issue.available) : 0),
         0,
     );
+    const comparisonLabel = preview.readiness === 'ready'
+        ? '出发状态'
+        : preview.readiness === 'insufficient-copies'
+            ? '缺口重点'
+            : '调整重点';
+    const comparisonLines = preview.shortagePreviewLines.length > 0
+        ? preview.shortagePreviewLines
+        : [preview.focusSummaryLine];
+    const compositionLines = preview.kindBreakdownLines;
 
     if (validation.valid && isSelected) {
         return {
@@ -166,8 +269,11 @@ function createDeckDisplayState(
             uniqueCardCount: preview.uniqueCardCount,
             selectionLabel,
             statusLabel: '可出发',
-            previewLabel: '构成速览',
-            previewText: `库存齐备，可直接确认带入。\n${preview.kindSummaryLine}\n${preview.compositionLine}`,
+            compositionLines,
+            comparisonLabel,
+            comparisonLines,
+            focusChip: preview.focusChip,
+            focusSummaryLine: preview.focusSummaryLine,
             footerText: '库存充足，当前带入可直接确认。',
             fillColor: 0x14264a,
             hoverFillColor: 0x1a3571,
@@ -182,6 +288,9 @@ function createDeckDisplayState(
             previewTextColor: '#eff6ff',
             previewFillColor: 0x0f1d38,
             previewBorderColor: 0x1d4ed8,
+            chipFillColor: 0x0f1d38,
+            chipBorderColor: 0x3b82f6,
+            chipTextColor: '#dbeafe',
             footerFillColor: 0x0f1d38,
             footerTextColor: '#dbeafe',
             shadowColor: 0x1d4ed8,
@@ -195,8 +304,11 @@ function createDeckDisplayState(
             uniqueCardCount: preview.uniqueCardCount,
             selectionLabel,
             statusLabel: '可带入',
-            previewLabel: '构成速览',
-            previewText: `库存齐备，点按即可切换。\n${preview.kindSummaryLine}\n${preview.compositionLine}`,
+            compositionLines,
+            comparisonLabel,
+            comparisonLines,
+            focusChip: preview.focusChip,
+            focusSummaryLine: preview.focusSummaryLine,
             footerText: '库存充足，点按即可切换为本次带入。',
             fillColor: 0x12201d,
             hoverFillColor: 0x163123,
@@ -211,6 +323,9 @@ function createDeckDisplayState(
             previewTextColor: '#f0fdf4',
             previewFillColor: 0x0e1c17,
             previewBorderColor: 0x166534,
+            chipFillColor: 0x0e1c17,
+            chipBorderColor: 0x22c55e,
+            chipTextColor: '#dcfce7',
             footerFillColor: 0x0e1c17,
             footerTextColor: '#dcfce7',
             shadowColor: 0x020617,
@@ -224,9 +339,12 @@ function createDeckDisplayState(
             uniqueCardCount: preview.uniqueCardCount,
             selectionLabel,
             statusLabel: '张数不足',
-            previewLabel: '当前重点',
-            previewText: `还差 ${(validation.sizeIssue?.kind === 'too-few-cards' ? validation.sizeIssue.min - validation.sizeIssue.count : 0)} 张达到出发线。\n${preview.kindSummaryLine}\n${preview.issuePreviewLine}`,
-            footerText: preview.issuePreviewLine,
+            compositionLines,
+            comparisonLabel,
+            comparisonLines,
+            focusChip: preview.focusChip,
+            focusSummaryLine: preview.focusSummaryLine,
+            footerText: preview.focusSummaryLine,
             fillColor: isSelected ? 0x372215 : 0x2f1d12,
             hoverFillColor: isSelected ? 0x46301e : 0x3b2416,
             borderColor: isSelected ? 0x93c5fd : 0xf59e0b,
@@ -240,6 +358,9 @@ function createDeckDisplayState(
             previewTextColor: '#fffbeb',
             previewFillColor: 0x291d0e,
             previewBorderColor: 0xb45309,
+            chipFillColor: 0x291d0e,
+            chipBorderColor: 0xf59e0b,
+            chipTextColor: '#fef3c7',
             footerFillColor: 0x291d0e,
             footerTextColor: '#fde68a',
             shadowColor: isSelected ? 0x1d4ed8 : 0x020617,
@@ -253,9 +374,12 @@ function createDeckDisplayState(
             uniqueCardCount: preview.uniqueCardCount,
             selectionLabel,
             statusLabel: '超出上限',
-            previewLabel: '当前重点',
-            previewText: `超出 ${(validation.sizeIssue?.kind === 'too-many-cards' ? validation.sizeIssue.count - validation.sizeIssue.max : 0)} 张，请精简后再确认。\n${preview.kindSummaryLine}\n${preview.issuePreviewLine}`,
-            footerText: preview.issuePreviewLine,
+            compositionLines,
+            comparisonLabel,
+            comparisonLines,
+            focusChip: preview.focusChip,
+            focusSummaryLine: preview.focusSummaryLine,
+            footerText: preview.focusSummaryLine,
             fillColor: isSelected ? 0x3f1d2e : 0x2f1721,
             hoverFillColor: isSelected ? 0x4c1d30 : 0x3a1822,
             borderColor: isSelected ? 0x93c5fd : 0xf87171,
@@ -269,6 +393,9 @@ function createDeckDisplayState(
             previewTextColor: '#fff1f2',
             previewFillColor: 0x29131b,
             previewBorderColor: 0x9f1239,
+            chipFillColor: 0x29131b,
+            chipBorderColor: 0xef4444,
+            chipTextColor: '#fee2e2',
             footerFillColor: 0x29131b,
             footerTextColor: '#fecaca',
             shadowColor: isSelected ? 0x1d4ed8 : 0x020617,
@@ -281,9 +408,14 @@ function createDeckDisplayState(
         uniqueCardCount: preview.uniqueCardCount,
         selectionLabel,
         statusLabel: '库存不足',
-        previewLabel: '缺口重点',
-        previewText: `${validation.availabilityIssues.length} 种卡共缺 ${missingCopies} 张。\n${preview.issuePreviewLine}\n${preview.kindSummaryLine}`,
-        footerText: preview.issuePreviewLine,
+        compositionLines,
+        comparisonLabel,
+        comparisonLines,
+        focusChip: preview.focusChip,
+        focusSummaryLine: validation.availabilityIssues.length > 0
+            ? `${validation.availabilityIssues.length} 种卡共缺 ${missingCopies} 张。`
+            : preview.focusSummaryLine,
+        footerText: preview.focusSummaryLine,
         fillColor: isSelected ? 0x3f1d2e : 0x2f1721,
         hoverFillColor: isSelected ? 0x4c1d30 : 0x3f1d2e,
         borderColor: isSelected ? 0x93c5fd : 0xf87171,
@@ -297,6 +429,9 @@ function createDeckDisplayState(
         previewTextColor: '#fff1f2',
         previewFillColor: 0x29131b,
         previewBorderColor: 0x9f1239,
+        chipFillColor: 0x29131b,
+        chipBorderColor: 0xef4444,
+        chipTextColor: '#fee2e2',
         footerFillColor: 0x29131b,
         footerTextColor: '#fecaca',
         shadowColor: isSelected ? 0x1d4ed8 : 0x020617,
@@ -414,6 +549,26 @@ function createMetricChip(
     return [background, text];
 }
 
+function createCompactChip(
+    scene: Scene,
+    x: number,
+    y: number,
+    width: number,
+    textValue: string,
+    colors: { fill: number; stroke: number; text: string },
+): Phaser.GameObjects.GameObject[] {
+    const background = scene.add.rectangle(x, y, width, 26, colors.fill, 0.96);
+    background.setStrokeStyle(1, colors.stroke, 0.92);
+    const text = scene.add.text(x, y, textValue, {
+        fontFamily: 'Arial',
+        fontSize: '11px',
+        color: colors.text,
+        fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    return [background, text];
+}
+
 function getDeckHandoffBannerColors(
     tone: PreparationDeckHandoffSummary['tone'],
 ): DeckHandoffBannerColors {
@@ -448,6 +603,7 @@ function getDeckHandoffBannerColors(
 export class PreparationPanel extends GameObjects.Container {
     private readonly stash: PersistentStash;
     private readonly metadata?: CardMetadataMap;
+    private readonly routeBriefing?: ExpeditionRouteBriefingSummary;
     private readonly onConfirm: () => void;
     private readonly onDeckSelect: (deckId: string) => void;
     private readonly onOpenDeckManager?: () => void;
@@ -476,6 +632,7 @@ export class PreparationPanel extends GameObjects.Container {
 
         this.stash = config.stash;
         this.metadata = config.metadata;
+        this.routeBriefing = config.routeBriefing;
         this.onConfirm = config.onConfirm;
         this.onDeckSelect = config.onDeckSelect;
         this.onOpenDeckManager = config.onOpenDeckManager;
@@ -489,13 +646,7 @@ export class PreparationPanel extends GameObjects.Container {
     private createPanel(): void {
         const { width, height } = this.scene.scale;
         const panelWidth = Math.min(980, width * 0.82);
-        const panelHeight = Math.min(820, height * 0.88);
         const panelX = width / 2;
-        const panelY = height / 2 + 24;
-        const panelLeft = panelX - panelWidth / 2;
-        const panelTop = panelY - panelHeight / 2;
-        const contentLeft = panelLeft + 48;
-        const contentWidth = panelWidth - 96;
         const summary = createPreparationSummary(this.stash);
         const selectedLoadoutSummary = createPreparationSelectedLoadoutSummary(this.stash, this.metadata);
         const validation = validateExpeditionLoadout(this.stash);
@@ -507,6 +658,73 @@ export class PreparationPanel extends GameObjects.Container {
         const selectedLoadoutColors = getSelectedLoadoutColors(selectedLoadoutSummary);
         const deckPreviewColumns = splitPreviewColumns(selectedLoadoutSummary.deckPreviewLines, 8, 2);
         const itemPreviewText = formatPreviewBulletList(selectedLoadoutSummary.itemPreviewLines, 3);
+        const selectedDeckSummaryWidth = 308;
+        const loadoutGap = 18;
+        const contentWidth = panelWidth - 96;
+        const deckCardHeight = getDeckCardHeight(this.scene, this.stash.savedDecks);
+        const loadoutSummaryHeight = getSelectedLoadoutSummaryHeight(
+            this.scene,
+            selectedLoadoutSummary,
+            selectedDeckSummaryWidth,
+        );
+        const subtitleHeight = measureTextHeight(
+            this.scene,
+            '选择要带入秘境的卡组；卡组需满足20-40张且所有卡牌均在储物袋中。',
+            {
+                fontFamily: 'Arial',
+                fontSize: '20px',
+                wordWrap: { width: contentWidth },
+            },
+        );
+        const scrollHintHeight = measureTextHeight(
+            this.scene,
+            this.stash.savedDecks.length > 1
+                ? '拖动或滚轮浏览更多卡组，点按卡片即可切换本次带入卡组。'
+                : '点按卡片即可切换本次带入卡组。',
+            {
+                fontFamily: 'Arial',
+                fontSize: '15px',
+            },
+        );
+        const titleTop = 34;
+        const subtitleTop = titleTop + 48;
+        const subtitleBottom = subtitleTop + subtitleHeight;
+        const routeBriefingHeight = this.routeBriefing
+            ? getRouteBriefingHeight(this.scene, this.routeBriefing, contentWidth)
+            : 0;
+        const routeBriefingTopOffset = this.routeBriefing
+            ? subtitleBottom + 18
+            : null;
+        const handoffTopOffset = this.deckHandoffSummary
+            ? (this.routeBriefing
+                ? (routeBriefingTopOffset ?? subtitleBottom) + routeBriefingHeight + 16
+                : subtitleBottom + 16)
+            : null;
+        const deckSelectorOffsetY = handoffTopOffset !== null
+            ? handoffTopOffset + 84 + 18
+            : this.routeBriefing
+                ? (routeBriefingTopOffset ?? subtitleBottom) + routeBriefingHeight + 16
+                : subtitleBottom + 26;
+        const scrollHintOffsetY = deckSelectorOffsetY + deckCardHeight + 10;
+        const validationOffsetY = scrollHintOffsetY + scrollHintHeight + 12;
+        const loadoutOffsetY = validationOffsetY + validationHeight + 16;
+        const actionOffsetY = loadoutOffsetY + loadoutSummaryHeight + 16;
+        const panelHeight = Math.min(
+            Math.max(PANEL_MIN_HEIGHT, actionOffsetY + 82 + 34),
+            Math.min(PANEL_MAX_HEIGHT, Math.floor(height * PANEL_MAX_HEIGHT_RATIO)),
+        );
+        const panelY = height / 2 + (panelHeight > 920 ? 10 : 24);
+        const panelLeft = panelX - panelWidth / 2;
+        const panelTop = panelY - panelHeight / 2;
+        const contentLeft = panelLeft + 48;
+        const carriedLoadoutWidth = contentWidth - selectedDeckSummaryWidth - loadoutGap;
+        const routeBriefingTop = routeBriefingTopOffset !== null
+            ? panelTop + routeBriefingTopOffset
+            : null;
+        const deckSelectorY = panelTop + deckSelectorOffsetY;
+        const scrollHintY = panelTop + scrollHintOffsetY;
+        const validationTop = panelTop + validationOffsetY;
+        const loadoutTop = panelTop + loadoutOffsetY;
 
         const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x030712, 0.8);
         const shadow = this.scene.add.rectangle(panelX, panelY + 12, panelWidth + 16, panelHeight + 16, 0x020617, 0.42);
@@ -527,29 +745,25 @@ export class PreparationPanel extends GameObjects.Container {
             color: '#cbd5e1',
             wordWrap: { width: contentWidth },
         });
-
-        let deckSelectorY = subtitle.y + subtitle.height + 18;
         const routeBriefingElements: Phaser.GameObjects.GameObject[] = [];
 
-        if (this.config.routeBriefing) {
+        if (this.routeBriefing && routeBriefingTop !== null) {
             const routeBriefing = createRouteBriefingStrip(
                 this.scene,
                 contentLeft,
-                deckSelectorY,
+                routeBriefingTop,
                 contentWidth,
-                this.config.routeBriefing,
+                this.routeBriefing,
             );
 
             routeBriefingElements.push(...routeBriefing.elements);
-            deckSelectorY += routeBriefing.height + 16;
         }
-
         const handoffSummary = this.deckHandoffSummary;
         const handoffElements: Phaser.GameObjects.GameObject[] = [];
 
         if (handoffSummary) {
             const bannerColors = getDeckHandoffBannerColors(handoffSummary.tone);
-            const bannerTop = deckSelectorY;
+            const bannerTop = panelTop + (handoffTopOffset ?? subtitleBottom + 16);
             const bannerHeight = 84;
             const banner = this.scene.add.rectangle(
                 panelX,
@@ -577,7 +791,6 @@ export class PreparationPanel extends GameObjects.Container {
             });
 
             handoffElements.push(banner, bannerTitle, bannerDetail);
-            deckSelectorY = bannerTop + bannerHeight + 18;
         }
 
         const deckCardElements = this.createDeckCardRow(
@@ -585,21 +798,20 @@ export class PreparationPanel extends GameObjects.Container {
             deckSelectorY,
             contentWidth,
             selectedDeckId,
+            deckCardHeight,
         );
 
         const scrollHint = this.maxScrollX > 0
-            ? this.scene.add.text(contentLeft, deckSelectorY + DECK_CARD_HEIGHT + 10, '拖动或滚轮浏览更多卡组，点按卡片即可切换本次带入卡组。', {
+            ? this.scene.add.text(contentLeft, scrollHintY, '拖动或滚轮浏览更多卡组，点按卡片即可切换本次带入卡组。', {
                 fontFamily: 'Arial',
                 fontSize: '15px',
                 color: '#a78bfa',
             })
-            : this.scene.add.text(contentLeft, deckSelectorY + DECK_CARD_HEIGHT + 10, '点按卡片即可切换本次带入卡组。', {
+            : this.scene.add.text(contentLeft, scrollHintY, '点按卡片即可切换本次带入卡组。', {
                 fontFamily: 'Arial',
                 fontSize: '15px',
                 color: '#94a3b8',
             });
-
-        const validationTop = scrollHint.y + 24;
         const validationCard = this.scene.add.rectangle(
             panelX,
             validationTop + validationHeight / 2,
@@ -632,16 +844,11 @@ export class PreparationPanel extends GameObjects.Container {
             color: isDeckValid ? '#86efac' : '#fca5a5',
             wordWrap: { width: contentWidth - 36 },
         });
-
-        const loadoutTop = validationTop + validationHeight + 16;
-        const loadoutGap = 18;
-        const selectedDeckSummaryWidth = 308;
-        const carriedLoadoutWidth = contentWidth - selectedDeckSummaryWidth - loadoutGap;
         const selectedDeckSummaryCard = this.scene.add.rectangle(
             contentLeft + selectedDeckSummaryWidth / 2,
-            loadoutTop + LOADOUT_SUMMARY_HEIGHT / 2,
+            loadoutTop + loadoutSummaryHeight / 2,
             selectedDeckSummaryWidth,
-            LOADOUT_SUMMARY_HEIGHT,
+            loadoutSummaryHeight,
             selectedLoadoutColors.fillColor,
             0.98,
         );
@@ -680,13 +887,39 @@ export class PreparationPanel extends GameObjects.Container {
             fontStyle: 'bold',
             wordWrap: { width: selectedDeckSummaryWidth - 36 },
         });
-        const selectedDeckCount = this.scene.add.text(contentLeft + 18, selectedDeckNameText.y + selectedDeckNameText.height + 8, `${selectedLoadoutSummary.deckCount} / ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张 · ${selectedLoadoutSummary.uniqueCardCount} 种卡`, {
-            fontFamily: 'Arial',
-            fontSize: '15px',
-            color: selectedLoadoutColors.mutedColor,
-        });
-        const selectedDeckReadinessPanelTop = selectedDeckCount.y + 18;
-        const selectedDeckReadinessPanelHeight = 42;
+        const selectedDeckChipWidth = (selectedDeckSummaryWidth - 36 - 12 * 2) / 3;
+        const selectedDeckChipY = selectedDeckNameText.y + selectedDeckNameText.height + 18;
+        const selectedDeckChipColors = {
+            fill: 0x0b1220,
+            stroke: selectedLoadoutColors.borderColor,
+            text: selectedLoadoutColors.headlineColor,
+        };
+        const selectedDeckCountChip = createCompactChip(
+            this.scene,
+            contentLeft + 18 + selectedDeckChipWidth / 2,
+            selectedDeckChipY,
+            selectedDeckChipWidth,
+            `张数 ${selectedLoadoutSummary.deckCount}`,
+            selectedDeckChipColors,
+        );
+        const selectedDeckUniqueChip = createCompactChip(
+            this.scene,
+            contentLeft + 18 + selectedDeckChipWidth * 1.5 + 12,
+            selectedDeckChipY,
+            selectedDeckChipWidth,
+            `种类 ${selectedLoadoutSummary.uniqueCardCount}`,
+            selectedDeckChipColors,
+        );
+        const selectedDeckFocusChip = createCompactChip(
+            this.scene,
+            contentLeft + 18 + selectedDeckChipWidth * 2.5 + 24,
+            selectedDeckChipY,
+            selectedDeckChipWidth,
+            `${selectedLoadoutSummary.focusChip.label} ${selectedLoadoutSummary.focusChip.value}`,
+            selectedDeckChipColors,
+        );
+        const selectedDeckReadinessPanelTop = selectedDeckChipY + 20;
+        const selectedDeckReadinessPanelHeight = 52;
         const selectedDeckReadinessPanel = this.scene.add.rectangle(
             contentLeft + selectedDeckSummaryWidth / 2,
             selectedDeckReadinessPanelTop + selectedDeckReadinessPanelHeight / 2,
@@ -705,7 +938,9 @@ export class PreparationPanel extends GameObjects.Container {
         const selectedDeckReadinessText = this.scene.add.text(
             contentLeft + 30,
             selectedDeckReadinessLabel.y + 18,
-            selectedLoadoutSummary.detail,
+            selectedLoadoutSummary.issuePreviewLines.length > 0
+                ? `${selectedLoadoutSummary.focusSummaryLine}\n• ${selectedLoadoutSummary.issuePreviewLines[0]}`
+                : `${selectedLoadoutSummary.headline}\n${selectedLoadoutSummary.focusSummaryLine}`,
             {
                 fontFamily: 'Arial',
                 fontSize: '12px',
@@ -715,7 +950,7 @@ export class PreparationPanel extends GameObjects.Container {
             },
         );
         const selectedDeckCompositionPanelTop = selectedDeckReadinessPanelTop + selectedDeckReadinessPanelHeight + 8;
-        const selectedDeckCompositionPanelHeight = 42;
+        const selectedDeckCompositionPanelHeight = 54;
         const selectedDeckCompositionPanel = this.scene.add.rectangle(
             contentLeft + selectedDeckSummaryWidth / 2,
             selectedDeckCompositionPanelTop + selectedDeckCompositionPanelHeight / 2,
@@ -734,7 +969,7 @@ export class PreparationPanel extends GameObjects.Container {
         const selectedDeckComposition = this.scene.add.text(
             contentLeft + 30,
             selectedDeckCompositionLabel.y + 18,
-            `${selectedLoadoutSummary.kindSummaryLine}\n${selectedLoadoutSummary.compositionLine}`,
+            `${selectedLoadoutSummary.kindSummaryLine}\n${formatBulletLines(selectedLoadoutSummary.kindBreakdownLines, 2)}`,
             {
                 fontFamily: 'Arial',
                 fontSize: '11px',
@@ -745,7 +980,7 @@ export class PreparationPanel extends GameObjects.Container {
         );
         const selectedDeckFooter = this.scene.add.text(
             contentLeft + 18,
-            loadoutTop + LOADOUT_SUMMARY_HEIGHT - 18,
+            loadoutTop + loadoutSummaryHeight - 18,
             selectedLoadoutSummary.footer,
             {
                 fontFamily: 'Arial',
@@ -758,9 +993,9 @@ export class PreparationPanel extends GameObjects.Container {
         const carriedLoadoutLeft = contentLeft + selectedDeckSummaryWidth + loadoutGap;
         const carriedLoadoutCard = this.scene.add.rectangle(
             carriedLoadoutLeft + carriedLoadoutWidth / 2,
-            loadoutTop + LOADOUT_SUMMARY_HEIGHT / 2,
+            loadoutTop + loadoutSummaryHeight / 2,
             carriedLoadoutWidth,
-            LOADOUT_SUMMARY_HEIGHT,
+            loadoutSummaryHeight,
             0x111827,
             0.98,
         );
@@ -800,7 +1035,7 @@ export class PreparationPanel extends GameObjects.Container {
         const previewGap = 16;
         const utilityColumnWidth = 184;
         const deckPreviewWidth = carriedLoadoutWidth - 36 - previewGap - utilityColumnWidth;
-        const previewPanelHeight = LOADOUT_SUMMARY_HEIGHT - (previewTop - loadoutTop) - 18;
+        const previewPanelHeight = loadoutSummaryHeight - (previewTop - loadoutTop) - 18;
         const itemPanelHeight = 50;
         const readinessPanelHeight = previewPanelHeight - itemPanelHeight - 8;
         const carriedDeckPanel = this.scene.add.rectangle(
@@ -880,7 +1115,7 @@ export class PreparationPanel extends GameObjects.Container {
         const readinessPanelTitle = this.scene.add.text(
             utilityColumnLeft + 12,
             readinessPanelTop + 10,
-            selectedLoadoutSummary.issuePreviewLines.length > 0 ? '缺口重点' : '出发校验',
+            selectedLoadoutSummary.issuePreviewLines.length > 0 ? '缺口重点' : '准备状态',
             {
                 fontFamily: 'Arial',
                 fontSize: '12px',
@@ -905,10 +1140,8 @@ export class PreparationPanel extends GameObjects.Container {
             utilityColumnLeft + 12,
             readinessPanelTitle.y + 22,
             selectedLoadoutSummary.issuePreviewLines.length > 0
-                ? selectedLoadoutSummary.issuePreviewLines.slice(0, 2).map((line) => `• ${line}`).join('\n')
-                : selectedLoadoutSummary.readiness === 'ready'
-                    ? '库存充足，确认后会按当前卡组创建秘境快照。'
-                    : selectedLoadoutSummary.detail,
+                ? `${selectedLoadoutSummary.focusSummaryLine}\n${formatBulletLines(selectedLoadoutSummary.issuePreviewLines, 2)}`
+                : `${selectedLoadoutSummary.focusSummaryLine}\n• 确认后会按当前卡组创建秘境快照。`,
             {
                 fontFamily: 'Arial',
                 fontSize: '12px',
@@ -918,7 +1151,7 @@ export class PreparationPanel extends GameObjects.Container {
             },
         );
 
-        const actionTop = loadoutTop + LOADOUT_SUMMARY_HEIGHT + 16;
+        const actionTop = loadoutTop + loadoutSummaryHeight + 16;
         const actionHeight = 82;
         const actionBar = this.scene.add.rectangle(panelX, actionTop + actionHeight / 2, contentWidth, actionHeight, 0x111827, 0.98);
         actionBar.setStrokeStyle(2, 0x334155, 0.88);
@@ -928,7 +1161,7 @@ export class PreparationPanel extends GameObjects.Container {
             color: '#f8fafc',
             fontStyle: 'bold',
         });
-        const actionSummary = this.scene.add.text(contentLeft + 20, actionTitle.y + 32, `${selectedLoadoutSummary.readinessLabel} · ${selectedLoadoutSummary.kindSummaryLine} · ${summary.itemCount} 件道具 · ${summary.spiritStones} 枚灵石`, {
+        const actionSummary = this.scene.add.text(contentLeft + 20, actionTitle.y + 32, `${selectedLoadoutSummary.readinessLabel} · ${selectedLoadoutSummary.focusChip.label} ${selectedLoadoutSummary.focusChip.value} · ${summary.itemCount} 件道具 · ${summary.spiritStones} 枚灵石`, {
             fontFamily: 'Arial',
             fontSize: '16px',
             color: '#94a3b8',
@@ -988,7 +1221,9 @@ export class PreparationPanel extends GameObjects.Container {
             selectedDeckHeading,
             selectedDeckStatusBadge,
             selectedDeckNameText,
-            selectedDeckCount,
+            ...selectedDeckCountChip,
+            ...selectedDeckUniqueChip,
+            ...selectedDeckFocusChip,
             selectedDeckReadinessPanel,
             selectedDeckReadinessLabel,
             selectedDeckReadinessText,
@@ -1035,11 +1270,11 @@ export class PreparationPanel extends GameObjects.Container {
         y: number,
         maxWidth: number,
         selectedDeckId: string | null,
+        cardHeight: number,
     ): Phaser.GameObjects.GameObject[] {
         const elements: Phaser.GameObjects.GameObject[] = [];
         const decks = this.stash.savedDecks;
         const cardWidth = DECK_CARD_WIDTH;
-        const cardHeight = DECK_CARD_HEIGHT;
         const cardGap = DECK_CARD_GAP;
 
         if (decks.length === 0) {
@@ -1148,6 +1383,45 @@ export class PreparationPanel extends GameObjects.Container {
                     color: displayState.countColor,
                 },
             );
+            const chipAreaWidth = cardWidth - 32;
+            const chipWidth = (chipAreaWidth - 6 * 2) / 3;
+            const chipY = countText.y + 18;
+            const deckCountChip = createCompactChip(
+                this.scene,
+                cardX - cardWidth / 2 + 16 + chipWidth / 2,
+                chipY,
+                chipWidth,
+                `张数 ${cardCount}`,
+                {
+                    fill: displayState.chipFillColor,
+                    stroke: displayState.chipBorderColor,
+                    text: displayState.chipTextColor,
+                },
+            );
+            const uniqueCountChip = createCompactChip(
+                this.scene,
+                cardX - cardWidth / 2 + 16 + chipWidth * 1.5 + 6,
+                chipY,
+                chipWidth,
+                `种类 ${displayState.uniqueCardCount}`,
+                {
+                    fill: displayState.chipFillColor,
+                    stroke: displayState.chipBorderColor,
+                    text: displayState.chipTextColor,
+                },
+            );
+            const focusChip = createCompactChip(
+                this.scene,
+                cardX - cardWidth / 2 + 16 + chipWidth * 2.5 + 12,
+                chipY,
+                chipWidth,
+                `${displayState.focusChip.label} ${displayState.focusChip.value}`,
+                {
+                    fill: displayState.chipFillColor,
+                    stroke: displayState.chipBorderColor,
+                    text: displayState.chipTextColor,
+                },
+            );
             const footerBg = this.scene.add.rectangle(
                 cardX,
                 cardY + cardHeight / 2 - 18,
@@ -1156,30 +1430,65 @@ export class PreparationPanel extends GameObjects.Container {
                 displayState.footerFillColor,
                 0.95,
             );
-            const previewPanelTop = countText.y + 20;
-            const previewPanelHeight = Math.max(48, footerBg.getTopCenter().y - previewPanelTop - 10);
-            const previewPanel = this.scene.add.rectangle(
-                cardX,
-                previewPanelTop + previewPanelHeight / 2,
-                cardWidth - 32,
-                previewPanelHeight,
+            const comparisonTop = chipY + 18;
+            const comparisonHeight = Math.max(50, footerBg.getTopCenter().y - comparisonTop - 8);
+            const comparisonGap = 10;
+            const comparisonWidth = cardWidth - 32;
+            const comparisonColumnWidth = (comparisonWidth - comparisonGap) / 2;
+            const compositionPanel = this.scene.add.rectangle(
+                cardX - comparisonColumnWidth / 2 - comparisonGap / 2,
+                comparisonTop + comparisonHeight / 2,
+                comparisonColumnWidth,
+                comparisonHeight,
                 displayState.previewFillColor,
                 0.96,
             );
-            previewPanel.setStrokeStyle(1, displayState.previewBorderColor, 0.55);
-            const previewLabel = this.scene.add.text(cardX - cardWidth / 2 + 24, previewPanelTop + 8, displayState.previewLabel, {
+            compositionPanel.setStrokeStyle(1, displayState.previewBorderColor, 0.55);
+            const compositionLabel = this.scene.add.text(cardX - cardWidth / 2 + 24, comparisonTop + 8, '构成分布', {
                 fontFamily: 'Arial',
                 fontSize: '11px',
                 color: displayState.previewLabelColor,
                 fontStyle: 'bold',
             });
-            const previewText = this.scene.add.text(cardX - cardWidth / 2 + 24, previewLabel.y + 16, displayState.previewText, {
+            const compositionText = this.scene.add.text(cardX - cardWidth / 2 + 24, compositionLabel.y + 16, formatBulletLines(displayState.compositionLines, 3), {
                 fontFamily: 'Arial',
                 fontSize: '11px',
                 color: displayState.previewTextColor,
-                wordWrap: { width: cardWidth - 48, useAdvancedWrap: true },
+                wordWrap: { width: comparisonColumnWidth - 20, useAdvancedWrap: true },
                 lineSpacing: 2,
             });
+            const comparisonPanel = this.scene.add.rectangle(
+                cardX + comparisonColumnWidth / 2 + comparisonGap / 2,
+                comparisonTop + comparisonHeight / 2,
+                comparisonColumnWidth,
+                comparisonHeight,
+                displayState.previewFillColor,
+                0.96,
+            );
+            comparisonPanel.setStrokeStyle(1, displayState.previewBorderColor, 0.55);
+            const comparisonLabel = this.scene.add.text(
+                cardX - cardWidth / 2 + 24 + comparisonColumnWidth + comparisonGap,
+                comparisonTop + 8,
+                displayState.comparisonLabel,
+                {
+                    fontFamily: 'Arial',
+                    fontSize: '11px',
+                    color: displayState.previewLabelColor,
+                    fontStyle: 'bold',
+                },
+            );
+            const comparisonText = this.scene.add.text(
+                comparisonLabel.x,
+                comparisonLabel.y + 16,
+                formatBulletLines(displayState.comparisonLines, 2),
+                {
+                    fontFamily: 'Arial',
+                    fontSize: '11px',
+                    color: displayState.previewTextColor,
+                    wordWrap: { width: comparisonColumnWidth - 20, useAdvancedWrap: true },
+                    lineSpacing: 2,
+                },
+            );
             const footerText = this.scene.add.text(cardX - cardWidth / 2 + 16, footerBg.y, displayState.footerText, {
                 fontFamily: 'Arial',
                 fontSize: '11px',
@@ -1205,9 +1514,15 @@ export class PreparationPanel extends GameObjects.Container {
                 status,
                 deckName,
                 countText,
-                previewPanel,
-                previewLabel,
-                previewText,
+                ...deckCountChip,
+                ...uniqueCountChip,
+                ...focusChip,
+                compositionPanel,
+                compositionLabel,
+                compositionText,
+                comparisonPanel,
+                comparisonLabel,
+                comparisonText,
                 footerBg,
                 footerText,
             ]);

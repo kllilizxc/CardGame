@@ -45,6 +45,11 @@ export interface PreparationDeckHandoffSummary {
     tone: 'positive' | 'neutral' | 'warning';
 }
 
+export interface PreparationFocusChip {
+    label: string;
+    value: string;
+}
+
 export interface PreparationSelectedLoadoutSummary {
     selectedDeckName: string;
     deckCount: number;
@@ -59,7 +64,10 @@ export interface PreparationSelectedLoadoutSummary {
     shortageCardKinds: number;
     shortageCardCopies: number;
     kindSummaryLine: string;
+    kindBreakdownLines: string[];
     compositionLine: string;
+    focusSummaryLine: string;
+    focusChip: PreparationFocusChip;
     issuePreviewLines: string[];
     deckPreviewLines: string[];
     itemPreviewLines: string[];
@@ -71,8 +79,12 @@ export interface PreparationDeckCardPreview {
     readiness: PreparationDeckReadiness;
     readinessLabel: string;
     kindSummaryLine: string;
+    kindBreakdownLines: string[];
     compositionLine: string;
+    focusSummaryLine: string;
+    focusChip: PreparationFocusChip;
     issuePreviewLine: string;
+    shortagePreviewLines: string[];
 }
 
 export interface RunSummary {
@@ -156,6 +168,14 @@ const PREPARATION_CARD_KIND_ORDER: Record<PreparationCardKind, number> = {
 
 function countStacks<T extends CountableStack>(stacks: readonly T[]): number {
     return stacks.reduce((sum, stack) => sum + stack.count, 0);
+}
+
+function countPreparationMissingCopies(issues: readonly DeckValidityReason[]): number {
+    return issues.reduce((sum, issue) => (
+        issue.kind === 'insufficient-copies'
+            ? sum + Math.max(0, issue.required - issue.available)
+            : sum
+    ), 0);
 }
 
 function createDeckCardSignature(stacks: Array<{ id: string; count: number }>): string | null {
@@ -302,6 +322,28 @@ function formatPreparationKindSummary(
     return [`${uniqueCardCount} 种卡`, ...segments].join(' · ');
 }
 
+function createPreparationKindBreakdownLines(
+    stacks: readonly { id: string; count: number }[],
+    metadata?: CardMetadataMap,
+    maxKinds = Number.POSITIVE_INFINITY,
+): string[] {
+    const breakdown = buildPreparationCardKindBreakdown(stacks, metadata);
+
+    if (breakdown.length === 0) {
+        return ['暂无卡牌'];
+    }
+
+    const visibleLines = breakdown
+        .slice(0, maxKinds)
+        .map((entry) => `${PREPARATION_CARD_KIND_LABELS[entry.kind]} ${entry.count} 张`);
+
+    if (breakdown.length > maxKinds) {
+        visibleLines.push(`…另 ${breakdown.length - maxKinds} 类`);
+    }
+
+    return visibleLines;
+}
+
 function createPreparationShortagePreviewSegments(
     issues: readonly DeckValidityReason[],
     metadata?: CardMetadataMap,
@@ -352,6 +394,58 @@ function createPreparationIssuePreviewLines(
         case 'none':
         case 'ready':
             return [];
+    }
+}
+
+function createPreparationFocusChip(
+    readiness: PreparationDeckReadiness,
+    sizeIssue: DeckValidityReason | null,
+    availabilityIssues: DeckValidityReason[],
+): PreparationFocusChip {
+    switch (readiness) {
+        case 'ready':
+            return { label: '状态', value: '齐备' };
+        case 'too-few-cards':
+            return {
+                label: '还差',
+                value: `${sizeIssue?.kind === 'too-few-cards' ? sizeIssue.min - sizeIssue.count : DECK_CARD_MIN} 张`,
+            };
+        case 'too-many-cards':
+            return {
+                label: '超出',
+                value: `${sizeIssue?.kind === 'too-many-cards' ? sizeIssue.count - sizeIssue.max : 0} 张`,
+            };
+        case 'insufficient-copies':
+            return {
+                label: '缺口',
+                value: `${countPreparationMissingCopies(availabilityIssues)} 张`,
+            };
+        case 'none':
+            return { label: '状态', value: '未选' };
+    }
+}
+
+function createPreparationFocusSummaryLine(
+    readiness: PreparationDeckReadiness,
+    sizeIssue: DeckValidityReason | null,
+    availabilityIssues: DeckValidityReason[],
+): string {
+    switch (readiness) {
+        case 'ready':
+            return '库存齐备，可直接确认出发。';
+        case 'too-few-cards':
+            return `还差 ${sizeIssue?.kind === 'too-few-cards' ? sizeIssue.min - sizeIssue.count : DECK_CARD_MIN} 张才能达到出发线。`;
+        case 'too-many-cards':
+            return `超出 ${sizeIssue?.kind === 'too-many-cards' ? sizeIssue.count - sizeIssue.max : 0} 张，请精简后再确认。`;
+        case 'insufficient-copies': {
+            const missingCopies = countPreparationMissingCopies(availabilityIssues);
+
+            return availabilityIssues.length === 1
+                ? `库存仍缺 ${missingCopies} 张目标卡牌。`
+                : `库存共缺 ${missingCopies} 张目标卡牌，涉及 ${availabilityIssues.length} 种。`;
+        }
+        case 'none':
+            return '请先选择一套可带入的卡组。';
     }
 }
 
@@ -600,10 +694,7 @@ export function createPreparationSelectedLoadoutSummary(
     const sizeIssue = selectedDeck ? validateDeckSize(selectedDeck.cards) : null;
     const availabilityIssues = selectedDeck ? validateDeckAvailability(selectedDeck.cards, stash.cards) : [];
     const shortageCardKinds = availabilityIssues.length;
-    const shortageCardCopies = availabilityIssues.reduce(
-        (sum, issue) => sum + Math.max(0, issue.required - issue.available),
-        0,
-    );
+    const shortageCardCopies = countPreparationMissingCopies(availabilityIssues);
 
     let headline = '尚未选择卡组';
     let detail = '请先选择或创建一套满足要求的卡组，再确认本次带入。';
@@ -645,6 +736,8 @@ export function createPreparationSelectedLoadoutSummary(
         availabilityIssues,
         metadata,
     );
+    const focusSummaryLine = createPreparationFocusSummaryLine(readiness, sizeIssue, availabilityIssues);
+    const focusChip = createPreparationFocusChip(readiness, sizeIssue, availabilityIssues);
 
     return {
         selectedDeckName: selectedDeck?.name ?? '未选择卡组',
@@ -660,7 +753,10 @@ export function createPreparationSelectedLoadoutSummary(
         shortageCardKinds,
         shortageCardCopies,
         kindSummaryLine: formatPreparationKindSummary(selectedDeckCards, metadata),
+        kindBreakdownLines: createPreparationKindBreakdownLines(selectedDeckCards, metadata, 3),
         compositionLine: formatPreparationInlinePreview(deckPreviewLines, 4),
+        focusSummaryLine,
+        focusChip,
         issuePreviewLines,
         deckPreviewLines,
         itemPreviewLines: stash.items.length > 0
@@ -680,6 +776,11 @@ export function createPreparationDeckCardPreview(
     const compositionPreviewLines = deck.cards
         .filter((stack) => stack.count > 0)
         .map((stack) => formatPreparationPreviewLine(stack, metadata));
+    const shortagePreviewLines = readiness === 'ready'
+        ? ['库存齐备，可直接带入。']
+        : createPreparationIssuePreviewLines(readiness, sizeIssue, availabilityIssues, metadata).slice(0, 2);
+    const focusSummaryLine = createPreparationFocusSummaryLine(readiness, sizeIssue, availabilityIssues);
+    const focusChip = createPreparationFocusChip(readiness, sizeIssue, availabilityIssues);
 
     return {
         deckCount: countStacks(deck.cards),
@@ -687,13 +788,17 @@ export function createPreparationDeckCardPreview(
         readiness,
         readinessLabel: getPreparationDeckReadinessLabel(readiness),
         kindSummaryLine: formatPreparationKindSummary(deck.cards, metadata, 2),
+        kindBreakdownLines: createPreparationKindBreakdownLines(deck.cards, metadata, 3),
         compositionLine: formatPreparationInlinePreview(compositionPreviewLines, 3),
+        focusSummaryLine,
+        focusChip,
         issuePreviewLine: createPreparationDeckCardIssuePreviewLine(
             readiness,
             sizeIssue,
             availabilityIssues,
             metadata,
         ),
+        shortagePreviewLines,
     };
 }
 

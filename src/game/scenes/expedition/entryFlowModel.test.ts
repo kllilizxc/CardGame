@@ -99,7 +99,10 @@ describe('entryFlowModel', () => {
             shortageCardKinds: 0,
             shortageCardCopies: 0,
             kindSummaryLine: '8 种卡 · 共 20 张',
+            kindBreakdownLines: ['未分类 20 张'],
             compositionLine: 'SX_YJZ_001 ×3 · SX_YJS_001 ×3 · SX_TY_001 ×3 · SX_JXTM_001 ×2 · …另 4 项',
+            focusSummaryLine: '库存齐备，可直接确认出发。',
+            focusChip: { label: '状态', value: '齐备' },
             issuePreviewLines: [],
             deckPreviewLines: [
                 'SX_YJZ_001 ×3',
@@ -152,7 +155,10 @@ describe('entryFlowModel', () => {
             shortageCardKinds: 3,
             shortageCardCopies: 15,
             kindSummaryLine: '3 种卡 · 共 20 张',
+            kindBreakdownLines: ['未分类 20 张'],
             compositionLine: 'AR_001 ×4 · AR_002 ×3 · AR_003 ×13',
+            focusSummaryLine: '库存共缺 15 张目标卡牌，涉及 3 种。',
+            focusChip: { label: '缺口', value: '15 张' },
             issuePreviewLines: [
                 'AR_003 还差 13 张',
                 'AR_001 还差 1 张',
@@ -186,6 +192,7 @@ describe('entryFlowModel', () => {
 
         expect(createPreparationSelectedLoadoutSummary(stash, PREPARATION_CARD_METADATA)).toMatchObject({
             kindSummaryLine: '3 种卡 · 法宝 3 · 符箓 2',
+            kindBreakdownLines: ['未分类 13 张', '法宝 3 张', '符箓 2 张'],
             compositionLine: '青云剑 ×3 · 流云符 ×2 · AR_003 ×13',
             deckPreviewLines: [
                 '青云剑 ×3',
@@ -219,8 +226,15 @@ describe('entryFlowModel', () => {
             readiness: 'insufficient-copies',
             readinessLabel: '缺少库存卡牌',
             kindSummaryLine: '3 种卡 · 法宝 4 · 符箓 3',
+            kindBreakdownLines: ['未分类 13 张', '法宝 4 张', '符箓 3 张'],
             compositionLine: '青云剑 ×4 · 流云符 ×3 · AR_003 ×13',
+            focusSummaryLine: '库存共缺 15 张目标卡牌，涉及 3 种。',
+            focusChip: { label: '缺口', value: '15 张' },
             issuePreviewLine: '缺牌：AR_003 -13 · 流云符 -1 · …另 1 项',
+            shortagePreviewLines: [
+                'AR_003 还差 13 张',
+                '流云符 还差 1 张',
+            ],
         });
     });
 
