@@ -71,6 +71,32 @@ import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 type StarterDeckCacheEntry = ExpeditionBootstrapSources['starterDeck'];
 
 type NonCombatMapNode = EventMapNode | ShopMapNode | ExtractMapNode;
+type EntryPanel = PreparationPanel | DeckManagementPanel;
+type EntryShellMode = 'preparation' | 'deckManager';
+
+interface EntryShellCorners {
+    topLeftHorizontal: Phaser.GameObjects.Rectangle;
+    topLeftVertical: Phaser.GameObjects.Rectangle;
+    topRightHorizontal: Phaser.GameObjects.Rectangle;
+    topRightVertical: Phaser.GameObjects.Rectangle;
+    bottomLeftHorizontal: Phaser.GameObjects.Rectangle;
+    bottomLeftVertical: Phaser.GameObjects.Rectangle;
+    bottomRightHorizontal: Phaser.GameObjects.Rectangle;
+    bottomRightVertical: Phaser.GameObjects.Rectangle;
+}
+
+interface EntryShellVisuals {
+    container: Phaser.GameObjects.Container;
+    headerPlate: Phaser.GameObjects.Rectangle;
+    headerAccent: Phaser.GameObjects.Rectangle;
+    titleText: Phaser.GameObjects.Text;
+    subtitleText: Phaser.GameObjects.Text;
+    modeBadgeText: Phaser.GameObjects.Text;
+    topRail: Phaser.GameObjects.Rectangle;
+    leftAccentBar: Phaser.GameObjects.Rectangle;
+    rightAccentBar: Phaser.GameObjects.Rectangle;
+    corners: EntryShellCorners;
+}
 
 export class ExpeditionScene extends Scene {
     private launchData: NormalizedExpeditionSceneLaunchData = normalizeExpeditionSceneLaunchData();
@@ -92,6 +118,8 @@ export class ExpeditionScene extends Scene {
     private pendingPreparationDeckHandoff?: PreparationDeckHandoffSummary;
     private deckbuilderCardMetadataResources?: DeckbuilderCardMetadataResources;
     private deckbuilderCardMetadata: CardMetadataMap = {};
+    private entryShell?: EntryShellVisuals;
+    private entryTransitionBlocker?: Phaser.GameObjects.Rectangle;
 
     constructor() {
         super('ExpeditionScene');
@@ -142,23 +170,15 @@ export class ExpeditionScene extends Scene {
             },
         });
 
-        this.cameras.main.setBackgroundColor(0x0f172a);
-        this.add.rectangle(width / 2, height / 2, width, height, 0x111827, 0.92);
-        this.add.text(width / 2, 80, this.mapDefinition.name, {
-            fontFamily: 'Arial',
-            fontSize: '44px',
-            color: '#f8fafc',
-            fontStyle: 'bold',
-        }).setOrigin(0.5);
-        this.add.text(width / 2, 126, '第一阶段 · 秘境入口流程', {
-            fontFamily: 'Arial',
-            fontSize: '22px',
-            color: '#93c5fd',
-        }).setOrigin(0.5);
+        this.createSceneBackdrop();
+        this.createEntryShell();
         this.createWorldMapReturnButton();
 
         this.runHud = new RunHud(this);
         this.runHud.setVisible(false);
+        const statusPlate = this.add.rectangle(width / 2, height - 92, Math.min(width - 220, 980), 74, 0x07111f, 0.72);
+        statusPlate.setStrokeStyle(1, 0x334155, 0.82);
+        statusPlate.setDepth(60);
         this.statusText = this.add.text(width / 2, height - 92, '', {
             fontFamily: 'Arial',
             fontSize: '20px',
@@ -166,6 +186,7 @@ export class ExpeditionScene extends Scene {
             align: 'center',
             wordWrap: { width: width - 220 },
         }).setOrigin(0.5);
+        this.statusText.setDepth(61);
 
         if (this.pendingBattleResult) {
             this.handleBattleResult(this.pendingBattleResult);
@@ -194,6 +215,49 @@ export class ExpeditionScene extends Scene {
         return this.expeditionResources;
     }
 
+    private createSceneBackdrop(): void {
+        const { width, height } = this.scale;
+
+        this.cameras.main.setBackgroundColor(0x050b16);
+
+        const base = this.add.rectangle(width / 2, height / 2, width, height, 0x0b1220, 1);
+        const topGlow = this.add.ellipse(width / 2, 0, width * 1.2, height * 0.78, 0x12315b, 0.34).setOrigin(0.5, 0);
+        const leftGlow = this.add.circle(width * 0.18, height * 0.34, 260, 0x2563eb, 0.16);
+        const rightGlow = this.add.circle(width * 0.82, height * 0.28, 230, 0x7c3aed, 0.14);
+        const floorGlow = this.add.ellipse(width / 2, height * 0.88, width * 0.94, height * 0.28, 0x0f766e, 0.1);
+        const vignetteFrame = this.add.rectangle(width / 2, height / 2, width - 54, height - 54, 0x000000, 0);
+        vignetteFrame.setStrokeStyle(2, 0x334155, 0.44);
+        const innerFrame = this.add.rectangle(width / 2, height / 2 + 8, width - 134, height - 142, 0x000000, 0);
+        innerFrame.setStrokeStyle(1, 0x60a5fa, 0.16);
+
+        const pathLines = this.add.graphics();
+        pathLines.lineStyle(2, 0x38bdf8, 0.11);
+        pathLines.beginPath();
+        pathLines.moveTo(120, height * 0.22);
+        pathLines.lineTo(width * 0.36, height * 0.22);
+        pathLines.lineTo(width * 0.5, height * 0.12);
+        pathLines.lineTo(width - 180, height * 0.12);
+        pathLines.strokePath();
+        pathLines.lineStyle(2, 0xa855f7, 0.09);
+        pathLines.beginPath();
+        pathLines.moveTo(160, height - 170);
+        pathLines.lineTo(width * 0.28, height - 170);
+        pathLines.lineTo(width * 0.42, height - 108);
+        pathLines.lineTo(width - 140, height - 108);
+        pathLines.strokePath();
+
+        [
+            base,
+            topGlow,
+            leftGlow,
+            rightGlow,
+            floorGlow,
+            vignetteFrame,
+            innerFrame,
+            pathLines,
+        ].forEach((gameObject) => gameObject.setDepth(-20));
+    }
+
     private getDeckbuilderCardMetadataResources(): DeckbuilderCardMetadataResources {
         if (!this.deckbuilderCardMetadataResources) {
             this.deckbuilderCardMetadataResources = resolveDeckbuilderCardMetadataResources(
@@ -212,23 +276,400 @@ export class ExpeditionScene extends Scene {
         }
     }
 
-    private createWorldMapReturnButton(): void {
+    private createEntryShell(): void {
         const { width } = this.scale;
-        const x = width - 180;
-        const y = 74;
-        const button = this.add.rectangle(x, y, 230, 54, 0x334155, 0.94);
-        button.setStrokeStyle(2, 0xffffff, 0.78);
-        button.setInteractive({ useHandCursor: true });
-        button.on('pointerover', () => button.setFillStyle(0x475569, 1));
-        button.on('pointerout', () => button.setFillStyle(0x334155, 0.94));
-        button.on('pointerdown', () => this.returnToWorldMap());
+        const container = this.add.container(0, 0);
 
-        this.add.text(x, y, '返回大地图', {
+        const headerPlate = this.add.rectangle(width / 2, 48, 680, 78, 0x091423, 0.94);
+        headerPlate.setStrokeStyle(2, 0x3b82f6, 0.72);
+        const headerAccent = this.add.rectangle(width / 2, 16, 604, 5, 0x38bdf8, 1).setOrigin(0.5, 0);
+        const titleText = this.add.text(width / 2, 42, this.mapDefinition.name, {
             fontFamily: 'Arial',
-            fontSize: '18px',
+            fontSize: '30px',
             color: '#f8fafc',
             fontStyle: 'bold',
         }).setOrigin(0.5);
+        const subtitleText = this.add.text(width / 2, 72, '第一阶段 · 秘境入口流程', {
+            fontFamily: 'Arial',
+            fontSize: '15px',
+            color: '#93c5fd',
+        }).setOrigin(0.5);
+        const modeBadgeText = this.add.text(width / 2 - 256, 42, '出发前检查', {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#dbeafe',
+            fontStyle: 'bold',
+            backgroundColor: '#1d4ed8',
+            padding: { left: 12, right: 12, top: 6, bottom: 6 },
+        }).setOrigin(0, 0.5);
+        const topRail = this.add.rectangle(width / 2, 100, 420, 4, 0x38bdf8, 0.9);
+        const leftAccentBar = this.add.rectangle(0, 0, 4, 92, 0x38bdf8, 0.82);
+        const rightAccentBar = this.add.rectangle(0, 0, 4, 92, 0x8b5cf6, 0.82);
+        const corners: EntryShellCorners = {
+            topLeftHorizontal: this.add.rectangle(0, 0, 54, 4, 0x38bdf8, 0.98),
+            topLeftVertical: this.add.rectangle(0, 0, 4, 54, 0x38bdf8, 0.98),
+            topRightHorizontal: this.add.rectangle(0, 0, 54, 4, 0x38bdf8, 0.98),
+            topRightVertical: this.add.rectangle(0, 0, 4, 54, 0x38bdf8, 0.98),
+            bottomLeftHorizontal: this.add.rectangle(0, 0, 54, 4, 0x8b5cf6, 0.98),
+            bottomLeftVertical: this.add.rectangle(0, 0, 4, 54, 0x8b5cf6, 0.98),
+            bottomRightHorizontal: this.add.rectangle(0, 0, 54, 4, 0x8b5cf6, 0.98),
+            bottomRightVertical: this.add.rectangle(0, 0, 4, 54, 0x8b5cf6, 0.98),
+        };
+
+        container.add([
+            headerPlate,
+            headerAccent,
+            titleText,
+            subtitleText,
+            modeBadgeText,
+            topRail,
+            leftAccentBar,
+            rightAccentBar,
+            corners.topLeftHorizontal,
+            corners.topLeftVertical,
+            corners.topRightHorizontal,
+            corners.topRightVertical,
+            corners.bottomLeftHorizontal,
+            corners.bottomLeftVertical,
+            corners.bottomRightHorizontal,
+            corners.bottomRightVertical,
+        ]);
+        container.setDepth(1300);
+        container.setVisible(false);
+        container.setAlpha(0);
+
+        this.entryShell = {
+            container,
+            headerPlate,
+            headerAccent,
+            titleText,
+            subtitleText,
+            modeBadgeText,
+            topRail,
+            leftAccentBar,
+            rightAccentBar,
+            corners,
+        };
+
+        this.entryTransitionBlocker = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 0.001);
+        this.entryTransitionBlocker.setDepth(1450);
+        this.entryTransitionBlocker.setVisible(false);
+        this.entryTransitionBlocker.disableInteractive();
+
+        this.updateEntryShellMode('preparation');
+        this.updateEntryShellLayout('preparation', false);
+    }
+
+    private createWorldMapReturnButton(): void {
+        const { width } = this.scale;
+        const x = width - 150;
+        const y = 48;
+        const container = this.add.container(0, 0);
+        const shadow = this.add.rectangle(x, y + 5, 184, 46, 0x020617, 0.4);
+        const background = this.add.rectangle(x, y, 184, 46, 0x162338, 0.96);
+        background.setStrokeStyle(2, 0x93c5fd, 0.78);
+        background.setInteractive({ useHandCursor: true });
+        background.on('pointerover', () => background.setFillStyle(0x233551, 1));
+        background.on('pointerout', () => background.setFillStyle(0x162338, 0.96));
+        background.on('pointerdown', () => this.returnToWorldMap());
+
+        const label = this.add.text(x, y, '返回大地图', {
+            fontFamily: 'Arial',
+            fontSize: '17px',
+            color: '#f8fafc',
+            fontStyle: 'bold',
+        }).setOrigin(0.5);
+        container.add([shadow, background, label]);
+        container.setDepth(1310);
+    }
+
+    private updateEntryShellMode(mode: EntryShellMode): void {
+        if (!this.entryShell) {
+            return;
+        }
+
+        const modeConfig = mode === 'deckManager'
+            ? {
+                badgeLabel: '牌库整理中',
+                badgeBackgroundColor: '#4c1d95',
+                badgeColor: '#ede9fe',
+                borderColor: 0xa855f7,
+                accentColor: 0xc084fc,
+                cornerTopColor: 0xc084fc,
+                cornerBottomColor: 0x60a5fa,
+            }
+            : {
+                badgeLabel: '出发前检查',
+                badgeBackgroundColor: '#1d4ed8',
+                badgeColor: '#dbeafe',
+                borderColor: 0x3b82f6,
+                accentColor: 0x38bdf8,
+                cornerTopColor: 0x38bdf8,
+                cornerBottomColor: 0x8b5cf6,
+            };
+
+        this.entryShell.headerPlate.setStrokeStyle(2, modeConfig.borderColor, 0.72);
+        this.entryShell.headerAccent.setFillStyle(modeConfig.accentColor, 1);
+        this.entryShell.modeBadgeText.setText(modeConfig.badgeLabel);
+        this.entryShell.modeBadgeText.setStyle({
+            color: modeConfig.badgeColor,
+            backgroundColor: modeConfig.badgeBackgroundColor,
+        });
+        this.entryShell.topRail.setFillStyle(modeConfig.accentColor, 0.9);
+        this.entryShell.leftAccentBar.setFillStyle(modeConfig.cornerTopColor, 0.82);
+        this.entryShell.rightAccentBar.setFillStyle(modeConfig.cornerBottomColor, 0.82);
+        this.entryShell.corners.topLeftHorizontal.setFillStyle(modeConfig.cornerTopColor, 0.98);
+        this.entryShell.corners.topLeftVertical.setFillStyle(modeConfig.cornerTopColor, 0.98);
+        this.entryShell.corners.topRightHorizontal.setFillStyle(modeConfig.cornerTopColor, 0.98);
+        this.entryShell.corners.topRightVertical.setFillStyle(modeConfig.cornerTopColor, 0.98);
+        this.entryShell.corners.bottomLeftHorizontal.setFillStyle(modeConfig.cornerBottomColor, 0.98);
+        this.entryShell.corners.bottomLeftVertical.setFillStyle(modeConfig.cornerBottomColor, 0.98);
+        this.entryShell.corners.bottomRightHorizontal.setFillStyle(modeConfig.cornerBottomColor, 0.98);
+        this.entryShell.corners.bottomRightVertical.setFillStyle(modeConfig.cornerBottomColor, 0.98);
+    }
+
+    private updateEntryShellLayout(mode: EntryShellMode, animate: boolean): void {
+        if (!this.entryShell) {
+            return;
+        }
+
+        const { width, height } = this.scale;
+        const panelWidth = mode === 'deckManager'
+            ? Math.min(1120, width * 0.9)
+            : Math.min(980, width * 0.82);
+        const panelHeight = mode === 'deckManager'
+            ? Math.min(760, height * 0.86)
+            : Math.min(820, height * 0.88);
+        const panelX = width / 2;
+        const panelY = mode === 'deckManager' ? (height / 2 + 18) : (height / 2 + 24);
+        const padding = 22;
+        const left = panelX - panelWidth / 2 - padding;
+        const right = panelX + panelWidth / 2 + padding;
+        const top = panelY - panelHeight / 2 - padding;
+        const bottom = panelY + panelHeight / 2 + padding;
+        const centerY = panelY;
+        const cornerLength = 54;
+        const sideBarHeight = mode === 'deckManager' ? 80 : 92;
+        const topRailY = panelY - panelHeight / 2 + 10;
+        const topRailWidth = Math.max(320, Math.min(panelWidth - 160, 520));
+        const shellTargets: Array<[Phaser.GameObjects.Rectangle, number, number, number, number]> = [
+            [this.entryShell.topRail, panelX, topRailY, topRailWidth, 4],
+            [this.entryShell.leftAccentBar, left - 10, centerY, 4, sideBarHeight],
+            [this.entryShell.rightAccentBar, right + 10, centerY, 4, sideBarHeight],
+            [this.entryShell.corners.topLeftHorizontal, left + cornerLength / 2, top, cornerLength, 4],
+            [this.entryShell.corners.topLeftVertical, left, top + cornerLength / 2, 4, cornerLength],
+            [this.entryShell.corners.topRightHorizontal, right - cornerLength / 2, top, cornerLength, 4],
+            [this.entryShell.corners.topRightVertical, right, top + cornerLength / 2, 4, cornerLength],
+            [this.entryShell.corners.bottomLeftHorizontal, left + cornerLength / 2, bottom, cornerLength, 4],
+            [this.entryShell.corners.bottomLeftVertical, left, bottom - cornerLength / 2, 4, cornerLength],
+            [this.entryShell.corners.bottomRightHorizontal, right - cornerLength / 2, bottom, cornerLength, 4],
+            [this.entryShell.corners.bottomRightVertical, right, bottom - cornerLength / 2, 4, cornerLength],
+        ];
+
+        if (!animate) {
+            shellTargets.forEach(([target, x, y, displayWidth, displayHeight]) => {
+                target.setPosition(x, y);
+                target.setDisplaySize(displayWidth, displayHeight);
+            });
+            return;
+        }
+
+        shellTargets.forEach(([target, x, y, displayWidth, displayHeight]) => {
+            this.tweens.killTweensOf(target);
+            this.tweens.add({
+                targets: target,
+                x,
+                y,
+                displayWidth,
+                displayHeight,
+                duration: 240,
+                ease: 'Cubic.easeOut',
+            });
+        });
+    }
+
+    private setEntryShellVisible(visible: boolean, animate: boolean): void {
+        if (!this.entryShell) {
+            return;
+        }
+
+        this.tweens.killTweensOf(this.entryShell.container);
+
+        if (visible) {
+            this.entryShell.container.setVisible(true);
+
+            if (!animate) {
+                this.entryShell.container.setAlpha(1);
+                this.entryShell.container.setY(0);
+                return;
+            }
+
+            if (this.entryShell.container.alpha <= 0.02) {
+                this.entryShell.container.setY(-8);
+            }
+
+            this.tweens.add({
+                targets: this.entryShell.container,
+                alpha: 1,
+                y: 0,
+                duration: 220,
+                ease: 'Cubic.easeOut',
+            });
+            return;
+        }
+
+        if (!animate) {
+            this.entryShell.container.setVisible(false);
+            this.entryShell.container.setAlpha(0);
+            this.entryShell.container.setY(-8);
+            return;
+        }
+
+        this.tweens.add({
+            targets: this.entryShell.container,
+            alpha: 0,
+            y: -8,
+            duration: 180,
+            ease: 'Cubic.easeIn',
+            onComplete: () => {
+                this.entryShell?.container.setVisible(false);
+            },
+        });
+    }
+
+    private setEntryTransitionBlocker(active: boolean): void {
+        if (!this.entryTransitionBlocker) {
+            return;
+        }
+
+        this.entryTransitionBlocker.setVisible(active);
+
+        if (active) {
+            this.entryTransitionBlocker.setInteractive({ useHandCursor: false });
+        } else {
+            this.entryTransitionBlocker.disableInteractive();
+        }
+    }
+
+    private getCurrentEntryPanel(): EntryPanel | undefined {
+        return this.deckManagementPanel ?? this.preparationPanel;
+    }
+
+    private swapEntryPanel(
+        currentPanel: EntryPanel | undefined,
+        nextPanel: EntryPanel,
+        mode: EntryShellMode,
+        direction: 'forward' | 'backward' | 'refresh',
+        animate = true,
+    ): void {
+        const offsets = direction === 'forward'
+            ? { enterY: 34, exitY: -20 }
+            : direction === 'backward'
+                ? { enterY: -28, exitY: 22 }
+                : { enterY: 14, exitY: -10 };
+
+        this.updateEntryShellMode(mode);
+        this.updateEntryShellLayout(mode, animate);
+        this.setEntryShellVisible(true, animate);
+        this.tweens.killTweensOf(nextPanel);
+
+        if (currentPanel) {
+            this.tweens.killTweensOf(currentPanel);
+        }
+
+        if (!animate) {
+            currentPanel?.destroy();
+            nextPanel.setAlpha(1);
+            nextPanel.setY(0);
+            this.setEntryTransitionBlocker(false);
+            return;
+        }
+
+        this.setEntryTransitionBlocker(true);
+        nextPanel.setAlpha(0);
+        nextPanel.setY(offsets.enterY);
+
+        if (!currentPanel) {
+            this.tweens.add({
+                targets: nextPanel,
+                alpha: 1,
+                y: 0,
+                duration: 240,
+                ease: 'Cubic.easeOut',
+                onComplete: () => this.setEntryTransitionBlocker(false),
+            });
+            return;
+        }
+
+        currentPanel.setAlpha(1);
+        currentPanel.setY(0);
+        let completedTweens = 0;
+        const completeTransition = () => {
+            completedTweens += 1;
+
+            if (completedTweens < 2) {
+                return;
+            }
+
+            currentPanel.destroy();
+            this.setEntryTransitionBlocker(false);
+        };
+
+        this.tweens.add({
+            targets: currentPanel,
+            alpha: 0,
+            y: offsets.exitY,
+            duration: 180,
+            ease: 'Cubic.easeIn',
+            onComplete: completeTransition,
+        });
+        this.tweens.add({
+            targets: nextPanel,
+            alpha: 1,
+            y: 0,
+            duration: 240,
+            ease: 'Cubic.easeOut',
+            onComplete: completeTransition,
+        });
+    }
+
+    private dismissEntryPanels(onComplete: () => void, animate = true): void {
+        const currentPanel = this.getCurrentEntryPanel();
+
+        this.preparationPanel = undefined;
+        this.deckManagementPanel = undefined;
+        this.setEntryShellVisible(false, animate);
+
+        if (!currentPanel) {
+            this.setEntryTransitionBlocker(false);
+            onComplete();
+            return;
+        }
+
+        this.tweens.killTweensOf(currentPanel);
+
+        if (!animate) {
+            currentPanel.destroy();
+            this.setEntryTransitionBlocker(false);
+            onComplete();
+            return;
+        }
+
+        this.setEntryTransitionBlocker(true);
+        currentPanel.setAlpha(1);
+        currentPanel.setY(0);
+        this.tweens.add({
+            targets: currentPanel,
+            alpha: 0,
+            y: -16,
+            duration: 180,
+            ease: 'Cubic.easeIn',
+            onComplete: () => {
+                currentPanel.destroy();
+                this.setEntryTransitionBlocker(false);
+                onComplete();
+            },
+        });
     }
 
     private returnToWorldMap(): void {
@@ -241,14 +682,12 @@ export class ExpeditionScene extends Scene {
     }
 
     private showPreparationPanel(): void {
-        this.preparationPanel?.destroy();
-        this.deckManagementPanel?.destroy();
-        this.deckManagementPanel = undefined;
+        const currentPanel = this.getCurrentEntryPanel();
         this.runHud.setVisible(false);
         this.clearMapViews();
         this.destroyNodeMenu();
         this.destroyActiveNodePanel();
-        this.preparationPanel = new PreparationPanel(this, {
+        const nextPanel = new PreparationPanel(this, {
             stash: this.expeditionState.persistentStash,
             metadata: this.deckbuilderCardMetadata,
             onConfirm: () => this.startFreshRun(),
@@ -256,7 +695,15 @@ export class ExpeditionScene extends Scene {
             onOpenDeckManager: () => this.showDeckManagementPanel(),
             deckHandoffSummary: this.pendingPreparationDeckHandoff,
         });
+        this.preparationPanel = nextPanel;
+        this.deckManagementPanel = undefined;
         this.pendingPreparationDeckHandoff = undefined;
+        this.swapEntryPanel(
+            currentPanel,
+            nextPanel,
+            'preparation',
+            currentPanel instanceof DeckManagementPanel ? 'backward' : 'refresh',
+        );
     }
 
     private handleDeckSelect(deckId: string): void {
@@ -267,11 +714,8 @@ export class ExpeditionScene extends Scene {
 
     private showDeckManagementPanel(): void {
         this.deckManagerEntryContext = createPreparationDeckContext(this.expeditionState.persistentStash);
-        this.preparationPanel?.destroy();
-        this.preparationPanel = undefined;
-        this.deckManagementPanel?.destroy();
-
-        this.deckManagementPanel = new DeckManagementPanel(this, {
+        const currentPanel = this.getCurrentEntryPanel();
+        const nextPanel = new DeckManagementPanel(this, {
             stash: this.expeditionState.persistentStash,
             metadata: this.deckbuilderCardMetadata,
             onStashChange: (newStash) => {
@@ -290,6 +734,9 @@ export class ExpeditionScene extends Scene {
                 this.showPreparationPanel();
             },
         });
+        this.preparationPanel = undefined;
+        this.deckManagementPanel = nextPanel;
+        this.swapEntryPanel(currentPanel, nextPanel, 'deckManager', 'forward');
     }
 
     private startFreshRun(): void {
@@ -303,9 +750,9 @@ export class ExpeditionScene extends Scene {
             entryNodeId: this.mapDefinition.entryNodeId,
         });
 
-        this.preparationPanel?.destroy();
-        this.preparationPanel = undefined;
-        this.showActiveRun(confirmedView.activeRun, 'started');
+        this.dismissEntryPanels(() => {
+            this.showActiveRun(confirmedView.activeRun, 'started');
+        });
     }
 
     private showActiveRun(activeRun: RunSnapshot, mode: RunSummaryMode): void {
@@ -314,6 +761,10 @@ export class ExpeditionScene extends Scene {
             mode,
             currentNodeLabel,
         });
+
+        if (!this.getCurrentEntryPanel()) {
+            this.setEntryShellVisible(false, false);
+        }
 
         this.runHud.setVisible(true);
         this.runHud.updateFromRun(activeRun, currentNodeLabel);
