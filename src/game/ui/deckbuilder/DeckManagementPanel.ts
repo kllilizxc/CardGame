@@ -6,6 +6,7 @@ import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import {
     computeCardCollectionViewModel,
     type CardCollectionFilters,
+    type CardCollectionRow,
     type CardCollectionSortConfig,
     type CardCollectionSortField,
 } from '../../state/CardCollectionViewModel';
@@ -222,6 +223,7 @@ interface SpotlightRowHandle {
 
 type DeckReadinessTier = 'invalid' | 'warning' | 'ready';
 type TweenableMotionTarget = GameObjects.Container | GameObjects.Rectangle | GameObjects.Text;
+type DeckbuilderKeyboardZone = 'decks' | 'editor' | 'browser' | 'return';
 
 interface DeckFeedbackSnapshot {
     deckId: string;
@@ -230,6 +232,17 @@ interface DeckFeedbackSnapshot {
 }
 
 type DeckNamingMode = 'create' | 'rename';
+
+interface KeyboardGuideCopy {
+    fillColor: number;
+    accentColor: number;
+    headline: string;
+    detail: string;
+    headlineColor: string;
+    detailColor: string;
+}
+
+const KEYBOARD_ZONE_ORDER: DeckbuilderKeyboardZone[] = ['decks', 'editor', 'browser', 'return'];
 
 function getPreviewTheme(kind?: CardKind): CardPreviewTheme {
     switch (kind) {
@@ -618,6 +631,111 @@ function getSortFieldLabel(field: CardCollectionSortField): string {
     return SORT_FIELD_LABEL[field] ?? field;
 }
 
+function getKeyboardZoneLabel(zone: DeckbuilderKeyboardZone): string {
+    switch (zone) {
+        case 'decks':
+            return '卡组列表';
+        case 'editor':
+            return '当前卡组';
+        case 'browser':
+            return '储物袋浏览';
+        case 'return':
+            return '返回摘要';
+        default:
+            return '卡组管理';
+    }
+}
+
+function createKeyboardGuideCopy(
+    zone: DeckbuilderKeyboardZone,
+    options: {
+        dialogMode: boolean;
+        namingMode: DeckNamingMode | null;
+        searchFocus: boolean;
+    },
+): KeyboardGuideCopy {
+    if (options.dialogMode) {
+        return {
+            fillColor: 0x29161b,
+            accentColor: INVALID_ACCENT,
+            headline: '键盘焦点：删除确认',
+            detail: 'Enter 确认删除 · Esc 取消本次删除；对话框关闭前不会触发其他导航快捷键。',
+            headlineColor: '#fecaca',
+            detailColor: '#fca5a5',
+        };
+    }
+
+    if (options.namingMode) {
+        return {
+            fillColor: 0x241b4d,
+            accentColor: PANEL_ACCENT,
+            headline: options.namingMode === 'create' ? '键盘焦点：新卡组命名' : '键盘焦点：重命名输入',
+            detail: '直接键入名称 · Enter 确认 · Esc 取消；命名期间不会触发列表导航或编辑快捷键。',
+            headlineColor: '#ede9fe',
+            detailColor: '#c4b5fd',
+        };
+    }
+
+    if (options.searchFocus) {
+        return {
+            fillColor: 0x172554,
+            accentColor: SELECTED_ACCENT,
+            headline: '键盘焦点：搜索输入',
+            detail: '直接键入搜索词 · Backspace 删除字符 · Enter / Esc 退出搜索；浏览快捷键会先暂停。',
+            headlineColor: '#dbeafe',
+            detailColor: '#bfdbfe',
+        };
+    }
+
+    switch (zone) {
+        case 'decks':
+            return {
+                fillColor: 0x102344,
+                accentColor: SELECTED_ACCENT,
+                headline: `键盘焦点：${getKeyboardZoneLabel(zone)}`,
+                detail: '↑↓ 切换卡组 · N 新建 · R 重命名 · Delete 删除当前卡组',
+                headlineColor: '#dbeafe',
+                detailColor: '#bfdbfe',
+            };
+        case 'editor':
+            return {
+                fillColor: 0x1f1732,
+                accentColor: PANEL_ACCENT,
+                headline: `键盘焦点：${getKeyboardZoneLabel(zone)}`,
+                detail: '↑↓ 选中条目 · Enter 移除 1 · X 清空整行 · 详情会跟随当前焦点同步刷新',
+                headlineColor: '#ede9fe',
+                detailColor: '#ddd6fe',
+            };
+        case 'browser':
+            return {
+                fillColor: 0x10251a,
+                accentColor: VALID_ACCENT,
+                headline: `键盘焦点：${getKeyboardZoneLabel(zone)}`,
+                detail: '↑↓ 浏览条目 · Enter 加入 1 · F 一键加满 · / 搜索 · K/H/S/D 调整浏览条件',
+                headlineColor: '#dcfce7',
+                detailColor: '#bbf7d0',
+            };
+        case 'return':
+            return {
+                fillColor: 0x271b0b,
+                accentColor: WARNING_ACCENT,
+                headline: `键盘焦点：${getKeyboardZoneLabel(zone)}`,
+                detail: 'Enter 直接返回远征准备 · Esc 也可立即返回；摘要区可直接返回远征准备。',
+                headlineColor: '#fde68a',
+                detailColor: '#fcd34d',
+            };
+        default:
+            return {
+                fillColor: 0x111827,
+                accentColor: SECTION_BORDER,
+                headline: '键盘焦点：卡组管理',
+                detail: 'Tab / Shift+Tab 切换区域 · Esc 返回远征准备',
+                headlineColor: '#e2e8f0',
+                detailColor: '#cbd5e1',
+            };
+    }
+}
+
 function summarizeDeckStatus(
     deck: SavedDeck,
     stashCards: readonly ExpeditionCardStack[],
@@ -970,7 +1088,7 @@ function createReturnCtaState(summary: DeckStatusSummary): ReturnCtaState {
             buttonStrokeColor: 0xfca5a5,
             buttonTextColor: '#fff1f2',
             buttonStatusLabel: '库存待补齐',
-            summaryLabel: `${summary.count} 张 · ${summary.availabilityIssues.length} 种卡牌库存不足`,
+            summaryLabel: `当前卡组：${summary.count} 张 · ${summary.availabilityIssues.length} 种卡牌库存不足`,
         };
     }
 
@@ -983,7 +1101,7 @@ function createReturnCtaState(summary: DeckStatusSummary): ReturnCtaState {
             buttonStrokeColor: 0xfcd34d,
             buttonTextColor: '#fff7ed',
             buttonStatusLabel: `还差 ${summary.sizeIssue.min - summary.sizeIssue.count} 张`,
-            summaryLabel: `${summary.count} 张 · 还差 ${summary.sizeIssue.min - summary.sizeIssue.count} 张`,
+            summaryLabel: `当前卡组：${summary.count} 张 · 还差 ${summary.sizeIssue.min - summary.sizeIssue.count} 张`,
         };
     }
 
@@ -996,7 +1114,7 @@ function createReturnCtaState(summary: DeckStatusSummary): ReturnCtaState {
             buttonStrokeColor: 0xfca5a5,
             buttonTextColor: '#fff1f2',
             buttonStatusLabel: `超出 ${summary.sizeIssue.count - summary.sizeIssue.max} 张`,
-            summaryLabel: `${summary.count} 张 · 超出 ${summary.sizeIssue.count - summary.sizeIssue.max} 张`,
+            summaryLabel: `当前卡组：${summary.count} 张 · 超出 ${summary.sizeIssue.count - summary.sizeIssue.max} 张`,
         };
     }
 
@@ -1008,7 +1126,7 @@ function createReturnCtaState(summary: DeckStatusSummary): ReturnCtaState {
         buttonStrokeColor: 0x86efac,
         buttonTextColor: '#f0fdf4',
         buttonStatusLabel: '当前卡组已就绪',
-        summaryLabel: `${summary.count} 张 · 已满足 20-40 张`,
+        summaryLabel: `当前卡组：${summary.count} 张 · 已满足 20-40 张`,
     };
 }
 
@@ -1039,10 +1157,17 @@ export class DeckManagementPanel extends GameObjects.Container {
     private searchFocus = false;
     private cursorVisible = true;
     private cursorTimer?: Phaser.Time.TimerEvent;
+    private keyboardZone: DeckbuilderKeyboardZone = 'decks';
 
     private queryBg?: GameObjects.Rectangle;
     private queryText?: GameObjects.Text;
     private queryClearBtn?: GameObjects.Text;
+    private keyboardGuideHeadline?: GameObjects.Text;
+    private keyboardGuideDetail?: GameObjects.Text;
+    private keyboardGuideBg?: GameObjects.Rectangle;
+    private keyboardGuideAccent?: GameObjects.Rectangle;
+    private keyboardGuidePillBg?: GameObjects.Rectangle;
+    private keyboardGuidePillText?: GameObjects.Text;
 
     private deckListOuter?: GameObjects.Container;
     private deckListInner?: GameObjects.Container;
@@ -1142,12 +1267,14 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.namingMode = mode;
         this.namingDeckId = deckId;
         this.renameBuffer = initialName;
+        this.refreshKeyboardGuide();
     }
 
     private resetDeckNamingState(): void {
         this.namingMode = null;
         this.namingDeckId = null;
         this.renameBuffer = '';
+        this.refreshKeyboardGuide();
     }
 
     private isCardKnownToPanel(cardId: string): boolean {
@@ -1193,6 +1320,226 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.detailCardId = cardId;
         this.refreshDetailPane(true);
         this.refreshSpotlightRowStates(true);
+    }
+
+    private setKeyboardZone(zone: DeckbuilderKeyboardZone): void {
+        this.keyboardZone = zone;
+        this.refreshKeyboardGuide();
+    }
+
+    private cycleKeyboardZone(direction: -1 | 1): void {
+        const currentIndex = KEYBOARD_ZONE_ORDER.indexOf(this.keyboardZone);
+        const baseIndex = currentIndex >= 0 ? currentIndex : 0;
+        const nextIndex = (baseIndex + direction + KEYBOARD_ZONE_ORDER.length) % KEYBOARD_ZONE_ORDER.length;
+        this.setKeyboardZone(KEYBOARD_ZONE_ORDER[nextIndex]);
+        this.syncKeyboardZoneSelection(true);
+    }
+
+    private refreshKeyboardGuide(): void {
+        if (!this.keyboardGuideHeadline
+            || !this.keyboardGuideDetail
+            || !this.keyboardGuideBg
+            || !this.keyboardGuideAccent
+            || !this.keyboardGuidePillText
+            || !this.keyboardGuidePillBg) {
+            return;
+        }
+
+        const copy = createKeyboardGuideCopy(this.keyboardZone, {
+            dialogMode: this.dialogMode,
+            namingMode: this.namingMode,
+            searchFocus: this.searchFocus,
+        });
+
+        this.keyboardGuideBg.setFillStyle(copy.fillColor, 0.98);
+        this.keyboardGuideBg.setStrokeStyle(1, copy.accentColor, 0.92);
+        this.keyboardGuideAccent.setFillStyle(copy.accentColor, 0.95);
+        this.keyboardGuideHeadline.setText(copy.headline);
+        this.keyboardGuideHeadline.setColor(copy.headlineColor);
+        this.keyboardGuideDetail.setText(copy.detail);
+        this.keyboardGuideDetail.setColor(copy.detailColor);
+        this.keyboardGuidePillText.setText(this.dialogMode || this.namingMode || this.searchFocus
+            ? 'Enter 确认 · Esc 取消'
+            : 'Tab 切换区域 · Esc 返回');
+        this.keyboardGuidePillText.setColor(copy.headlineColor);
+        this.keyboardGuidePillBg.setFillStyle(0x0f172a, 1);
+        this.keyboardGuidePillBg.setStrokeStyle(1, copy.accentColor, 0.28);
+    }
+
+    private ensureSelectedDeckVisible(): boolean {
+        const decks = this.stash.savedDecks;
+        if (decks.length === 0 || !this.selectedDeckId) {
+            return false;
+        }
+
+        const selectedIndex = decks.findIndex((deck) => deck.id === this.selectedDeckId);
+        if (selectedIndex < 0) {
+            return false;
+        }
+
+        const maxOffset = Math.max(0, decks.length - this.deckListVisibleRows);
+        const previousOffset = this.deckListScrollOffset;
+
+        if (selectedIndex < this.deckListScrollOffset) {
+            this.deckListScrollOffset = selectedIndex;
+        } else if (selectedIndex >= this.deckListScrollOffset + this.deckListVisibleRows) {
+            this.deckListScrollOffset = selectedIndex - this.deckListVisibleRows + 1;
+        }
+
+        this.deckListScrollOffset = Phaser.Math.Clamp(this.deckListScrollOffset, 0, maxOffset);
+        return previousOffset !== this.deckListScrollOffset;
+    }
+
+    private getFocusedEditorIndex(deck: SavedDeck | null = this.getSelectedDeck()): number {
+        if (!deck || deck.cards.length === 0) {
+            return -1;
+        }
+
+        const focusedIndex = deck.cards.findIndex((stack) => stack.id === this.detailCardId);
+        return focusedIndex >= 0 ? focusedIndex : 0;
+    }
+
+    private focusEditorIndex(index: number, animate = true): void {
+        const deck = this.getSelectedDeck();
+        if (!deck || deck.cards.length === 0) {
+            return;
+        }
+
+        const clampedIndex = Phaser.Math.Clamp(index, 0, deck.cards.length - 1);
+        const nextCardId = deck.cards[clampedIndex]?.id;
+        if (!nextCardId) {
+            return;
+        }
+
+        const maxOffset = Math.max(0, deck.cards.length - this.editorVisibleRows);
+        const previousOffset = this.editorScrollOffset;
+
+        if (clampedIndex < this.editorScrollOffset) {
+            this.editorScrollOffset = clampedIndex;
+        } else if (clampedIndex >= this.editorScrollOffset + this.editorVisibleRows) {
+            this.editorScrollOffset = clampedIndex - this.editorVisibleRows + 1;
+        }
+
+        this.editorScrollOffset = Phaser.Math.Clamp(this.editorScrollOffset, 0, maxOffset);
+        const detailChanged = this.detailCardId !== nextCardId;
+        this.detailCardId = nextCardId;
+
+        if (this.editorScrollOffset !== previousOffset) {
+            this.refreshEditor();
+            return;
+        }
+
+        if (detailChanged) {
+            this.refreshDetailPane(animate);
+        }
+        this.refreshSpotlightRowStates(animate);
+    }
+
+    private buildBrowserCollections(): {
+        rows: CardCollectionRow[];
+        matchedRows: CardCollectionRow[];
+        totalRows: CardCollectionRow[];
+    } {
+        const baseFilters: CardCollectionFilters = {
+            query: this.filterQuery || undefined,
+            kind: this.filterKind,
+            hideZeroCount: false,
+        };
+        const sort: CardCollectionSortConfig = {
+            field: this.sortField,
+            direction: this.sortDirection,
+        };
+
+        return {
+            rows: computeCardCollectionViewModel(this.stash.cards, {
+                metadata: this.config.metadata,
+                filters: {
+                    ...baseFilters,
+                    hideZeroCount: this.filterHideZero,
+                },
+                sort,
+            }),
+            matchedRows: computeCardCollectionViewModel(this.stash.cards, {
+                metadata: this.config.metadata,
+                filters: baseFilters,
+                sort,
+            }),
+            totalRows: computeCardCollectionViewModel(this.stash.cards, {
+                metadata: this.config.metadata,
+                sort,
+            }),
+        };
+    }
+
+    private getFocusedBrowserIndex(rows: readonly CardCollectionRow[]): number {
+        if (rows.length === 0) {
+            return -1;
+        }
+
+        const focusedIndex = rows.findIndex((row) => row.id === this.detailCardId);
+        return focusedIndex >= 0 ? focusedIndex : 0;
+    }
+
+    private focusBrowserIndex(index: number, rows: readonly CardCollectionRow[] | null = null, animate = true): void {
+        const browserRows = rows ?? this.buildBrowserCollections().rows;
+        if (browserRows.length === 0) {
+            return;
+        }
+
+        const clampedIndex = Phaser.Math.Clamp(index, 0, browserRows.length - 1);
+        const nextCardId = browserRows[clampedIndex]?.id;
+        if (!nextCardId) {
+            return;
+        }
+
+        const maxOffset = Math.max(0, browserRows.length - this.browserVisibleRows);
+        const previousOffset = this.browserScrollOffset;
+
+        if (clampedIndex < this.browserScrollOffset) {
+            this.browserScrollOffset = clampedIndex;
+        } else if (clampedIndex >= this.browserScrollOffset + this.browserVisibleRows) {
+            this.browserScrollOffset = clampedIndex - this.browserVisibleRows + 1;
+        }
+
+        this.browserScrollOffset = Phaser.Math.Clamp(this.browserScrollOffset, 0, maxOffset);
+        const detailChanged = this.detailCardId !== nextCardId;
+        this.detailCardId = nextCardId;
+
+        if (this.browserScrollOffset !== previousOffset) {
+            this.refreshBrowser();
+            return;
+        }
+
+        if (detailChanged) {
+            this.refreshDetailPane(animate);
+        }
+        this.refreshSpotlightRowStates(animate);
+    }
+
+    private syncKeyboardZoneSelection(animate = false): void {
+        if (this.dialogMode || this.namingMode || this.searchFocus) {
+            this.refreshKeyboardGuide();
+            return;
+        }
+
+        switch (this.keyboardZone) {
+            case 'decks':
+                if (this.ensureSelectedDeckVisible()) {
+                    this.refreshDeckList();
+                }
+                break;
+            case 'editor':
+                this.focusEditorIndex(this.getFocusedEditorIndex(), animate);
+                break;
+            case 'browser': {
+                const { rows } = this.buildBrowserCollections();
+                this.focusBrowserIndex(this.getFocusedBrowserIndex(rows), rows, animate);
+                break;
+            }
+            case 'return':
+                this.refreshEditor();
+                break;
+        }
     }
 
     private playMotionPulse(
@@ -1647,8 +1994,10 @@ export class DeckManagementPanel extends GameObjects.Container {
     private handleKeyDown(event: KeyboardEvent): void {
         if (this.dialogMode) {
             if (event.key === 'Enter') {
+                event.preventDefault();
                 this.confirmDelete();
             } else if (event.key === 'Escape') {
+                event.preventDefault();
                 this.hideDeleteConfirmation();
             }
             return;
@@ -1656,8 +2005,10 @@ export class DeckManagementPanel extends GameObjects.Container {
 
         if (this.namingMode) {
             if (event.key === 'Enter') {
+                event.preventDefault();
                 this.confirmRename();
             } else if (event.key === 'Escape') {
+                event.preventDefault();
                 this.cancelRename();
             } else if (event.key === 'Backspace') {
                 event.preventDefault();
@@ -1673,16 +2024,131 @@ export class DeckManagementPanel extends GameObjects.Container {
 
         if (this.searchFocus) {
             if (event.key === 'Escape' || event.key === 'Enter') {
+                event.preventDefault();
                 this.setSearchFocus(false);
             } else if (event.key === 'Backspace') {
+                event.preventDefault();
                 this.filterQuery = this.filterQuery.slice(0, -1);
                 this.refreshBrowser();
                 this.updateSearchDisplay();
             } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+                event.preventDefault();
                 this.filterQuery += event.key;
                 this.refreshBrowser();
                 this.updateSearchDisplay();
             }
+            return;
+        }
+
+        const normalizedKey = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+
+        if (event.key === 'Tab') {
+            event.preventDefault();
+            this.cycleKeyboardZone(event.shiftKey ? -1 : 1);
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            this.setKeyboardZone('return');
+            this.config.onClose();
+            return;
+        }
+
+        if (event.key === '/') {
+            event.preventDefault();
+            this.setKeyboardZone('browser');
+            this.setSearchFocus(true);
+            return;
+        }
+
+        switch (this.keyboardZone) {
+            case 'decks':
+                if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    this.focusNextDeck(-1);
+                } else if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    this.focusNextDeck(1);
+                } else if (normalizedKey === 'n') {
+                    event.preventDefault();
+                    this.createDeck();
+                } else if (normalizedKey === 'r') {
+                    event.preventDefault();
+                    this.beginRenameSelectedDeck();
+                } else if (event.key === 'Delete') {
+                    event.preventDefault();
+                    this.showDeleteConfirmation();
+                }
+                break;
+            case 'editor': {
+                const deck = this.getSelectedDeck();
+                if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    this.focusEditorIndex(this.getFocusedEditorIndex(deck) - 1);
+                } else if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    this.focusEditorIndex(this.getFocusedEditorIndex(deck) + 1);
+                } else if (event.key === 'Home') {
+                    event.preventDefault();
+                    this.focusEditorIndex(0);
+                } else if (event.key === 'End') {
+                    event.preventDefault();
+                    this.focusEditorIndex(Number.MAX_SAFE_INTEGER);
+                } else if (event.key === 'Enter') {
+                    event.preventDefault();
+                    this.removeFocusedEditorCard(false);
+                } else if (normalizedKey === 'x' || event.key === 'Delete') {
+                    event.preventDefault();
+                    this.removeFocusedEditorCard(true);
+                }
+                break;
+            }
+            case 'browser': {
+                const { rows } = this.buildBrowserCollections();
+                if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    this.focusBrowserIndex(this.getFocusedBrowserIndex(rows) - 1, rows);
+                } else if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    this.focusBrowserIndex(this.getFocusedBrowserIndex(rows) + 1, rows);
+                } else if (event.key === 'Home') {
+                    event.preventDefault();
+                    this.focusBrowserIndex(0, rows);
+                } else if (event.key === 'End') {
+                    event.preventDefault();
+                    this.focusBrowserIndex(Number.MAX_SAFE_INTEGER, rows);
+                } else if (event.key === 'Enter') {
+                    event.preventDefault();
+                    this.addFocusedBrowserCard(false);
+                } else if (normalizedKey === 'f') {
+                    event.preventDefault();
+                    this.addFocusedBrowserCard(true);
+                } else if (normalizedKey === 'k') {
+                    event.preventDefault();
+                    this.cycleBrowserKindFilter();
+                } else if (normalizedKey === 'h') {
+                    event.preventDefault();
+                    this.toggleBrowserHideZero();
+                } else if (normalizedKey === 's') {
+                    event.preventDefault();
+                    this.cycleBrowserSortField();
+                } else if (normalizedKey === 'd') {
+                    event.preventDefault();
+                    this.toggleBrowserSortDirection();
+                } else if (normalizedKey === 'r') {
+                    event.preventDefault();
+                    this.resetBrowserControls();
+                    this.syncKeyboardZoneSelection();
+                }
+                break;
+            }
+            case 'return':
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    this.config.onClose();
+                }
+                break;
         }
     }
 
@@ -1744,6 +2210,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.searchFocus = focused;
 
         if (focused) {
+            this.setKeyboardZone('browser');
             if (this.namingMode) {
                 this.cancelRename();
             }
@@ -1767,6 +2234,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         }
 
         this.updateSearchDisplay();
+        this.refreshKeyboardGuide();
     }
 
     private handleSearchClickOutside(pointer: Phaser.Input.Pointer): void {
@@ -1829,6 +2297,132 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.sortDirection = DEFAULT_BROWSER_SORT_DIRECTION;
         this.setSearchFocus(false);
         this.refreshBrowser();
+    }
+
+    private cycleBrowserKindFilter(): void {
+        const idx = KIND_CYCLE.indexOf(this.filterKind);
+        this.filterKind = KIND_CYCLE[(idx + 1) % KIND_CYCLE.length];
+        this.refreshBrowser();
+        this.syncKeyboardZoneSelection();
+    }
+
+    private toggleBrowserHideZero(): void {
+        this.filterHideZero = !this.filterHideZero;
+        this.refreshBrowser();
+        this.syncKeyboardZoneSelection();
+    }
+
+    private cycleBrowserSortField(): void {
+        const idx = BROWSER_SORT_FIELDS.indexOf(this.sortField);
+        this.sortField = BROWSER_SORT_FIELDS[(idx + 1) % BROWSER_SORT_FIELDS.length];
+        this.refreshBrowser();
+        this.syncKeyboardZoneSelection();
+    }
+
+    private toggleBrowserSortDirection(): void {
+        this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+        this.refreshBrowser();
+        this.syncKeyboardZoneSelection();
+    }
+
+    private createDeck(): void {
+        const id = createDeckId();
+        const createdStash = addSavedDeckToStash(this.stash, id, null, []);
+        const selectedStash = selectDeckInStash(createdStash, id);
+        const createdDeck = selectedStash.savedDecks.find((savedDeck) => savedDeck.id === id);
+        this.setKeyboardZone('decks');
+        this.applyStashChange(selectedStash);
+        this.beginDeckNaming('create', id, createdDeck?.name ?? '');
+        this.deckListScrollOffset = Math.max(0, selectedStash.savedDecks.length - this.deckListVisibleRows);
+        this.refreshDeckViews();
+    }
+
+    private beginRenameSelectedDeck(): void {
+        const deck = this.getSelectedDeck();
+        if (!deck) {
+            return;
+        }
+
+        this.beginDeckNaming('rename', deck.id, deck.name);
+        this.refreshEditor();
+    }
+
+    private focusNextDeck(delta: number): void {
+        const decks = this.stash.savedDecks;
+        if (decks.length === 0) {
+            return;
+        }
+
+        const currentIndex = Math.max(0, decks.findIndex((deck) => deck.id === this.selectedDeckId));
+        const nextIndex = Phaser.Math.Clamp(currentIndex + delta, 0, decks.length - 1);
+        const nextDeck = decks[nextIndex];
+        if (!nextDeck || nextDeck.id === this.selectedDeckId) {
+            if (this.ensureSelectedDeckVisible()) {
+                this.refreshDeckList();
+            }
+            return;
+        }
+
+        this.setKeyboardZone('decks');
+        this.applyStashChange(selectDeckInStash(this.stash, nextDeck.id));
+        this.ensureSelectedDeckVisible();
+        this.refreshDeckViews();
+    }
+
+    private removeFocusedEditorCard(removeAll = false): void {
+        const deck = this.getSelectedDeck();
+        if (!deck || deck.cards.length === 0) {
+            return;
+        }
+
+        const focusedIndex = this.getFocusedEditorIndex(deck);
+        if (focusedIndex < 0) {
+            return;
+        }
+
+        const stack = deck.cards[focusedIndex];
+        if (!stack) {
+            return;
+        }
+
+        this.setKeyboardZone('editor');
+        this.setDetailCardId(stack.id);
+        this.updateDeckCards(deck.id, adjustDeckCardCount(deck.cards, stack.id, removeAll ? -stack.count : -1));
+    }
+
+    private addFocusedBrowserCard(quickAdd = false): void {
+        const selectedDeck = this.getSelectedDeck();
+        if (!selectedDeck) {
+            return;
+        }
+
+        const { rows } = this.buildBrowserCollections();
+        if (rows.length === 0) {
+            return;
+        }
+
+        const focusedIndex = this.getFocusedBrowserIndex(rows);
+        if (focusedIndex < 0) {
+            return;
+        }
+
+        const row = rows[focusedIndex];
+        if (!row) {
+            return;
+        }
+
+        const deckCards = selectedDeck.cards;
+        const selectedCapacity = summarizeDeckCapacity(deckCards);
+        const available = computeAvailable(this.stash.cards, deckCards, row.id);
+        const quickAddCount = getQuickAddCount(available, selectedCapacity.slotsRemainingToMax);
+        const delta = quickAdd ? quickAddCount : 1;
+        if (delta <= 0) {
+            return;
+        }
+
+        this.setKeyboardZone('browser');
+        this.setDetailCardId(row.id);
+        this.updateDeckCards(selectedDeck.id, adjustDeckCardCount(deckCards, row.id, delta));
     }
 
     private refreshBrowserSummary(
@@ -1923,7 +2517,11 @@ export class DeckManagementPanel extends GameObjects.Container {
                 24,
                 '恢复默认',
                 0x4338ca,
-                () => this.resetBrowserControls(),
+                () => {
+                    this.setKeyboardZone('browser');
+                    this.resetBrowserControls();
+                    this.syncKeyboardZoneSelection();
+                },
                 false,
                 {
                     hoverFillColor: 0x5b4ce1,
@@ -1969,6 +2567,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.refreshEditor();
         this.refreshBrowser();
         this.pendingSelectedDeckMotionId = null;
+        this.refreshKeyboardGuide();
     }
 
     private updateDeckCards(deckId: string, cards: readonly ExpeditionCardStack[]): void {
@@ -2004,7 +2603,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             fontFamily: 'Arial',
             fontSize: '17px',
             color: '#cbd5e1',
-            wordWrap: { width: panelWidth - 220 },
+            wordWrap: { width: panelWidth - 120 },
         });
 
         const closeButton = this.createButton(
@@ -2014,28 +2613,73 @@ export class DeckManagementPanel extends GameObjects.Container {
             38,
             '返回',
             0x334155,
-            () => this.config.onClose(),
+            () => {
+                this.setKeyboardZone('return');
+                this.config.onClose();
+            },
             false,
             { hoverFillColor: 0x475569, strokeColor: 0x94a3b8 },
         );
         const routeBriefingElements: Phaser.GameObjects.GameObject[] = [];
-        let contentY = panelY - panelHeight / 2 + 108;
-        let contentH = panelHeight - 136;
+        let chromeBottom = subtitle.y + subtitle.height;
 
         if (this.config.routeBriefing) {
             const routeBriefing = createRouteBriefingStrip(
                 this.scene,
                 titleX,
-                subtitle.y + subtitle.height + 14,
+                chromeBottom + 14,
                 panelWidth - 68,
                 this.config.routeBriefing,
             );
 
             routeBriefingElements.push(...routeBriefing.elements);
-            const contentTop = subtitle.y + subtitle.height + 14 + routeBriefing.height + 18;
-            contentY = contentTop;
-            contentH = panelY + panelHeight / 2 - 28 - contentY;
+            chromeBottom = chromeBottom + 14 + routeBriefing.height;
         }
+
+        const keyboardGuideTop = chromeBottom + 14;
+        const keyboardGuideWidth = panelWidth - 68;
+        const keyboardGuideHeight = 44;
+        this.keyboardGuideBg = this.scene.add.rectangle(
+            panelX,
+            keyboardGuideTop + keyboardGuideHeight / 2,
+            keyboardGuideWidth,
+            keyboardGuideHeight,
+            0x102344,
+            0.98,
+        );
+        this.keyboardGuideBg.setStrokeStyle(1, SELECTED_ACCENT, 0.92);
+        this.keyboardGuideAccent = this.scene.add.rectangle(
+            titleX + 5,
+            keyboardGuideTop + keyboardGuideHeight / 2,
+            6,
+            keyboardGuideHeight - 12,
+            SELECTED_ACCENT,
+            0.95,
+        ).setOrigin(0, 0.5);
+        this.keyboardGuideHeadline = this.scene.add.text(titleX + 18, keyboardGuideTop + 8, '', {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#dbeafe',
+            fontStyle: 'bold',
+        });
+        this.keyboardGuideDetail = this.scene.add.text(titleX + 18, keyboardGuideTop + 24, '', {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: '#bfdbfe',
+            wordWrap: { width: keyboardGuideWidth - 174 },
+        });
+        const [keyboardGuidePillBg, keyboardGuidePillText] = this.createRightAlignedPill(
+            titleX + keyboardGuideWidth - 12,
+            keyboardGuideTop + keyboardGuideHeight / 2,
+            'Tab 切换区域 · Esc 返回',
+            0x0f172a,
+            '#cbd5e1',
+        );
+        this.keyboardGuidePillBg = keyboardGuidePillBg;
+        this.keyboardGuidePillText = keyboardGuidePillText;
+
+        const contentY = keyboardGuideTop + keyboardGuideHeight + 18;
+        const contentH = panelY + panelHeight / 2 - 28 - contentY;
 
         const columnGap = 18;
         const leftColX = panelX - panelWidth / 2 + 26;
@@ -2045,13 +2689,27 @@ export class DeckManagementPanel extends GameObjects.Container {
         const rightColX = centerColX + centerColW + columnGap;
         const rightColW = panelX + panelWidth / 2 - 26 - rightColX;
 
-        this.add([overlay, panel, title, subtitle, ...closeButton, ...routeBriefingElements]);
+        this.add([
+            overlay,
+            panel,
+            title,
+            subtitle,
+            ...closeButton,
+            ...routeBriefingElements,
+            this.keyboardGuideBg,
+            this.keyboardGuideAccent,
+            this.keyboardGuideHeadline,
+            this.keyboardGuideDetail,
+            this.keyboardGuidePillBg,
+            this.keyboardGuidePillText,
+        ]);
 
         this.createDeckListColumn(leftColX, contentY, leftColW, contentH);
         this.createEditorColumn(centerColX, contentY, centerColW, contentH);
         this.createBrowserColumn(rightColX, contentY, rightColW, contentH);
 
         this.setDepth(1200);
+        this.refreshKeyboardGuide();
     }
 
     private createButton(
@@ -2194,7 +2852,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createDeckListColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '卡组列表', '选择要编辑与带入远征的卡组，并快速扫描当前失效状态。', SELECTED_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '卡组列表', '切换要编辑的卡组。键盘：↑↓ 切换 · N 新建 · R 重命名。', SELECTED_ACCENT));
 
         const innerX = x + 16;
         const innerW = colW - 32;
@@ -2219,16 +2877,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             34,
             '＋ 新建卡组',
             0x2563eb,
-            () => {
-                const id = createDeckId();
-                const createdStash = addSavedDeckToStash(this.stash, id, null, []);
-                const selectedStash = selectDeckInStash(createdStash, id);
-                const createdDeck = selectedStash.savedDecks.find((savedDeck) => savedDeck.id === id);
-                this.applyStashChange(selectedStash);
-                this.beginDeckNaming('create', id, createdDeck?.name ?? '');
-                this.deckListScrollOffset = Math.max(0, selectedStash.savedDecks.length - this.deckListVisibleRows);
-                this.refreshDeckViews();
-            },
+            () => this.createDeck(),
             false,
             {
                 hoverFillColor: 0x3b82f6,
@@ -2536,6 +3185,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                 bg.on('pointerover', () => bg.setFillStyle(hoverFill, 1));
                 bg.on('pointerout', () => bg.setFillStyle(bgFill, 1));
                 bg.on('pointerdown', () => {
+                    this.setKeyboardZone('decks');
                     this.applyStashChange(selectDeckInStash(this.stash, deck.id));
                     this.refreshDeckViews();
                 });
@@ -2589,7 +3239,10 @@ export class DeckManagementPanel extends GameObjects.Container {
             this.deleteDeckBtn.setInteractive({ useHandCursor: true });
             this.deleteDeckBtn.on('pointerover', () => this.deleteDeckBtn?.setFillStyle(0xdc2626, 1));
             this.deleteDeckBtn.on('pointerout', () => this.deleteDeckBtn?.setFillStyle(0xb91c1c, 1));
-            this.deleteDeckBtn.on('pointerdown', () => this.showDeleteConfirmation());
+            this.deleteDeckBtn.on('pointerdown', () => {
+                this.setKeyboardZone('decks');
+                this.showDeleteConfirmation();
+            });
             this.deleteDeckLabel.setText('删除当前卡组');
             this.deleteDeckLabel.setColor('#f8fafc');
         } else {
@@ -2603,7 +3256,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createEditorColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '卡组编辑', '新建卡组会先进入命名流程；你也可以随时重命名、校验，并以单张或整行清空的方式快速调整当前卡组。', PANEL_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '卡组编辑', '键盘：↑↓ 选条目 · Enter 移除 1 张 · X 清空整行。', PANEL_ACCENT));
         this.editorContentWidth = colW - 32;
         this.editorContentHeight = colH - 72;
         this.editorContainer = this.scene.add.container(x + 16, y + 70);
@@ -2788,10 +3441,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                 28,
                 '重命名',
                 0x312e81,
-                () => {
-                    this.beginDeckNaming('rename', deck.id, deck.name);
-                    this.refreshEditor();
-                },
+                () => this.beginRenameSelectedDeck(),
                 false,
                 {
                     hoverFillColor: 0x4338ca,
@@ -2801,8 +3451,8 @@ export class DeckManagementPanel extends GameObjects.Container {
             );
             nameText.setInteractive({ useHandCursor: true });
             nameText.on('pointerdown', () => {
-                this.beginDeckNaming('rename', deck.id, deck.name);
-                this.refreshEditor();
+                this.setKeyboardZone('decks');
+                this.beginRenameSelectedDeck();
             });
             this.editorContainer.add([nameText, ...renameButton]);
         }
@@ -2937,7 +3587,14 @@ export class DeckManagementPanel extends GameObjects.Container {
             returnCta.stripFillColor,
             0.98,
         );
-        exitStrip.setStrokeStyle(1, summary.accentColor, 0.9);
+        exitStrip.setStrokeStyle(this.keyboardZone === 'return' ? 2 : 1, summary.accentColor, 0.9);
+        exitStrip.setInteractive({ useHandCursor: true });
+        exitStrip.on('pointerover', () => exitStrip.setFillStyle(blendColor(returnCta.stripFillColor, returnCta.buttonFillColor, 0.18), 0.98));
+        exitStrip.on('pointerout', () => exitStrip.setFillStyle(returnCta.stripFillColor, 0.98));
+        exitStrip.on('pointerdown', () => {
+            this.setKeyboardZone('return');
+            this.config.onClose();
+        });
 
         const exitHeader = this.scene.add.text(exitStripX + 14, exitStripY + 8, '返回前摘要', {
             fontFamily: 'Arial',
@@ -2945,6 +3602,12 @@ export class DeckManagementPanel extends GameObjects.Container {
             color: returnCta.stripTextColor,
             fontStyle: 'bold',
         });
+        const exitHint = this.scene.add.text(exitStripX + exitStripW - 14, exitStripY + 8, '摘要区可直接返回远征准备', {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: this.keyboardZone === 'return' ? '#fef3c7' : returnCta.stripTextColor,
+            fontStyle: 'bold',
+        }).setOrigin(1, 0);
 
         const exitSummary = this.scene.add.text(exitStripX + 14, exitStripY + 24, returnCta.summaryLabel, {
             fontFamily: 'Arial',
@@ -2965,11 +3628,14 @@ export class DeckManagementPanel extends GameObjects.Container {
             returnCta.buttonFillColor,
             1,
         );
-        ctaButton.setStrokeStyle(1, returnCta.buttonStrokeColor, 0.95);
+        ctaButton.setStrokeStyle(this.keyboardZone === 'return' ? 2 : 1, returnCta.buttonStrokeColor, 0.95);
         ctaButton.setInteractive({ useHandCursor: true });
         ctaButton.on('pointerover', () => ctaButton.setFillStyle(returnCta.buttonHoverFillColor, 1));
         ctaButton.on('pointerout', () => ctaButton.setFillStyle(returnCta.buttonFillColor, 1));
-        ctaButton.on('pointerdown', () => this.config.onClose());
+        ctaButton.on('pointerdown', () => {
+            this.setKeyboardZone('return');
+            this.config.onClose();
+        });
 
         const ctaLabel = this.scene.add.text(ctaButtonX, ctaButtonY - 6, '返回远征准备', {
             fontFamily: 'Arial',
@@ -2982,7 +3648,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             fontSize: '10px',
             color: returnCta.buttonTextColor,
         }).setOrigin(0.5);
-        this.editorContainer.add([exitStrip, exitHeader, exitSummary, ctaButton, ctaLabel, ctaSubLabel]);
+        this.editorContainer.add([exitStrip, exitHeader, exitHint, exitSummary, ctaButton, ctaLabel, ctaSubLabel]);
 
         const detailPaneBottom = exitStripY - 12;
         const detailPaneH = Math.max(124, detailPaneBottom - detailPaneY);
@@ -3112,7 +3778,10 @@ export class DeckManagementPanel extends GameObjects.Container {
                     this.setDetailCardId(stack.id);
                 });
                 rowBg.on('pointerout', () => this.applySpotlightRowState(spotlightRow, this.detailCardId === stack.id));
-                rowBg.on('pointerdown', () => this.setDetailCardId(stack.id));
+                rowBg.on('pointerdown', () => {
+                    this.setKeyboardZone('editor');
+                    this.setDetailCardId(stack.id);
+                });
                 this.registerSpotlightRow(this.editorSpotlightRows, spotlightRow);
                 const accent = this.scene.add.rectangle(5, rowY + EDITOR_ROW_HEIGHT / 2, 6, EDITOR_ROW_HEIGHT - 14, rowAccentColor, 1)
                     .setOrigin(0, 0.5);
@@ -3139,6 +3808,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                     '移除 1',
                     0x7f1d1d,
                     () => {
+                        this.setKeyboardZone('editor');
                         this.setDetailCardId(stack.id);
                         this.updateDeckCards(deck.id, adjustDeckCardCount(deck.cards, stack.id, -1));
                     },
@@ -3157,6 +3827,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                     '全部移除',
                     0x991b1b,
                     () => {
+                        this.setKeyboardZone('editor');
                         this.setDetailCardId(stack.id);
                         this.updateDeckCards(deck.id, adjustDeckCardCount(deck.cards, stack.id, -stack.count));
                     },
@@ -3317,7 +3988,7 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createBrowserColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '储物袋浏览', '筛选库存卡牌，并按单张或一键加满的方式补入当前卡组；上方会同步提示当前浏览条件、剩余结果与恢复默认入口。', VALID_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '储物袋浏览', '键盘：/ 搜索 · Enter 加入 1 张 · F 一键加满。', VALID_ACCENT));
 
         const innerX = x + 16;
         const innerW = colW - 32;
@@ -3358,7 +4029,10 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.queryBg = this.scene.add.rectangle(innerX + innerW / 2, searchY, innerW, 30, 0x0f172a, 1);
         this.queryBg.setStrokeStyle(1, SECTION_BORDER, 0.9);
         this.queryBg.setInteractive({ useHandCursor: true });
-        this.queryBg.on('pointerdown', () => this.setSearchFocus(true));
+        this.queryBg.on('pointerdown', () => {
+            this.setKeyboardZone('browser');
+            this.setSearchFocus(true);
+        });
 
         this.queryText = this.scene.add.text(innerX + 14, searchY, this.filterQuery || '搜索卡牌、编号或名称', {
             fontFamily: 'Arial',
@@ -3374,6 +4048,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         }).setOrigin(1, 0.5);
         this.queryClearBtn.setInteractive({ useHandCursor: true });
         this.queryClearBtn.on('pointerdown', () => {
+            this.setKeyboardZone('browser');
             this.filterQuery = '';
             this.setSearchFocus(false);
             this.refreshBrowser();
@@ -3389,9 +4064,8 @@ export class DeckManagementPanel extends GameObjects.Container {
             `种类：${KIND_LABEL[String(this.filterKind)]}`,
             0x312e81,
             () => {
-                const idx = KIND_CYCLE.indexOf(this.filterKind);
-                this.filterKind = KIND_CYCLE[(idx + 1) % KIND_CYCLE.length];
-                this.refreshBrowser();
+                this.setKeyboardZone('browser');
+                this.cycleBrowserKindFilter();
             },
             false,
             {
@@ -3411,8 +4085,8 @@ export class DeckManagementPanel extends GameObjects.Container {
             this.filterHideZero ? '零库存：已隐藏' : '零库存：已显示',
             this.filterHideZero ? 0x1d4ed8 : 0x1f2937,
             () => {
-                this.filterHideZero = !this.filterHideZero;
-                this.refreshBrowser();
+                this.setKeyboardZone('browser');
+                this.toggleBrowserHideZero();
             },
             false,
             {
@@ -3432,9 +4106,8 @@ export class DeckManagementPanel extends GameObjects.Container {
             `排序：${getSortFieldLabel(this.sortField)}`,
             0x1f2937,
             () => {
-                const idx = BROWSER_SORT_FIELDS.indexOf(this.sortField);
-                this.sortField = BROWSER_SORT_FIELDS[(idx + 1) % BROWSER_SORT_FIELDS.length];
-                this.refreshBrowser();
+                this.setKeyboardZone('browser');
+                this.cycleBrowserSortField();
             },
             false,
             { hoverFillColor: 0x334155, strokeColor: 0x475569, fontSize: '13px' },
@@ -3450,8 +4123,8 @@ export class DeckManagementPanel extends GameObjects.Container {
             this.sortDirection === 'asc' ? '↑ 升序' : '↓ 降序',
             0x1f2937,
             () => {
-                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-                this.refreshBrowser();
+                this.setKeyboardZone('browser');
+                this.toggleBrowserSortDirection();
             },
             false,
             { hoverFillColor: 0x334155, strokeColor: 0x475569, fontSize: '13px' },
@@ -3572,33 +4245,7 @@ export class DeckManagementPanel extends GameObjects.Container {
 
         this.browserInner.removeAll(true);
 
-        const baseFilters: CardCollectionFilters = {
-            query: this.filterQuery || undefined,
-            kind: this.filterKind,
-            hideZeroCount: false,
-        };
-        const sort: CardCollectionSortConfig = {
-            field: this.sortField,
-            direction: this.sortDirection,
-        };
-
-        const rows = computeCardCollectionViewModel(this.stash.cards, {
-            metadata: this.config.metadata,
-            filters: {
-                ...baseFilters,
-                hideZeroCount: this.filterHideZero,
-            },
-            sort,
-        });
-        const matchedRows = computeCardCollectionViewModel(this.stash.cards, {
-            metadata: this.config.metadata,
-            filters: baseFilters,
-            sort,
-        });
-        const totalRows = computeCardCollectionViewModel(this.stash.cards, {
-            metadata: this.config.metadata,
-            sort,
-        });
+        const { rows, matchedRows, totalRows } = this.buildBrowserCollections();
 
         const maxOffset = Math.max(0, rows.length - this.browserVisibleRows);
         this.browserScrollOffset = Phaser.Math.Clamp(this.browserScrollOffset, 0, maxOffset);
@@ -3758,7 +4405,10 @@ export class DeckManagementPanel extends GameObjects.Container {
                     this.setDetailCardId(row.id);
                 });
                 rowBg.on('pointerout', () => this.applySpotlightRowState(spotlightRow, this.detailCardId === row.id));
-                rowBg.on('pointerdown', () => this.setDetailCardId(row.id));
+                rowBg.on('pointerdown', () => {
+                    this.setKeyboardZone('browser');
+                    this.setDetailCardId(row.id);
+                });
                 this.registerSpotlightRow(this.browserSpotlightRows, spotlightRow);
                 const accent = this.scene.add.rectangle(5, rowY + BROWSER_ROW_HEIGHT / 2, 6, BROWSER_ROW_HEIGHT - 14, borderColor, 1)
                     .setOrigin(0, 0.5);
@@ -3790,6 +4440,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                     '加入 1',
                     0x166534,
                     () => {
+                        this.setKeyboardZone('browser');
                         this.setDetailCardId(row.id);
                         if (selectedDeck) {
                             this.updateDeckCards(selectedDeck.id, adjustDeckCardCount(deckCards, row.id, 1));
@@ -3813,6 +4464,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                     '一键加满',
                     0x15803d,
                     () => {
+                        this.setKeyboardZone('browser');
                         this.setDetailCardId(row.id);
                         if (selectedDeck) {
                             this.updateDeckCards(selectedDeck.id, adjustDeckCardCount(deckCards, row.id, quickAddCount));
@@ -3856,10 +4508,13 @@ export class DeckManagementPanel extends GameObjects.Container {
 
     private showDeleteConfirmation(): void {
         if (this.dialogMode) return;
+        if (this.stash.savedDecks.length <= 1) return;
         const deck = this.getSelectedDeck();
         if (!deck || !this.selectedDeckId) return;
 
         this.dialogMode = true;
+        this.setKeyboardZone('decks');
+        this.refreshKeyboardGuide();
 
         const { width, height } = this.scene.scale;
         const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.62)
@@ -3921,6 +4576,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.dialogMode = false;
         this.dialogObjects.forEach((obj) => obj.destroy());
         this.dialogObjects = [];
+        this.refreshKeyboardGuide();
     }
 
     private confirmDelete(): void {

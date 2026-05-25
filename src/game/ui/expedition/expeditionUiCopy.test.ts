@@ -82,6 +82,11 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).toContain('返回前摘要');
         expect(panel).toContain('返回远征准备');
         expect(panel).toContain('摘要区可直接返回远征准备');
+        expect(panel).toContain('键盘焦点：');
+        expect(panel).toContain('Tab 切换区域 · Esc 返回');
+        expect(panel).toContain('↑↓ 切换卡组');
+        expect(panel).toContain('Enter 加入 1');
+        expect(panel).toContain('Enter 直接返回远征准备');
         expect(panel).toContain('当前卡组：');
         expect(panel).toContain('卡组 ×');
         expect(panel).toContain('一键加满');
