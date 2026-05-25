@@ -356,7 +356,7 @@ export class ExpeditionScene extends Scene {
             color: '#f8fafc',
             fontStyle: 'bold',
         }).setOrigin(0, 0.5);
-        const subtitleText = this.add.text(headerLeft + 22, 72, routeBriefing.panelStageLabel, {
+        const subtitleText = this.add.text(headerLeft + 22, 72, routeBriefing.shellSubtitle, {
             fontFamily: 'Arial',
             fontSize: '14px',
             color: '#bfdbfe',
@@ -738,7 +738,7 @@ export class ExpeditionScene extends Scene {
             color: modeConfig.badgeColor,
             backgroundColor: modeConfig.badgeBackgroundColor,
         });
-        this.entryShell.subtitleText.setText(routeBriefing.panelStageLabel);
+        this.entryShell.subtitleText.setText(routeBriefing.shellSubtitle);
         this.entryShell.subtitleText.setColor(modeConfig.subtitleColor);
         this.entryShell.routeSlate.plate.setFillStyle(modeConfig.routePlateFillColor, 0.98);
         this.entryShell.routeSlate.plate.setStrokeStyle(1, modeConfig.routePlateBorderColor, 0.82);

@@ -14,6 +14,8 @@ describe('expedition UI Chinese copy', () => {
         expect(sceneCopy).toContain('两步出发校验 · 先确认路线，再选定带入');
         expect(sceneCopy).toContain('两步出发校验 · 整理卡组后返回确认');
         expect(sceneCopy).toContain('路线简报');
+        expect(sceneCopy).toContain('开局');
+        expect(sceneCopy).toContain('收官');
         expect(sceneCopy).toContain('确认路线与带入');
         expect(sceneCopy).toContain('卡组管理');
         expect(sceneCopy).toContain('可出发');
@@ -44,9 +46,12 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).toContain('缺口重点');
         expect(panel).toContain('本次携带一览');
         expect(loadoutCopy).toContain('当前阶段：确认路线并选定本次带入');
+        expect(loadoutCopy).toContain('路线速览');
+        expect(loadoutCopy).toContain('首层');
+        expect(loadoutCopy).toContain('终层');
         expect(loadoutCopy).toContain('入口');
-        expect(loadoutCopy).toContain('路线');
-        expect(loadoutCopy).toContain('终点');
+        expect(loadoutCopy).toContain('开局');
+        expect(loadoutCopy).toContain('收官');
         expect(panel).toContain('卡组构成');
         expect(panel).toContain('携带道具');
         expect(panel).toContain('灵石');

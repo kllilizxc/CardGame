@@ -15,7 +15,8 @@ interface RouteBriefingStripTheme {
     badgeBackgroundColor: string;
     stageColor: string;
     descriptionColor: string;
-    highlightLabelColor: string;
+    glanceTitleColor: string;
+    glanceTextColor: string;
 }
 
 function getRouteBriefingStripTheme(briefing: ExpeditionRouteBriefingSummary): RouteBriefingStripTheme {
@@ -28,7 +29,8 @@ function getRouteBriefingStripTheme(briefing: ExpeditionRouteBriefingSummary): R
             badgeBackgroundColor: '#4c1d95',
             stageColor: '#ddd6fe',
             descriptionColor: '#ede9fe',
-            highlightLabelColor: '#c4b5fd',
+            glanceTitleColor: '#d8b4fe',
+            glanceTextColor: '#c4b5fd',
         };
     }
 
@@ -40,7 +42,8 @@ function getRouteBriefingStripTheme(briefing: ExpeditionRouteBriefingSummary): R
         badgeBackgroundColor: '#1d4ed8',
         stageColor: '#bfdbfe',
         descriptionColor: '#eff6ff',
-        highlightLabelColor: '#93c5fd',
+        glanceTitleColor: '#bfdbfe',
+        glanceTextColor: '#93c5fd',
     };
 }
 
@@ -73,19 +76,25 @@ export function createRouteBriefingStrip(
         lineSpacing: 4,
         wordWrap: { width: width - 36 },
     });
-    const highlightText = scene.add.text(
+    const glanceTitle = scene.add.text(left + 18, description.y + description.height + 12, briefing.glanceTitle, {
+        fontFamily: 'Arial',
+        fontSize: '13px',
+        color: theme.glanceTitleColor,
+        fontStyle: 'bold',
+    });
+    const glanceText = scene.add.text(
         left + 18,
-        description.y + description.height + 10,
-        briefing.highlights.map((highlight) => `${highlight.label}：${highlight.value}`).join(' · '),
+        glanceTitle.y + glanceTitle.height + 6,
+        briefing.glanceLines.map((line) => `• ${line}`).join('\n'),
         {
             fontFamily: 'Arial',
             fontSize: '13px',
-            color: theme.highlightLabelColor,
+            color: theme.glanceTextColor,
             lineSpacing: 3,
             wordWrap: { width: width - 36 },
         },
     );
-    const height = highlightText.y + highlightText.height - top + 16;
+    const height = glanceText.y + glanceText.height - top + 16;
     const background = scene.add.rectangle(left + width / 2, top + height / 2, width, height, theme.fillColor, 0.96);
     background.setStrokeStyle(2, theme.borderColor, 0.92);
     const accent = scene.add.rectangle(left + width / 2, top + 5, width - 16, 5, theme.accentColor, 1).setOrigin(0.5, 0);
@@ -97,7 +106,8 @@ export function createRouteBriefingStrip(
             badge,
             stageText,
             description,
-            highlightText,
+            glanceTitle,
+            glanceText,
         ],
         height,
     };

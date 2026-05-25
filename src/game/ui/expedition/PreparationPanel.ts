@@ -288,9 +288,14 @@ function getRouteBriefingHeight(
         lineSpacing: 4,
         wordWrap: { width: width - 36 },
     });
-    const highlightHeight = measureTextHeight(
+    const glanceTitleHeight = measureTextHeight(scene, briefing.glanceTitle, {
+        fontFamily: 'Arial',
+        fontSize: '13px',
+        fontStyle: 'bold',
+    });
+    const glanceTextHeight = measureTextHeight(
         scene,
-        briefing.highlights.map((highlight) => `${highlight.label}：${highlight.value}`).join(' · '),
+        briefing.glanceLines.map((line) => `• ${line}`).join('\n'),
         {
             fontFamily: 'Arial',
             fontSize: '13px',
@@ -299,7 +304,7 @@ function getRouteBriefingHeight(
         },
     );
 
-    return 80 + descriptionHeight + highlightHeight;
+    return 88 + descriptionHeight + glanceTitleHeight + glanceTextHeight;
 }
 
 function splitPreviewColumns(

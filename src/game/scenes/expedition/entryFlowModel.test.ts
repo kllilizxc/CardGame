@@ -4,6 +4,7 @@ import initialWorldState from '../../../../public/data/world/initial-state.json'
 import jadeCaveMapJson from '../../../../public/data/mijing/jade-cave-map.json';
 import prototypeMapJson from '../../../../public/data/mijing/prototype-map.json';
 import starterDeckJson from '../../../../public/data/decks/starter-deck.json';
+import tutorialQingyunMapJson from '../../../../public/data/mijing/tutorial-qingyun-outer-mountain-map.json';
 
 import { resetRunPersistenceForTests } from '../../services/RunPersistence';
 import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
@@ -52,14 +53,20 @@ describe('entryFlowModel', () => {
         expect(createExpeditionRouteBriefingSummary(prototypeMapJson, 'preparation')).toEqual({
             mode: 'preparation',
             shellBadgeLabel: '步骤 1 / 2',
-            shellSubtitle: '两步出发校验 · 先确认路线，再选定带入',
+            shellSubtitle: '开局：雾林伏击 / 弃置行囊 · 收官：悬桥撤离点 / 封印守关者',
             panelBadgeLabel: '路线简报',
             panelStageLabel: '当前阶段：确认路线并选定本次带入',
-            description: '一张固定拓扑的第一阶段原型秘境地图，用于验证带入、搜打撤与首领通关闭环。',
+            description: '青云外山试炼从山门入口起步，先辨认雾林伏击 / 弃置行囊的分路，再按悬桥撤离点 / 封印守关者的收官去准备本次带入。',
             highlights: [
                 { label: '入口', value: '山门入口' },
-                { label: '路线', value: '4 层 · 战斗 2 · 事件 1 · 商店 1' },
-                { label: '终点', value: '1 个撤离点 · 1 个首领' },
+                { label: '开局', value: '雾林伏击 / 弃置行囊' },
+                { label: '收官', value: '悬桥撤离点 / 封印守关者' },
+            ],
+            glanceTitle: '路线速览',
+            glanceLines: [
+                '首层：雾林伏击（战斗） / 弃置行囊（事件）',
+                '二层：云游小贩（商店） / 残庭巡守（战斗） / 悬桥撤离点（撤离）',
+                '终层：封印守关者（首领）',
             ],
         });
     });
@@ -68,14 +75,37 @@ describe('entryFlowModel', () => {
         expect(createExpeditionRouteBriefingSummary(jadeCaveMapJson, 'deckManager')).toEqual({
             mode: 'deckManager',
             shellBadgeLabel: '步骤 2 / 2',
-            shellSubtitle: '两步出发校验 · 整理卡组后返回确认',
+            shellSubtitle: '开局：幽雾狐影 / 遗落行囊 · 收官：洞壁绳梯 / 玉脉守关者',
             panelBadgeLabel: '路线简报',
             panelStageLabel: '当前阶段：整理卡组并返回远征准备',
-            description: '青云后山一处青玉洞支脉，沿用第一阶段固定拓扑与原型事件/商店池，用于验证第二个秘境入口的 route identity 与 active-run 隔离。',
+            description: '青玉洞试炼从青玉洞口起步，前段要先看幽雾狐影 / 遗落行囊的分路；整理卡组时请对照洞壁绳梯 / 玉脉守关者的收官节点再返回远征准备。',
             highlights: [
                 { label: '入口', value: '青玉洞口' },
-                { label: '路线', value: '4 层 · 战斗 2 · 事件 1 · 商店 1' },
-                { label: '终点', value: '1 个撤离点 · 1 个首领' },
+                { label: '开局', value: '幽雾狐影 / 遗落行囊' },
+                { label: '收官', value: '洞壁绳梯 / 玉脉守关者' },
+            ],
+            glanceTitle: '路线速览',
+            glanceLines: [
+                '首层：幽雾狐影（战斗） / 遗落行囊（事件）',
+                '二层：洞口小贩（商店） / 碎玉石庭（战斗） / 洞壁绳梯（撤离）',
+                '终层：玉脉守关者（首领）',
+            ],
+        });
+    });
+
+    it('derives layer-by-layer route glance lines from maps with a longer single-file tutorial path', () => {
+        expect(createExpeditionRouteBriefingSummary(tutorialQingyunMapJson, 'preparation')).toMatchObject({
+            shellSubtitle: '开局：雾狐试招 · 收官：问心回响 / 索桥撤离点',
+            highlights: [
+                { label: '入口', value: '外山入口' },
+                { label: '开局', value: '雾狐试招' },
+                { label: '收官', value: '问心回响 / 索桥撤离点' },
+            ],
+            glanceLines: [
+                '首层：雾狐试招（战斗）',
+                '二层：守山补给匣（事件）',
+                '三层：引路散修（商店）',
+                '终层：问心回响（首领） / 索桥撤离点（撤离）',
             ],
         });
     });

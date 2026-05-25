@@ -131,6 +131,8 @@ export interface ExpeditionRouteBriefingSummary {
     panelStageLabel: string;
     description: string;
     highlights: ExpeditionRouteBriefingHighlight[];
+    glanceTitle: string;
+    glanceLines: string[];
 }
 
 export type ExpeditionPreflightStepState = 'current' | 'complete' | 'upcoming';
@@ -181,6 +183,15 @@ const PREPARATION_CARD_KIND_ORDER: Record<PreparationCardKind, number> = {
     field: 4,
     pill: 5,
     unknown: 6,
+};
+
+const ROUTE_BRIEFING_NODE_TYPE_LABELS: Record<ExpeditionNodeType, string> = {
+    entrance: '入口',
+    battle: '战斗',
+    event: '事件',
+    shop: '商店',
+    extract: '撤离',
+    boss: '首领',
 };
 
 function countStacks<T extends CountableStack>(stacks: readonly T[]): number {
@@ -501,34 +512,143 @@ function createDeckCountDeltaText(before: number, after: number): string {
     return `已保存卡组数从 ${before} 套变为 ${after} 套。`;
 }
 
-function summarizeRouteNodes(map: ExpeditionMapDefinition): Record<ExpeditionNodeType, number> {
-    const counts: Record<ExpeditionNodeType, number> = {
-        entrance: 0,
-        battle: 0,
-        event: 0,
-        shop: 0,
-        extract: 0,
-        boss: 0,
-    };
-
-    for (const node of map.nodes) {
-        counts[node.type] += 1;
-    }
-
-    return counts;
-}
-
 function getRouteDepth(map: ExpeditionMapDefinition): number {
     return map.nodes.reduce((maxLayer, node) => Math.max(maxLayer, node.layer), 0) + 1;
 }
 
-function formatRouteEndpointSummary(extractCount: number, bossCount: number): string {
-    const segments: string[] = [];
+function createRouteNodeLookup(map: ExpeditionMapDefinition): Map<string, ExpeditionMapDefinition['nodes'][number]> {
+    return new Map(map.nodes.map((node) => [node.id, node]));
+}
 
-    segments.push(extractCount > 0 ? `${extractCount} 个撤离点` : '无撤离点');
-    segments.push(bossCount > 0 ? `${bossCount} 个首领` : '无首领');
+function getRouteOpeningNodes(map: ExpeditionMapDefinition, entryNode: ExpeditionMapDefinition['nodes'][number] | undefined) {
+    if (!entryNode) {
+        return [];
+    }
 
-    return segments.join(' · ');
+    const nodeLookup = createRouteNodeLookup(map);
+
+    return entryNode.outgoingNodeIds
+        .map((nodeId) => nodeLookup.get(nodeId))
+        .filter((node): node is ExpeditionMapDefinition['nodes'][number] => node !== undefined);
+}
+
+function getRouteTerminalNodes(map: ExpeditionMapDefinition) {
+    return map.nodes.filter((node) => node.outgoingNodeIds.length === 0 && node.id !== map.entryNodeId);
+}
+
+function getRouteLayerGroups(map: ExpeditionMapDefinition) {
+    const layers = new Map<number, ExpeditionMapDefinition['nodes'][number][]>();
+
+    for (const node of map.nodes) {
+        if (node.id === map.entryNodeId) {
+            continue;
+        }
+
+        const current = layers.get(node.layer);
+
+        if (current) {
+            current.push(node);
+        } else {
+            layers.set(node.layer, [node]);
+        }
+    }
+
+    return [...layers.entries()]
+        .sort((left, right) => left[0] - right[0])
+        .map(([, nodes]) => nodes);
+}
+
+function formatRouteNodeLabels(
+    nodes: readonly ExpeditionMapDefinition['nodes'][number][],
+    options?: {
+        includeType?: boolean;
+        limit?: number;
+        emptyLabel?: string;
+    },
+): string {
+    const includeType = options?.includeType ?? false;
+    const limit = options?.limit ?? nodes.length;
+    const emptyLabel = options?.emptyLabel ?? '暂无节点';
+
+    if (nodes.length === 0) {
+        return emptyLabel;
+    }
+
+    const visibleNodes = nodes.slice(0, limit);
+    const label = visibleNodes
+        .map((node) => includeType
+            ? `${node.label}（${ROUTE_BRIEFING_NODE_TYPE_LABELS[node.type]}）`
+            : node.label)
+        .join(' / ');
+
+    return visibleNodes.length < nodes.length
+        ? `${label} · …另 ${nodes.length - visibleNodes.length} 处`
+        : label;
+}
+
+function getRouteLayerLabel(index: number, totalLayers: number): string {
+    if (index === 0) {
+        return '首层';
+    }
+
+    if (index === totalLayers - 1) {
+        return '终层';
+    }
+
+    const numerals = ['二', '三', '四', '五', '六', '七', '八', '九'];
+
+    return `${numerals[index - 1] ?? `${index + 1}`}层`;
+}
+
+function createRouteGlanceLines(map: ExpeditionMapDefinition): string[] {
+    const layerGroups = getRouteLayerGroups(map);
+
+    return layerGroups.map((nodes, index) => `${getRouteLayerLabel(index, layerGroups.length)}：${formatRouteNodeLabels(nodes, {
+        includeType: true,
+    })}`);
+}
+
+function createRouteShellSubtitle(
+    openingNodes: readonly ExpeditionMapDefinition['nodes'][number][],
+    terminalNodes: readonly ExpeditionMapDefinition['nodes'][number][],
+): string {
+    const openingSummary = formatRouteNodeLabels(openingNodes, {
+        limit: 2,
+        emptyLabel: '入口后直进',
+    });
+    const terminalSummary = formatRouteNodeLabels(terminalNodes, {
+        limit: 2,
+        emptyLabel: '无终点情报',
+    });
+
+    return `开局：${openingSummary} · 收官：${terminalSummary}`;
+}
+
+function createRouteBriefingDescription(
+    map: ExpeditionMapDefinition,
+    mode: ExpeditionRouteBriefingMode,
+    entryNode: ExpeditionMapDefinition['nodes'][number] | undefined,
+    openingNodes: readonly ExpeditionMapDefinition['nodes'][number][],
+    terminalNodes: readonly ExpeditionMapDefinition['nodes'][number][],
+): string {
+    const entryLabel = entryNode?.label ?? map.entryNodeId;
+    const openingSummary = formatRouteNodeLabels(openingNodes, {
+        limit: 2,
+        emptyLabel: '入口后的单线推进',
+    });
+    const terminalSummary = formatRouteNodeLabels(terminalNodes, {
+        limit: 2,
+        emptyLabel: '终段节点',
+    });
+    const openingPhrase = openingNodes.length > 1
+        ? `${openingSummary}的分路`
+        : `${openingSummary}的推进顺序`;
+
+    if (mode === 'deckManager') {
+        return `${map.name}从${entryLabel}起步，前段要先看${openingPhrase}；整理卡组时请对照${terminalSummary}的收官节点再返回远征准备。`;
+    }
+
+    return `${map.name}从${entryLabel}起步，先辨认${openingPhrase}，再按${terminalSummary}的收官去准备本次带入。`;
 }
 
 function getRouteBriefingShellCopy(mode: ExpeditionRouteBriefingMode): {
@@ -636,30 +756,39 @@ export function createExpeditionRouteBriefingSummary(
     mode: ExpeditionRouteBriefingMode,
 ): ExpeditionRouteBriefingSummary {
     const entryNode = map.nodes.find((node) => node.id === map.entryNodeId);
-    const counts = summarizeRouteNodes(map);
+    const openingNodes = getRouteOpeningNodes(map, entryNode);
+    const terminalNodes = getRouteTerminalNodes(map);
     const shellCopy = getRouteBriefingShellCopy(mode);
 
     return {
         mode,
         shellBadgeLabel: shellCopy.badgeLabel,
-        shellSubtitle: shellCopy.subtitle,
+        shellSubtitle: createRouteShellSubtitle(openingNodes, terminalNodes),
         panelBadgeLabel: '路线简报',
         panelStageLabel: shellCopy.stageLabel,
-        description: map.description,
+        description: createRouteBriefingDescription(map, mode, entryNode, openingNodes, terminalNodes),
         highlights: [
             {
                 label: '入口',
                 value: entryNode?.label ?? map.entryNodeId,
             },
             {
-                label: '路线',
-                value: `${getRouteDepth(map)} 层 · 战斗 ${counts.battle} · 事件 ${counts.event} · 商店 ${counts.shop}`,
+                label: '开局',
+                value: formatRouteNodeLabels(openingNodes, {
+                    limit: 2,
+                    emptyLabel: `${getRouteDepth(map)} 层推进`,
+                }),
             },
             {
-                label: '终点',
-                value: formatRouteEndpointSummary(counts.extract, counts.boss),
+                label: '收官',
+                value: formatRouteNodeLabels(terminalNodes, {
+                    limit: 2,
+                    emptyLabel: `${getRouteDepth(map)} 层推进`,
+                }),
             },
         ],
+        glanceTitle: '路线速览',
+        glanceLines: createRouteGlanceLines(map),
     };
 }
 
