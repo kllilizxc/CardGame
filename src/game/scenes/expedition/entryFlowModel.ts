@@ -1313,7 +1313,7 @@ export function createPreparationSelectedLoadoutSummary(
         guidanceLines,
         deckPreviewLines,
         itemPreviewLines: stash.items.length > 0
-            ? stash.items.map((stack) => formatPreparationPreviewLine(stack))
+            ? stash.items.map((stack) => formatPreparationPreviewLine(stack, metadata))
             : ['无'],
     };
 }

@@ -38,6 +38,12 @@ export type DeckbuilderCardMetadataResources = Record<
     DeckbuilderCardMetadataResource
 >;
 
+export interface DeckbuilderWorldItemMetadataResource {
+    cacheKey: 'worldItemMetadata';
+    resourceId: 'world.seed.items-artifacts';
+    publicPath: string;
+}
+
 const CARD_KIND_VALUES: CardKind[] = ['unit', 'artifact', 'talisman', 'field', 'skill', 'pill'];
 const CARD_RARITY_VALUES: CardRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
@@ -100,6 +106,9 @@ const DECKBUILDER_CARD_METADATA_RESOURCE_REQUESTS: readonly DeckbuilderCardMetad
         resourceId: 'cards.skills',
     },
 ] as const;
+
+const WORLD_ITEM_METADATA_RESOURCE_ID = 'world.seed.items-artifacts';
+const WORLD_ITEM_COLLECTION_KEYS = ['artifacts', 'tools', 'consumables', 'quests', 'questItems'] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -217,9 +226,31 @@ export function resolveDeckbuilderCardMetadataResources(
     return resources as DeckbuilderCardMetadataResources;
 }
 
+export function resolveDeckbuilderWorldItemMetadataResource(
+    rawCatalog: unknown,
+): DeckbuilderWorldItemMetadataResource {
+    const catalogResolver = createContentCatalogResolver(rawCatalog, {
+        context: 'ExpeditionScene world item metadata',
+        sourcePublicPath: CONTENT_CATALOG_PUBLIC_PATH,
+    });
+    const catalogResource = catalogResolver.resolveJsonResource({
+        resourceId: WORLD_ITEM_METADATA_RESOURCE_ID,
+        expectedKind: 'worldSeed',
+    });
+
+    return {
+        cacheKey: 'worldItemMetadata',
+        resourceId: WORLD_ITEM_METADATA_RESOURCE_ID,
+        publicPath: catalogResource.publicPath,
+    };
+}
+
 export function buildDeckbuilderCardMetadataMap(
     resources: DeckbuilderCardMetadataResources,
     readJson: (cacheKey: DeckbuilderCardMetadataCacheKey) => unknown,
+    options: {
+        worldItemSource?: unknown;
+    } = {},
 ): CardMetadataMap {
     const metadata: Record<
         string,
@@ -378,6 +409,51 @@ export function buildDeckbuilderCardMetadataMap(
             metadata[entry.id] = next;
         });
     });
+
+    const worldItemSource = options.worldItemSource;
+
+    if (isRecord(worldItemSource)) {
+        WORLD_ITEM_COLLECTION_KEYS.forEach((collectionKey) => {
+            const collection = worldItemSource[collectionKey];
+
+            if (!Array.isArray(collection)) {
+                return;
+            }
+
+            collection.forEach((entry) => {
+                if (!isRecord(entry) || typeof entry.id !== 'string') {
+                    return;
+                }
+
+                const existing = metadata[entry.id] ?? {};
+                const next = { ...existing };
+
+                const name = normalizeOptionalText(entry.name);
+                if (name && !next.name) {
+                    next.name = name;
+                }
+
+                const description = normalizeOptionalText(entry.description);
+                if (description && !next.description) {
+                    next.description = description;
+                }
+
+                const typeLabel = normalizeOptionalText(entry.type);
+                if (typeLabel) {
+                    next.labels = next.labels?.length
+                        ? next.labels
+                        : [typeLabel];
+                }
+
+                const gradeLabel = normalizeOptionalText(entry.grade);
+                if (gradeLabel && !next.gradeLabel) {
+                    next.gradeLabel = gradeLabel;
+                }
+
+                metadata[entry.id] = next;
+            });
+        });
+    }
 
     return metadata;
 }

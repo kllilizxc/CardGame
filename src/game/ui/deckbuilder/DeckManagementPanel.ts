@@ -38,6 +38,7 @@ export interface DeckManagementPanelConfig {
     stash: PersistentStash;
     metadata?: CardMetadataMap;
     routeBriefing?: ExpeditionRouteBriefingSummary;
+    initialKeyboardZone?: 'decks' | 'editor' | 'browser' | 'return';
     onStashChange: (stash: PersistentStash) => void;
     onClose: () => void;
 }
@@ -1227,8 +1228,10 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.nativeTextEntry = new NativeTextEntryOverlay(scene);
         this.selectedDeckId = config.stash.selectedDeckId ?? config.stash.savedDecks[0]?.id ?? null;
         this.detailCardId = this.resolveFallbackDetailCardId();
+        this.keyboardZone = config.initialKeyboardZone ?? this.keyboardZone;
 
         this.createPanel();
+        this.syncKeyboardZoneSelection();
         scene.add.existing(this);
 
         this.keydownHandler = this.handleKeyDown.bind(this);

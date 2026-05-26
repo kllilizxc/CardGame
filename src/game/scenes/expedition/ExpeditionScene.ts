@@ -75,6 +75,7 @@ import {
 import {
     buildDeckbuilderCardMetadataMap,
     resolveDeckbuilderCardMetadataResources,
+    resolveDeckbuilderWorldItemMetadataResource,
     type DeckbuilderCardMetadataResources,
 } from './deckbuilderCardMetadata';
 import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
@@ -231,6 +232,10 @@ export class ExpeditionScene extends Scene {
         Object.values(this.getDeckbuilderCardMetadataResources()).forEach((resource) => {
             this.load.json(resource.cacheKey, resource.publicPath);
         });
+        const worldItemMetadataResource = resolveDeckbuilderWorldItemMetadataResource(
+            this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+        );
+        this.load.json(worldItemMetadataResource.cacheKey, worldItemMetadataResource.publicPath);
     }
 
     create(): void {
@@ -244,6 +249,13 @@ export class ExpeditionScene extends Scene {
         this.deckbuilderCardMetadata = buildDeckbuilderCardMetadataMap(
             this.getDeckbuilderCardMetadataResources(),
             (cacheKey) => this.cache.json.get(cacheKey),
+            {
+                worldItemSource: this.cache.json.get(
+                    resolveDeckbuilderWorldItemMetadataResource(
+                        this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+                    ).cacheKey,
+                ),
+            },
         );
         this.assertLaunchTargetMatchesMapDefinition();
         this.expeditionState = ExpeditionState.bootstrap({

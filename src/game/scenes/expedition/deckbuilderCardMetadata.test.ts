@@ -3,6 +3,7 @@ import { describe, expect, it } from 'bun:test';
 import {
     buildDeckbuilderCardMetadataMap,
     resolveDeckbuilderCardMetadataResources,
+    resolveDeckbuilderWorldItemMetadataResource,
 } from './deckbuilderCardMetadata';
 
 const CONTENT_CATALOG = {
@@ -14,12 +15,14 @@ const CONTENT_CATALOG = {
         { resourceId: 'cards.pills', kind: 'card', schemaVersion: 1, publicPath: 'data/cards/pills.json' },
         { resourceId: 'cards.fields', kind: 'card', schemaVersion: 1, publicPath: 'data/cards/fields.json' },
         { resourceId: 'cards.skills', kind: 'card', schemaVersion: 1, publicPath: 'data/cards/skills.json' },
+        { resourceId: 'world.seed.items-artifacts', kind: 'worldSeed', schemaVersion: 1, publicPath: 'data/world/items.artifacts.json' },
     ],
 };
 
 describe('deckbuilder card metadata helpers', () => {
     it('resolves the six card resources used by the expedition deckbuilder', () => {
         const resources = resolveDeckbuilderCardMetadataResources(CONTENT_CATALOG);
+        const worldItemResource = resolveDeckbuilderWorldItemMetadataResource(CONTENT_CATALOG);
 
         expect(resources.unitCards).toEqual({
             cacheKey: 'unitCards',
@@ -32,6 +35,11 @@ describe('deckbuilder card metadata helpers', () => {
             collectionKey: 'skills',
             resourceId: 'cards.skills',
             publicPath: 'data/cards/skills.json',
+        });
+        expect(worldItemResource).toEqual({
+            cacheKey: 'worldItemMetadata',
+            resourceId: 'world.seed.items-artifacts',
+            publicPath: 'data/world/items.artifacts.json',
         });
     });
 
@@ -126,6 +134,26 @@ describe('deckbuilder card metadata helpers', () => {
         const metadata = buildDeckbuilderCardMetadataMap(
             resources,
             (cacheKey) => loadedJson[cacheKey],
+            {
+                worldItemSource: {
+                    tools: [
+                        {
+                            id: 'tool.return-rope',
+                            name: '归返绳',
+                            grade: '凡阶工具',
+                            type: '撤离工具',
+                            description: '用于标记归路的安全绳。',
+                        },
+                    ],
+                    consumables: [
+                        {
+                            id: 'consumable.spirit-salve',
+                            name: '凝气膏',
+                            type: '疗愈药膏',
+                        },
+                    ],
+                },
+            },
         );
 
         expect(metadata).toEqual({
@@ -160,6 +188,16 @@ describe('deckbuilder card metadata helpers', () => {
             PL_001: { name: '小回气丹', kind: 'pill', target: 'player', isInstant: true, gradeLabel: '二品丹药' },
             FD_001: { name: '灵泉圣地', kind: 'field', symmetric: true },
             SK_001: { name: '灵兽召唤练习', kind: 'skill', effectSummary: '抽1张卡', cooldownType: 'perTurn' },
+            'tool.return-rope': {
+                name: '归返绳',
+                description: '用于标记归路的安全绳。',
+                labels: ['撤离工具'],
+                gradeLabel: '凡阶工具',
+            },
+            'consumable.spirit-salve': {
+                name: '凝气膏',
+                labels: ['疗愈药膏'],
+            },
         });
     });
 });
