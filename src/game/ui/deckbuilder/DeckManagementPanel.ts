@@ -72,7 +72,7 @@ const SORT_FIELD_LABEL: Record<CardCollectionSortField, string> = {
     name: '名称',
 };
 
-const DECK_LIST_SUMMARY_HEIGHT = 74;
+const DECK_LIST_SUMMARY_HEIGHT = 64;
 const DECK_ROW_HEIGHT = 84;
 const EDITOR_ROW_HEIGHT = 72;
 const BROWSER_ROW_HEIGHT = 72;
@@ -666,7 +666,7 @@ function createKeyboardGuideCopy(
             fillColor: 0x29161b,
             accentColor: INVALID_ACCENT,
             headline: '键盘焦点：删除确认',
-            detail: 'Enter 确认删除 · Esc 取消本次删除；对话框关闭前不会触发其他导航快捷键。',
+            detail: 'Enter 确认删除 · Esc 取消；对话框关闭前不会触发其他导航快捷键。',
             headlineColor: '#fecaca',
             detailColor: '#fca5a5',
         };
@@ -677,7 +677,7 @@ function createKeyboardGuideCopy(
             fillColor: 0x241b4d,
             accentColor: PANEL_ACCENT,
             headline: options.namingMode === 'create' ? '键盘焦点：新卡组命名' : '键盘焦点：重命名输入',
-            detail: '直接键入名称或粘贴内容 · Enter 确认 · Esc 取消；支持输入法，命名期间不会触发列表导航或编辑快捷键。',
+            detail: '直接键入名称或粘贴内容 · Enter 确认 · Esc 取消；支持输入法。',
             headlineColor: '#ede9fe',
             detailColor: '#c4b5fd',
         };
@@ -688,7 +688,7 @@ function createKeyboardGuideCopy(
             fillColor: 0x172554,
             accentColor: SELECTED_ACCENT,
             headline: '键盘焦点：搜索输入',
-            detail: '直接键入搜索词或粘贴内容 · Enter / Esc 退出搜索；支持输入法，浏览快捷键会先暂停。',
+            detail: '直接键入搜索词或粘贴内容 · Enter / Esc 退出搜索；支持输入法。',
             headlineColor: '#dbeafe',
             detailColor: '#bfdbfe',
         };
@@ -709,7 +709,7 @@ function createKeyboardGuideCopy(
                 fillColor: 0x1f1732,
                 accentColor: PANEL_ACCENT,
                 headline: `键盘焦点：${getKeyboardZoneLabel(zone)}`,
-                detail: '↑↓ 选中条目 · Enter 移除 1 · X 清空整行 · 详情会跟随当前焦点同步刷新',
+                detail: '↑↓ 选中条目 · Enter 移除 1 · X 清空整行 · 详情会跟随焦点刷新',
                 headlineColor: '#ede9fe',
                 detailColor: '#ddd6fe',
             };
@@ -718,7 +718,7 @@ function createKeyboardGuideCopy(
                 fillColor: 0x10251a,
                 accentColor: VALID_ACCENT,
                 headline: `键盘焦点：${getKeyboardZoneLabel(zone)}`,
-                detail: '↑↓ 浏览条目 · Enter 加入 1 · F 一键加满 · / 搜索 · K/H/S/D 调整浏览条件',
+                detail: '↑↓ 浏览条目 · Enter 加入 1 · F 一键加满 · / 搜索 · K/H/S/D 调整条件',
                 headlineColor: '#dcfce7',
                 detailColor: '#bbf7d0',
             };
@@ -727,7 +727,7 @@ function createKeyboardGuideCopy(
                 fillColor: 0x271b0b,
                 accentColor: WARNING_ACCENT,
                 headline: `键盘焦点：${getKeyboardZoneLabel(zone)}`,
-                detail: 'Enter 直接返回远征准备 · Esc 也可立即返回；摘要区可直接返回远征准备。',
+                detail: 'Enter 直接返回远征准备 · Esc 也可立即返回 · 摘要区也能返回。',
                 headlineColor: '#fde68a',
                 detailColor: '#fcd34d',
             };
@@ -1386,7 +1386,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.keyboardGuideAccent.setFillStyle(copy.accentColor, 0.95);
         this.keyboardGuideHeadline.setText(copy.headline);
         this.keyboardGuideHeadline.setColor(copy.headlineColor);
-        this.keyboardGuideDetail.setText(copy.detail);
+        this.keyboardGuideDetail.setText(truncateLabel(copy.detail, this.config.routeBriefing ? 50 : 76));
         this.keyboardGuideDetail.setColor(copy.detailColor);
         this.keyboardGuidePillText.setText(this.dialogMode || this.namingMode || this.searchFocus
             ? 'Enter 确认 · Esc 取消'
@@ -2599,26 +2599,34 @@ export class DeckManagementPanel extends GameObjects.Container {
             `序 ${getSortFieldLabel(this.sortField)}${this.sortDirection === 'asc' ? '↑' : '↓'}`,
         ].join(' · ');
 
-        let headline = `结果 ${resultCount} / ${resultBaseline} · 先选卡组`;
+        let summaryLine = `结果 ${resultCount} / ${resultBaseline} · 先选卡组`;
         if (selectedDeck) {
-            headline = selectedSlotsRemaining <= 0
-                ? '当前卡组已满 · 先在中间移除'
-                : `可加入 ${resultCount} 条 · 空位 ${selectedSlotsRemaining} 张`;
+            summaryLine = selectedSlotsRemaining <= 0
+                ? `当前卡组已满 · 先在中间移除 · 当前卡组：${selectedSummary?.count ?? 0} 张 · ${selectedSummary?.statusLabel ?? '待检查'}`
+                : `可加入 ${resultCount} 条 · 空位 ${selectedSlotsRemaining} 张 · 当前卡组：${selectedSummary?.count ?? 0} 张 · ${selectedSummary?.statusLabel ?? '待检查'}`;
         } else if (!hasModifiedControls) {
-            headline = '先选卡组，再加入卡牌';
+            summaryLine = '先选卡组，再加入卡牌';
         }
 
-        const statusDetail = selectedDeck
-            ? `当前卡组：${selectedSummary?.count ?? 0} 张 · ${selectedSummary?.statusLabel ?? '待检查'}`
-            : '左侧选定卡组后，这里才会启用加入操作';
-        const detail = joinPreviewFacts(
-            [
-                statusDetail,
-                filterDetail,
-                this.filterHideZero && hiddenZeroCount > 0 ? `零张隐藏 ${hiddenZeroCount}` : null,
-            ],
-            84,
-        ) ?? statusDetail;
+        const secondarySummary = selectedDeck
+            ? joinPreviewFacts(
+                [
+                    filterDetail,
+                    this.filterHideZero && hiddenZeroCount > 0 ? `零张隐藏 ${hiddenZeroCount}` : null,
+                ],
+                42,
+            )
+            : (hasModifiedControls
+                ? joinPreviewFacts(
+                    [
+                        '先调整浏览条件，再回到加入动作',
+                        filterDetail,
+                        this.filterHideZero && hiddenZeroCount > 0 ? `零张隐藏 ${hiddenZeroCount}` : null,
+                    ],
+                    42,
+                )
+                : '左侧选定卡组后，这里才会启用加入操作');
+        summaryLine = joinPreviewFacts([summaryLine, secondarySummary], 84) ?? summaryLine;
 
         const summaryBg = this.scene.add.rectangle(
             this.browserSummaryArea.w / 2,
@@ -2632,27 +2640,21 @@ export class DeckManagementPanel extends GameObjects.Container {
         const summaryAccent = this.scene.add.rectangle(5, this.browserSummaryArea.h / 2, 6, this.browserSummaryArea.h - 12, accentColor, 0.95)
             .setOrigin(0, 0.5);
 
-        const headlineText = this.scene.add.text(18, 9, headline, {
+        const headlineText = this.scene.add.text(14, this.browserSummaryArea.h / 2, truncateLabel(summaryLine, hasModifiedControls ? 52 : 60), {
             fontFamily: 'Arial',
-            fontSize: '13px',
+            fontSize: '10px',
             color: titleColor,
             fontStyle: 'bold',
-        });
-        const detailText = this.scene.add.text(18, 26, detail, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            color: detailColor,
-        });
-        headlineText.setText(truncateLabel(headlineText.text, 28));
-        detailText.setText(truncateLabel(detailText.text, 38));
-        this.browserSummaryContainer.add([summaryBg, summaryAccent, headlineText, detailText]);
+        }).setOrigin(0, 0.5);
+        headlineText.setColor(detailColor);
+        this.browserSummaryContainer.add([summaryBg, summaryAccent, headlineText]);
 
         if (hasModifiedControls) {
             const resetButton = this.createButton(
-                this.browserSummaryArea.w - 54,
+                this.browserSummaryArea.w - 48,
                 this.browserSummaryArea.h / 2,
-                92,
-                24,
+                86,
+                20,
                 '恢复默认',
                 0x4338ca,
                 () => {
@@ -2664,7 +2666,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                 {
                     hoverFillColor: 0x5b4ce1,
                     strokeColor: 0xc4b5fd,
-                    fontSize: '11px',
+                    fontSize: '10px',
                 },
             );
             this.browserSummaryContainer.add(resetButton);
@@ -2759,62 +2761,10 @@ export class DeckManagementPanel extends GameObjects.Container {
             { hoverFillColor: 0x475569, strokeColor: 0x94a3b8 },
         );
         const routeBriefingElements: Phaser.GameObjects.GameObject[] = [];
-        let chromeBottom = subtitle.y + subtitle.height;
-
-        if (this.config.routeBriefing) {
-            const routeBannerTop = chromeBottom + 12;
-            const routeBannerHeight = 52;
-            const routeBannerWidth = panelWidth - 68;
-            const routeBannerDetail = buildDeckManagerRouteBannerDetail(this.config.routeBriefing);
-            const routeBanner = this.scene.add.rectangle(
-                panelX,
-                routeBannerTop + routeBannerHeight / 2,
-                routeBannerWidth,
-                routeBannerHeight,
-                0x0f1d33,
-                0.98,
-            );
-            routeBanner.setStrokeStyle(1, 0x31557d, 0.95);
-            const routeAccent = this.scene.add.rectangle(
-                titleX + 5,
-                routeBannerTop + routeBannerHeight / 2,
-                6,
-                routeBannerHeight - 12,
-                SELECTED_ACCENT,
-                0.95,
-            ).setOrigin(0, 0.5);
-            const routeLabel = this.scene.add.text(
-                titleX + 18,
-                routeBannerTop + 8,
-                `${this.config.routeBriefing.glanceTitle} · ${this.config.routeBriefing.panelBadgeLabel}`,
-                {
-                    fontFamily: 'Arial',
-                    fontSize: '11px',
-                    color: '#93c5fd',
-                    fontStyle: 'bold',
-                },
-            );
-            const routeDetail = this.scene.add.text(titleX + 18, routeBannerTop + 24, routeBannerDetail, {
-                fontFamily: 'Arial',
-                fontSize: '12px',
-                color: '#dbeafe',
-                wordWrap: { width: routeBannerWidth - 164 },
-            });
-            const [routeStageBg, routeStageText] = this.createRightAlignedPill(
-                titleX + routeBannerWidth - 12,
-                routeBannerTop + routeBannerHeight / 2,
-                this.config.routeBriefing.panelStageLabel,
-                0x172554,
-                '#dbeafe',
-            );
-
-            routeBriefingElements.push(routeBanner, routeAccent, routeLabel, routeDetail, routeStageBg, routeStageText);
-            chromeBottom = routeBannerTop + routeBannerHeight;
-        }
-
-        const keyboardGuideTop = chromeBottom + 12;
+        const keyboardGuideTop = subtitle.y + subtitle.height + 10;
         const keyboardGuideWidth = panelWidth - 68;
-        const keyboardGuideHeight = 38;
+        const hasRouteBriefing = Boolean(this.config.routeBriefing);
+        const keyboardGuideHeight = hasRouteBriefing ? 46 : 30;
         this.keyboardGuideBg = this.scene.add.rectangle(
             panelX,
             keyboardGuideTop + keyboardGuideHeight / 2,
@@ -2828,25 +2778,48 @@ export class DeckManagementPanel extends GameObjects.Container {
             titleX + 5,
             keyboardGuideTop + keyboardGuideHeight / 2,
             6,
-            keyboardGuideHeight - 12,
+            keyboardGuideHeight - 10,
             SELECTED_ACCENT,
             0.95,
         ).setOrigin(0, 0.5);
-        this.keyboardGuideHeadline = this.scene.add.text(titleX + 18, keyboardGuideTop + 6, '', {
+        if (this.config.routeBriefing) {
+            const routeDetail = truncateLabel(
+                `路线简报 · ${buildDeckManagerRouteBannerDetail(this.config.routeBriefing)}`,
+                74,
+            );
+            const routeLabel = this.scene.add.text(titleX + 18, keyboardGuideTop + 7, routeDetail, {
+                fontFamily: 'Arial',
+                fontSize: '11px',
+                color: '#dbeafe',
+                fontStyle: 'bold',
+            });
+            const [routeStageBg, routeStageText] = this.createRightAlignedPill(
+                titleX + keyboardGuideWidth - 12,
+                keyboardGuideTop + 11,
+                `${this.config.routeBriefing.shellBadgeLabel} · ${this.config.routeBriefing.panelStageLabel}`,
+                0x172554,
+                '#dbeafe',
+            );
+            routeBriefingElements.push(routeLabel, routeStageBg, routeStageText);
+        }
+
+        const keyboardGuideY = hasRouteBriefing
+            ? keyboardGuideTop + keyboardGuideHeight - 13
+            : keyboardGuideTop + keyboardGuideHeight / 2;
+        this.keyboardGuideHeadline = this.scene.add.text(titleX + 18, keyboardGuideY, '', {
             fontFamily: 'Arial',
-            fontSize: '12px',
+            fontSize: '11px',
             color: '#dbeafe',
             fontStyle: 'bold',
-        });
-        this.keyboardGuideDetail = this.scene.add.text(titleX + 18, keyboardGuideTop + 20, '', {
+        }).setOrigin(0, 0.5);
+        this.keyboardGuideDetail = this.scene.add.text(titleX + 144, keyboardGuideY, '', {
             fontFamily: 'Arial',
             fontSize: '10px',
             color: '#bfdbfe',
-            wordWrap: { width: keyboardGuideWidth - 188 },
-        });
+        }).setOrigin(0, 0.5);
         const [keyboardGuidePillBg, keyboardGuidePillText] = this.createRightAlignedPill(
             titleX + keyboardGuideWidth - 12,
-            keyboardGuideTop + keyboardGuideHeight / 2,
+            keyboardGuideY,
             'Tab 切换区域 · Esc 返回',
             0x0f172a,
             '#cbd5e1',
@@ -2854,7 +2827,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.keyboardGuidePillBg = keyboardGuidePillBg;
         this.keyboardGuidePillText = keyboardGuidePillText;
 
-        const contentY = keyboardGuideTop + keyboardGuideHeight + 18;
+        const contentY = keyboardGuideTop + keyboardGuideHeight + 14;
         const contentH = panelY + panelHeight / 2 - 28 - contentY;
 
         const columnGap = 18;
@@ -2872,9 +2845,9 @@ export class DeckManagementPanel extends GameObjects.Container {
             title,
             subtitle,
             ...closeButton,
-            ...routeBriefingElements,
             this.keyboardGuideBg,
             this.keyboardGuideAccent,
+            ...routeBriefingElements,
             this.keyboardGuideHeadline,
             this.keyboardGuideDetail,
             this.keyboardGuidePillBg,
@@ -3011,33 +2984,33 @@ export class DeckManagementPanel extends GameObjects.Container {
         const background = this.scene.add.rectangle(x + w / 2, y + h / 2, w, h, SECTION_FILL, 0.96);
         background.setStrokeStyle(1, SECTION_BORDER, 0.9);
 
-        const accent = this.scene.add.rectangle(x + 18, y + 25, 6, 26, accentColor, 1);
-        const titleText = this.scene.add.text(x + 32, y + 14, title, {
+        const accent = this.scene.add.rectangle(x + 16, y + 20, 6, 22, accentColor, 1);
+        const titleText = this.scene.add.text(x + 30, y + 10, title, {
             fontFamily: 'Arial',
-            fontSize: '22px',
+            fontSize: '20px',
             color: '#f8fafc',
             fontStyle: 'bold',
         });
-        const subtitleText = this.scene.add.text(x + 32, y + 43, subtitle, {
+        const subtitleText = this.scene.add.text(x + 30, y + 33, subtitle, {
             fontFamily: 'Arial',
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#94a3b8',
-            wordWrap: { width: w - 52 },
+            wordWrap: { width: w - 48 },
         });
 
         return [background, accent, titleText, subtitleText];
     }
 
     private createDeckListColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '切换卡组', '先在这里选定要编辑的卡组。键盘：↑↓ 切换 · N 新建 · R 重命名。', SELECTED_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '切换卡组', '先在这里选定要编辑的卡组。↑↓ 切换 · N 新建 · R 重命名。', SELECTED_ACCENT));
 
         const innerX = x + 16;
         const innerW = colW - 32;
-        const summaryY = y + 68;
-        const newDeckY = summaryY + DECK_LIST_SUMMARY_HEIGHT + 14;
+        const summaryY = y + 62;
+        const newDeckY = summaryY + DECK_LIST_SUMMARY_HEIGHT + 10;
         const deleteY = y + colH - 28;
         const scrollBtnY = deleteY - 42;
-        const listTop = newDeckY + 34;
+        const listTop = newDeckY + 32;
         const listBottom = scrollBtnY - 18;
         const listH = Math.max(120, listBottom - listTop);
 
@@ -3173,36 +3146,36 @@ export class DeckManagementPanel extends GameObjects.Container {
                 const selectedSnapshot = buildDeckRosterSnapshot(selectedDeck, selectedSummary, this.config.metadata);
                 const [statusPillBg, statusPillText] = this.createRightAlignedPill(
                     this.deckListArea.w - 12,
-                    17,
+                    16,
                     selectedSummary.statusLabel,
                     selectedSummary.pillFillColor,
                     selectedSummary.pillTextColor,
                 );
-                const eyebrow = this.scene.add.text(16, 8, '当前带入卡组', {
+                const eyebrow = this.scene.add.text(16, 7, '当前带入卡组', {
                     fontFamily: 'Arial',
                     fontSize: '10px',
                     color: '#93c5fd',
                     fontStyle: 'bold',
                 });
-                const deckName = this.scene.add.text(16, 22, truncateLabel(selectedDeck.name, 18), {
+                const deckName = this.scene.add.text(16, 21, truncateLabel(selectedDeck.name, 18), {
                     fontFamily: 'Arial',
-                    fontSize: '18px',
+                    fontSize: '17px',
                     color: '#f8fafc',
                     fontStyle: 'bold',
                 });
-                const meta = this.scene.add.text(16, 43, `${selectedSummary.count} 张 · ${truncateLabel(selectedSnapshot.pressureLabel, 16)}`, {
+                const meta = this.scene.add.text(16, 40, `${selectedSummary.count} 张 · ${truncateLabel(selectedSnapshot.pressureLabel, 14)}`, {
                     fontFamily: 'Arial',
-                    fontSize: '11px',
+                    fontSize: '10px',
                     color: '#dbeafe',
                     wordWrap: { width: this.deckListArea.w - 28 },
                 });
                 const rosterLine = this.scene.add.text(
                     16,
-                    58,
-                    truncateLabel(formatDeckRosterHealthLabel(rosterHealth, decks.length), 42),
+                    53,
+                    truncateLabel(formatDeckRosterHealthLabel(rosterHealth, decks.length), 34),
                     {
                         fontFamily: 'Arial',
-                        fontSize: '10px',
+                        fontSize: '9px',
                         color: selectedSummary.isValid ? '#cbd5e1' : selectedSummary.pillTextColor,
                         wordWrap: { width: this.deckListArea.w - 28 },
                     },
@@ -3219,27 +3192,27 @@ export class DeckManagementPanel extends GameObjects.Container {
                     statusPillText,
                 ]);
             } else {
-                const eyebrow = this.scene.add.text(16, 8, '当前带入卡组', {
+                const eyebrow = this.scene.add.text(16, 7, '当前带入卡组', {
                     fontFamily: 'Arial',
                     fontSize: '10px',
                     color: '#93c5fd',
                     fontStyle: 'bold',
                 });
-                const deckName = this.scene.add.text(16, 22, '尚未选择卡组', {
+                const deckName = this.scene.add.text(16, 21, '尚未选择卡组', {
                     fontFamily: 'Arial',
-                    fontSize: '18px',
+                    fontSize: '17px',
                     color: '#f8fafc',
                     fontStyle: 'bold',
                 });
-                const meta = this.scene.add.text(16, 43, '新建或从下方列表切换一套卡组。', {
+                const meta = this.scene.add.text(16, 40, '新建或从下方列表切换一套卡组。', {
                     fontFamily: 'Arial',
-                    fontSize: '11px',
+                    fontSize: '10px',
                     color: '#cbd5e1',
                     wordWrap: { width: this.deckListArea.w - 28 },
                 });
-                const rosterLine = this.scene.add.text(16, 58, formatDeckRosterHealthLabel(rosterHealth, decks.length), {
+                const rosterLine = this.scene.add.text(16, 53, truncateLabel(formatDeckRosterHealthLabel(rosterHealth, decks.length), 34), {
                     fontFamily: 'Arial',
-                    fontSize: '10px',
+                    fontSize: '9px',
                     color: '#94a3b8',
                     wordWrap: { width: this.deckListArea.w - 28 },
                 });
@@ -3430,10 +3403,10 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createEditorColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '当前卡组', '主编辑区：在这里移除，去右侧加入。键盘：↑↓ 选条目 · Enter 移除 1 张 · X 清空整行。', PANEL_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '当前卡组', '主编辑区：在这里移除，去右侧加入。↑↓ 选条目 · Enter 移除 · X 清空。', PANEL_ACCENT));
         this.editorContentWidth = colW - 32;
-        this.editorContentHeight = colH - 72;
-        this.editorContainer = this.scene.add.container(x + 16, y + 70);
+        this.editorContentHeight = colH - 66;
+        this.editorContainer = this.scene.add.container(x + 16, y + 62);
         this.add(this.editorContainer);
         this.refreshEditor();
     }
@@ -3454,8 +3427,8 @@ export class DeckManagementPanel extends GameObjects.Container {
         const contentH = this.editorContentHeight;
         const deck = this.getSelectedDeck();
         const namingActive = this.isDeckNamingActive(deck);
-        const targetSummaryH = namingActive ? 356 : 308;
-        const summaryH = Math.min(targetSummaryH, Math.max(176, contentH - 150));
+        const targetSummaryH = namingActive ? 352 : 292;
+        const summaryH = Math.min(targetSummaryH, Math.max(176, contentH - 146));
         const listHeaderY = summaryH + 10;
         const scrollBtnY = contentH - 12;
         const listTop = listHeaderY + 34;
@@ -4168,20 +4141,21 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createBrowserColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '从储物袋加入', '储物袋浏览：先筛选，再加入。键盘：/ 搜索 · Enter 加入 1 张 · F 一键加满。', VALID_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '从储物袋加入', '储物袋浏览：先筛选，再加入。/ 搜索 · Enter 加入 · F 一键加满。', VALID_ACCENT));
 
         const innerX = x + 16;
         const innerW = colW - 32;
-        const railTop = y + 66;
-        const railHeight = 112;
-        const searchY = railTop + 36;
-        const toggleY = railTop + 68;
-        const sortY = railTop + 96;
-        const summaryY = railTop + railHeight + 10;
-        const summaryHeight = 44;
+        const railTop = y + 60;
+        const railHeight = 128;
+        const railLabelY = railTop + 8;
+        const searchY = railTop + 34;
+        const toggleY = railTop + 64;
+        const sortY = railTop + 92;
+        const summaryY = railTop + 114;
+        const summaryHeight = 24;
         const deleteY = y + colH - 28;
         const scrollBtnY = deleteY - 42;
-        const listTop = summaryY + summaryHeight + 8;
+        const listTop = railTop + railHeight + 8;
         const listBottom = scrollBtnY - 18;
         const listH = Math.max(120, listBottom - listTop);
 
@@ -4193,18 +4167,12 @@ export class DeckManagementPanel extends GameObjects.Container {
         railBg.setStrokeStyle(1, SECTION_BORDER, 0.92);
         const railAccent = this.scene.add.rectangle(innerX + 5, railTop + railHeight / 2, 6, railHeight - 16, 0x4ade80, 0.9)
             .setOrigin(0, 0.5);
-        const railLabel = this.scene.add.text(innerX + 16, railTop + 8, '浏览控制 / 加入路径', {
+        const railLabel = this.scene.add.text(innerX + 16, railLabelY, '浏览控制', {
             fontFamily: 'Arial',
             fontSize: '11px',
             color: '#cbd5e1',
             fontStyle: 'bold',
         });
-        const railHint = this.scene.add.text(innerX + innerW - 14, railTop + 8, '先缩小结果，再决定加入 1 张或一键加满', {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#64748b',
-            fontStyle: 'bold',
-        }).setOrigin(1, 0);
 
         this.queryBg = this.scene.add.rectangle(innerX + innerW / 2, searchY, innerW, 30, 0x0f172a, 1);
         this.queryBg.setStrokeStyle(1, SECTION_BORDER, 0.9);
@@ -4323,7 +4291,6 @@ export class DeckManagementPanel extends GameObjects.Container {
             railBg,
             railAccent,
             railLabel,
-            railHint,
             this.queryBg,
             this.queryText,
             this.queryClearBtn,
