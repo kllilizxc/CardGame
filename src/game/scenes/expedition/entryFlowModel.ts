@@ -233,6 +233,15 @@ const ROUTE_BRIEFING_NODE_TYPE_LABELS: Record<ExpeditionNodeType, string> = {
     boss: '首领',
 };
 
+const ROUTE_BRIEFING_NODE_TYPE_GLANCE_LABELS: Record<ExpeditionNodeType, string> = {
+    entrance: '入口',
+    battle: '战',
+    event: '事',
+    shop: '店',
+    extract: '撤',
+    boss: '首',
+};
+
 function countStacks<T extends CountableStack>(stacks: readonly T[]): number {
     return stacks.reduce((sum, stack) => sum + stack.count, 0);
 }
@@ -670,11 +679,13 @@ function formatRouteNodeLabels(
     nodes: readonly ExpeditionMapDefinition['nodes'][number][],
     options?: {
         includeType?: boolean;
+        compactTypeLabel?: boolean;
         limit?: number;
         emptyLabel?: string;
     },
 ): string {
     const includeType = options?.includeType ?? false;
+    const compactTypeLabel = options?.compactTypeLabel ?? false;
     const limit = options?.limit ?? nodes.length;
     const emptyLabel = options?.emptyLabel ?? '暂无节点';
 
@@ -685,7 +696,9 @@ function formatRouteNodeLabels(
     const visibleNodes = nodes.slice(0, limit);
     const label = visibleNodes
         .map((node) => includeType
-            ? `${node.label}（${ROUTE_BRIEFING_NODE_TYPE_LABELS[node.type]}）`
+            ? compactTypeLabel
+                ? `${node.label}·${ROUTE_BRIEFING_NODE_TYPE_GLANCE_LABELS[node.type]}`
+                : `${node.label}（${ROUTE_BRIEFING_NODE_TYPE_LABELS[node.type]}）`
             : node.label)
         .join(' / ');
 
@@ -713,6 +726,7 @@ function createRouteGlanceLines(map: ExpeditionMapDefinition): string[] {
 
     return layerGroups.map((nodes, index) => `${getRouteLayerLabel(index, layerGroups.length)}：${formatRouteNodeLabels(nodes, {
         includeType: true,
+        compactTypeLabel: true,
     })}`);
 }
 
@@ -788,34 +802,28 @@ function createRouteBriefingDescription(
         limit: 2,
         emptyLabel: '终段节点',
     });
-    const openingPhrase = openingNodes.length > 1
-        ? `${openingSummary}的分路`
-        : `${openingSummary}的推进顺序`;
 
     if (mode === 'deckManager') {
-        return `${map.name}从${entryLabel}起步，前段要先看${openingPhrase}；整理卡组时请对照${terminalSummary}的收官节点再返回远征准备。`;
+        return `从${entryLabel}起步，先看${openingSummary}；整理时留意${terminalSummary}。`;
     }
 
-    return `${map.name}从${entryLabel}起步，先辨认${openingPhrase}，再按${terminalSummary}的收官去准备本次带入。`;
+    return `从${entryLabel}起步，先看${openingSummary}；收官留意${terminalSummary}。`;
 }
 
 function getRouteBriefingShellCopy(mode: ExpeditionRouteBriefingMode): {
     badgeLabel: string;
-    subtitle: string;
     stageLabel: string;
 } {
     if (mode === 'deckManager') {
         return {
             badgeLabel: '步骤 2 / 2',
-            subtitle: '两步出发校验 · 整理卡组后返回确认',
-            stageLabel: '当前阶段：整理卡组并返回远征准备',
+            stageLabel: '当前操作：整理卡组',
         };
     }
 
     return {
         badgeLabel: '步骤 1 / 2',
-        subtitle: '两步出发校验 · 先确认路线，再选定带入',
-        stageLabel: '当前阶段：确认路线并选定本次带入',
+        stageLabel: '当前操作：选定带入',
     };
 }
 
@@ -879,22 +887,22 @@ function createExpeditionPreflightDetail(
     switch (readiness) {
         case 'ready':
             return mode === 'deckManager'
-                ? `已通过 20-40 张与库存校验；同行 ${inventorySummary}，可继续微调或返回确认。`
-                : `已通过 20-40 张与库存校验；同行 ${inventorySummary}，可直接确认出发。`;
+                ? `20-40 张与库存已通过；携带 ${inventorySummary}。可返回确认。`
+                : `20-40 张与库存已通过；携带 ${inventorySummary}。可直接出发。`;
         case 'none':
             return mode === 'deckManager'
-                ? `请先选择或创建一套卡组；同行 ${inventorySummary}，返回远征准备前需满足带入要求。`
-                : `请先选择或创建一套卡组；同行 ${inventorySummary}，随后才能确认出发。`;
+                ? `先选或新建一套卡组；携带 ${inventorySummary}。`
+                : `先选或新建一套卡组；携带 ${inventorySummary}。`;
         case 'too-few-cards':
-            return `还差 ${sizeIssue?.kind === 'too-few-cards' ? sizeIssue.min - sizeIssue.count : DECK_CARD_MIN} 张达到 ${DECK_CARD_MIN} 张出发线；同行 ${inventorySummary}。`;
+            return `还差 ${sizeIssue?.kind === 'too-few-cards' ? sizeIssue.min - sizeIssue.count : DECK_CARD_MIN} 张达到 ${DECK_CARD_MIN} 张；携带 ${inventorySummary}。`;
         case 'too-many-cards':
-            return `当前超出 ${sizeIssue?.kind === 'too-many-cards' ? sizeIssue.count - sizeIssue.max : 0} 张，请精简到 ${DECK_CARD_MAX} 张内；同行 ${inventorySummary}。`;
+            return `超出 ${sizeIssue?.kind === 'too-many-cards' ? sizeIssue.count - sizeIssue.max : 0} 张，请精简到 ${DECK_CARD_MAX} 张内；携带 ${inventorySummary}。`;
         case 'insufficient-copies': {
             const missingCopies = countPreparationMissingCopies(availabilityIssues);
 
             return availabilityIssues.length === 1
-                ? `有 1 种卡牌库存不足，共缺 ${missingCopies} 张；同行 ${inventorySummary}。`
-                : `有 ${availabilityIssues.length} 种卡牌库存不足，共缺 ${missingCopies} 张；同行 ${inventorySummary}。`;
+                ? `1 种卡牌库存不足，共缺 ${missingCopies} 张；携带 ${inventorySummary}。`
+                : `${availabilityIssues.length} 种卡牌库存不足，共缺 ${missingCopies} 张；携带 ${inventorySummary}。`;
         }
     }
 }
@@ -936,7 +944,7 @@ export function createExpeditionRouteBriefingSummary(
             },
         ],
         telemetryChips: createRouteTelemetryChips(map),
-        glanceTitle: '路线速览',
+        glanceTitle: '分层速览',
         glanceLines: createRouteGlanceLines(map),
     };
 }
@@ -984,12 +992,12 @@ export function createExpeditionDepartureHandoffSummary(
     const carriedItemCount = countStacks(run.carriedItems);
 
     return {
-        badgeLabel: '出发交接',
-        headline: `${deckLabel}已封装，即将从${entryLabel}踏入${map.name}`,
-        detail: `开局先看${openingSummary}，收官节点为${terminalSummary}。`,
-        routeLine: `路线：${entryLabel} → ${openingSummary} → ${terminalSummary}`,
+        badgeLabel: '出发确认',
+        headline: `${deckLabel}已备好，从${entryLabel}进入${map.name}`,
+        detail: `先看${openingSummary}；收官留意${terminalSummary}。`,
+        routeLine: `先看：${openingSummary} · 收官：${terminalSummary}`,
         loadoutLine: `带入：${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
-        revealStatusText: `已从${entryLabel}踏入${map.name}：带入${deckLabel}共 ${carriedDeckCount} 张卡、${carriedItemCount} 件道具、${run.spiritStones} 枚灵石；开局先看${openingSummary}。`,
+        revealStatusText: `已进入${map.name}：${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石；先看${openingSummary}。`,
     };
 }
 
@@ -1019,8 +1027,8 @@ export function createExpeditionArrivalCueSummary(
     return {
         badgeLabel: '抵达提示',
         headline: `已抵达${map.name} · ${entryLabel}`,
-        detail: '首个分路已高亮；点按节点后收起此提示。',
-        routeLine: `路线：${entryLabel} → ${openingSummary} → ${terminalSummary}`,
+        detail: '首层分路已高亮；点按节点后收起。',
+        routeLine: `先看：${openingSummary} · 收官：${terminalSummary}`,
         loadoutLine: `带入：${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
     };
 }

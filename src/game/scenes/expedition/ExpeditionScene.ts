@@ -1052,11 +1052,11 @@ export class ExpeditionScene extends Scene {
             y: loadoutPlate.y + 58,
             width: 286,
             height: 52,
-            label: '继续进入秘境',
+            label: '进入秘境',
             fillColor: 0x1d4ed8,
             onClick: () => acknowledge(),
         });
-        const footer = this.add.text(panelX, continueButton[0].y + 44, '点按任意处或按 Enter / Space 继续；首层视图会保留路线与带入提示。', {
+        const footer = this.add.text(panelX, continueButton[0].y + 44, '点按任意处或按 Enter / Space 继续。首层提示会保留。', {
             fontFamily: 'Arial',
             fontSize: '15px',
             color: '#cbd5e1',
