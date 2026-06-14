@@ -56,10 +56,9 @@ describe('entryFlowModel', () => {
         expect(createExpeditionRouteBriefingSummary(prototypeMapJson, 'preparation')).toEqual({
             mode: 'preparation',
             shellBadgeLabel: '步骤 1 / 2',
-            shellSubtitle: '开局：雾林伏击 / 弃置行囊 · 收官：悬桥撤离点 / 封印守关者',
+            shellSubtitle: '入口：山门入口 · 3 层路线',
             panelBadgeLabel: '路线简报',
-            panelStageLabel: '当前操作：选定带入',
-            description: '从山门入口起步，先看雾林伏击 / 弃置行囊；收官留意悬桥撤离点 / 封印守关者。',
+            description: '山门入口 → 雾林伏击 / 弃置行囊 → 悬桥撤离点 / 封印守关者',
             highlights: [
                 { label: '入口', value: '山门入口' },
                 { label: '开局', value: '雾林伏击 / 弃置行囊' },
@@ -84,10 +83,9 @@ describe('entryFlowModel', () => {
         expect(createExpeditionRouteBriefingSummary(jadeCaveMapJson, 'deckManager')).toEqual({
             mode: 'deckManager',
             shellBadgeLabel: '步骤 2 / 2',
-            shellSubtitle: '开局：幽雾狐影 / 遗落行囊 · 收官：洞壁绳梯 / 玉脉守关者',
+            shellSubtitle: '入口：青玉洞口 · 3 层路线',
             panelBadgeLabel: '路线简报',
-            panelStageLabel: '当前操作：整理卡组',
-            description: '从青玉洞口起步，先看幽雾狐影 / 遗落行囊；整理时留意洞壁绳梯 / 玉脉守关者。',
+            description: '青玉洞口 → 幽雾狐影 / 遗落行囊 → 洞壁绳梯 / 玉脉守关者',
             highlights: [
                 { label: '入口', value: '青玉洞口' },
                 { label: '开局', value: '幽雾狐影 / 遗落行囊' },
@@ -110,7 +108,8 @@ describe('entryFlowModel', () => {
 
     it('derives layer-by-layer route glance lines from maps with a longer single-file tutorial path', () => {
         expect(createExpeditionRouteBriefingSummary(tutorialQingyunMapJson, 'preparation')).toMatchObject({
-            shellSubtitle: '开局：雾狐试招 · 收官：问心回响 / 索桥撤离点',
+            shellSubtitle: '入口：外山入口 · 4 层路线',
+            description: '外山入口 → 雾狐试招 → 问心回响 / 索桥撤离点',
             highlights: [
                 { label: '入口', value: '外山入口' },
                 { label: '开局', value: '雾狐试招' },

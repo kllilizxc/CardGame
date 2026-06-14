@@ -1138,25 +1138,7 @@ function createReturnCtaState(summary: DeckStatusSummary): ReturnCtaState {
 }
 
 function buildDeckManagerRouteBannerDetail(routeBriefing: ExpeditionRouteBriefingSummary): string {
-    const highlightLabels = routeBriefing.highlights
-        .slice(0, 2)
-        .map(({ label, value }) => `${label}：${value}`);
-    const telemetryLabels = routeBriefing.telemetryChips
-        .slice(0, 2)
-        .map(({ label, value }) => `${label}${value}`);
-
-    return truncateLabel(
-        joinPreviewFacts(
-            [
-                routeBriefing.description,
-                routeBriefing.glanceLines[0],
-                ...highlightLabels,
-                ...telemetryLabels,
-            ],
-            120,
-        ) ?? routeBriefing.description,
-        120,
-    );
+    return truncateLabel(routeBriefing.description, 120);
 }
 
 export class DeckManagementPanel extends GameObjects.Container {
@@ -2784,7 +2766,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         ).setOrigin(0, 0.5);
         if (this.config.routeBriefing) {
             const routeDetail = truncateLabel(
-                `路线简报 · ${buildDeckManagerRouteBannerDetail(this.config.routeBriefing)}`,
+                `路线：${buildDeckManagerRouteBannerDetail(this.config.routeBriefing)}`,
                 74,
             );
             const routeLabel = this.scene.add.text(titleX + 18, keyboardGuideTop + 7, routeDetail, {
@@ -2793,14 +2775,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                 color: '#dbeafe',
                 fontStyle: 'bold',
             });
-            const [routeStageBg, routeStageText] = this.createRightAlignedPill(
-                titleX + keyboardGuideWidth - 12,
-                keyboardGuideTop + 11,
-                `${this.config.routeBriefing.shellBadgeLabel} · ${this.config.routeBriefing.panelStageLabel}`,
-                0x172554,
-                '#dbeafe',
-            );
-            routeBriefingElements.push(routeLabel, routeStageBg, routeStageText);
+            routeBriefingElements.push(routeLabel);
         }
 
         const keyboardGuideY = hasRouteBriefing

@@ -18,7 +18,6 @@ interface RouteBriefingStripTheme {
     accentColor: number;
     badgeTextColor: string;
     badgeBackgroundColor: string;
-    stageColor: string;
     descriptionColor: string;
     glanceTitleColor: string;
     glanceTextColor: string;
@@ -54,7 +53,6 @@ function getRouteBriefingStripTheme(briefing: ExpeditionRouteBriefingSummary): R
             accentColor: 0xc084fc,
             badgeTextColor: '#ede9fe',
             badgeBackgroundColor: '#4c1d95',
-            stageColor: '#ddd6fe',
             descriptionColor: '#ede9fe',
             glanceTitleColor: '#d8b4fe',
             glanceTextColor: '#c4b5fd',
@@ -71,7 +69,6 @@ function getRouteBriefingStripTheme(briefing: ExpeditionRouteBriefingSummary): R
         accentColor: 0x38bdf8,
         badgeTextColor: '#dbeafe',
         badgeBackgroundColor: '#1d4ed8',
-        stageColor: '#bfdbfe',
         descriptionColor: '#eff6ff',
         glanceTitleColor: '#bfdbfe',
         glanceTextColor: '#93c5fd',
@@ -146,12 +143,6 @@ export function createRouteBriefingStrip(
         backgroundColor: theme.badgeBackgroundColor,
         padding: { left: 12, right: 12, top: 6, bottom: 6 },
     });
-    const stageText = scene.add.text(left + width - 18, top + 18, briefing.panelStageLabel, {
-        fontFamily: 'Arial',
-        fontSize: '15px',
-        color: theme.stageColor,
-        fontStyle: 'bold',
-    }).setOrigin(1, 0);
     const description = scene.add.text(left + 18, badge.y + 40, briefing.description, {
         fontFamily: 'Arial',
         fontSize: '15px',
@@ -201,7 +192,6 @@ export function createRouteBriefingStrip(
             background,
             accent,
             badge,
-            stageText,
             description,
             ...telemetry.elements,
             glanceTitle,

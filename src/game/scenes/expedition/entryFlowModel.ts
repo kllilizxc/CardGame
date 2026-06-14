@@ -149,7 +149,6 @@ export interface ExpeditionRouteBriefingSummary {
     shellBadgeLabel: string;
     shellSubtitle: string;
     panelBadgeLabel: string;
-    panelStageLabel: string;
     description: string;
     highlights: ExpeditionRouteBriefingHighlight[];
     telemetryChips: ExpeditionRouteBriefingTelemetryChip[];
@@ -771,24 +770,17 @@ function createRouteTelemetryChips(map: ExpeditionMapDefinition): ExpeditionRout
 }
 
 function createRouteShellSubtitle(
-    openingNodes: readonly ExpeditionMapDefinition['nodes'][number][],
-    terminalNodes: readonly ExpeditionMapDefinition['nodes'][number][],
+    map: ExpeditionMapDefinition,
+    entryNode: ExpeditionMapDefinition['nodes'][number] | undefined,
 ): string {
-    const openingSummary = formatRouteNodeLabels(openingNodes, {
-        limit: 2,
-        emptyLabel: '入口后直进',
-    });
-    const terminalSummary = formatRouteNodeLabels(terminalNodes, {
-        limit: 2,
-        emptyLabel: '无终点情报',
-    });
+    const entryLabel = entryNode?.label ?? map.entryNodeId;
+    const routeDepth = getRouteDepth(map);
 
-    return `开局：${openingSummary} · 收官：${terminalSummary}`;
+    return `入口：${entryLabel} · ${routeDepth} 层路线`;
 }
 
 function createRouteBriefingDescription(
     map: ExpeditionMapDefinition,
-    mode: ExpeditionRouteBriefingMode,
     entryNode: ExpeditionMapDefinition['nodes'][number] | undefined,
     openingNodes: readonly ExpeditionMapDefinition['nodes'][number][],
     terminalNodes: readonly ExpeditionMapDefinition['nodes'][number][],
@@ -803,27 +795,20 @@ function createRouteBriefingDescription(
         emptyLabel: '终段节点',
     });
 
-    if (mode === 'deckManager') {
-        return `从${entryLabel}起步，先看${openingSummary}；整理时留意${terminalSummary}。`;
-    }
-
-    return `从${entryLabel}起步，先看${openingSummary}；收官留意${terminalSummary}。`;
+    return `${entryLabel} → ${openingSummary} → ${terminalSummary}`;
 }
 
 function getRouteBriefingShellCopy(mode: ExpeditionRouteBriefingMode): {
     badgeLabel: string;
-    stageLabel: string;
 } {
     if (mode === 'deckManager') {
         return {
             badgeLabel: '步骤 2 / 2',
-            stageLabel: '当前操作：整理卡组',
         };
     }
 
     return {
         badgeLabel: '步骤 1 / 2',
-        stageLabel: '当前操作：选定带入',
     };
 }
 
@@ -919,10 +904,9 @@ export function createExpeditionRouteBriefingSummary(
     return {
         mode,
         shellBadgeLabel: shellCopy.badgeLabel,
-        shellSubtitle: createRouteShellSubtitle(openingNodes, terminalNodes),
+        shellSubtitle: createRouteShellSubtitle(map, entryNode),
         panelBadgeLabel: '路线简报',
-        panelStageLabel: shellCopy.stageLabel,
-        description: createRouteBriefingDescription(map, mode, entryNode, openingNodes, terminalNodes),
+        description: createRouteBriefingDescription(map, entryNode, openingNodes, terminalNodes),
         highlights: [
             {
                 label: '入口',
