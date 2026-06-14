@@ -22,8 +22,10 @@
     ],
     "scripts": {
         "dev": "node log.js dev & vite --config vite/config.dev.mjs",
+        "dev:polling": "CHOKIDAR_USEPOLLING=1 node log.js dev & vite --config vite/config.dev.mjs",
         "build": "node log.js build & vite build --config vite/config.prod.mjs",
         "dev-nolog": "vite --config vite/config.dev.mjs",
+        "dev-nolog:polling": "CHOKIDAR_USEPOLLING=1 vite --config vite/config.dev.mjs",
         "build-nolog": "vite build --config vite/config.prod.mjs"
     },
     "dependencies": {
