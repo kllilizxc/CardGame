@@ -795,10 +795,10 @@ export class ExpeditionScene extends Scene {
         const [firstStep, secondStep] = preflightStatus.steps;
         const firstStepColors = this.getEntryShellStepColors(firstStep.state, modeConfig);
         const secondStepColors = this.getEntryShellStepColors(secondStep.state, modeConfig);
-        const showsSupportingBreadcrumbOnly = mode === 'deckManager';
-        const headerFillAlpha = showsSupportingBreadcrumbOnly ? 0.86 : 0.94;
-        const headerStrokeAlpha = showsSupportingBreadcrumbOnly ? 0.48 : 0.72;
-        const headerAccentAlpha = showsSupportingBreadcrumbOnly ? 0.86 : 1;
+        const showsSupportingBreadcrumbOnly = true;
+        const headerFillAlpha = 0.86;
+        const headerStrokeAlpha = 0.48;
+        const headerAccentAlpha = 0.86;
 
         this.entryShell.frameOuter.setStrokeStyle(2, modeConfig.frameOuterColor, modeConfig.frameOuterAlpha);
         this.entryShell.frameInner.setStrokeStyle(1, modeConfig.frameInnerColor, modeConfig.frameInnerAlpha);
@@ -912,31 +912,23 @@ export class ExpeditionScene extends Scene {
         const stepTwoWidth = 188;
         const firstStepX = panelX - topRailWidth / 2;
         const secondStepX = panelX + topRailWidth / 2;
-        const headerWidth = mode === 'deckManager'
-            ? Math.min(Math.max(440, panelWidth * 0.5), 560)
-            : 712;
-        const headerHeight = mode === 'deckManager' ? 64 : 86;
-        const headerX = mode === 'deckManager'
-            ? panelX - panelWidth / 2 + headerWidth / 2 + 24
-            : width / 2;
-        const headerY = mode === 'deckManager'
-            ? panelY - panelHeight / 2 - 18
-            : 50;
+        const headerWidth = Math.min(Math.max(440, panelWidth * 0.5), 560);
+        const headerHeight = 64;
+        const headerX = panelX - panelWidth / 2 + headerWidth / 2 + 24;
+        const headerY = panelY - panelHeight / 2 - 18;
         const headerLeft = headerX - headerWidth / 2;
         const headerRight = headerX + headerWidth / 2;
-        const headerAccentWidth = mode === 'deckManager' ? headerWidth - 56 : headerWidth - 72;
-        const headerAccentY = mode === 'deckManager'
-            ? headerY - headerHeight / 2 + 8
-            : 12;
-        const headerDividerHeight = mode === 'deckManager' ? 40 : 54;
-        const headerDividerX = mode === 'deckManager' ? headerRight - 180 : headerRight - 254;
+        const headerAccentWidth = headerWidth - 56;
+        const headerAccentY = headerY - headerHeight / 2 + 8;
+        const headerDividerHeight = 40;
+        const headerDividerX = headerRight - 180;
         const badgeX = headerLeft + 18;
-        const badgeY = mode === 'deckManager' ? headerY - 22 : 20;
+        const badgeY = headerY - 22;
         const titleX = headerLeft + 20;
-        const titleY = mode === 'deckManager' ? headerY - 2 : 44;
+        const titleY = headerY - 2;
         const subtitleX = titleX;
-        const subtitleY = mode === 'deckManager' ? headerY + 18 : 72;
-        const subtitleWrapWidth = mode === 'deckManager' ? headerWidth - 48 : headerWidth - 44;
+        const subtitleY = headerY + 18;
+        const subtitleWrapWidth = headerWidth - 48;
         const shellTargets: Array<[Phaser.GameObjects.Rectangle, number, number, number, number]> = [
             [this.entryShell.headerPlate, headerX, headerY, headerWidth, headerHeight],
             [this.entryShell.headerAccent, headerX, headerAccentY, headerAccentWidth, 5],
@@ -1386,7 +1378,6 @@ export class ExpeditionScene extends Scene {
         const nextPanel = new PreparationPanel(this, {
             stash: this.expeditionState.persistentStash,
             metadata: this.deckbuilderCardMetadata,
-            routeBriefing: this.getEntryRouteBriefing('preparation'),
             onConfirm: () => this.startFreshRun(),
             onDeckSelect: (deckId) => this.handleDeckSelect(deckId),
             onOpenDeckManager: () => this.showDeckManagementPanel(),

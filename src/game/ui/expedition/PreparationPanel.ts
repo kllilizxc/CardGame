@@ -6,7 +6,6 @@ import {
     createPreparationSummary,
     createPreparationSelectedLoadoutSummary,
     formatPreparationValidationLines,
-    type ExpeditionRouteBriefingSummary,
     type PreparationDeckContext,
     type PreparationFocusChip,
     type PreparationDeckHandoffSummary,
@@ -37,12 +36,10 @@ import {
     getAdjacentPreparationDeckId,
     getPreparationKeyboardShortcut,
 } from './preparationPanelKeyboard';
-import { createRouteBriefingStrip, measureRouteBriefingStripHeight } from './routeBriefingStrip';
 
 export interface PreparationPanelConfig {
     stash: PersistentStash;
     metadata?: CardMetadataMap;
-    routeBriefing?: ExpeditionRouteBriefingSummary;
     onConfirm: () => void;
     onDeckSelect: (deckId: string) => void;
     onOpenDeckManager?: () => void;
@@ -313,14 +310,6 @@ function getDeckCardHeight(scene: Scene, decks: readonly SavedDeck[]): number {
     ), 0);
 
     return calculateDeckCardHeight(maxDeckNameHeight);
-}
-
-function getRouteBriefingHeight(
-    scene: Scene,
-    briefing: ExpeditionRouteBriefingSummary,
-    width: number,
-): number {
-    return measureRouteBriefingStripHeight(scene, width, briefing);
 }
 
 function createManifestPanel(
@@ -1084,7 +1073,6 @@ function getDeckHandoffBannerColors(
 export class PreparationPanel extends GameObjects.Container {
     private stash: PersistentStash;
     private readonly metadata?: CardMetadataMap;
-    private readonly routeBriefing?: ExpeditionRouteBriefingSummary;
     private readonly onConfirm: () => void;
     private readonly onDeckSelect: (deckId: string) => void;
     private readonly onOpenDeckManager?: () => void;
@@ -1116,7 +1104,6 @@ export class PreparationPanel extends GameObjects.Container {
 
         this.stash = config.stash;
         this.metadata = config.metadata;
-        this.routeBriefing = config.routeBriefing;
         this.onConfirm = config.onConfirm;
         this.onDeckSelect = config.onDeckSelect;
         this.onOpenDeckManager = config.onOpenDeckManager;
@@ -1261,22 +1248,12 @@ export class PreparationPanel extends GameObjects.Container {
         const titleTop = 34;
         const subtitleTop = titleTop + 48;
         const subtitleBottom = subtitleTop + subtitleHeight;
-        const routeBriefingHeight = this.routeBriefing
-            ? getRouteBriefingHeight(this.scene, this.routeBriefing, contentWidth)
-            : 0;
-        const routeBriefingTopOffset = this.routeBriefing
-            ? subtitleBottom + 18
-            : null;
         const handoffTopOffset = this.deckHandoffSummary
-            ? (this.routeBriefing
-                ? (routeBriefingTopOffset ?? subtitleBottom) + routeBriefingHeight + 16
-                : subtitleBottom + 16)
+            ? subtitleBottom + 16
             : null;
         const readinessHeroOffsetY = handoffTopOffset !== null
             ? handoffTopOffset + 84 + 18
-            : this.routeBriefing
-                ? (routeBriefingTopOffset ?? subtitleBottom) + routeBriefingHeight + 16
-                : subtitleBottom + 26;
+            : subtitleBottom + 26;
         const deckSelectorOffsetY = readinessHeroOffsetY + heroMetrics.height + 16;
         const loadoutDetailOffsetY = deckSelectorOffsetY + deckSelectorSectionHeight + 16;
         const panelHeight = Math.min(
@@ -1287,9 +1264,6 @@ export class PreparationPanel extends GameObjects.Container {
         const panelLeft = panelX - panelWidth / 2;
         const panelTop = panelY - panelHeight / 2;
         const contentLeft = panelLeft + 48;
-        const routeBriefingTop = routeBriefingTopOffset !== null
-            ? panelTop + routeBriefingTopOffset
-            : null;
         const deckSelectorY = panelTop + deckSelectorOffsetY;
         const readinessHeroTop = panelTop + readinessHeroOffsetY;
         const loadoutDetailTop = panelTop + loadoutDetailOffsetY;
@@ -1313,19 +1287,6 @@ export class PreparationPanel extends GameObjects.Container {
             color: '#cbd5e1',
             wordWrap: { width: contentWidth },
         });
-        const routeBriefingElements: Phaser.GameObjects.GameObject[] = [];
-
-        if (this.routeBriefing && routeBriefingTop !== null) {
-            const routeBriefing = createRouteBriefingStrip(
-                this.scene,
-                contentLeft,
-                routeBriefingTop,
-                contentWidth,
-                this.routeBriefing,
-            );
-
-            routeBriefingElements.push(...routeBriefing.elements);
-        }
         const handoffSummary = this.deckHandoffSummary;
         const handoffElements: Phaser.GameObjects.GameObject[] = [];
 
@@ -1916,7 +1877,6 @@ ${itemPreviewText}`,
             panelAccent,
             title,
             subtitle,
-            ...routeBriefingElements,
             ...handoffElements,
             readinessHeroContainer,
             deckSelectorContainer,
