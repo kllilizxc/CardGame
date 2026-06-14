@@ -74,6 +74,8 @@ const SORT_FIELD_LABEL: Record<CardCollectionSortField, string> = {
 
 const DECK_LIST_SUMMARY_HEIGHT = 64;
 const DECK_ROW_HEIGHT = 84;
+const COMPACT_DECK_LIST_SUMMARY_HEIGHT = 52;
+const COMPACT_DECK_ROW_HEIGHT = 68;
 const EDITOR_ROW_HEIGHT = 72;
 const BROWSER_ROW_HEIGHT = 72;
 const DECK_NAMING_TEXT_ENTRY_SESSION_ID = 'deck-name';
@@ -1226,6 +1228,9 @@ export class DeckManagementPanel extends GameObjects.Container {
     private editorArea = { x: 0, y: 0, w: 0, h: 0 };
     private browserArea = { x: 0, y: 0, w: 0, h: 0 };
     private browserSummaryArea = { x: 0, y: 0, w: 0, h: 0 };
+    private deckListSummaryHeight = DECK_LIST_SUMMARY_HEIGHT;
+    private deckListRowHeight = DECK_ROW_HEIGHT;
+    private deckListCompact = false;
     private editorContentWidth = 0;
     private editorContentHeight = 0;
     private detailPaneWidth = 0;
@@ -2745,7 +2750,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             fontStyle: 'bold',
         });
 
-        const subtitle = this.scene.add.text(titleX, titleTop + 34, '先切换卡组，再从右侧加入或在中间移除；左侧集中当前卡组，右侧集中储物袋浏览。', {
+        const subtitle = this.scene.add.text(titleX, titleTop + 34, '先切换卡组，再从右侧加入或在中间移除；当前带入与卡牌清单占主位，卡组切换缩到右侧工具轨。', {
             fontFamily: 'Arial',
             fontSize: '13px',
             color: '#cbd5e1',
@@ -2839,12 +2844,13 @@ export class DeckManagementPanel extends GameObjects.Container {
         const leftWorkspaceInnerY = contentY + 52;
         const leftWorkspaceInnerW = leftWorkspaceW - 24;
         const leftWorkspaceInnerH = contentH - 64;
-        const deckTrayW = Math.max(218, Math.min(236, Math.floor(leftWorkspaceInnerW * 0.31)));
+        const deckTrayW = Math.max(172, Math.min(196, Math.floor(leftWorkspaceInnerW * 0.27)));
         const leftWorkspaceInnerGap = 14;
         const editorW = leftWorkspaceInnerW - deckTrayW - leftWorkspaceInnerGap;
-        const editorX = leftWorkspaceInnerX + deckTrayW + leftWorkspaceInnerGap;
+        const editorX = leftWorkspaceInnerX;
+        const deckTrayX = editorX + editorW + leftWorkspaceInnerGap;
         const workspaceDivider = this.scene.add.rectangle(
-            leftWorkspaceInnerX + deckTrayW + leftWorkspaceInnerGap / 2,
+            editorX + editorW + leftWorkspaceInnerGap / 2,
             leftWorkspaceInnerY + leftWorkspaceInnerH / 2,
             1,
             leftWorkspaceInnerH - 10,
@@ -2852,7 +2858,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             0.55,
         );
         const workspaceDividerGlow = this.scene.add.rectangle(
-            leftWorkspaceInnerX + deckTrayW + leftWorkspaceInnerGap / 2,
+            editorX + editorW + leftWorkspaceInnerGap / 2,
             leftWorkspaceInnerY + leftWorkspaceInnerH / 2,
             3,
             leftWorkspaceInnerH - 42,
@@ -2881,12 +2887,15 @@ export class DeckManagementPanel extends GameObjects.Container {
             leftWorkspaceW,
             contentH,
             '当前卡组编辑',
-            '左侧集中当前带入、切换与移除；右侧储物袋负责补牌，不再拆成并列三栏。',
+            '当前带入与可编辑卡牌清单先读；卡组切换、新建、删除退到右侧工具轨，储物袋继续独立在最右列。',
             PANEL_ACCENT,
         ));
         this.add([workspaceDividerGlow, workspaceDivider]);
-        this.createDeckListColumn(leftWorkspaceInnerX, leftWorkspaceInnerY, deckTrayW, leftWorkspaceInnerH, { embedded: true });
         this.createEditorColumn(editorX, leftWorkspaceInnerY, editorW, leftWorkspaceInnerH, { embedded: true });
+        this.createDeckListColumn(deckTrayX, leftWorkspaceInnerY, deckTrayW, leftWorkspaceInnerH, {
+            embedded: true,
+            compact: true,
+        });
         this.createBrowserColumn(rightColX, contentY, rightColW, contentH);
 
         this.setDepth(1200);
@@ -3069,9 +3078,15 @@ export class DeckManagementPanel extends GameObjects.Container {
         colH: number,
         options: {
             embedded?: boolean;
+            compact?: boolean;
         } = {},
     ): void {
         const embedded = options.embedded ?? false;
+        const compact = options.compact ?? false;
+        this.deckListCompact = compact;
+        this.deckListSummaryHeight = compact ? COMPACT_DECK_LIST_SUMMARY_HEIGHT : DECK_LIST_SUMMARY_HEIGHT;
+        this.deckListRowHeight = compact ? COMPACT_DECK_ROW_HEIGHT : DECK_ROW_HEIGHT;
+
         if (embedded) {
             this.add(this.createEmbeddedSectionSurface(
                 x,
@@ -3079,7 +3094,9 @@ export class DeckManagementPanel extends GameObjects.Container {
                 colW,
                 colH,
                 '卡组序列',
-                '先在这里选定要编辑的卡组。↑↓ 切换 · N 新建 · R 重命名。',
+                compact
+                    ? '次级工具轨：切换 / 新建 / 删除。'
+                    : '先在这里选定要编辑的卡组。↑↓ 切换 · N 新建 · R 重命名。',
                 SELECTED_ACCENT,
             ));
         } else {
@@ -3090,32 +3107,40 @@ export class DeckManagementPanel extends GameObjects.Container {
         const innerX = x + inset;
         const innerW = colW - inset * 2;
         const summaryY = y + (embedded ? 54 : 62);
-        const newDeckY = summaryY + DECK_LIST_SUMMARY_HEIGHT + 10;
-        const deleteY = y + colH - (embedded ? 18 : 28);
-        const scrollBtnY = deleteY - (embedded ? 36 : 42);
-        const listTop = newDeckY + (embedded ? 28 : 32);
-        const listBottom = scrollBtnY - (embedded ? 14 : 18);
+        const actionButtonHeight = embedded ? (compact ? 28 : 30) : 34;
+        const actionButtonGap = compact ? 8 : 0;
+        const newDeckY = summaryY + this.deckListSummaryHeight + 10;
+        const deleteY = compact ? newDeckY : y + colH - (embedded ? 18 : 28);
+        const scrollBtnY = compact
+            ? y + colH - (embedded ? 18 : 28)
+            : deleteY - (embedded ? 36 : 42);
+        const listTop = newDeckY + actionButtonHeight / 2 + (compact ? 16 : embedded ? 13 : 15);
+        const listBottom = compact
+            ? scrollBtnY - 18
+            : scrollBtnY - (embedded ? 14 : 18);
         const listH = Math.max(embedded ? 96 : 120, listBottom - listTop);
 
         this.deckListArea = { x: innerX, y: listTop, w: innerW, h: listH };
-        this.deckListVisibleRows = Math.max(1, Math.floor(listH / DECK_ROW_HEIGHT));
+        this.deckListVisibleRows = Math.max(1, Math.floor(listH / this.deckListRowHeight));
 
         this.deckListSummaryContainer = this.scene.add.container(innerX, summaryY);
         this.add(this.deckListSummaryContainer);
 
+        const newDeckButtonWidth = compact ? Math.floor((innerW - actionButtonGap) / 2) : innerW;
+        const deleteButtonWidth = compact ? innerW - newDeckButtonWidth - actionButtonGap : innerW;
         const newDeckButton = this.createButton(
-            innerX + innerW / 2,
+            compact ? innerX + newDeckButtonWidth / 2 : innerX + innerW / 2,
             newDeckY,
-            innerW,
-            embedded ? 30 : 34,
-            '＋ 新建卡组',
+            newDeckButtonWidth,
+            actionButtonHeight,
+            compact ? '＋ 新建' : '＋ 新建卡组',
             0x2563eb,
             () => this.createDeck(),
             false,
             {
                 hoverFillColor: 0x3b82f6,
                 strokeColor: 0x93c5fd,
-                fontSize: embedded ? '14px' : '15px',
+                fontSize: compact ? '12px' : embedded ? '14px' : '15px',
             },
         );
         this.add(newDeckButton);
@@ -3168,18 +3193,20 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.add(this.deckListPosText);
 
         const [deleteButton, deleteLabel] = this.createButton(
-            innerX + innerW / 2,
+            compact
+                ? innerX + newDeckButtonWidth + actionButtonGap + deleteButtonWidth / 2
+                : innerX + innerW / 2,
             deleteY,
-            innerW,
-            embedded ? 30 : 34,
-            '删除当前卡组',
+            deleteButtonWidth,
+            actionButtonHeight,
+            compact ? '删除当前' : '删除当前卡组',
             0xb91c1c,
             () => this.showDeleteConfirmation(),
             false,
             {
                 hoverFillColor: 0xdc2626,
                 strokeColor: 0xfca5a5,
-                fontSize: embedded ? '14px' : '15px',
+                fontSize: compact ? '12px' : embedded ? '14px' : '15px',
             },
         );
         this.deleteDeckBtn = deleteButton;
@@ -3208,18 +3235,18 @@ export class DeckManagementPanel extends GameObjects.Container {
                 : SECTION_BORDER;
             const summaryBg = this.scene.add.rectangle(
                 this.deckListArea.w / 2,
-                DECK_LIST_SUMMARY_HEIGHT / 2,
+                this.deckListSummaryHeight / 2,
                 this.deckListArea.w,
-                DECK_LIST_SUMMARY_HEIGHT,
+                this.deckListSummaryHeight,
                 selectedDeck ? 0x102344 : 0x0f172a,
                 0.99,
             );
             summaryBg.setStrokeStyle(1, selectedDeck ? currentDeckAccentColor : SECTION_BORDER, 0.95);
             const summaryAccent = this.scene.add.rectangle(
                 5,
-                DECK_LIST_SUMMARY_HEIGHT / 2,
+                this.deckListSummaryHeight / 2,
                 6,
-                DECK_LIST_SUMMARY_HEIGHT - 18,
+                Math.max(24, this.deckListSummaryHeight - 18),
                 selectedDeck ? currentDeckAccentColor : SECTION_BORDER,
                 1,
             ).setOrigin(0, 0.5);
@@ -3227,80 +3254,137 @@ export class DeckManagementPanel extends GameObjects.Container {
             if (selectedDeck && selectedDeckSummary) {
                 const selectedSummary = selectedDeckSummary;
                 const selectedSnapshot = buildDeckRosterSnapshot(selectedDeck, selectedSummary, this.config.metadata);
-                const [statusPillBg, statusPillText] = this.createRightAlignedPill(
-                    this.deckListArea.w - 12,
-                    16,
-                    selectedSummary.statusLabel,
-                    selectedSummary.pillFillColor,
-                    selectedSummary.pillTextColor,
-                );
-                const eyebrow = this.scene.add.text(16, 7, '当前带入卡组', {
-                    fontFamily: 'Arial',
-                    fontSize: '10px',
-                    color: '#93c5fd',
-                    fontStyle: 'bold',
-                });
-                const deckName = this.scene.add.text(16, 21, truncateLabel(selectedDeck.name, 18), {
-                    fontFamily: 'Arial',
-                    fontSize: '17px',
-                    color: '#f8fafc',
-                    fontStyle: 'bold',
-                });
-                const meta = this.scene.add.text(16, 40, `${selectedSummary.count} 张 · ${truncateLabel(selectedSnapshot.pressureLabel, 14)}`, {
-                    fontFamily: 'Arial',
-                    fontSize: '10px',
-                    color: '#dbeafe',
-                    wordWrap: { width: this.deckListArea.w - 28 },
-                });
-                const rosterLine = this.scene.add.text(
-                    16,
-                    53,
-                    truncateLabel(formatDeckRosterHealthLabel(rosterHealth, decks.length), 34),
-                    {
+                if (this.deckListCompact) {
+                    const [statusPillBg, statusPillText] = this.createRightAlignedPill(
+                        this.deckListArea.w - 10,
+                        15,
+                        selectedSummary.statusLabel,
+                        selectedSummary.pillFillColor,
+                        selectedSummary.pillTextColor,
+                    );
+                    const eyebrow = this.scene.add.text(14, 6, '当前编辑', {
                         fontFamily: 'Arial',
                         fontSize: '9px',
-                        color: selectedSummary.isValid ? '#cbd5e1' : selectedSummary.pillTextColor,
-                        wordWrap: { width: this.deckListArea.w - 28 },
-                    },
-                );
+                        color: '#93c5fd',
+                        fontStyle: 'bold',
+                    });
+                    const deckName = this.scene.add.text(14, 18, truncateLabel(selectedDeck.name, 12), {
+                        fontFamily: 'Arial',
+                        fontSize: '14px',
+                        color: '#f8fafc',
+                        fontStyle: 'bold',
+                    });
+                    const rosterLine = this.scene.add.text(
+                        14,
+                        36,
+                        truncateLabel(
+                            joinPreviewFacts(
+                                [
+                                    `${selectedSummary.count} 张`,
+                                    selectedSnapshot.pressureLabel,
+                                    formatDeckRosterHealthLabel(rosterHealth, decks.length),
+                                ],
+                                30,
+                            ) ?? formatDeckRosterHealthLabel(rosterHealth, decks.length),
+                            30,
+                        ),
+                        {
+                            fontFamily: 'Arial',
+                            fontSize: '9px',
+                            color: selectedSummary.isValid ? '#cbd5e1' : selectedSummary.pillTextColor,
+                            wordWrap: { width: this.deckListArea.w - 24 },
+                        },
+                    );
 
-                this.deckListSummaryContainer.add([
-                    summaryBg,
-                    summaryAccent,
-                    eyebrow,
-                    deckName,
-                    meta,
-                    rosterLine,
-                    statusPillBg,
-                    statusPillText,
-                ]);
+                    this.deckListSummaryContainer.add([
+                        summaryBg,
+                        summaryAccent,
+                        eyebrow,
+                        deckName,
+                        rosterLine,
+                        statusPillBg,
+                        statusPillText,
+                    ]);
+                } else {
+                    const [statusPillBg, statusPillText] = this.createRightAlignedPill(
+                        this.deckListArea.w - 12,
+                        16,
+                        selectedSummary.statusLabel,
+                        selectedSummary.pillFillColor,
+                        selectedSummary.pillTextColor,
+                    );
+                    const eyebrow = this.scene.add.text(16, 7, '当前带入卡组', {
+                        fontFamily: 'Arial',
+                        fontSize: '10px',
+                        color: '#93c5fd',
+                        fontStyle: 'bold',
+                    });
+                    const deckName = this.scene.add.text(16, 21, truncateLabel(selectedDeck.name, 18), {
+                        fontFamily: 'Arial',
+                        fontSize: '17px',
+                        color: '#f8fafc',
+                        fontStyle: 'bold',
+                    });
+                    const meta = this.scene.add.text(16, 40, `${selectedSummary.count} 张 · ${truncateLabel(selectedSnapshot.pressureLabel, 14)}`, {
+                        fontFamily: 'Arial',
+                        fontSize: '10px',
+                        color: '#dbeafe',
+                        wordWrap: { width: this.deckListArea.w - 28 },
+                    });
+                    const rosterLine = this.scene.add.text(
+                        16,
+                        53,
+                        truncateLabel(formatDeckRosterHealthLabel(rosterHealth, decks.length), 34),
+                        {
+                            fontFamily: 'Arial',
+                            fontSize: '9px',
+                            color: selectedSummary.isValid ? '#cbd5e1' : selectedSummary.pillTextColor,
+                            wordWrap: { width: this.deckListArea.w - 28 },
+                        },
+                    );
+
+                    this.deckListSummaryContainer.add([
+                        summaryBg,
+                        summaryAccent,
+                        eyebrow,
+                        deckName,
+                        meta,
+                        rosterLine,
+                        statusPillBg,
+                        statusPillText,
+                    ]);
+                }
             } else {
-                const eyebrow = this.scene.add.text(16, 7, '当前带入卡组', {
+                const eyebrow = this.scene.add.text(this.deckListCompact ? 14 : 16, this.deckListCompact ? 6 : 7, this.deckListCompact ? '当前编辑' : '当前带入卡组', {
                     fontFamily: 'Arial',
-                    fontSize: '10px',
+                    fontSize: this.deckListCompact ? '9px' : '10px',
                     color: '#93c5fd',
                     fontStyle: 'bold',
                 });
-                const deckName = this.scene.add.text(16, 21, '尚未选择卡组', {
+                const deckName = this.scene.add.text(this.deckListCompact ? 14 : 16, this.deckListCompact ? 18 : 21, '尚未选择卡组', {
                     fontFamily: 'Arial',
-                    fontSize: '17px',
+                    fontSize: this.deckListCompact ? '14px' : '17px',
                     color: '#f8fafc',
                     fontStyle: 'bold',
                 });
-                const meta = this.scene.add.text(16, 40, '新建或从下方列表切换一套卡组。', {
+                const meta = this.scene.add.text(this.deckListCompact ? 14 : 16, this.deckListCompact ? 36 : 40, this.deckListCompact ? '新建或从下方切换一套卡组。' : '新建或从下方列表切换一套卡组。', {
                     fontFamily: 'Arial',
-                    fontSize: '10px',
+                    fontSize: this.deckListCompact ? '9px' : '10px',
                     color: '#cbd5e1',
-                    wordWrap: { width: this.deckListArea.w - 28 },
+                    wordWrap: { width: this.deckListArea.w - (this.deckListCompact ? 24 : 28) },
                 });
-                const rosterLine = this.scene.add.text(16, 53, truncateLabel(formatDeckRosterHealthLabel(rosterHealth, decks.length), 34), {
-                    fontFamily: 'Arial',
-                    fontSize: '9px',
-                    color: '#94a3b8',
-                    wordWrap: { width: this.deckListArea.w - 28 },
-                });
+                if (this.deckListCompact) {
+                    this.deckListSummaryContainer.add([summaryBg, summaryAccent, eyebrow, deckName, meta]);
+                } else {
+                    const rosterLine = this.scene.add.text(16, 53, truncateLabel(formatDeckRosterHealthLabel(rosterHealth, decks.length), 34), {
+                        fontFamily: 'Arial',
+                        fontSize: '9px',
+                        color: '#94a3b8',
+                        wordWrap: { width: this.deckListArea.w - 28 },
+                    });
 
-                this.deckListSummaryContainer.add([summaryBg, summaryAccent, eyebrow, deckName, meta, rosterLine]);
+                    this.deckListSummaryContainer.add([summaryBg, summaryAccent, eyebrow, deckName, meta, rosterLine]);
+                }
             }
         }
 
@@ -3315,7 +3399,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                 fontStyle: 'bold',
             }).setOrigin(0.5);
 
-            const emptyBody = this.scene.add.text(this.deckListArea.w / 2, 84, '点击上方“新建卡组”开始整理本次远征配置。', {
+            const emptyBody = this.scene.add.text(this.deckListArea.w / 2, 84, this.deckListCompact ? '点击上方“新建”开始整理本次远征配置。' : '点击上方“新建卡组”开始整理本次远征配置。', {
                 fontFamily: 'Arial',
                 fontSize: '13px',
                 color: '#94a3b8',
@@ -3330,7 +3414,7 @@ export class DeckManagementPanel extends GameObjects.Container {
 
             for (let index = start; index < end; index += 1) {
                 const deck = decks[index];
-                const rowY = (index - start) * DECK_ROW_HEIGHT;
+                const rowY = (index - start) * this.deckListRowHeight;
                 const isSelected = deck.id === this.selectedDeckId;
                 const summary = summarizeDeckStatus(deck, this.stash.cards);
                 const snapshot = buildDeckRosterSnapshot(deck, summary, this.config.metadata);
@@ -3345,9 +3429,9 @@ export class DeckManagementPanel extends GameObjects.Container {
 
                 const bg = this.scene.add.rectangle(
                     this.deckListArea.w / 2,
-                    rowY + DECK_ROW_HEIGHT / 2,
+                    rowY + this.deckListRowHeight / 2,
                     this.deckListArea.w,
-                    DECK_ROW_HEIGHT - 8,
+                    this.deckListRowHeight - 8,
                     bgFill,
                     0.98,
                 );
@@ -3355,57 +3439,66 @@ export class DeckManagementPanel extends GameObjects.Container {
 
                 const accent = this.scene.add.rectangle(
                     5,
-                    rowY + DECK_ROW_HEIGHT / 2,
+                    rowY + this.deckListRowHeight / 2,
                     6,
-                    DECK_ROW_HEIGHT - 18,
+                    this.deckListCompact ? this.deckListRowHeight - 14 : this.deckListRowHeight - 18,
                     selectionAccentColor,
                     1,
                 )
                     .setOrigin(0, 0.5);
 
-                const detailStrip = this.scene.add.rectangle(
-                    this.deckListArea.w / 2,
-                    rowY + DECK_ROW_HEIGHT - 18,
-                    this.deckListArea.w - 18,
-                    20,
-                    blendColor(bgFill, summary.accentColor, isSelected ? 0.22 : 0.16),
-                    0.98,
-                );
-                detailStrip.setStrokeStyle(1, summary.accentColor, 0.22);
+                let detailStrip: GameObjects.Rectangle | undefined;
+                if (!this.deckListCompact) {
+                    detailStrip = this.scene.add.rectangle(
+                        this.deckListArea.w / 2,
+                        rowY + this.deckListRowHeight - 18,
+                        this.deckListArea.w - 18,
+                        20,
+                        blendColor(bgFill, summary.accentColor, isSelected ? 0.22 : 0.16),
+                        0.98,
+                    );
+                    detailStrip.setStrokeStyle(1, summary.accentColor, 0.22);
+                }
 
                 let currentLabel: GameObjects.Text | undefined;
                 if (isSelected) {
-                    currentLabel = this.scene.add.text(16, rowY + 8, '当前带入', {
+                    currentLabel = this.scene.add.text(14, rowY + 8, this.deckListCompact ? '当前编辑' : '当前带入', {
                         fontFamily: 'Arial',
-                        fontSize: '10px',
+                        fontSize: this.deckListCompact ? '9px' : '10px',
                         color: '#93c5fd',
                         fontStyle: 'bold',
                     });
                 }
 
-                const name = this.scene.add.text(16, rowY + (isSelected ? 22 : 16), truncateLabel(deck.name, 18), {
+                const name = this.scene.add.text(14, rowY + (isSelected ? (this.deckListCompact ? 22 : 22) : this.deckListCompact ? 15 : 16), truncateLabel(deck.name, this.deckListCompact ? 12 : 18), {
                     fontFamily: 'Arial',
-                    fontSize: isSelected ? '17px' : '16px',
+                    fontSize: this.deckListCompact ? (isSelected ? '14px' : '13px') : isSelected ? '17px' : '16px',
                     color: '#f8fafc',
                     fontStyle: 'bold',
                 });
 
-                const meta = this.scene.add.text(16, rowY + (isSelected ? 42 : 38), snapshot.metaLabel, {
+                const meta = this.scene.add.text(14, rowY + (isSelected ? (this.deckListCompact ? 40 : 42) : this.deckListCompact ? 34 : 38), this.deckListCompact
+                    ? truncateLabel(`${snapshot.metaLabel} · ${snapshot.pressureLabel}`, 18)
+                    : snapshot.metaLabel, {
                     fontFamily: 'Arial',
-                    fontSize: '11px',
-                    color: secondaryColor,
+                    fontSize: this.deckListCompact ? '9px' : '11px',
+                    color: this.deckListCompact ? detailColor : secondaryColor,
+                    wordWrap: this.deckListCompact ? { width: this.deckListArea.w - 28 } : undefined,
                 });
 
-                const detail = this.scene.add.text(16, rowY + (isSelected ? 58 : 57), truncateLabel(snapshot.detailLabel, 32), {
-                    fontFamily: 'Arial',
-                    fontSize: '10px',
-                    color: detailColor,
-                    fontStyle: isSelected ? 'bold' : 'normal',
-                });
+                let detail: GameObjects.Text | undefined;
+                if (!this.deckListCompact) {
+                    detail = this.scene.add.text(16, rowY + (isSelected ? 58 : 57), truncateLabel(snapshot.detailLabel, 32), {
+                        fontFamily: 'Arial',
+                        fontSize: '10px',
+                        color: detailColor,
+                        fontStyle: isSelected ? 'bold' : 'normal',
+                    });
+                }
 
                 const [statusPillBg, statusPillText] = this.createRightAlignedPill(
-                    this.deckListArea.w - 12,
-                    rowY + 18,
+                    this.deckListArea.w - (this.deckListCompact ? 10 : 12),
+                    rowY + (this.deckListCompact ? 15 : 18),
                     summary.statusLabel,
                     summary.pillFillColor,
                     summary.pillTextColor,
@@ -3423,11 +3516,11 @@ export class DeckManagementPanel extends GameObjects.Container {
                 this.deckListInner.add([
                     bg,
                     accent,
-                    detailStrip,
+                    ...(detailStrip ? [detailStrip] : []),
                     ...(currentLabel ? [currentLabel] : []),
                     name,
                     meta,
-                    detail,
+                    ...(detail ? [detail] : []),
                     statusPillBg,
                     statusPillText,
                 ]);
@@ -3452,7 +3545,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             const total = decks.length;
             const start = total === 0 ? 0 : this.deckListScrollOffset + 1;
             const end = total === 0 ? 0 : Math.min(this.deckListScrollOffset + this.deckListVisibleRows, total);
-            this.deckListPosText.setText(`显示 ${start}-${end} / ${total}`);
+            this.deckListPosText.setText(this.deckListCompact ? `${start}-${end}/${total}` : `显示 ${start}-${end} / ${total}`);
         }
     }
 
@@ -3473,14 +3566,14 @@ export class DeckManagementPanel extends GameObjects.Container {
                 this.setKeyboardZone('decks');
                 this.showDeleteConfirmation();
             });
-            this.deleteDeckLabel.setText('删除当前卡组');
+            this.deleteDeckLabel.setText(this.deckListCompact ? '删除当前' : '删除当前卡组');
             this.deleteDeckLabel.setColor('#f8fafc');
         } else {
             this.deleteDeckBtn.disableInteractive();
             this.deleteDeckBtn.setFillStyle(0x1f2937, 1);
             this.deleteDeckBtn.setStrokeStyle(1, 0x334155, 0.95);
             this.deleteDeckBtn.setAlpha(0.82);
-            this.deleteDeckLabel.setText('至少保留 1 套卡组');
+            this.deleteDeckLabel.setText(this.deckListCompact ? '保留 1 套' : '至少保留 1 套卡组');
             this.deleteDeckLabel.setColor('#94a3b8');
         }
     }
