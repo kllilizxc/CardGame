@@ -803,7 +803,7 @@ function getRouteBriefingShellCopy(mode: ExpeditionRouteBriefingMode): {
 } {
     if (mode === 'deckManager') {
         return {
-            badgeLabel: '步骤 2 / 2',
+            badgeLabel: '卡组管理',
         };
     }
 

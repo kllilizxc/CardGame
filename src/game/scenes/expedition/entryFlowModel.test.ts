@@ -82,7 +82,7 @@ describe('entryFlowModel', () => {
     it('keeps the same route identity while changing the shell framing for deck management', () => {
         expect(createExpeditionRouteBriefingSummary(jadeCaveMapJson, 'deckManager')).toEqual({
             mode: 'deckManager',
-            shellBadgeLabel: '步骤 2 / 2',
+            shellBadgeLabel: '卡组管理',
             shellSubtitle: '入口：青玉洞口 · 3 层路线',
             panelBadgeLabel: '路线简报',
             description: '青玉洞口 → 幽雾狐影 / 遗落行囊 → 洞壁绳梯 / 玉脉守关者',

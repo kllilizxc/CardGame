@@ -10,7 +10,7 @@ describe('expedition UI Chinese copy', () => {
         const sceneCopy = `${scene}\n${model}`;
 
         expect(sceneCopy).toContain('步骤 1 / 2');
-        expect(sceneCopy).toContain('步骤 2 / 2');
+        expect(sceneCopy).toContain('完成后按返回回到远征准备');
         expect(sceneCopy).toContain('路线简报');
         expect(sceneCopy).toContain('入口：');
         expect(sceneCopy).toContain('开局');
@@ -24,6 +24,7 @@ describe('expedition UI Chinese copy', () => {
         expect(sceneCopy).not.toContain('当前操作：选定带入');
         expect(sceneCopy).not.toContain('当前操作：整理卡组');
         expect(sceneCopy).not.toContain('继续进入秘境');
+        expect(sceneCopy).not.toContain('步骤 2 / 2');
         expect(sceneCopy).not.toContain('点按任意处或按 Enter / Space 继续；首层视图会保留路线与带入提示。');
         expect(sceneCopy).not.toContain('Phase 01 · Expedition Entry Flow');
     });

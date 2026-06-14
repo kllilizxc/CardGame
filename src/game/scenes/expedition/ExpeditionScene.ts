@@ -128,6 +128,7 @@ interface EntryShellVisuals {
     leftAccentBar: Phaser.GameObjects.Rectangle;
     rightAccentBar: Phaser.GameObjects.Rectangle;
     corners: EntryShellCorners;
+    chromeElements: Phaser.GameObjects.GameObject[];
 }
 
 interface EntryShellModeVisualConfig {
@@ -550,6 +551,35 @@ export class ExpeditionScene extends Scene {
             leftAccentBar,
             rightAccentBar,
             corners,
+            chromeElements: [
+                frameOuter,
+                frameInner,
+                headerDivider,
+                routeSlate.plate,
+                routeSlate.accent,
+                ...routeSlateTelemetry.elements,
+                statusStrip,
+                statusStripAccent,
+                statusStripBadgeText,
+                statusStripHeadlineText,
+                statusStripDetailText,
+                topRail,
+                topRailProgress,
+                stepOnePill,
+                stepOneText,
+                stepTwoPill,
+                stepTwoText,
+                leftAccentBar,
+                rightAccentBar,
+                corners.topLeftHorizontal,
+                corners.topLeftVertical,
+                corners.topRightHorizontal,
+                corners.topRightVertical,
+                corners.bottomLeftHorizontal,
+                corners.bottomLeftVertical,
+                corners.bottomRightHorizontal,
+                corners.bottomRightVertical,
+            ],
         };
 
         this.entryTransitionBlocker = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 0.001);
@@ -563,6 +593,25 @@ export class ExpeditionScene extends Scene {
 
     private getEntryRouteBriefing(mode: EntryShellMode) {
         return createExpeditionRouteBriefingSummary(this.mapDefinition, mode);
+    }
+
+    private getEntryShellHeaderCopy(
+        mode: EntryShellMode,
+        routeBriefing: ReturnType<typeof createExpeditionRouteBriefingSummary>,
+    ) {
+        if (mode === 'deckManager') {
+            return {
+                badgeLabel: routeBriefing.shellBadgeLabel,
+                title: this.mapDefinition.name,
+                subtitle: `${routeBriefing.shellSubtitle} · 完成后按返回回到远征准备`,
+            };
+        }
+
+        return {
+            badgeLabel: routeBriefing.shellBadgeLabel,
+            title: this.mapDefinition.name,
+            subtitle: routeBriefing.shellSubtitle,
+        };
     }
 
     private getEntryShellStatusToneColors(tone: PreparationDeckHandoffSummary['tone']) {
@@ -739,26 +788,49 @@ export class ExpeditionScene extends Scene {
         }
 
         const routeBriefing = this.getEntryRouteBriefing(mode);
+        const headerCopy = this.getEntryShellHeaderCopy(mode, routeBriefing);
         const preflightStatus = createExpeditionPreflightStatusSummary(this.expeditionState.persistentStash, mode);
         const modeConfig = this.getEntryShellModeVisualConfig(mode);
         const statusToneConfig = this.getEntryShellStatusToneColors(preflightStatus.tone);
         const [firstStep, secondStep] = preflightStatus.steps;
         const firstStepColors = this.getEntryShellStepColors(firstStep.state, modeConfig);
         const secondStepColors = this.getEntryShellStepColors(secondStep.state, modeConfig);
+        const showsSupportingBreadcrumbOnly = mode === 'deckManager';
+        const headerFillAlpha = showsSupportingBreadcrumbOnly ? 0.86 : 0.94;
+        const headerStrokeAlpha = showsSupportingBreadcrumbOnly ? 0.48 : 0.72;
+        const headerAccentAlpha = showsSupportingBreadcrumbOnly ? 0.86 : 1;
 
         this.entryShell.frameOuter.setStrokeStyle(2, modeConfig.frameOuterColor, modeConfig.frameOuterAlpha);
         this.entryShell.frameInner.setStrokeStyle(1, modeConfig.frameInnerColor, modeConfig.frameInnerAlpha);
-        this.entryShell.headerPlate.setFillStyle(modeConfig.headerFillColor, 0.94);
-        this.entryShell.headerPlate.setStrokeStyle(2, modeConfig.borderColor, 0.72);
-        this.entryShell.headerAccent.setFillStyle(modeConfig.accentColor, 1);
+        this.entryShell.headerPlate.setFillStyle(modeConfig.headerFillColor, headerFillAlpha);
+        this.entryShell.headerPlate.setStrokeStyle(1, modeConfig.borderColor, headerStrokeAlpha);
+        this.entryShell.headerAccent.setFillStyle(modeConfig.accentColor, headerAccentAlpha);
         this.entryShell.headerDivider.setFillStyle(modeConfig.headerDividerColor, 0.24);
-        this.entryShell.modeBadgeText.setText(routeBriefing.shellBadgeLabel);
+        this.entryShell.modeBadgeText.setText(headerCopy.badgeLabel);
         this.entryShell.modeBadgeText.setStyle({
+            fontFamily: 'Arial',
+            fontSize: showsSupportingBreadcrumbOnly ? '11px' : '12px',
             color: modeConfig.badgeColor,
             backgroundColor: modeConfig.badgeBackgroundColor,
+            fontStyle: 'bold',
+            padding: showsSupportingBreadcrumbOnly
+                ? { left: 10, right: 10, top: 4, bottom: 4 }
+                : { left: 12, right: 12, top: 6, bottom: 6 },
         });
-        this.entryShell.subtitleText.setText(routeBriefing.shellSubtitle);
-        this.entryShell.subtitleText.setColor(modeConfig.subtitleColor);
+        this.entryShell.titleText.setText(headerCopy.title);
+        this.entryShell.titleText.setStyle({
+            fontFamily: 'Arial',
+            fontSize: showsSupportingBreadcrumbOnly ? '24px' : '30px',
+            color: '#f8fafc',
+            fontStyle: 'bold',
+        });
+        this.entryShell.subtitleText.setText(headerCopy.subtitle);
+        this.entryShell.subtitleText.setStyle({
+            fontFamily: 'Arial',
+            fontSize: showsSupportingBreadcrumbOnly ? '12px' : '14px',
+            color: modeConfig.subtitleColor,
+        });
+        this.entryShell.chromeElements.forEach((gameObject) => gameObject.setVisible(!showsSupportingBreadcrumbOnly));
         this.entryShell.routeSlate.plate.setFillStyle(modeConfig.routePlateFillColor, 0.98);
         this.entryShell.routeSlate.plate.setStrokeStyle(1, modeConfig.routePlateBorderColor, 0.82);
         this.entryShell.routeSlate.accent.setFillStyle(modeConfig.routePlateAccentColor, 1);
@@ -840,7 +912,35 @@ export class ExpeditionScene extends Scene {
         const stepTwoWidth = 188;
         const firstStepX = panelX - topRailWidth / 2;
         const secondStepX = panelX + topRailWidth / 2;
+        const headerWidth = mode === 'deckManager'
+            ? Math.min(Math.max(440, panelWidth * 0.5), 560)
+            : 712;
+        const headerHeight = mode === 'deckManager' ? 64 : 86;
+        const headerX = mode === 'deckManager'
+            ? panelX - panelWidth / 2 + headerWidth / 2 + 24
+            : width / 2;
+        const headerY = mode === 'deckManager'
+            ? panelY - panelHeight / 2 - 18
+            : 50;
+        const headerLeft = headerX - headerWidth / 2;
+        const headerRight = headerX + headerWidth / 2;
+        const headerAccentWidth = mode === 'deckManager' ? headerWidth - 56 : headerWidth - 72;
+        const headerAccentY = mode === 'deckManager'
+            ? headerY - headerHeight / 2 + 8
+            : 12;
+        const headerDividerHeight = mode === 'deckManager' ? 40 : 54;
+        const headerDividerX = mode === 'deckManager' ? headerRight - 180 : headerRight - 254;
+        const badgeX = headerLeft + 18;
+        const badgeY = mode === 'deckManager' ? headerY - 22 : 20;
+        const titleX = headerLeft + 20;
+        const titleY = mode === 'deckManager' ? headerY - 2 : 44;
+        const subtitleX = titleX;
+        const subtitleY = mode === 'deckManager' ? headerY + 18 : 72;
+        const subtitleWrapWidth = mode === 'deckManager' ? headerWidth - 48 : headerWidth - 44;
         const shellTargets: Array<[Phaser.GameObjects.Rectangle, number, number, number, number]> = [
+            [this.entryShell.headerPlate, headerX, headerY, headerWidth, headerHeight],
+            [this.entryShell.headerAccent, headerX, headerAccentY, headerAccentWidth, 5],
+            [this.entryShell.headerDivider, headerDividerX, headerY, 2, headerDividerHeight],
             [this.entryShell.frameOuter, panelX, panelY, panelWidth + frameOuterInset * 2, panelHeight + frameOuterInset * 2],
             [this.entryShell.frameInner, panelX, panelY, panelWidth + frameInnerInset * 2, panelHeight + frameInnerInset * 2],
             [this.entryShell.statusStrip, panelX, statusY, statusWidth, 56],
@@ -861,6 +961,9 @@ export class ExpeditionScene extends Scene {
             [this.entryShell.corners.bottomRightVertical, right, bottom - cornerLength / 2, 4, cornerLength],
         ];
         const textTargets: Array<[Phaser.GameObjects.Text, number, number]> = [
+            [this.entryShell.modeBadgeText, badgeX, badgeY],
+            [this.entryShell.titleText, titleX, titleY],
+            [this.entryShell.subtitleText, subtitleX, subtitleY],
             [this.entryShell.statusStripBadgeText, statusLeft + 28, statusY - 14],
             [this.entryShell.statusStripHeadlineText, statusTextX, statusY - 18],
             [this.entryShell.statusStripDetailText, statusTextX, statusY + 4],
@@ -868,6 +971,7 @@ export class ExpeditionScene extends Scene {
             [this.entryShell.stepTwoText, secondStepX, topRailY],
         ];
 
+        this.entryShell.subtitleText.setWordWrapWidth(subtitleWrapWidth);
         this.entryShell.statusStripHeadlineText.setWordWrapWidth(statusWidth - 154);
         this.entryShell.statusStripDetailText.setWordWrapWidth(statusWidth - 154);
 
@@ -1327,7 +1431,6 @@ export class ExpeditionScene extends Scene {
         const nextPanel = new DeckManagementPanel(this, {
             stash: this.expeditionState.persistentStash,
             metadata: this.deckbuilderCardMetadata,
-            routeBriefing: this.getEntryRouteBriefing('deckManager'),
             onStashChange: (newStash) => {
                 this.expeditionState.persistentStash = newStash;
                 this.expeditionState.persistCurrentStash();
