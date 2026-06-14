@@ -197,8 +197,6 @@ interface ReadinessHeroMetrics {
     textWidth: number;
     readinessPanelWidth: number;
     nextStepPanelWidth: number;
-    readinessPanelHeight: number;
-    nextStepPanelHeight: number;
     sectionHeight: number;
     metricChipWidth: number;
     height: number;
@@ -211,23 +209,19 @@ interface LoadoutDetailMetrics {
     compositionPanelHeight: number;
     itemPanelHeight: number;
     contentHeight: number;
+    footerHeight: number;
     height: number;
 }
 
 const DECK_CARD_WIDTH = 252;
 const DECK_CARD_GAP = 14;
-const PANEL_MIN_HEIGHT = 720;
+const PANEL_MIN_HEIGHT = 760;
 const PANEL_MAX_HEIGHT = 980;
 const PANEL_MAX_HEIGHT_RATIO = 0.95;
 const ACTION_BUTTON_COLUMN_WIDTH = 252;
 const ACTION_BUTTON_PRIMARY_HEIGHT = 62;
 const ACTION_BUTTON_SECONDARY_HEIGHT = 44;
 const ACTION_BUTTON_GAP = 10;
-const PRIMARY_SECTION_GAP = 18;
-const PRIMARY_SECTION_PADDING = 18;
-const PRIMARY_SELECTOR_COLUMN_MIN_WIDTH = 300;
-const PRIMARY_SELECTOR_COLUMN_MAX_WIDTH = 336;
-const SECONDARY_DETAIL_COLLAPSED_MIN_HEIGHT = 136;
 const LOADOUT_MANIFEST_PREVIEW_GAP = 16;
 const LOADOUT_MANIFEST_SECTION_GAP = 8;
 const LOADOUT_MANIFEST_DECK_COLUMN_GAP = 12;
@@ -389,24 +383,6 @@ function measureManifestPanelHeight(
     );
 }
 
-function getDeckCarouselProgressText(
-    deckCount: number,
-    maxScrollX: number,
-    progressRatio: number,
-    visibleStart: number,
-    visibleEnd: number,
-): string {
-    if (deckCount === 0) {
-        return '暂无卡组可浏览 · 请先去管理卡组整理一套。';
-    }
-
-    if (maxScrollX > 0) {
-        return `浏览进度 ${Math.round(progressRatio * 100)}% · 当前可见 ${visibleStart}-${visibleEnd} / ${deckCount} 套 · 点按卡片或按 ← / → 切换当前带入`;
-    }
-
-    return `全部卡组已展开 · 当前可见 ${visibleStart}-${visibleEnd} / ${deckCount} 套 · 点按卡片或按 ← / → 切换当前带入`;
-}
-
 function getReadinessHeroMetrics(
     scene: Scene,
     contentWidth: number,
@@ -419,9 +395,9 @@ function getReadinessHeroMetrics(
     nextStepBody: string,
     shortcutHint: string,
 ): ReadinessHeroMetrics {
-    const textWidth = contentWidth - buttonColumnWidth - 44;
-    const readinessPanelWidth = textWidth;
-    const nextStepPanelWidth = textWidth;
+    const textWidth = contentWidth - buttonColumnWidth - 58;
+    const readinessPanelWidth = Math.floor((textWidth - READINESS_HERO_PANEL_GAP) * 0.47);
+    const nextStepPanelWidth = textWidth - readinessPanelWidth - READINESS_HERO_PANEL_GAP;
     const deckNameHeight = measureTextHeight(scene, deckName, {
         fontFamily: 'Arial',
         fontSize: '30px',
@@ -446,9 +422,10 @@ function getReadinessHeroMetrics(
         lineSpacing: 3,
         wordWrap: { width: textWidth },
     });
-    const readinessPanelHeight = measureManifestPanelHeight(scene, readinessBody, readinessPanelWidth, { minHeight: 84 });
-    const nextStepPanelHeight = measureManifestPanelHeight(scene, nextStepBody, nextStepPanelWidth, { minHeight: 84 });
-    const sectionHeight = readinessPanelHeight + READINESS_HERO_PANEL_GAP + nextStepPanelHeight;
+    const sectionHeight = Math.max(
+        measureManifestPanelHeight(scene, readinessBody, readinessPanelWidth, { minHeight: 84 }),
+        measureManifestPanelHeight(scene, nextStepBody, nextStepPanelWidth, { minHeight: 84 }),
+    );
     const shortcutHintHeight = measureTextHeight(scene, shortcutHint, {
         fontFamily: 'Arial',
         fontSize: '12px',
@@ -473,8 +450,6 @@ function getReadinessHeroMetrics(
         textWidth,
         readinessPanelWidth,
         nextStepPanelWidth,
-        readinessPanelHeight,
-        nextStepPanelHeight,
         sectionHeight,
         metricChipWidth: Math.floor((buttonColumnWidth - READINESS_HERO_METRIC_GAP) / 2),
         height: calculateReadinessHeroHeight(
@@ -504,17 +479,17 @@ function getLoadoutDetailMetrics(
         deckPreviewBody,
         previewPanelWidth,
         {
-            minHeight: 112,
+            minHeight: 96,
         },
     );
     const compositionPanelHeight = measureManifestPanelHeight(
         scene,
         `${summary.kindSummaryLine}\n${formatBulletLines(summary.kindBreakdownLines, 3)}`,
         infoColumnWidth,
-        { minHeight: 92 },
+        { minHeight: 76 },
     );
     const itemPanelHeight = measureManifestPanelHeight(scene, `携带道具 ${summary.itemCount} 件\n${itemPreviewText}`, infoColumnWidth, {
-        minHeight: 76,
+        minHeight: 64,
     });
     const footerHeight = measureTextHeight(scene, summary.footer, {
         fontFamily: 'Arial',
@@ -533,6 +508,7 @@ function getLoadoutDetailMetrics(
         compositionPanelHeight,
         itemPanelHeight,
         contentHeight,
+        footerHeight,
         height: calculateLoadoutDetailHeight(contentHeight, footerHeight),
     };
 }
@@ -1115,7 +1091,6 @@ export class PreparationPanel extends GameObjects.Container {
     private rightIndicator?: GameObjects.Text;
     private deckCarouselWayfinding?: DeckCarouselWayfindingRefs;
     private readonly scrollTweenState = { value: 0 };
-    private manifestDetailsExpanded = false;
     private wheelHandler?: (
         pointer: Phaser.Input.Pointer,
         gameObjects: unknown[],
@@ -1183,19 +1158,12 @@ export class PreparationPanel extends GameObjects.Container {
         const selectedLoadoutColors = getSelectedLoadoutColors(selectedLoadoutSummary);
         const actionColors = getActionHierarchyColors(selectedLoadoutSummary);
         const contentWidth = panelWidth - 96;
-        const selectorColumnWidth = Phaser.Math.Clamp(
-            Math.floor(contentWidth * 0.36),
-            PRIMARY_SELECTOR_COLUMN_MIN_WIDTH,
-            PRIMARY_SELECTOR_COLUMN_MAX_WIDTH,
-        );
-        const decisionColumnWidth = contentWidth - selectorColumnWidth - PRIMARY_SECTION_GAP;
-        const decisionInnerWidth = decisionColumnWidth - 36;
-        const selectorInnerWidth = selectorColumnWidth - 36;
         const buttonColumnWidth = Math.min(
-            ACTION_BUTTON_COLUMN_WIDTH - 44,
-            Math.max(180, Math.floor(decisionInnerWidth * 0.36)),
+            ACTION_BUTTON_COLUMN_WIDTH,
+            Math.max(224, Math.floor(contentWidth * 0.3)),
         );
-        const itemPreviewText = formatPreviewBulletList(selectedLoadoutSummary.itemPreviewLines, 3);
+        const selectorInnerWidth = contentWidth - 36;
+        const itemPreviewText = formatPreviewBulletList(selectedLoadoutSummary.itemPreviewLines, 2);
         const validationLines = formatPreparationValidationLines(validation, this.metadata);
         const validationChecklistBody = formatBulletLines(
             isDeckValid ? selectedLoadoutSummary.readinessChecklistLines : validationLines,
@@ -1205,25 +1173,16 @@ export class PreparationPanel extends GameObjects.Container {
             actionColors.nextStepLabel.replace(/^下一步：/, ''),
             ...selectedLoadoutSummary.guidanceLines.slice(0, 2).map((line) => `• ${line}`),
         ].join('\n');
-        const selectorVisibleEnd = this.stash.savedDecks.length === 0
-            ? 0
-            : Math.min(
-                this.stash.savedDecks.length,
-                Math.max(1, Math.ceil(selectorInnerWidth / (DECK_CARD_WIDTH + DECK_CARD_GAP))),
-            );
-        const carouselProgressMeasurementText = getDeckCarouselProgressText(
-            this.stash.savedDecks.length,
-            this.stash.savedDecks.length > selectorVisibleEnd ? 1 : 0,
-            this.stash.savedDecks.length > selectorVisibleEnd ? 1 : 0,
-            this.stash.savedDecks.length === 0 ? 0 : 1,
-            selectorVisibleEnd,
-        );
-        const heroDetailText = selectedLoadoutSummary.detail;
-        const heroSupportText = `卡组构成：${selectedLoadoutSummary.kindSummaryLine}
-${actionColors.detail}`;
+        const carouselProgressMeasurementText = this.stash.savedDecks.length === 0
+            ? '暂无卡组可浏览 · 请先去管理卡组整理一套。'
+            : this.maxScrollX > 0 || this.stash.savedDecks.length > 3
+                ? `浏览进度 100% · 当前可见 1-${Math.min(this.stash.savedDecks.length, 4)} / ${this.stash.savedDecks.length} 套 · 拖动/滚轮/点按，或按 ← / → 切换当前带入`
+                : `全部卡组已展开 · 当前可见 1-${this.stash.savedDecks.length} / ${this.stash.savedDecks.length} 套 · 点按卡片或按 ← / → 切换当前带入`;
+        const heroDetailText = `${selectedLoadoutSummary.detail}\n${actionColors.detail}`;
+        const heroSupportText = `卡组构成：${selectedLoadoutSummary.kindSummaryLine}\n${selectedLoadoutSummary.focusSummaryLine}`;
         const heroMetrics = getReadinessHeroMetrics(
             this.scene,
-            decisionInnerWidth,
+            contentWidth,
             buttonColumnWidth,
             selectedLoadoutSummary.selectedDeckName,
             actionColors.headline,
@@ -1233,10 +1192,9 @@ ${actionColors.detail}`;
             nextStepBody,
             actionColors.shortcutHint,
         );
-        const detailDeckPreviewBody = `卡组构成：${selectedLoadoutSummary.kindSummaryLine}
-${formatPreviewBulletList(
+        const detailDeckPreviewBody = `卡组构成：${selectedLoadoutSummary.kindSummaryLine}\n${formatPreviewBulletList(
             selectedLoadoutSummary.deckPreviewLines,
-            6,
+            4,
         )}`;
         const detailMetrics = getLoadoutDetailMetrics(
             this.scene,
@@ -1245,10 +1203,22 @@ ${formatPreviewBulletList(
             detailDeckPreviewBody,
             itemPreviewText,
         );
+        const supportHeadingHeight = measureTextHeight(this.scene, '本次携带一览', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            fontStyle: 'bold',
+        });
+        const preflightSupportTopOffset = heroMetrics.height - 22 + 14;
+        const preflightSupportPanelTopOffset = preflightSupportTopOffset + Math.max(supportHeadingHeight, 18) + 8;
+        const primaryPreflightHeight = preflightSupportPanelTopOffset
+            + detailMetrics.contentHeight
+            + 12
+            + detailMetrics.footerHeight
+            + 18;
         const deckCardHeight = getDeckCardHeight(this.scene, this.stash.savedDecks);
         const selectorHeadingHeight = measureTextHeight(this.scene, '切换本次带入卡组', {
             fontFamily: 'Arial',
-            fontSize: '18px',
+            fontSize: '16px',
             fontStyle: 'bold',
         });
         const selectorLabelHeight = measureTextHeight(this.scene, '卡组序列', {
@@ -1268,7 +1238,7 @@ ${formatPreviewBulletList(
             lineSpacing: 3,
             wordWrap: { width: selectorInnerWidth },
         });
-        const selectorSectionHeaderHeight = 14
+        const deckSelectorSectionHeaderHeight = 14
             + selectorHeadingHeight
             + 8
             + selectorLabelHeight
@@ -1279,49 +1249,18 @@ ${formatPreviewBulletList(
             + 10
             + 4
             + 14;
-        const deckSelectorSectionHeight = selectorSectionHeaderHeight + deckCardHeight + 16;
-        const selectorSectionHeight = deckSelectorSectionHeight;
-        const primaryContentHeight = Math.max(heroMetrics.height, selectorSectionHeight);
-        const primarySectionHeight = PRIMARY_SECTION_PADDING * 2 + primaryContentHeight;
-        const subtitleCopy = '选择要带入秘境的卡组；卡组需满足20-40张且所有卡牌均在储物袋中。';
+        const deckSelectorSectionHeight = deckSelectorSectionHeaderHeight + deckCardHeight + 16;
         const subtitleHeight = measureTextHeight(
             this.scene,
-            subtitleCopy,
+            '选择要带入秘境的卡组；卡组需满足20-40张且所有卡牌均在储物袋中。',
             {
                 fontFamily: 'Arial',
-                fontSize: '18px',
+                fontSize: '20px',
                 wordWrap: { width: contentWidth },
             },
         );
-        const detailSummaryBody = [
-            `带入舱单：${selectedLoadoutSummary.kindSummaryLine}`,
-            `物资封单：${summary.itemCount} 件道具 · 灵石 ${summary.spiritStones} 枚`,
-            `构成速览：${selectedLoadoutSummary.compositionLine}`,
-        ].join('\n');
-        const detailSummaryHeight = measureTextHeight(this.scene, detailSummaryBody, {
-            fontFamily: 'Arial',
-            fontSize: '13px',
-            lineSpacing: 4,
-            wordWrap: { width: contentWidth - 36 },
-        });
-        const detailFooterHeight = measureTextHeight(this.scene, selectedLoadoutSummary.footer, {
-            fontFamily: 'Arial',
-            fontSize: '12px',
-            wordWrap: { width: contentWidth - 36 },
-        });
-        const detailCollapsedHeight = Math.max(
-            SECONDARY_DETAIL_COLLAPSED_MIN_HEIGHT,
-            80 + detailSummaryHeight + detailFooterHeight,
-        );
-        const detailExpandedHeight = Math.max(
-            detailCollapsedHeight,
-            90 + detailSummaryHeight + detailMetrics.contentHeight + detailFooterHeight,
-        );
-        const detailCardHeight = this.manifestDetailsExpanded
-            ? detailExpandedHeight
-            : detailCollapsedHeight;
-        const titleTop = 28;
-        const subtitleTop = titleTop + 40;
+        const titleTop = 34;
+        const subtitleTop = titleTop + 48;
         const subtitleBottom = subtitleTop + subtitleHeight;
         const handoffTopOffset = this.deckHandoffSummary
             ? subtitleBottom + 16
@@ -1329,26 +1268,17 @@ ${formatPreviewBulletList(
         const readinessHeroOffsetY = handoffTopOffset !== null
             ? handoffTopOffset + 84 + 18
             : subtitleBottom + 26;
-        const deckSelectorOffsetY = readinessHeroOffsetY + heroMetrics.height + 16;
-        const loadoutDetailOffsetY = deckSelectorOffsetY + deckSelectorSectionHeight + 16;
-        const preflightOffsetY = handoffTopOffset !== null
-            ? handoffTopOffset + 74 + 16
-            : subtitleBottom + 20;
-        const detailOffsetY = preflightOffsetY + primarySectionHeight + 14;
+        const deckSelectorOffsetY = readinessHeroOffsetY + primaryPreflightHeight + 14;
         const panelHeight = Math.min(
-            Math.max(PANEL_MIN_HEIGHT, detailOffsetY + detailCardHeight + 28),
+            Math.max(PANEL_MIN_HEIGHT, deckSelectorOffsetY + deckSelectorSectionHeight + 34),
             Math.min(PANEL_MAX_HEIGHT, Math.floor(height * PANEL_MAX_HEIGHT_RATIO)),
         );
-        const panelY = height / 2 + (panelHeight > 900 ? 10 : 18);
+        const panelY = height / 2 + (panelHeight > 920 ? 10 : 24);
         const panelLeft = panelX - panelWidth / 2;
         const panelTop = panelY - panelHeight / 2;
         const contentLeft = panelLeft + 48;
         const deckSelectorY = panelTop + deckSelectorOffsetY;
         const readinessHeroTop = panelTop + readinessHeroOffsetY;
-        const loadoutDetailTop = panelTop + loadoutDetailOffsetY;
-        const preflightTop = panelTop + preflightOffsetY;
-        const detailTop = panelTop + detailOffsetY;
-        void [deckSelectorY, readinessHeroTop, loadoutDetailTop];
 
         const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x030712, 0.8);
         const shadow = this.scene.add.rectangle(panelX, panelY + 12, panelWidth + 16, panelHeight + 16, 0x020617, 0.42);
@@ -1356,16 +1286,16 @@ ${formatPreviewBulletList(
         panel.setStrokeStyle(3, 0x60a5fa, 0.82);
         const panelAccent = this.scene.add.rectangle(panelX, panelTop + 6, panelWidth - 36, 6, 0x7c3aed, 0.96).setOrigin(0.5, 0);
 
-        const title = this.scene.add.text(contentLeft, panelTop + titleTop, '秘境入口 · 储物袋确认', {
+        const title = this.scene.add.text(contentLeft, panelTop + 34, '秘境入口 · 储物袋确认', {
             fontFamily: 'Arial',
-            fontSize: '30px',
+            fontSize: '34px',
             color: '#f8fafc',
             fontStyle: 'bold',
         });
 
-        const subtitle = this.scene.add.text(contentLeft, title.y + 40, subtitleCopy, {
+        const subtitle = this.scene.add.text(contentLeft, title.y + 48, '选择要带入秘境的卡组；卡组需满足20-40张且所有卡牌均在储物袋中。', {
             fontFamily: 'Arial',
-            fontSize: '18px',
+            fontSize: '20px',
             color: '#cbd5e1',
             wordWrap: { width: contentWidth },
         });
@@ -1375,7 +1305,7 @@ ${formatPreviewBulletList(
         if (handoffSummary) {
             const bannerColors = getDeckHandoffBannerColors(handoffSummary.tone);
             const bannerTop = panelTop + (handoffTopOffset ?? subtitleBottom + 16);
-            const bannerHeight = 74;
+            const bannerHeight = 84;
             const banner = this.scene.add.rectangle(
                 panelX,
                 bannerTop + bannerHeight / 2,
@@ -1385,93 +1315,61 @@ ${formatPreviewBulletList(
                 0.96,
             );
             banner.setStrokeStyle(2, bannerColors.borderColor, 0.92);
-            const bannerTitle = this.scene.add.text(contentLeft + 18, bannerTop + 12, handoffSummary.title, {
+            const bannerTitle = this.scene.add.text(contentLeft + 18, bannerTop + 14, handoffSummary.title, {
                 fontFamily: 'Arial',
-                fontSize: '15px',
+                fontSize: '16px',
                 color: bannerColors.badgeColor,
                 fontStyle: 'bold',
                 backgroundColor: bannerColors.badgeBackgroundColor,
-                padding: { left: 10, right: 10, top: 5, bottom: 5 },
+                padding: { left: 12, right: 12, top: 6, bottom: 6 },
             });
-            const bannerDetail = this.scene.add.text(contentLeft + 18, bannerTitle.y + 32, handoffSummary.detail, {
+            const bannerDetail = this.scene.add.text(contentLeft + 18, bannerTitle.y + 38, handoffSummary.detail, {
                 fontFamily: 'Arial',
-                fontSize: '15px',
+                fontSize: '17px',
                 color: bannerColors.detailColor,
                 wordWrap: { width: contentWidth - 36 },
-                lineSpacing: 3,
+                lineSpacing: 4,
             });
 
             handoffElements.push(banner, bannerTitle, bannerDetail);
         }
 
-        const decisionLeft = contentLeft;
-        const selectorLeft = decisionLeft + decisionColumnWidth + PRIMARY_SECTION_GAP;
-        const primaryContentTop = preflightTop + PRIMARY_SECTION_PADDING;
-        const decisionTop = primaryContentTop + Math.floor((primaryContentHeight - heroMetrics.height) / 2);
-        const selectorTop = primaryContentTop + Math.floor((primaryContentHeight - selectorSectionHeight) / 2);
-
-        const primaryGlow = this.scene.add.rectangle(
+        const heroInnerLeft = contentLeft + 18;
+        const heroButtonLeft = contentLeft + contentWidth - buttonColumnWidth - 20;
+        const heroGlow = this.scene.add.rectangle(
             panelX,
-            preflightTop + primarySectionHeight / 2,
-            contentWidth + 10,
-            primarySectionHeight + 10,
+            readinessHeroTop + primaryPreflightHeight / 2,
+            contentWidth + 12,
+            primaryPreflightHeight + 12,
             selectedLoadoutColors.accentColor,
-            0.06,
-        );
-        const primaryCard = this.scene.add.rectangle(
-            panelX,
-            preflightTop + primarySectionHeight / 2,
-            contentWidth,
-            primarySectionHeight,
-            0x09111f,
-            0.94,
-        );
-        primaryCard.setStrokeStyle(1, 0x334155, 0.9);
-        const primaryAccent = this.scene.add.rectangle(
-            panelX,
-            preflightTop + 4,
-            contentWidth - 16,
-            4,
-            0x475569,
-            1,
-        ).setOrigin(0.5, 0);
-
-        const heroInnerLeft = decisionLeft + 18;
-        const heroButtonLeft = decisionLeft + decisionColumnWidth - buttonColumnWidth - 18;
-        const decisionGlow = this.scene.add.rectangle(
-            decisionLeft + decisionColumnWidth / 2,
-            decisionTop + heroMetrics.height / 2,
-            decisionColumnWidth + 8,
-            heroMetrics.height + 8,
-            selectedLoadoutColors.accentColor,
-            selectedLoadoutSummary.readiness === 'ready' ? 0.08 : 0.12,
+            selectedLoadoutSummary.readiness === 'ready' ? 0.1 : 0.14,
         );
         const heroCard = this.scene.add.rectangle(
-            decisionLeft + decisionColumnWidth / 2,
-            decisionTop + heroMetrics.height / 2,
-            decisionColumnWidth,
-            heroMetrics.height,
+            panelX,
+            readinessHeroTop + primaryPreflightHeight / 2,
+            contentWidth,
+            primaryPreflightHeight,
             selectedLoadoutColors.fillColor,
             0.98,
         );
         heroCard.setStrokeStyle(2, selectedLoadoutColors.borderColor, 0.92);
         const heroAccent = this.scene.add.rectangle(
-            decisionLeft + decisionColumnWidth / 2,
-            decisionTop + 5,
-            decisionColumnWidth - 16,
+            panelX,
+            readinessHeroTop + 5,
+            contentWidth - 16,
             5,
             selectedLoadoutColors.accentColor,
             1,
         ).setOrigin(0.5, 0);
-        const heroRailLabel = this.scene.add.text(heroInnerLeft, decisionTop + 16, actionColors.railLabel, {
+        const heroRailLabel = this.scene.add.text(heroInnerLeft, readinessHeroTop + 16, actionColors.railLabel, {
             fontFamily: 'Arial',
             fontSize: '12px',
             color: actionColors.supportColor,
             fontStyle: 'bold',
         });
         const heroStateBadge = this.scene.add.text(
-            decisionLeft + decisionColumnWidth - 18,
-            decisionTop + 12,
+            heroButtonLeft - 12,
+            readinessHeroTop + 12,
             actionColors.stateBadgeLabel,
             {
                 fontFamily: 'Arial',
@@ -1479,6 +1377,19 @@ ${formatPreviewBulletList(
                 color: actionColors.stateBadgeColor,
                 fontStyle: 'bold',
                 backgroundColor: actionColors.stateBadgeBackgroundColor,
+                padding: { left: 10, right: 10, top: 5, bottom: 5 },
+            },
+        ).setOrigin(1, 0);
+        const heroPositionBadge = this.scene.add.text(
+            contentLeft + contentWidth - 18,
+            readinessHeroTop + 12,
+            deckCarouselSummary.positionLabel,
+            {
+                fontFamily: 'Arial',
+                fontSize: '12px',
+                color: '#ede9fe',
+                fontStyle: 'bold',
+                backgroundColor: '#312e81',
                 padding: { left: 10, right: 10, top: 5, bottom: 5 },
             },
         ).setOrigin(1, 0);
@@ -1538,7 +1449,7 @@ ${formatPreviewBulletList(
             heroInnerLeft,
             readinessPanelTop,
             heroMetrics.readinessPanelWidth,
-            heroMetrics.readinessPanelHeight,
+            heroMetrics.sectionHeight,
             selectedLoadoutSummary.issuePreviewLines.length > 0 ? '阻塞项' : '出发校验',
             validationChecklistBody,
             {
@@ -1553,14 +1464,13 @@ ${formatPreviewBulletList(
                 badgeText: selectedLoadoutSummary.readinessLabel,
             },
         );
-        const nextStepPanelLeft = heroInnerLeft;
-        const nextStepPanelTop = readinessPanelTop + heroMetrics.readinessPanelHeight + READINESS_HERO_PANEL_GAP;
+        const nextStepPanelLeft = heroInnerLeft + heroMetrics.readinessPanelWidth + READINESS_HERO_PANEL_GAP;
         const nextStepPanel = createManifestPanel(
             this.scene,
             nextStepPanelLeft,
-            nextStepPanelTop,
+            readinessPanelTop,
             heroMetrics.nextStepPanelWidth,
-            heroMetrics.nextStepPanelHeight,
+            heroMetrics.sectionHeight,
             selectedLoadoutSummary.readiness === 'ready' ? '执行提示' : '修整建议',
             nextStepBody,
             {
@@ -1572,7 +1482,7 @@ ${formatPreviewBulletList(
         );
         const heroShortcutHint = this.scene.add.text(
             heroInnerLeft,
-            nextStepPanelTop + heroMetrics.nextStepPanelHeight + 10,
+            readinessPanelTop + heroMetrics.sectionHeight + 10,
             actionColors.shortcutHint,
             {
                 fontFamily: 'Arial',
@@ -1582,10 +1492,25 @@ ${formatPreviewBulletList(
                 wordWrap: { width: heroMetrics.textWidth },
             },
         );
+        const heroSummaryContainer = this.scene.add.container(0, 0, [
+            heroRailLabel,
+            heroStateBadge,
+            heroPositionBadge,
+            heroDeckLabel,
+            heroDeckName,
+            heroConclusionLabel,
+            heroHeadline,
+            heroDetail,
+            heroSupportSummary,
+            heroChecklistRule,
+            ...readinessPanel,
+            ...nextStepPanel,
+            heroShortcutHint,
+        ]);
 
         const actionGlow = this.scene.add.rectangle(
             heroButtonLeft + buttonColumnWidth / 2,
-            decisionTop + heroMetrics.height / 2,
+            readinessHeroTop + heroMetrics.height / 2,
             buttonColumnWidth + 18,
             heroMetrics.height - 28,
             actionColors.actionGlowColor,
@@ -1593,17 +1518,17 @@ ${formatPreviewBulletList(
         );
         const actionSlot = this.scene.add.rectangle(
             heroButtonLeft + buttonColumnWidth / 2,
-            decisionTop + heroMetrics.height / 2,
+            readinessHeroTop + heroMetrics.height / 2,
             buttonColumnWidth,
             heroMetrics.height - 36,
-            0x0b1220,
-            0.54,
+            actionColors.barFillColor,
+            0.66,
         );
-        actionSlot.setStrokeStyle(1, selectedLoadoutColors.borderColor, 0.36);
-        const actionSlotLabel = this.scene.add.text(heroButtonLeft, decisionTop + 16, '本次操作', {
+        actionSlot.setStrokeStyle(1, actionColors.barBorderColor, 0.5);
+        const actionSlotLabel = this.scene.add.text(heroButtonLeft, readinessHeroTop + 16, '本次操作', {
             fontFamily: 'Arial',
             fontSize: '12px',
-            color: selectedLoadoutColors.mutedColor,
+            color: actionColors.supportColor,
             fontStyle: 'bold',
         });
         const heroMetricTop = actionSlotLabel.y + 24;
@@ -1645,7 +1570,7 @@ ${formatPreviewBulletList(
             heroMetricChipColors,
         );
         const buttonStackHeight = ACTION_BUTTON_PRIMARY_HEIGHT + ACTION_BUTTON_GAP + ACTION_BUTTON_SECONDARY_HEIGHT;
-        const buttonStackTop = decisionTop + heroMetrics.height - 22 - buttonStackHeight;
+        const buttonStackTop = readinessHeroTop + heroMetrics.height - 22 - buttonStackHeight;
         const primaryButtonY = buttonStackTop + ACTION_BUTTON_PRIMARY_HEIGHT / 2;
         const secondaryButtonY = buttonStackTop + ACTION_BUTTON_PRIMARY_HEIGHT + ACTION_BUTTON_GAP + ACTION_BUTTON_SECONDARY_HEIGHT / 2;
         const manageButtonHeight = actionColors.primaryAction === 'manage'
@@ -1697,59 +1622,166 @@ ${formatPreviewBulletList(
             confirmGlow,
             confirmButton.container,
         ]);
-        const decisionContainer = this.scene.add.container(0, 0, [
-            decisionGlow,
+
+        const detailHeading = this.scene.add.text(heroInnerLeft, readinessHeroTop + preflightSupportTopOffset, '本次携带一览', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#f8fafc',
+            fontStyle: 'bold',
+        });
+        const detailBadge = this.scene.add.text(
+            contentLeft + contentWidth - 18,
+            readinessHeroTop + preflightSupportTopOffset,
+            '补充明细',
+            {
+                fontFamily: 'Arial',
+                fontSize: '10px',
+                color: '#cbd5e1',
+                fontStyle: 'bold',
+                backgroundColor: '#1e293b',
+                padding: { left: 10, right: 10, top: 4, bottom: 4 },
+            },
+        ).setOrigin(1, 0);
+        const supportGlow = this.scene.add.rectangle(
+            panelX,
+            readinessHeroTop + preflightSupportTopOffset + (primaryPreflightHeight - preflightSupportTopOffset - 12) / 2 + 6,
+            contentWidth - 12,
+            primaryPreflightHeight - preflightSupportTopOffset - 12,
+            0x020617,
+            0.12,
+        );
+        supportGlow.setStrokeStyle(1, selectedLoadoutColors.borderColor, 0.14);
+        const supportDivider = this.scene.add.rectangle(
+            panelX,
+            readinessHeroTop + preflightSupportTopOffset - 8,
+            contentWidth - 36,
+            1,
+            selectedLoadoutColors.borderColor,
+            0.28,
+        ).setOrigin(0.5, 0);
+        const detailDeckPanelTop = readinessHeroTop + preflightSupportPanelTopOffset;
+        const detailPreviewPanel = createManifestPanel(
+            this.scene,
+            heroInnerLeft,
+            detailDeckPanelTop,
+            detailMetrics.previewPanelWidth,
+            detailMetrics.previewPanelHeight,
+            '带入舱单',
+            detailDeckPreviewBody,
+            {
+                fillColor: 0x0b1220,
+                borderColor: 0x3b82f6,
+                titleColor: '#93c5fd',
+                bodyColor: '#e2e8f0',
+            },
+        );
+        const detailInfoLeft = heroInnerLeft + detailMetrics.previewPanelWidth + LOADOUT_MANIFEST_PREVIEW_GAP;
+        const detailCompositionPanel = createManifestPanel(
+            this.scene,
+            detailInfoLeft,
+            detailDeckPanelTop,
+            detailMetrics.infoColumnWidth,
+            detailMetrics.compositionPanelHeight,
+            '构成速览',
+            `${selectedLoadoutSummary.kindSummaryLine}
+${formatBulletLines(selectedLoadoutSummary.kindBreakdownLines, 3)}`,
+            {
+                fillColor: selectedLoadoutColors.fillColor,
+                borderColor: selectedLoadoutColors.borderColor,
+                titleColor: selectedLoadoutColors.mutedColor,
+                bodyColor: selectedLoadoutColors.headlineColor,
+                badgeColor: selectedLoadoutColors.badgeColor,
+                badgeBackgroundColor: selectedLoadoutColors.badgeBackgroundColor,
+            },
+            {
+                badgeText: selectedLoadoutSummary.readinessLabel,
+            },
+        );
+        const detailItemPanelTop = detailDeckPanelTop + detailMetrics.compositionPanelHeight + LOADOUT_MANIFEST_SECTION_GAP;
+        const detailItemsPanel = createManifestPanel(
+            this.scene,
+            detailInfoLeft,
+            detailItemPanelTop,
+            detailMetrics.infoColumnWidth,
+            detailMetrics.itemPanelHeight,
+            '物资封单',
+            `携带道具 ${summary.itemCount} 件 · 灵石 ${summary.spiritStones} 枚
+${itemPreviewText}`,
+            {
+                fillColor: 0x0d1b15,
+                borderColor: 0x22c55e,
+                titleColor: '#86efac',
+                bodyColor: '#dcfce7',
+            },
+        );
+        const detailFooter = this.scene.add.text(
+            heroInnerLeft,
+            readinessHeroTop + primaryPreflightHeight - 18,
+            selectedLoadoutSummary.footer,
+            {
+                fontFamily: 'Arial',
+                fontSize: '12px',
+                color: '#94a3b8',
+                wordWrap: { width: contentWidth - 36 },
+            },
+        ).setOrigin(0, 1);
+        const carriedReadinessContainer = this.scene.add.container(0, 0, [
+            ...detailCompositionPanel,
+            ...detailItemsPanel,
+        ]);
+        const selectedLoadoutSupportContainer = this.scene.add.container(0, 0, [
+            supportGlow,
+            supportDivider,
+            detailHeading,
+            detailBadge,
+            ...detailPreviewPanel,
+            carriedReadinessContainer,
+            detailFooter,
+        ]);
+        const readinessHeroContainer = this.scene.add.container(0, 0, [
+            heroGlow,
             heroCard,
             heroAccent,
-            heroRailLabel,
-            heroStateBadge,
-            heroDeckLabel,
-            heroDeckName,
-            heroConclusionLabel,
-            heroHeadline,
-            heroDetail,
-            heroSupportSummary,
-            heroChecklistRule,
-            ...readinessPanel,
-            ...nextStepPanel,
-            heroShortcutHint,
+            heroSummaryContainer,
             actionContainer,
+            selectedLoadoutSupportContainer,
         ]);
 
+        const selectorInnerLeft = contentLeft + 18;
         const selectorGlow = this.scene.add.rectangle(
-            selectorLeft + selectorColumnWidth / 2,
-            selectorTop + selectorSectionHeight / 2,
-            selectorColumnWidth + 8,
-            selectorSectionHeight + 8,
+            panelX,
+            deckSelectorY + deckSelectorSectionHeight / 2,
+            contentWidth + 10,
+            deckSelectorSectionHeight + 10,
             0x7c3aed,
-            0.04,
+            0.05,
         );
         const selectorCard = this.scene.add.rectangle(
-            selectorLeft + selectorColumnWidth / 2,
-            selectorTop + selectorSectionHeight / 2,
-            selectorColumnWidth,
-            selectorSectionHeight,
+            panelX,
+            deckSelectorY + deckSelectorSectionHeight / 2,
+            contentWidth,
+            deckSelectorSectionHeight,
             0x0b1220,
-            0.96,
+            0.94,
         );
         selectorCard.setStrokeStyle(1, 0x334155, 0.92);
         const selectorAccent = this.scene.add.rectangle(
-            selectorLeft + selectorColumnWidth / 2,
-            selectorTop + 4,
-            selectorColumnWidth - 16,
+            panelX,
+            deckSelectorY + 4,
+            contentWidth - 16,
             4,
             0x475569,
             1,
         ).setOrigin(0.5, 0);
-        const selectorHeading = this.scene.add.text(selectorLeft + 18, selectorTop + 14, '切换本次带入卡组', {
+        const selectorHeading = this.scene.add.text(selectorInnerLeft, deckSelectorY + 14, '切换本次带入卡组', {
             fontFamily: 'Arial',
-            fontSize: '18px',
+            fontSize: '16px',
             color: '#f8fafc',
             fontStyle: 'bold',
         });
         const selectorPositionBadge = this.scene.add.text(
-            selectorLeft + selectorColumnWidth - 18,
-            selectorTop + 14,
+            contentLeft + contentWidth - 18,
+            deckSelectorY + 14,
             deckCarouselSummary.positionLabel,
             {
                 fontFamily: 'Arial',
@@ -1761,7 +1793,7 @@ ${formatPreviewBulletList(
             },
         ).setOrigin(1, 0);
         const selectorRosterLabel = this.scene.add.text(
-            selectorLeft + 18,
+            selectorInnerLeft,
             selectorHeading.y + selectorHeading.height + 8,
             '卡组序列',
             {
@@ -1772,7 +1804,7 @@ ${formatPreviewBulletList(
             },
         );
         const selectorRosterSummary = this.scene.add.text(
-            selectorLeft + 18,
+            selectorInnerLeft,
             selectorRosterLabel.y + selectorRosterLabel.height + 4,
             deckCarouselSummary.rosterSummaryLine,
             {
@@ -1784,7 +1816,7 @@ ${formatPreviewBulletList(
             },
         );
         const carouselProgressText = this.scene.add.text(
-            selectorLeft + 18,
+            selectorInnerLeft,
             selectorRosterSummary.y + selectorRosterSummary.height + 6,
             '',
             {
@@ -1796,7 +1828,7 @@ ${formatPreviewBulletList(
             },
         );
         const carouselProgressTrack = this.scene.add.rectangle(
-            selectorLeft + 18,
+            selectorInnerLeft,
             carouselProgressText.y + carouselProgressText.height + 10,
             selectorInnerWidth,
             4,
@@ -1804,7 +1836,7 @@ ${formatPreviewBulletList(
             1,
         ).setOrigin(0, 0.5);
         const carouselProgressFill = this.scene.add.rectangle(
-            selectorLeft + 18,
+            selectorInnerLeft,
             carouselProgressTrack.y,
             selectorInnerWidth,
             4,
@@ -1815,21 +1847,21 @@ ${formatPreviewBulletList(
         this.deckCarouselWayfinding = {
             progressFill: carouselProgressFill,
             progressText: carouselProgressText,
-            progressTrackX: selectorLeft + 18,
+            progressTrackX: selectorInnerLeft,
             progressTrackWidth: selectorInnerWidth,
             deckCount: this.stash.savedDecks.length,
             viewportWidth: selectorInnerWidth,
             slotWidth: DECK_CARD_WIDTH + DECK_CARD_GAP,
         };
         const deckCardRow = this.createDeckCardRow(
-            selectorLeft + 18,
+            selectorInnerLeft,
             carouselProgressTrack.y + 14,
             selectorInnerWidth,
             selectedDeckId,
             deckCardHeight,
             options.initialScrollX,
         );
-        const selectorContainer = this.scene.add.container(0, 0, [
+        const deckSelectorContainer = this.scene.add.container(0, 0, [
             selectorGlow,
             selectorCard,
             selectorAccent,
@@ -1843,160 +1875,6 @@ ${formatPreviewBulletList(
             ...deckCardRow.elements,
         ]);
 
-        const primaryContainer = this.scene.add.container(0, 0, [
-            primaryGlow,
-            primaryCard,
-            primaryAccent,
-            decisionContainer,
-            selectorContainer,
-        ]);
-
-        const detailGlow = this.scene.add.rectangle(
-            panelX,
-            detailTop + detailCardHeight / 2,
-            contentWidth + 10,
-            detailCardHeight + 10,
-            0x64748b,
-            this.manifestDetailsExpanded ? 0.05 : 0.035,
-        );
-        const detailCard = this.scene.add.rectangle(
-            panelX,
-            detailTop + detailCardHeight / 2,
-            contentWidth,
-            detailCardHeight,
-            0x0d1424,
-            0.94,
-        );
-        detailCard.setStrokeStyle(1, 0x334155, 0.9);
-        const detailAccent = this.scene.add.rectangle(
-            panelX,
-            detailTop + 4,
-            contentWidth - 16,
-            4,
-            0x475569,
-            1,
-        ).setOrigin(0.5, 0);
-        const detailHeading = this.scene.add.text(contentLeft + 18, detailTop + 14, '本次携带一览', {
-            fontFamily: 'Arial',
-            fontSize: '18px',
-            color: '#f8fafc',
-            fontStyle: 'bold',
-        });
-        const detailBadge = this.scene.add.text(
-            contentLeft + contentWidth - 18,
-            detailTop + 14,
-            this.manifestDetailsExpanded ? '补充明细 · 收起' : '补充明细 · 展开',
-            {
-                fontFamily: 'Arial',
-                fontSize: '11px',
-                color: '#cbd5e1',
-                fontStyle: 'bold',
-                backgroundColor: '#1e293b',
-                padding: { left: 10, right: 10, top: 5, bottom: 5 },
-            },
-        ).setOrigin(1, 0).setInteractive({ useHandCursor: true });
-        detailBadge.on('pointerover', () => detailBadge.setAlpha(0.86));
-        detailBadge.on('pointerout', () => detailBadge.setAlpha(1));
-        detailBadge.on('pointerdown', () => this.toggleManifestDetails());
-        const detailSummaryText = this.scene.add.text(
-            contentLeft + 18,
-            detailTop + 48,
-            detailSummaryBody,
-            {
-                fontFamily: 'Arial',
-                fontSize: '13px',
-                color: '#cbd5e1',
-                lineSpacing: 4,
-                wordWrap: { width: contentWidth - 36 },
-            },
-        );
-        let carriedReadinessContainer: GameObjects.Container | undefined;
-        const detailElements: Phaser.GameObjects.GameObject[] = [
-            detailGlow,
-            detailCard,
-            detailAccent,
-            detailHeading,
-            detailBadge,
-            detailSummaryText,
-        ];
-
-        if (this.manifestDetailsExpanded) {
-            const detailDeckPanelTop = detailSummaryText.y + detailSummaryText.height + 14;
-            const detailPreviewPanel = createManifestPanel(
-                this.scene,
-                contentLeft + 18,
-                detailDeckPanelTop,
-                detailMetrics.previewPanelWidth,
-                detailMetrics.previewPanelHeight,
-                '带入舱单',
-                detailDeckPreviewBody,
-                {
-                    fillColor: 0x0b1220,
-                    borderColor: 0x3b82f6,
-                    titleColor: '#93c5fd',
-                    bodyColor: '#e2e8f0',
-                },
-            );
-            const detailInfoLeft = contentLeft + 18 + detailMetrics.previewPanelWidth + LOADOUT_MANIFEST_PREVIEW_GAP;
-            const detailCompositionPanel = createManifestPanel(
-                this.scene,
-                detailInfoLeft,
-                detailDeckPanelTop,
-                detailMetrics.infoColumnWidth,
-                detailMetrics.compositionPanelHeight,
-                '构成速览',
-                `${selectedLoadoutSummary.kindSummaryLine}
-${formatBulletLines(selectedLoadoutSummary.kindBreakdownLines, 3)}`,
-                {
-                    fillColor: selectedLoadoutColors.fillColor,
-                    borderColor: selectedLoadoutColors.borderColor,
-                    titleColor: selectedLoadoutColors.mutedColor,
-                    bodyColor: selectedLoadoutColors.headlineColor,
-                    badgeColor: selectedLoadoutColors.badgeColor,
-                    badgeBackgroundColor: selectedLoadoutColors.badgeBackgroundColor,
-                },
-                {
-                    badgeText: selectedLoadoutSummary.readinessLabel,
-                },
-            );
-            const detailItemPanelTop = detailDeckPanelTop + detailMetrics.compositionPanelHeight + LOADOUT_MANIFEST_SECTION_GAP;
-            const detailItemsPanel = createManifestPanel(
-                this.scene,
-                detailInfoLeft,
-                detailItemPanelTop,
-                detailMetrics.infoColumnWidth,
-                detailMetrics.itemPanelHeight,
-                '物资封单',
-                `携带道具 ${summary.itemCount} 件 · 灵石 ${summary.spiritStones} 枚
-${itemPreviewText}`,
-                {
-                    fillColor: 0x0d1b15,
-                    borderColor: 0x22c55e,
-                    titleColor: '#86efac',
-                    bodyColor: '#dcfce7',
-                },
-            );
-            carriedReadinessContainer = this.scene.add.container(0, 0, [
-                ...detailCompositionPanel,
-                ...detailItemsPanel,
-            ]);
-            detailElements.push(...detailPreviewPanel, carriedReadinessContainer);
-        }
-
-        const detailFooter = this.scene.add.text(
-            contentLeft + 18,
-            detailTop + detailCardHeight - 16,
-            selectedLoadoutSummary.footer,
-            {
-                fontFamily: 'Arial',
-                fontSize: '12px',
-                color: '#94a3b8',
-                wordWrap: { width: contentWidth - 36 },
-            },
-        ).setOrigin(0, 1);
-        detailElements.push(detailFooter);
-
-        const detailContainer = this.scene.add.container(0, 0, detailElements);
 
         this.add([
             overlay,
@@ -2006,8 +1884,8 @@ ${itemPreviewText}`,
             title,
             subtitle,
             ...handoffElements,
-            primaryContainer,
-            detailContainer,
+            readinessHeroContainer,
+            deckSelectorContainer,
         ]);
 
         this.updateScrollIndicators();
@@ -2021,14 +1899,14 @@ ${itemPreviewText}`,
         if (options.deckSwitchFeedback) {
             this.playDeckSwitchFeedback(options.deckSwitchFeedback, {
                 selectedCard: deckCardRow.selectedCard,
-                validationContainer: primaryContainer,
-                selectedLoadoutContainer: detailContainer,
+                validationContainer: heroSummaryContainer,
+                selectedLoadoutContainer: selectedLoadoutSupportContainer,
                 carriedReadinessContainer,
                 actionContainer,
                 confirmButton: confirmButton.container,
                 manageDeckButton: deckManagerButton.container,
-                validationGlow: decisionGlow,
-                selectedLoadoutGlow: detailGlow,
+                validationGlow: heroGlow,
+                selectedLoadoutGlow: supportGlow,
                 actionGlow,
                 confirmGlow,
                 targetScrollX: deckCardRow.targetScrollX,
@@ -2633,21 +2511,12 @@ ${itemPreviewText}`,
             progressFill.setScale(deckCount === 0 ? 0 : thumbRatio, 1);
             progressFill.setX(progressTrackX + thumbTravel * progressRatio);
             progressText.setColor(this.maxScrollX > 0 ? '#c4b5fd' : '#94a3b8');
-            progressText.setText(getDeckCarouselProgressText(
-                deckCount,
-                this.maxScrollX,
-                progressRatio,
-                visibleStart,
-                visibleEnd,
-            ));
+            progressText.setText(deckCount === 0
+                ? '暂无卡组可浏览 · 请先去管理卡组整理一套。'
+                : this.maxScrollX > 0
+                    ? `浏览进度 ${Math.round(progressRatio * 100)}% · 当前可见 ${visibleStart}-${visibleEnd} / ${deckCount} 套 · 拖动/滚轮/点按，或按 ← / → 切换当前带入`
+                    : `全部卡组已展开 · 当前可见 ${visibleStart}-${visibleEnd} / ${deckCount} 套 · 点按卡片或按 ← / → 切换当前带入`);
         }
-    }
-
-    private toggleManifestDetails(): void {
-        this.manifestDetailsExpanded = !this.manifestDetailsExpanded;
-        this.renderPanel({
-            initialScrollX: this.scrollX,
-        });
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
