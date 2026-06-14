@@ -94,6 +94,10 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).toContain('Enter 加入 1');
         expect(panel).toContain('Enter 直接返回远征准备');
         expect(panel).toContain('当前卡组：');
+        expect(panel).toContain('先切换卡组，再从右侧加入或在中间移除');
+        expect(panel).toContain('从储物袋加入');
+        expect(panel).toContain('当前卡牌（在这里移除）');
+        expect(panel).toContain('下一步：');
         expect(panel).toContain('卡组 ×');
         expect(panel).toContain('一键加满');
         expect(panel).toContain('全部移除');
