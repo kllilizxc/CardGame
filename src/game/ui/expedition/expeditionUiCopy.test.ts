@@ -120,6 +120,8 @@ describe('expedition UI Chinese copy', () => {
         const panel = read('src/game/ui/deckbuilder/DeckManagementPanel.ts');
 
         expect(panel).toContain('焦点牌面');
+        expect(panel).toContain('默认收起详情');
+        expect(panel).toContain('查看当前焦点');
         expect(panel).toContain('效果要点');
         expect(panel).toContain('剩余');
         expect(panel).toContain('缺口');
@@ -133,8 +135,8 @@ describe('expedition UI Chinese copy', () => {
 
         expect(panel).toContain('浏览控制');
         expect(panel).toContain('清空');
-        expect(panel).toContain('零库存：已隐藏');
-        expect(panel).toContain('零库存：已显示');
+        expect(panel).toContain('零：隐');
+        expect(panel).toContain('零：显');
         expect(panel).toContain('恢复默认');
         expect(panel).toContain('默认浏览');
         expect(panel).toContain('命中条目都为零张');

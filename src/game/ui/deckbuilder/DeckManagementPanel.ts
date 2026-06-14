@@ -638,6 +638,14 @@ function getSortFieldLabel(field: CardCollectionSortField): string {
     return SORT_FIELD_LABEL[field] ?? field;
 }
 
+function getSortDirectionLabel(direction: 'asc' | 'desc'): string {
+    return direction === 'asc' ? '↑' : '↓';
+}
+
+function getCompactSortLabel(field: CardCollectionSortField, direction: 'asc' | 'desc'): string {
+    return `${getSortFieldLabel(field)}${getSortDirectionLabel(direction)}`;
+}
+
 function getKeyboardZoneLabel(zone: DeckbuilderKeyboardZone): string {
     switch (zone) {
         case 'decks':
@@ -709,7 +717,7 @@ function createKeyboardGuideCopy(
                 fillColor: 0x1f1732,
                 accentColor: PANEL_ACCENT,
                 headline: `键盘焦点：${getKeyboardZoneLabel(zone)}`,
-                detail: '↑↓ 选中条目 · Enter 移除 1 · X 清空整行 · 详情会跟随焦点刷新',
+                detail: '↑↓ 选中条目 · Enter 移除 1 · X 清空整行 · I 检视当前焦点',
                 headlineColor: '#ede9fe',
                 detailColor: '#ddd6fe',
             };
@@ -718,7 +726,7 @@ function createKeyboardGuideCopy(
                 fillColor: 0x10251a,
                 accentColor: VALID_ACCENT,
                 headline: `键盘焦点：${getKeyboardZoneLabel(zone)}`,
-                detail: '↑↓ 浏览条目 · Enter 加入 1 · F 一键加满 · / 搜索 · K/H/S/D 调整条件',
+                detail: '↑↓ 浏览条目 · Enter 加入 1 · F 一键加满 · / 搜索 · K/H/S/D 调整 · I 检视',
                 headlineColor: '#dcfce7',
                 detailColor: '#bbf7d0',
             };
@@ -1169,8 +1177,10 @@ export class DeckManagementPanel extends GameObjects.Container {
     private namingInputText?: GameObjects.Text;
 
     private searchFocus = false;
+    private detailPaneExpanded = false;
     private keyboardZone: DeckbuilderKeyboardZone = 'decks';
 
+    private browserStateText?: GameObjects.Text;
     private queryBg?: GameObjects.Rectangle;
     private queryText?: GameObjects.Text;
     private queryClearBtn?: GameObjects.Text;
@@ -1278,6 +1288,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.namingMode = mode;
         this.namingDeckId = deckId;
         this.renameBuffer = initialName;
+        this.detailPaneExpanded = false;
         this.refreshKeyboardGuide();
     }
 
@@ -1332,6 +1343,20 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.detailCardId = cardId;
         this.refreshDetailPane(true);
         this.refreshSpotlightRowStates(true);
+    }
+
+    private setDetailPaneExpanded(expanded: boolean): void {
+        if (this.detailPaneExpanded === expanded) {
+            return;
+        }
+
+        this.detailPaneExpanded = expanded;
+        this.refreshEditor();
+        this.refreshKeyboardGuide();
+    }
+
+    private toggleDetailPane(expanded?: boolean): void {
+        this.setDetailPaneExpanded(expanded ?? !this.detailPaneExpanded);
     }
 
     private setKeyboardZone(zone: DeckbuilderKeyboardZone): void {
@@ -1874,6 +1899,29 @@ export class DeckManagementPanel extends GameObjects.Container {
             color: '#cbd5e1',
             fontStyle: 'bold',
         }).setOrigin(0, 0.5);
+        let collapseButtonBg: GameObjects.Rectangle | null = null;
+        let collapseButtonText: GameObjects.Text | null = null;
+        if (this.detailPaneExpanded) {
+            collapseButtonBg = this.scene.add.rectangle(
+                previewWidth - 28,
+                headerHeight / 2,
+                42,
+                16,
+                0x0f172a,
+                0.96,
+            );
+            collapseButtonBg.setStrokeStyle(1, previewTheme.borderColor, 0.42);
+            collapseButtonBg.setInteractive({ useHandCursor: true });
+            collapseButtonBg.on('pointerover', () => collapseButtonBg?.setFillStyle(0x172033, 0.98));
+            collapseButtonBg.on('pointerout', () => collapseButtonBg?.setFillStyle(0x0f172a, 0.96));
+            collapseButtonBg.on('pointerdown', () => this.toggleDetailPane(false));
+            collapseButtonText = this.scene.add.text(previewWidth - 28, headerHeight / 2, '收起', {
+                fontFamily: 'Arial',
+                fontSize: '9px',
+                color: '#e2e8f0',
+                fontStyle: 'bold',
+            }).setOrigin(0.5);
+        }
         const [kindBadgeBg, kindBadgeText] = createBadge(
             18,
             heroTop + 12,
@@ -2025,6 +2073,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             heroAccent,
             heroGlow,
             headerTitle,
+            ...(collapseButtonBg && collapseButtonText ? [collapseButtonBg, collapseButtonText] : []),
             kindBadgeBg,
             kindBadgeText,
             rarityBadgeBg,
@@ -2184,6 +2233,9 @@ export class DeckManagementPanel extends GameObjects.Container {
                 } else if (normalizedKey === 'x' || event.key === 'Delete') {
                     event.preventDefault();
                     this.removeFocusedEditorCard(true);
+                } else if (normalizedKey === 'i') {
+                    event.preventDefault();
+                    this.toggleDetailPane();
                 }
                 break;
             }
@@ -2223,6 +2275,9 @@ export class DeckManagementPanel extends GameObjects.Container {
                     event.preventDefault();
                     this.resetBrowserControls();
                     this.syncKeyboardZoneSelection();
+                } else if (normalizedKey === 'i') {
+                    event.preventDefault();
+                    this.toggleDetailPane();
                 }
                 break;
             }
@@ -2543,72 +2598,65 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.browserSummaryContainer.removeAll(true);
 
         const hasModifiedControls = this.hasModifiedBrowserControls();
-        const hasSearchOrKindFilter = this.filterQuery.trim().length > 0 || this.filterKind !== undefined;
         const hiddenZeroCount = Math.max(0, matchedCount - resultCount);
-        const resultBaseline = hasSearchOrKindFilter ? matchedCount : totalCount;
 
         let fillColor = 0x10251a;
         let borderColor = VALID_ACCENT;
         let accentColor = 0x4ade80;
-        let titleColor = '#dcfce7';
         let detailColor = '#bbf7d0';
 
         if (resultCount === 0 && (hasModifiedControls || matchedCount > 0)) {
             fillColor = 0x271b0b;
             borderColor = WARNING_ACCENT;
             accentColor = 0xfbbf24;
-            titleColor = '#fde68a';
             detailColor = '#fcd34d';
         } else if (resultCount === 0) {
             fillColor = 0x1f1722;
             borderColor = SECTION_BORDER;
             accentColor = INVALID_ACCENT;
-            titleColor = '#fecaca';
             detailColor = '#cbd5e1';
         } else if (hasModifiedControls) {
             fillColor = 0x111c33;
             borderColor = SELECTED_ACCENT;
             accentColor = 0x93c5fd;
-            titleColor = '#dbeafe';
             detailColor = '#bfdbfe';
         }
 
         const selectedSlotsRemaining = Math.max(selectedCapacity?.slotsRemainingToMax ?? 0, 0);
-        const filterDetail = [
-            `搜 ${this.filterQuery.trim().length > 0 ? `「${truncateLabel(this.filterQuery.trim(), 10)}」` : '全部'}`,
-            `类 ${KIND_LABEL[String(this.filterKind)]}`,
-            `零 ${this.filterHideZero ? '隐藏' : '显示'}`,
-            `序 ${getSortFieldLabel(this.sortField)}${this.sortDirection === 'asc' ? '↑' : '↓'}`,
-        ].join(' · ');
+        const selectedCount = selectedSummary?.count ?? 0;
 
-        let summaryLine = `结果 ${resultCount} / ${resultBaseline} · 先选卡组`;
-        if (selectedDeck) {
-            summaryLine = selectedSlotsRemaining <= 0
-                ? `当前卡组已满 · 先在中间移除 · 当前卡组：${selectedSummary?.count ?? 0} 张 · ${selectedSummary?.statusLabel ?? '待检查'}`
-                : `可加入 ${resultCount} 条 · 空位 ${selectedSlotsRemaining} 张 · 当前卡组：${selectedSummary?.count ?? 0} 张 · ${selectedSummary?.statusLabel ?? '待检查'}`;
-        } else if (!hasModifiedControls) {
-            summaryLine = '先选卡组，再加入卡牌';
-        }
+        let summaryLine = selectedDeck
+            ? `下一步：从下方加入 · 命中 ${resultCount} 条 · 空位 ${selectedSlotsRemaining} 张`
+            : '先在左侧选定卡组，再回到下方加入';
 
-        const secondarySummary = selectedDeck
-            ? joinPreviewFacts(
+        if (selectedDeck && selectedSlotsRemaining <= 0) {
+            summaryLine = `当前卡组已满 · 先在中间移除，再回来加入 · 当前卡组 ${selectedCount} 张`;
+        } else if (selectedDeck && resultCount === 0 && hiddenZeroCount > 0 && this.filterHideZero) {
+            summaryLine = `命中 ${matchedCount} 条但都被零库存隐藏 · 可切换显示或恢复默认`;
+        } else if (selectedDeck && resultCount === 0) {
+            summaryLine = hasModifiedControls
+                ? '当前条件下没有可加入条目 · 可恢复默认后继续补牌'
+                : `当前没有可加入条目 · 当前卡组 ${selectedCount} 张`;
+        } else if (selectedDeck) {
+            summaryLine = joinPreviewFacts(
                 [
-                    filterDetail,
+                    summaryLine,
+                    `当前卡组 ${selectedCount} 张`,
+                    selectedSummary?.statusLabel,
                     this.filterHideZero && hiddenZeroCount > 0 ? `零张隐藏 ${hiddenZeroCount}` : null,
                 ],
-                42,
-            )
-            : (hasModifiedControls
-                ? joinPreviewFacts(
-                    [
-                        '先调整浏览条件，再回到加入动作',
-                        filterDetail,
-                        this.filterHideZero && hiddenZeroCount > 0 ? `零张隐藏 ${hiddenZeroCount}` : null,
-                    ],
-                    42,
-                )
-                : '左侧选定卡组后，这里才会启用加入操作');
-        summaryLine = joinPreviewFacts([summaryLine, secondarySummary], 84) ?? summaryLine;
+                72,
+            ) ?? summaryLine;
+        } else if (hasModifiedControls) {
+            summaryLine = joinPreviewFacts(
+                [
+                    summaryLine,
+                    `命中 ${resultCount} / ${matchedCount || totalCount} 条`,
+                    this.filterHideZero && hiddenZeroCount > 0 ? `零张隐藏 ${hiddenZeroCount}` : null,
+                ],
+                72,
+            ) ?? summaryLine;
+        }
 
         const summaryBg = this.scene.add.rectangle(
             this.browserSummaryArea.w / 2,
@@ -2622,21 +2670,20 @@ export class DeckManagementPanel extends GameObjects.Container {
         const summaryAccent = this.scene.add.rectangle(5, this.browserSummaryArea.h / 2, 6, this.browserSummaryArea.h - 12, accentColor, 0.95)
             .setOrigin(0, 0.5);
 
-        const headlineText = this.scene.add.text(14, this.browserSummaryArea.h / 2, truncateLabel(summaryLine, hasModifiedControls ? 52 : 60), {
+        const headlineText = this.scene.add.text(14, this.browserSummaryArea.h / 2, truncateLabel(summaryLine, hasModifiedControls ? 46 : 56), {
             fontFamily: 'Arial',
             fontSize: '10px',
-            color: titleColor,
+            color: detailColor,
             fontStyle: 'bold',
         }).setOrigin(0, 0.5);
-        headlineText.setColor(detailColor);
         this.browserSummaryContainer.add([summaryBg, summaryAccent, headlineText]);
 
         if (hasModifiedControls) {
             const resetButton = this.createButton(
-                this.browserSummaryArea.w - 48,
+                this.browserSummaryArea.w - 36,
                 this.browserSummaryArea.h / 2,
-                86,
-                20,
+                64,
+                18,
                 '恢复默认',
                 0x4338ca,
                 () => {
@@ -2668,6 +2715,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         const nextSelectedDeckId = newStash.selectedDeckId ?? newStash.savedDecks[0]?.id ?? null;
         if (this.selectedDeckId !== nextSelectedDeckId) {
             this.pendingSelectedDeckMotionId = nextSelectedDeckId;
+            this.detailPaneExpanded = false;
         }
 
         const shouldKeepDeckNaming = this.namingMode !== null
@@ -3586,10 +3634,16 @@ export class DeckManagementPanel extends GameObjects.Container {
         }
 
         const detailY = namingActive ? 136 : 66;
-        const detailPaneW = 168;
-        const detailPaneX = localX + summaryW - detailPaneW - 16;
-        const detailPaneY = namingActive ? 130 : 44;
-        const leftSummaryW = detailPaneX - (localX + 24);
+        const detailExpanded = !namingActive && this.detailPaneExpanded;
+        const detailSurfaceWidth = namingActive ? 0 : detailExpanded ? 168 : 144;
+        const detailPaneX = detailSurfaceWidth > 0
+            ? localX + summaryW - detailSurfaceWidth - 16
+            : localX + summaryW;
+        const detailPaneY = 44;
+        const leftSummaryW = detailSurfaceWidth > 0
+            ? detailPaneX - (localX + 24)
+            : summaryW - 32;
+        const detailSurfacePulseTargets: (TweenableMotionTarget | null | undefined)[] = [];
         const countText = this.scene.add.text(localX + 16, detailY, `${summary.count} / ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, {
             fontFamily: 'Arial',
             fontSize: '19px',
@@ -3778,13 +3832,92 @@ export class DeckManagementPanel extends GameObjects.Container {
         }).setOrigin(0.5);
         this.editorContainer.add([exitStrip, exitHeader, exitHint, exitSummary, ctaButton, ctaLabel, ctaSubLabel]);
 
-        const detailPaneBottom = exitStripY - 12;
-        const detailPaneH = Math.max(124, detailPaneBottom - detailPaneY);
-        this.detailPaneContainer = this.scene.add.container(detailPaneX, detailPaneY);
-        this.detailPaneWidth = detailPaneW;
-        this.detailPaneHeight = detailPaneH;
-        this.editorContainer.add(this.detailPaneContainer);
-        this.refreshDetailPane(deckSelectionChanged);
+        if (!namingActive) {
+            if (detailExpanded) {
+                const detailPaneBottom = exitStripY - 12;
+                const detailPaneH = Math.max(124, detailPaneBottom - detailPaneY);
+                this.detailPaneContainer = this.scene.add.container(detailPaneX, detailPaneY);
+                this.detailPaneWidth = detailSurfaceWidth;
+                this.detailPaneHeight = detailPaneH;
+                this.editorContainer.add(this.detailPaneContainer);
+                this.refreshDetailPane(deckSelectionChanged);
+                detailSurfacePulseTargets.push(this.detailPaneContainer);
+            } else {
+                const peekHeight = 104;
+                const peekBg = this.scene.add.rectangle(
+                    detailPaneX + detailSurfaceWidth / 2,
+                    detailPaneY + peekHeight / 2,
+                    detailSurfaceWidth,
+                    peekHeight,
+                    0x0f172a,
+                    0.98,
+                );
+                peekBg.setStrokeStyle(1, PANEL_ACCENT, 0.9);
+                const peekAccent = this.scene.add.rectangle(
+                    detailPaneX + 5,
+                    detailPaneY + peekHeight / 2,
+                    6,
+                    peekHeight - 18,
+                    PANEL_ACCENT,
+                    0.92,
+                ).setOrigin(0, 0.5);
+                const peekTitle = this.scene.add.text(detailPaneX + 16, detailPaneY + 12, '焦点牌面', {
+                    fontFamily: 'Arial',
+                    fontSize: '11px',
+                    color: '#dbeafe',
+                    fontStyle: 'bold',
+                });
+                const peekBody = this.scene.add.text(
+                    detailPaneX + 16,
+                    detailPaneY + 30,
+                    '默认收起详情，焦点会继续跟随当前条目；需要核对牌面时，再按 I 或点击下方查看。',
+                    {
+                        fontFamily: 'Arial',
+                        fontSize: '10px',
+                        color: '#bfdbfe',
+                        wordWrap: { width: detailSurfaceWidth - 28 },
+                    },
+                );
+                const peekHint = this.scene.add.text(
+                    detailPaneX + detailSurfaceWidth / 2,
+                    detailPaneY + peekHeight - 36,
+                    'I 快捷检视 · 不打断搜索 / 键盘流程',
+                    {
+                        fontFamily: 'Arial',
+                        fontSize: '9px',
+                        color: '#c4b5fd',
+                        fontStyle: 'bold',
+                    },
+                ).setOrigin(0.5);
+                const openDetailButton = this.createButton(
+                    detailPaneX + detailSurfaceWidth / 2,
+                    detailPaneY + peekHeight - 16,
+                    detailSurfaceWidth - 24,
+                    22,
+                    '查看当前焦点',
+                    0x312e81,
+                    () => {
+                        this.setKeyboardZone('editor');
+                        this.toggleDetailPane(true);
+                    },
+                    false,
+                    {
+                        hoverFillColor: 0x4338ca,
+                        strokeColor: 0xa5b4fc,
+                        fontSize: '12px',
+                    },
+                );
+                this.editorContainer.add([
+                    peekBg,
+                    peekAccent,
+                    peekTitle,
+                    peekBody,
+                    peekHint,
+                    ...openDetailButton,
+                ]);
+                detailSurfacePulseTargets.push(peekBg, peekAccent, peekTitle, peekBody, peekHint, ...openDetailButton);
+            }
+        }
 
         const cardListTitle = this.scene.add.text(localX, listHeaderY, `当前卡牌（在这里移除）· ${deck.cards.length} 个条目 / ${summary.count} 张`, {
             fontFamily: 'Arial',
@@ -4052,7 +4185,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                     ctaButton,
                     ctaLabel,
                     ctaSubLabel,
-                    this.detailPaneContainer,
+                    ...detailSurfacePulseTargets,
                     cardListTitle,
                     cardListSubtitle,
                     cardsOuter,
@@ -4121,13 +4254,12 @@ export class DeckManagementPanel extends GameObjects.Container {
         const innerX = x + 16;
         const innerW = colW - 32;
         const railTop = y + 60;
-        const railHeight = 128;
+        const railHeight = 98;
         const railLabelY = railTop + 8;
-        const searchY = railTop + 34;
-        const toggleY = railTop + 64;
-        const sortY = railTop + 92;
-        const summaryY = railTop + 114;
-        const summaryHeight = 24;
+        const searchY = railTop + 32;
+        const controlsY = railTop + 60;
+        const summaryY = railTop + 82;
+        const summaryHeight = 18;
         const deleteY = y + colH - 28;
         const scrollBtnY = deleteY - 42;
         const listTop = railTop + railHeight + 8;
@@ -4148,8 +4280,14 @@ export class DeckManagementPanel extends GameObjects.Container {
             color: '#cbd5e1',
             fontStyle: 'bold',
         });
+        this.browserStateText = this.scene.add.text(innerX + innerW - 12, railLabelY, '', {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: '#94a3b8',
+            fontStyle: 'bold',
+        }).setOrigin(1, 0);
 
-        this.queryBg = this.scene.add.rectangle(innerX + innerW / 2, searchY, innerW, 30, 0x0f172a, 1);
+        this.queryBg = this.scene.add.rectangle(innerX + innerW / 2, searchY, innerW, 26, 0x0f172a, 1);
         this.queryBg.setStrokeStyle(1, SECTION_BORDER, 0.9);
         this.queryBg.setInteractive({ useHandCursor: true });
         this.queryBg.on('pointerdown', () => {
@@ -4184,12 +4322,22 @@ export class DeckManagementPanel extends GameObjects.Container {
         });
         this.queryClearBtn.setVisible(this.filterQuery.length > 0);
 
+        const buttonGap = 6;
+        const kindButtonWidth = 92;
+        const hideZeroButtonWidth = 58;
+        const sortFieldButtonWidth = 92;
+        const sortDirButtonWidth = 56;
+        const sortDirButtonX = innerX + innerW - sortDirButtonWidth / 2;
+        const sortFieldButtonX = sortDirButtonX - sortDirButtonWidth / 2 - buttonGap - sortFieldButtonWidth / 2;
+        const hideZeroButtonX = sortFieldButtonX - sortFieldButtonWidth / 2 - buttonGap - hideZeroButtonWidth / 2;
+        const kindButtonX = hideZeroButtonX - hideZeroButtonWidth / 2 - buttonGap - kindButtonWidth / 2;
+
         const kindButton = this.createButton(
-            innerX + 78,
-            toggleY,
-            156,
-            28,
-            `种类：${KIND_LABEL[String(this.filterKind)]}`,
+            kindButtonX,
+            controlsY,
+            kindButtonWidth,
+            24,
+            `类：${KIND_LABEL[String(this.filterKind)]}`,
             0x312e81,
             () => {
                 this.setKeyboardZone('browser');
@@ -4199,18 +4347,18 @@ export class DeckManagementPanel extends GameObjects.Container {
             {
                 hoverFillColor: 0x4338ca,
                 strokeColor: 0xa5b4fc,
-                fontSize: '13px',
+                fontSize: '12px',
             },
         );
         this.kindBtn = kindButton[0];
         this.kindBtnText = kindButton[1];
 
         const hideZeroButton = this.createButton(
-            innerX + innerW - 76,
-            toggleY,
-            152,
-            28,
-            this.filterHideZero ? '零库存：已隐藏' : '零库存：已显示',
+            hideZeroButtonX,
+            controlsY,
+            hideZeroButtonWidth,
+            24,
+            this.filterHideZero ? '零：隐' : '零：显',
             this.filterHideZero ? 0x1d4ed8 : 0x1f2937,
             () => {
                 this.setKeyboardZone('browser');
@@ -4220,42 +4368,42 @@ export class DeckManagementPanel extends GameObjects.Container {
             {
                 hoverFillColor: this.filterHideZero ? 0x2563eb : 0x334155,
                 strokeColor: this.filterHideZero ? 0x93c5fd : 0x475569,
-                fontSize: '13px',
+                fontSize: '12px',
             },
         );
         this.hideZeroBtn = hideZeroButton[0];
         this.hideZeroBtnText = hideZeroButton[1];
 
         const sortFieldButton = this.createButton(
-            innerX + 60,
-            sortY,
-            120,
-            28,
-            `排序：${getSortFieldLabel(this.sortField)}`,
+            sortFieldButtonX,
+            controlsY,
+            sortFieldButtonWidth,
+            24,
+            `序：${getSortFieldLabel(this.sortField)}`,
             0x1f2937,
             () => {
                 this.setKeyboardZone('browser');
                 this.cycleBrowserSortField();
             },
             false,
-            { hoverFillColor: 0x334155, strokeColor: 0x475569, fontSize: '13px' },
+            { hoverFillColor: 0x334155, strokeColor: 0x475569, fontSize: '12px' },
         );
         this.sortFieldBtn = sortFieldButton[0];
         this.sortFieldBtnText = sortFieldButton[1];
 
         const sortDirButton = this.createButton(
-            innerX + innerW - 62,
-            sortY,
-            124,
-            28,
-            this.sortDirection === 'asc' ? '↑ 升序' : '↓ 降序',
+            sortDirButtonX,
+            controlsY,
+            sortDirButtonWidth,
+            24,
+            this.sortDirection === 'asc' ? '↑ 升' : '↓ 降',
             0x1f2937,
             () => {
                 this.setKeyboardZone('browser');
                 this.toggleBrowserSortDirection();
             },
             false,
-            { hoverFillColor: 0x334155, strokeColor: 0x475569, fontSize: '13px' },
+            { hoverFillColor: 0x334155, strokeColor: 0x475569, fontSize: '12px' },
         );
         this.sortDirBtn = sortDirButton[0];
         this.sortDirBtnText = sortDirButton[1];
@@ -4266,6 +4414,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             railBg,
             railAccent,
             railLabel,
+            this.browserStateText,
             this.queryBg,
             this.queryText,
             this.queryClearBtn,
@@ -4332,8 +4481,19 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.updateSearchDisplay();
         this.browserSpotlightRows.clear();
 
+        const browserStateParts = [
+            this.filterQuery.trim().length > 0 ? `搜「${truncateLabel(this.filterQuery.trim(), 6)}」` : '搜全部',
+            `类${KIND_LABEL[String(this.filterKind)]}`,
+            this.filterHideZero ? '零隐藏' : '零显示',
+            `序${getCompactSortLabel(this.sortField, this.sortDirection)}`,
+        ];
+        if (this.browserStateText) {
+            this.browserStateText.setText(truncateLabel(browserStateParts.join(' · '), 34));
+            this.browserStateText.setColor(this.hasModifiedBrowserControls() ? '#bfdbfe' : '#94a3b8');
+        }
+
         if (this.kindBtnText) {
-            this.kindBtnText.setText(`种类：${KIND_LABEL[String(this.filterKind)]}`);
+            this.kindBtnText.setText(`类：${KIND_LABEL[String(this.filterKind)]}`);
         }
 
         this.setButtonVisualState(this.kindBtn, this.kindBtnText, {
@@ -4344,7 +4504,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         );
 
         if (this.hideZeroBtnText) {
-            this.hideZeroBtnText.setText(this.filterHideZero ? '零库存：已隐藏' : '零库存：已显示');
+            this.hideZeroBtnText.setText(this.filterHideZero ? '零：隐' : '零：显');
         }
         this.setButtonVisualState(this.hideZeroBtn, this.hideZeroBtnText, {
             fillColor: this.filterHideZero ? 0x1d4ed8 : 0x1f2937,
@@ -4353,7 +4513,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         });
 
         if (this.sortFieldBtnText) {
-            this.sortFieldBtnText.setText(`排序：${getSortFieldLabel(this.sortField)}`);
+            this.sortFieldBtnText.setText(`序：${getSortFieldLabel(this.sortField)}`);
         }
         this.setButtonVisualState(this.sortFieldBtn, this.sortFieldBtnText, {
             fillColor: this.sortField === DEFAULT_BROWSER_SORT_FIELD ? 0x1f2937 : 0x134e4a,
@@ -4362,7 +4522,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         });
 
         if (this.sortDirBtnText) {
-            this.sortDirBtnText.setText(this.sortDirection === 'asc' ? '↑ 升序' : '↓ 降序');
+            this.sortDirBtnText.setText(this.sortDirection === 'asc' ? '↑ 升' : '↓ 降');
         }
         this.setButtonVisualState(this.sortDirBtn, this.sortDirBtnText, {
             fillColor: this.sortDirection === DEFAULT_BROWSER_SORT_DIRECTION ? 0x1f2937 : 0x1d4ed8,
@@ -4406,7 +4566,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                     : '左侧选定卡组后，这里会继续显示可加入的库存卡牌与一键加满入口。';
             } else if (matchedRows.length > 0 && this.filterHideZero) {
                 emptyTitle = '命中条目都为零张';
-                emptyBody = '当前搜索或种类条件有命中，但它们都被“零库存：已隐藏”筛掉了；可切换显示，或点击上方“恢复默认”。';
+                emptyBody = '当前搜索或种类条件有命中，但它们都被“零：隐”筛掉了；可切换到“零：显”，或点击上方“恢复默认”。';
                 emptyFillColor = 0x271b0b;
                 emptyBorderColor = WARNING_ACCENT;
                 emptyTitleColor = '#fde68a';
