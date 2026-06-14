@@ -3,6 +3,8 @@ import { describe, expect, it } from 'bun:test';
 import {
     calculateActionRailHeight,
     calculateDeckCardHeight,
+    calculateLoadoutDetailHeight,
+    calculateReadinessHeroHeight,
     calculateSelectedLoadoutSummaryHeight,
 } from './PreparationPanelLayout';
 
@@ -42,6 +44,32 @@ describe('PreparationPanel layout helpers', () => {
 
             expect(railHeight - 18 - shortcutHintBottom).toBeGreaterThanOrEqual(0);
             expect(railHeight).toBeGreaterThanOrEqual(148);
+        }
+    });
+
+    it('gives the readiness hero enough room for the headline stack, support panels, and CTA column', () => {
+        for (const [headerHeight, sectionHeight, shortcutHintHeight, actionColumnHeight] of [[150, 88, 18, 188], [214, 116, 36, 214]] as const) {
+            const heroHeight = calculateReadinessHeroHeight(
+                headerHeight,
+                sectionHeight,
+                shortcutHintHeight,
+                actionColumnHeight,
+            );
+            const leftColumnBottom = 30 + headerHeight + 12 + sectionHeight + 10 + shortcutHintHeight;
+            const rightColumnBottom = 30 + actionColumnHeight;
+
+            expect(heroHeight - Math.max(leftColumnBottom, rightColumnBottom)).toBeGreaterThanOrEqual(22);
+            expect(heroHeight).toBeGreaterThanOrEqual(324);
+        }
+    });
+
+    it('gives the subordinate loadout detail card enough room for manifest content and the carry footer', () => {
+        for (const [contentHeight, footerHeight] of [[176, 30], [212, 45]] as const) {
+            const detailHeight = calculateLoadoutDetailHeight(contentHeight, footerHeight);
+            const contentBottom = 66 + contentHeight + 12 + footerHeight;
+
+            expect(detailHeight - contentBottom).toBeGreaterThanOrEqual(0);
+            expect(detailHeight).toBeGreaterThanOrEqual(244);
         }
     });
 });

@@ -4,6 +4,9 @@ const LOADOUT_SUMMARY_MIN_HEIGHT = 332;
 const LOADOUT_MANIFEST_STACK_TOP_OFFSET = 96;
 const ACTION_RAIL_MIN_HEIGHT = 148;
 const ACTION_RAIL_BUTTON_STACK_MIN_HEIGHT = 148;
+const READINESS_HERO_MIN_HEIGHT = 324;
+const READINESS_HERO_BOTTOM_PADDING = 22;
+const LOADOUT_DETAIL_MIN_HEIGHT = 244;
 
 export function calculateDeckCardHeight(deckNameHeight: number): number {
     return Math.max(
@@ -40,5 +43,30 @@ export function calculateActionRailHeight(
             ACTION_RAIL_BUTTON_STACK_MIN_HEIGHT,
             68 + headlineHeight + detailHeight + nextStepHeight + shortcutContribution,
         ),
+    );
+}
+
+export function calculateReadinessHeroHeight(
+    headerHeight: number,
+    sectionHeight: number,
+    shortcutHintHeight: number,
+    actionColumnHeight: number,
+): number {
+    return Math.max(
+        READINESS_HERO_MIN_HEIGHT,
+        30 + Math.max(
+            headerHeight + 12 + sectionHeight + 10 + shortcutHintHeight,
+            actionColumnHeight,
+        ) + READINESS_HERO_BOTTOM_PADDING,
+    );
+}
+
+export function calculateLoadoutDetailHeight(
+    contentHeight: number,
+    footerHeight: number,
+): number {
+    return Math.max(
+        LOADOUT_DETAIL_MIN_HEIGHT,
+        66 + contentHeight + 12 + footerHeight,
     );
 }

@@ -56,11 +56,10 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).toContain('放行结论');
         expect(panel).toContain('阻塞项');
         expect(panel).toContain('执行提示');
+        expect(panel).toContain('本次操作');
         expect(panel).toContain('本次携带一览');
         expect(panel).toContain('带入舱单');
         expect(panel).toContain('物资封单');
-        expect(panel).toContain('放行检查');
-        expect(panel).toContain('放行建议');
         expect(panel).toContain('修整建议');
         expect(loadoutCopy).toContain('当前操作：选定带入');
         expect(loadoutCopy).toContain('分层速览');
