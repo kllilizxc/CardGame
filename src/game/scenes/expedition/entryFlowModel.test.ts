@@ -55,7 +55,7 @@ describe('entryFlowModel', () => {
     it('builds a route briefing from the expedition map and current shell step', () => {
         expect(createExpeditionRouteBriefingSummary(prototypeMapJson, 'preparation')).toEqual({
             mode: 'preparation',
-            shellBadgeLabel: '步骤 1 / 2',
+            shellBadgeLabel: '远征准备',
             shellSubtitle: '入口：山门入口 · 3 层路线',
             panelBadgeLabel: '路线简报',
             description: '山门入口 → 雾林伏击 / 弃置行囊 → 悬桥撤离点 / 封印守关者',

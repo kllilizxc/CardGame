@@ -51,6 +51,7 @@ import {
     type ExpeditionDepartureHandoffSummary,
     type ExpeditionArrivalCueSummary,
     type PreparationDeckContext,
+    type PreparationDeckReadiness,
     type PreparationDeckHandoffSummary,
     type RunSummaryMode,
 } from './entryFlowModel';
@@ -379,8 +380,8 @@ export class ExpeditionScene extends Scene {
         const { width } = this.scale;
         const container = this.add.container(0, 0);
         const routeBriefing = this.getEntryRouteBriefing('preparation');
-        const headerWidth = 712;
-        const headerHeight = 86;
+        const headerWidth = 620;
+        const headerHeight = 62;
         const headerX = width / 2;
         const headerY = 50;
         const headerLeft = headerX - headerWidth / 2;
@@ -392,26 +393,26 @@ export class ExpeditionScene extends Scene {
         frameInner.setStrokeStyle(1, 0x60a5fa, 0.34);
         const headerPlate = this.add.rectangle(headerX, headerY, headerWidth, headerHeight, 0x091423, 0.94);
         headerPlate.setStrokeStyle(2, 0x3b82f6, 0.72);
-        const headerAccent = this.add.rectangle(headerX, 12, headerWidth - 72, 5, 0x38bdf8, 1).setOrigin(0.5, 0);
+        const headerAccent = this.add.rectangle(headerX, 20, headerWidth - 28, 3, 0x38bdf8, 1).setOrigin(0.5, 0);
         const headerDivider = this.add.rectangle(headerRight - 254, headerY, 2, 54, 0x60a5fa, 0.24);
-        const titleText = this.add.text(headerLeft + 22, 44, this.mapDefinition.name, {
+        const titleText = this.add.text(headerLeft + 18, 44, `大地图 / ${this.mapDefinition.name}`, {
             fontFamily: 'Arial',
-            fontSize: '30px',
+            fontSize: '17px',
             color: '#f8fafc',
             fontStyle: 'bold',
         }).setOrigin(0, 0.5);
-        const subtitleText = this.add.text(headerLeft + 22, 72, routeBriefing.shellSubtitle, {
-            fontFamily: 'Arial',
-            fontSize: '14px',
-            color: '#bfdbfe',
-        }).setOrigin(0, 0.5);
-        const modeBadgeText = this.add.text(headerLeft + 22, 20, routeBriefing.shellBadgeLabel, {
+        const subtitleText = this.add.text(headerLeft + 18, 64, routeBriefing.shellSubtitle, {
             fontFamily: 'Arial',
             fontSize: '12px',
+            color: '#bfdbfe',
+        }).setOrigin(0, 0.5);
+        const modeBadgeText = this.add.text(headerLeft + 18, 20, routeBriefing.shellBadgeLabel, {
+            fontFamily: 'Arial',
+            fontSize: '10px',
             color: '#dbeafe',
             fontStyle: 'bold',
             backgroundColor: '#1d4ed8',
-            padding: { left: 12, right: 12, top: 6, bottom: 6 },
+            padding: { left: 8, right: 8, top: 4, bottom: 4 },
         }).setOrigin(0, 0);
         const routeSlateLeft = headerRight - 238;
         const routeSlateTop = headerY - 30;
@@ -598,20 +599,38 @@ export class ExpeditionScene extends Scene {
     private getEntryShellHeaderCopy(
         mode: EntryShellMode,
         routeBriefing: ReturnType<typeof createExpeditionRouteBriefingSummary>,
+        readiness: PreparationDeckReadiness,
     ) {
-        if (mode === 'deckManager') {
-            return {
-                badgeLabel: routeBriefing.shellBadgeLabel,
-                title: this.mapDefinition.name,
-                subtitle: `${routeBriefing.shellSubtitle} · 完成后按返回回到远征准备`,
-            };
-        }
+        const routeReminder = mode === 'deckManager'
+            ? this.getDeckManagerBreadcrumbReminder(readiness)
+            : this.getPreparationBreadcrumbReminder(readiness);
+
+        const breadcrumbTitle = `大地图 / ${this.mapDefinition.name}`;
 
         return {
             badgeLabel: routeBriefing.shellBadgeLabel,
-            title: this.mapDefinition.name,
-            subtitle: routeBriefing.shellSubtitle,
+            title: breadcrumbTitle,
+            subtitle: `${routeBriefing.shellSubtitle} · ${routeReminder}`,
         };
+    }
+
+    private getPreparationBreadcrumbReminder(readiness: PreparationDeckReadiness): string {
+        switch (readiness) {
+            case 'ready':
+                return '当前带入可直接确认出发';
+            case 'none':
+                return '先在面板里选定一套带入卡组';
+            case 'too-few-cards':
+            case 'too-many-cards':
+            case 'insufficient-copies':
+                return '先在面板里补齐带入条件';
+        }
+    }
+
+    private getDeckManagerBreadcrumbReminder(readiness: PreparationDeckReadiness): string {
+        return readiness === 'ready'
+            ? '完成调整后按返回回到远征准备'
+            : '补齐带入条件后按返回回到远征准备';
     }
 
     private getEntryShellStatusToneColors(tone: PreparationDeckHandoffSummary['tone']) {
@@ -788,17 +807,18 @@ export class ExpeditionScene extends Scene {
         }
 
         const routeBriefing = this.getEntryRouteBriefing(mode);
-        const headerCopy = this.getEntryShellHeaderCopy(mode, routeBriefing);
+        const deckContext = createPreparationDeckContext(this.expeditionState.persistentStash);
         const preflightStatus = createExpeditionPreflightStatusSummary(this.expeditionState.persistentStash, mode);
+        const headerCopy = this.getEntryShellHeaderCopy(mode, routeBriefing, deckContext.readiness);
         const modeConfig = this.getEntryShellModeVisualConfig(mode);
         const statusToneConfig = this.getEntryShellStatusToneColors(preflightStatus.tone);
         const [firstStep, secondStep] = preflightStatus.steps;
         const firstStepColors = this.getEntryShellStepColors(firstStep.state, modeConfig);
         const secondStepColors = this.getEntryShellStepColors(secondStep.state, modeConfig);
         const showsSupportingBreadcrumbOnly = true;
-        const headerFillAlpha = 0.86;
-        const headerStrokeAlpha = 0.48;
-        const headerAccentAlpha = 0.86;
+        const headerFillAlpha = 0.78;
+        const headerStrokeAlpha = 0.4;
+        const headerAccentAlpha = 0.72;
 
         this.entryShell.frameOuter.setStrokeStyle(2, modeConfig.frameOuterColor, modeConfig.frameOuterAlpha);
         this.entryShell.frameInner.setStrokeStyle(1, modeConfig.frameInnerColor, modeConfig.frameInnerAlpha);
@@ -809,25 +829,25 @@ export class ExpeditionScene extends Scene {
         this.entryShell.modeBadgeText.setText(headerCopy.badgeLabel);
         this.entryShell.modeBadgeText.setStyle({
             fontFamily: 'Arial',
-            fontSize: showsSupportingBreadcrumbOnly ? '11px' : '12px',
+            fontSize: showsSupportingBreadcrumbOnly ? '10px' : '12px',
             color: modeConfig.badgeColor,
             backgroundColor: modeConfig.badgeBackgroundColor,
             fontStyle: 'bold',
             padding: showsSupportingBreadcrumbOnly
-                ? { left: 10, right: 10, top: 4, bottom: 4 }
+                ? { left: 8, right: 8, top: 4, bottom: 4 }
                 : { left: 12, right: 12, top: 6, bottom: 6 },
         });
         this.entryShell.titleText.setText(headerCopy.title);
         this.entryShell.titleText.setStyle({
             fontFamily: 'Arial',
-            fontSize: showsSupportingBreadcrumbOnly ? '24px' : '30px',
+            fontSize: showsSupportingBreadcrumbOnly ? '16px' : '30px',
             color: '#f8fafc',
             fontStyle: 'bold',
         });
         this.entryShell.subtitleText.setText(headerCopy.subtitle);
         this.entryShell.subtitleText.setStyle({
             fontFamily: 'Arial',
-            fontSize: showsSupportingBreadcrumbOnly ? '12px' : '14px',
+            fontSize: showsSupportingBreadcrumbOnly ? '11px' : '14px',
             color: modeConfig.subtitleColor,
         });
         this.entryShell.chromeElements.forEach((gameObject) => gameObject.setVisible(!showsSupportingBreadcrumbOnly));
@@ -912,23 +932,23 @@ export class ExpeditionScene extends Scene {
         const stepTwoWidth = 188;
         const firstStepX = panelX - topRailWidth / 2;
         const secondStepX = panelX + topRailWidth / 2;
-        const headerWidth = Math.min(Math.max(440, panelWidth * 0.5), 560);
-        const headerHeight = 64;
-        const headerX = panelX - panelWidth / 2 + headerWidth / 2 + 24;
-        const headerY = panelY - panelHeight / 2 - 18;
+        const headerWidth = Math.min(Math.max(460, panelWidth * 0.62), 760);
+        const headerHeight = 56;
+        const headerX = panelX - panelWidth / 2 + headerWidth / 2 + 16;
+        const headerY = Math.max(54, panelY - panelHeight / 2 - 20);
         const headerLeft = headerX - headerWidth / 2;
         const headerRight = headerX + headerWidth / 2;
-        const headerAccentWidth = headerWidth - 56;
-        const headerAccentY = headerY - headerHeight / 2 + 8;
+        const headerAccentWidth = headerWidth - 28;
+        const headerAccentY = headerY - headerHeight / 2 + 5;
         const headerDividerHeight = 40;
         const headerDividerX = headerRight - 180;
-        const badgeX = headerLeft + 18;
-        const badgeY = headerY - 22;
-        const titleX = headerLeft + 20;
-        const titleY = headerY - 2;
+        const badgeX = headerLeft + 14;
+        const badgeY = headerY - 16;
+        const titleX = headerLeft + 16;
+        const titleY = headerY - 1;
         const subtitleX = titleX;
-        const subtitleY = headerY + 18;
-        const subtitleWrapWidth = headerWidth - 48;
+        const subtitleY = headerY + 14;
+        const subtitleWrapWidth = headerWidth - 32;
         const shellTargets: Array<[Phaser.GameObjects.Rectangle, number, number, number, number]> = [
             [this.entryShell.headerPlate, headerX, headerY, headerWidth, headerHeight],
             [this.entryShell.headerAccent, headerX, headerAccentY, headerAccentWidth, 5],

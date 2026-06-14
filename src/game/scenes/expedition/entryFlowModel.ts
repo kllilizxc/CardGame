@@ -808,7 +808,7 @@ function getRouteBriefingShellCopy(mode: ExpeditionRouteBriefingMode): {
     }
 
     return {
-        badgeLabel: '步骤 1 / 2',
+        badgeLabel: '远征准备',
     };
 }
 
