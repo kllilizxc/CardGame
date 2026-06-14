@@ -66,10 +66,10 @@ describe('PreparationPanel layout helpers', () => {
     it('gives the subordinate loadout detail card enough room for manifest content and the carry footer', () => {
         for (const [contentHeight, footerHeight] of [[176, 30], [212, 45]] as const) {
             const detailHeight = calculateLoadoutDetailHeight(contentHeight, footerHeight);
-            const contentBottom = 66 + contentHeight + 12 + footerHeight;
+            const contentBottom = 48 + contentHeight + 12 + footerHeight;
 
             expect(detailHeight - contentBottom).toBeGreaterThanOrEqual(0);
-            expect(detailHeight).toBeGreaterThanOrEqual(244);
+            expect(detailHeight).toBeGreaterThanOrEqual(220);
         }
     });
 });
