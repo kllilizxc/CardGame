@@ -55,26 +55,8 @@ describe('entryFlowModel', () => {
         expect(createExpeditionRouteBriefingSummary(prototypeMapJson, 'preparation')).toEqual({
             mode: 'preparation',
             shellBadgeLabel: '远征准备',
+            shellTitle: '大地图 / 青云外山试炼',
             shellSubtitle: '入口：山门入口 · 3 层路线',
-            panelBadgeLabel: '路线简报',
-            description: '山门入口 → 雾林伏击 / 弃置行囊 → 悬桥撤离点 / 封印守关者',
-            highlights: [
-                { label: '入口', value: '山门入口' },
-                { label: '开局', value: '雾林伏击 / 弃置行囊' },
-                { label: '收官', value: '悬桥撤离点 / 封印守关者' },
-            ],
-            telemetryChips: [
-                { label: '层深', value: '3层' },
-                { label: '层宽', value: '2-3-1' },
-                { label: '战/首', value: '2/1' },
-                { label: '事/店/撤', value: '1/1/1' },
-            ],
-            glanceTitle: '分层速览',
-            glanceLines: [
-                '首层：雾林伏击·战 / 弃置行囊·事',
-                '二层：云游小贩·店 / 残庭巡守·战 / 悬桥撤离点·撤',
-                '终层：封印守关者·首',
-            ],
         });
     });
 
@@ -82,50 +64,15 @@ describe('entryFlowModel', () => {
         expect(createExpeditionRouteBriefingSummary(jadeCaveMapJson, 'deckManager')).toEqual({
             mode: 'deckManager',
             shellBadgeLabel: '卡组管理',
+            shellTitle: '大地图 / 青玉洞试炼',
             shellSubtitle: '入口：青玉洞口 · 3 层路线',
-            panelBadgeLabel: '路线简报',
-            description: '青玉洞口 → 幽雾狐影 / 遗落行囊 → 洞壁绳梯 / 玉脉守关者',
-            highlights: [
-                { label: '入口', value: '青玉洞口' },
-                { label: '开局', value: '幽雾狐影 / 遗落行囊' },
-                { label: '收官', value: '洞壁绳梯 / 玉脉守关者' },
-            ],
-            telemetryChips: [
-                { label: '层深', value: '3层' },
-                { label: '层宽', value: '2-3-1' },
-                { label: '战/首', value: '2/1' },
-                { label: '事/店/撤', value: '1/1/1' },
-            ],
-            glanceTitle: '分层速览',
-            glanceLines: [
-                '首层：幽雾狐影·战 / 遗落行囊·事',
-                '二层：洞口小贩·店 / 碎玉石庭·战 / 洞壁绳梯·撤',
-                '终层：玉脉守关者·首',
-            ],
         });
     });
 
-    it('derives layer-by-layer route glance lines from maps with a longer single-file tutorial path', () => {
+    it('keeps tutorial maps on the same quiet breadcrumb shape even with longer routes', () => {
         expect(createExpeditionRouteBriefingSummary(tutorialQingyunMapJson, 'preparation')).toMatchObject({
+            shellTitle: '大地图 / 教程 · 青云外山试炼',
             shellSubtitle: '入口：外山入口 · 4 层路线',
-            description: '外山入口 → 雾狐试招 → 问心回响 / 索桥撤离点',
-            highlights: [
-                { label: '入口', value: '外山入口' },
-                { label: '开局', value: '雾狐试招' },
-                { label: '收官', value: '问心回响 / 索桥撤离点' },
-            ],
-            telemetryChips: [
-                { label: '层深', value: '4层' },
-                { label: '层宽', value: '1-1-1-2' },
-                { label: '战/首', value: '1/1' },
-                { label: '事/店/撤', value: '1/1/1' },
-            ],
-            glanceLines: [
-                '首层：雾狐试招·战',
-                '二层：守山补给匣·事',
-                '三层：引路散修·店',
-                '终层：问心回响·首 / 索桥撤离点·撤',
-            ],
         });
     });
 

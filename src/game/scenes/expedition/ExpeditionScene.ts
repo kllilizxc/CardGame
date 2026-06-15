@@ -81,6 +81,13 @@ type NonCombatMapNode = EventMapNode | ShopMapNode | ExtractMapNode;
 type EntryPanel = PreparationPanel | DeckManagementPanel;
 type EntryShellMode = 'preparation' | 'deckManager';
 
+interface WorldMapReturnChipVisuals {
+    container: Phaser.GameObjects.Container;
+    shadow: Phaser.GameObjects.Rectangle;
+    background: Phaser.GameObjects.Rectangle;
+    label: Phaser.GameObjects.Text;
+}
+
 interface EntryShellVisuals {
     container: Phaser.GameObjects.Container;
     shadow: Phaser.GameObjects.Rectangle;
@@ -123,6 +130,7 @@ export class ExpeditionScene extends Scene {
     private deckbuilderCardMetadataResources?: DeckbuilderCardMetadataResources;
     private deckbuilderCardMetadata: CardMetadataMap = {};
     private entryShell?: EntryShellVisuals;
+    private worldMapReturnChip?: WorldMapReturnChipVisuals;
     private entryTransitionBlocker?: Phaser.GameObjects.Rectangle;
     private departureHandoffOverlay?: Phaser.GameObjects.Container;
     private departureHandoffKeydownHandler?: (event: KeyboardEvent) => void;
@@ -190,7 +198,6 @@ export class ExpeditionScene extends Scene {
 
         this.createSceneBackdrop();
         this.createEntryShell();
-        this.createWorldMapReturnButton();
 
         this.runHud = new RunHud(this);
         this.runHud.setVisible(false);
@@ -344,6 +351,7 @@ export class ExpeditionScene extends Scene {
             modeBadgeText,
         };
 
+        this.createWorldMapReturnChip();
         this.entryTransitionBlocker = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 0.001);
         this.entryTransitionBlocker.setDepth(1450);
         this.entryTransitionBlocker.setVisible(false);
@@ -366,11 +374,9 @@ export class ExpeditionScene extends Scene {
             ? this.getDeckManagerBreadcrumbReminder(readiness)
             : this.getPreparationBreadcrumbReminder(readiness);
 
-        const breadcrumbTitle = `大地图 / ${this.mapDefinition.name}`;
-
         return {
             badgeLabel: routeBriefing.shellBadgeLabel,
-            title: breadcrumbTitle,
+            title: routeBriefing.shellTitle,
             subtitle: `${routeBriefing.shellSubtitle} · ${routeReminder}`,
         };
     }
@@ -400,9 +406,9 @@ export class ExpeditionScene extends Scene {
                 badgeBackgroundColor: '#4c1d95',
                 badgeColor: '#ede9fe',
                 plateFillColor: 0x140f23,
-                plateFillAlpha: 0.8,
+                plateFillAlpha: 0.76,
                 plateBorderColor: 0xa855f7,
-                plateBorderAlpha: 0.46,
+                plateBorderAlpha: 0.34,
                 accentColor: 0xc084fc,
                 subtitleColor: '#ddd6fe',
             };
@@ -412,35 +418,38 @@ export class ExpeditionScene extends Scene {
             badgeBackgroundColor: '#1d4ed8',
             badgeColor: '#dbeafe',
             plateFillColor: 0x091423,
-            plateFillAlpha: 0.78,
+            plateFillAlpha: 0.72,
             plateBorderColor: 0x3b82f6,
-            plateBorderAlpha: 0.42,
+            plateBorderAlpha: 0.3,
             accentColor: 0x38bdf8,
             subtitleColor: '#bfdbfe',
         };
     }
 
-    private createWorldMapReturnButton(): void {
-        const { width } = this.scale;
-        const x = width - 150;
-        const y = 48;
+    private createWorldMapReturnChip(): void {
         const container = this.add.container(0, 0);
-        const shadow = this.add.rectangle(x, y + 5, 184, 46, 0x020617, 0.4);
-        const background = this.add.rectangle(x, y, 184, 46, 0x162338, 0.96);
-        background.setStrokeStyle(2, 0x93c5fd, 0.78);
+        const shadow = this.add.rectangle(0, 0, 0, 0, 0x020617, 0.24);
+        const background = this.add.rectangle(0, 0, 0, 0, 0x0b1220, 0.78);
+        background.setStrokeStyle(1, 0x93c5fd, 0.46);
         background.setInteractive({ useHandCursor: true });
-        background.on('pointerover', () => background.setFillStyle(0x233551, 1));
-        background.on('pointerout', () => background.setFillStyle(0x162338, 0.96));
+        background.on('pointerover', () => background.setFillStyle(0x162338, 0.9));
+        background.on('pointerout', () => background.setFillStyle(0x0b1220, 0.78));
         background.on('pointerdown', () => this.returnToWorldMap());
 
-        const label = this.add.text(x, y, '返回大地图', {
+        const label = this.add.text(0, 0, '返回大地图', {
             fontFamily: 'Arial',
-            fontSize: '17px',
-            color: '#f8fafc',
+            fontSize: '12px',
+            color: '#dbeafe',
             fontStyle: 'bold',
         }).setOrigin(0.5);
         container.add([shadow, background, label]);
         container.setDepth(1310);
+        this.worldMapReturnChip = {
+            container,
+            shadow,
+            background,
+            label,
+        };
     }
 
     private updateEntryShellMode(mode: EntryShellMode): void {
@@ -454,7 +463,7 @@ export class ExpeditionScene extends Scene {
         const modeConfig = this.getEntryShellModeVisualConfig(mode);
         this.entryShell.plate.setFillStyle(modeConfig.plateFillColor, modeConfig.plateFillAlpha);
         this.entryShell.plate.setStrokeStyle(1, modeConfig.plateBorderColor, modeConfig.plateBorderAlpha);
-        this.entryShell.accent.setFillStyle(modeConfig.accentColor, 0.72);
+        this.entryShell.accent.setFillStyle(modeConfig.accentColor, 0.58);
         this.entryShell.modeBadgeText.setText(headerCopy.badgeLabel);
         this.entryShell.modeBadgeText.setStyle({
             fontFamily: 'Arial',
@@ -493,29 +502,43 @@ export class ExpeditionScene extends Scene {
             : Math.min(820, height * 0.88);
         const panelX = width / 2;
         const panelY = mode === 'deckManager' ? (height / 2 + 18) : (height / 2 + 24);
-        const breadcrumbWidth = Math.max(520, Math.min(panelWidth - 120, 760));
-        const breadcrumbHeight = 72;
+        const breadcrumbWidth = Math.max(560, Math.min(panelWidth - 48, 780));
+        const breadcrumbHeight = 64;
         const breadcrumbX = panelX;
-        const breadcrumbY = Math.max(68, panelY - panelHeight / 2 - 24);
+        const breadcrumbY = Math.max(62, panelY - panelHeight / 2 - 18);
         const breadcrumbLeft = breadcrumbX - breadcrumbWidth / 2;
         const breadcrumbTop = breadcrumbY - breadcrumbHeight / 2;
+        const returnChipWidth = 114;
+        const returnChipHeight = 30;
+        const returnChipX = breadcrumbLeft + breadcrumbWidth - returnChipWidth / 2 - 14;
+        const returnChipY = breadcrumbY;
+        const contentRight = returnChipX - returnChipWidth / 2 - 14;
         const badgeX = breadcrumbLeft + 18;
-        const badgeY = breadcrumbTop + 12;
+        const badgeY = breadcrumbTop + 9;
         const titleX = breadcrumbLeft + 18;
-        const titleY = breadcrumbTop + 40;
+        const titleY = breadcrumbTop + 31;
         const subtitleX = titleX;
-        const subtitleY = breadcrumbTop + 58;
-        const subtitleWrapWidth = breadcrumbWidth - 36;
+        const subtitleY = breadcrumbTop + 49;
+        const subtitleWrapWidth = Math.max(280, contentRight - subtitleX);
         const shellTargets: Array<[Phaser.GameObjects.Rectangle, number, number, number, number]> = [
-            [this.entryShell.shadow, breadcrumbX, breadcrumbY + 4, breadcrumbWidth, breadcrumbHeight],
+            [this.entryShell.shadow, breadcrumbX, breadcrumbY + 3, breadcrumbWidth, breadcrumbHeight],
             [this.entryShell.plate, breadcrumbX, breadcrumbY, breadcrumbWidth, breadcrumbHeight],
-            [this.entryShell.accent, breadcrumbX, breadcrumbTop + 5, breadcrumbWidth - 28, 3],
+            [this.entryShell.accent, breadcrumbX, breadcrumbTop + 4, breadcrumbWidth - 24, 2],
         ];
         const textTargets: Array<[Phaser.GameObjects.Text, number, number]> = [
             [this.entryShell.modeBadgeText, badgeX, badgeY],
             [this.entryShell.titleText, titleX, titleY],
             [this.entryShell.subtitleText, subtitleX, subtitleY],
         ];
+        const returnChipTargets = this.worldMapReturnChip
+            ? [
+                [this.worldMapReturnChip.shadow, returnChipX, returnChipY + 2, returnChipWidth, returnChipHeight],
+                [this.worldMapReturnChip.background, returnChipX, returnChipY, returnChipWidth, returnChipHeight],
+            ] as const
+            : [];
+        const returnChipLabelTarget = this.worldMapReturnChip
+            ? [this.worldMapReturnChip.label, returnChipX, returnChipY] as const
+            : null;
 
         this.entryShell.subtitleText.setWordWrapWidth(subtitleWrapWidth);
 
@@ -525,6 +548,14 @@ export class ExpeditionScene extends Scene {
                 target.setDisplaySize(displayWidth, displayHeight);
             });
             textTargets.forEach(([target, x, y]) => target.setPosition(x, y));
+            returnChipTargets.forEach(([target, x, y, displayWidth, displayHeight]) => {
+                target.setPosition(x, y);
+                target.setDisplaySize(displayWidth, displayHeight);
+            });
+            if (returnChipLabelTarget) {
+                const [target, x, y] = returnChipLabelTarget;
+                target.setPosition(x, y);
+            }
             return;
         }
 
@@ -550,6 +581,29 @@ export class ExpeditionScene extends Scene {
                 ease: 'Cubic.easeOut',
             });
         });
+        returnChipTargets.forEach(([target, x, y, displayWidth, displayHeight]) => {
+            this.tweens.killTweensOf(target);
+            this.tweens.add({
+                targets: target,
+                x,
+                y,
+                displayWidth,
+                displayHeight,
+                duration: 240,
+                ease: 'Cubic.easeOut',
+            });
+        });
+        if (returnChipLabelTarget) {
+            const [target, x, y] = returnChipLabelTarget;
+            this.tweens.killTweensOf(target);
+            this.tweens.add({
+                targets: target,
+                x,
+                y,
+                duration: 240,
+                ease: 'Cubic.easeOut',
+            });
+        }
     }
 
     private setEntryShellVisible(visible: boolean, animate: boolean): void {
