@@ -12,9 +12,10 @@ describe('expedition UI Chinese copy', () => {
         expect(sceneCopy).toContain('远征准备');
         expect(sceneCopy).toContain('大地图 /');
         expect(sceneCopy).toContain('返回大地图');
-        expect(sceneCopy).toContain('完成调整后按返回回到远征准备');
-        expect(sceneCopy).toContain('当前带入可直接确认出发');
+        expect(sceneCopy).toContain('调整后返回准备');
+        expect(sceneCopy).toContain('可直接出发');
         expect(sceneCopy).toContain('入口：');
+        expect(sceneCopy).toContain('首层：');
         expect(sceneCopy).toContain('收官');
         expect(sceneCopy).toContain('卡组管理');
         expect(sceneCopy).toContain('进入秘境');
@@ -24,9 +25,14 @@ describe('expedition UI Chinese copy', () => {
         expect(sceneCopy).not.toContain('开局');
         expect(sceneCopy).not.toContain('当前操作：选定带入');
         expect(sceneCopy).not.toContain('当前操作：整理卡组');
+        expect(sceneCopy).not.toContain('当前带入可直接确认出发');
+        expect(sceneCopy).not.toContain('完成调整后按返回回到远征准备');
+        expect(sceneCopy).not.toContain('补齐带入条件后按返回回到远征准备');
         expect(sceneCopy).not.toContain('继续进入秘境');
         expect(sceneCopy).not.toContain('完成后按返回回到远征准备');
         expect(sceneCopy).not.toContain('确认路线与带入');
+        expect(sceneCopy).not.toContain('已备好，从');
+        expect(sceneCopy).not.toContain('先看：');
         expect(sceneCopy).not.toContain('步骤 1 / 2');
         expect(sceneCopy).not.toContain('步骤 2 / 2');
         expect(sceneCopy).not.toContain('可返回确认');

@@ -655,6 +655,10 @@ function createRouteShellSubtitle(
     return `入口：${entryLabel} · ${routeDepth} 层路线`;
 }
 
+function createRouteStageLine(openingSummary: string, terminalSummary: string): string {
+    return `首层：${openingSummary} · 收官：${terminalSummary}`;
+}
+
 function getRouteBriefingShellCopy(mode: ExpeditionRouteBriefingMode): {
     badgeLabel: string;
 } {
@@ -706,14 +710,15 @@ export function createExpeditionDepartureHandoffSummary(
     const deckLabel = selectedDeckName && selectedDeckName.length > 0 ? `「${selectedDeckName}」` : '当前卡组';
     const carriedDeckCount = countStacks(run.carriedDeck);
     const carriedItemCount = countStacks(run.carriedItems);
+    const routeStageLine = createRouteStageLine(openingSummary, terminalSummary);
 
     return {
         badgeLabel: '出发确认',
-        headline: `${deckLabel}已备好，从${entryLabel}进入${map.name}`,
-        detail: `先看${openingSummary}；收官留意${terminalSummary}。`,
-        routeLine: `先看：${openingSummary} · 收官：${terminalSummary}`,
+        headline: `${deckLabel}从${entryLabel}进入${map.name}`,
+        detail: `首层：${openingSummary}`,
+        routeLine: routeStageLine,
         loadoutLine: `带入：${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
-        revealStatusText: `已进入${map.name}：${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石；先看${openingSummary}。`,
+        revealStatusText: `已进入${map.name}：${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石；首层：${openingSummary}。`,
     };
 }
 
@@ -739,12 +744,13 @@ export function createExpeditionArrivalCueSummary(
     const deckLabel = selectedDeckName && selectedDeckName.length > 0 ? `「${selectedDeckName}」` : '当前卡组';
     const carriedDeckCount = countStacks(run.carriedDeck);
     const carriedItemCount = countStacks(run.carriedItems);
+    const routeStageLine = createRouteStageLine(openingSummary, terminalSummary);
 
     return {
         badgeLabel: '抵达提示',
         headline: `已抵达${map.name} · ${entryLabel}`,
         detail: '首层分路已高亮；点按节点后收起。',
-        routeLine: `先看：${openingSummary} · 收官：${terminalSummary}`,
+        routeLine: routeStageLine,
         loadoutLine: `带入：${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
     };
 }
