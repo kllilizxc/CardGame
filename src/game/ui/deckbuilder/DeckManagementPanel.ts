@@ -72,10 +72,10 @@ const SORT_FIELD_LABEL: Record<CardCollectionSortField, string> = {
 
 const DECK_LIST_SUMMARY_HEIGHT = 64;
 const DECK_ROW_HEIGHT = 84;
-const COMPACT_DECK_LIST_SUMMARY_HEIGHT = 38;
-const COMPACT_DECK_ROW_HEIGHT = 54;
-const EDITOR_ROW_HEIGHT = 68;
-const BROWSER_ROW_HEIGHT = 68;
+const COMPACT_DECK_LIST_SUMMARY_HEIGHT = 34;
+const COMPACT_DECK_ROW_HEIGHT = 50;
+const EDITOR_ROW_HEIGHT = 56;
+const BROWSER_ROW_HEIGHT = 56;
 const DECK_NAMING_TEXT_ENTRY_SESSION_ID = 'deck-name';
 const DECK_SEARCH_TEXT_ENTRY_SESSION_ID = 'deck-search';
 
@@ -2735,22 +2735,22 @@ export class DeckManagementPanel extends GameObjects.Container {
         panel.setStrokeStyle(3, PANEL_ACCENT, 0.9);
 
         const titleX = panelX - panelWidth / 2 + 34;
-        const titleTop = panelY - panelHeight / 2 + 18;
-        const topUtilityHeight = 34;
-        const topUtility = this.scene.add.rectangle(
+        const titleTop = panelY - panelHeight / 2 + 16;
+        const headerHeight = 48;
+        this.keyboardGuideBg = this.scene.add.rectangle(
             panelX,
-            titleTop + topUtilityHeight / 2,
+            titleTop + headerHeight / 2,
             panelWidth - 32,
-            topUtilityHeight,
+            headerHeight,
             0x0f172a,
-            0.84,
+            0.88,
         );
-        topUtility.setStrokeStyle(1, blendColor(PANEL_ACCENT, SECTION_BORDER, 0.4), 0.56);
-        const topUtilityAccent = this.scene.add.rectangle(
+        this.keyboardGuideBg.setStrokeStyle(1, blendColor(PANEL_ACCENT, SECTION_BORDER, 0.4), 0.56);
+        this.keyboardGuideAccent = this.scene.add.rectangle(
             titleX + 2,
-            titleTop + topUtilityHeight / 2,
+            titleTop + headerHeight / 2,
             5,
-            topUtilityHeight - 12,
+            headerHeight - 14,
             PANEL_ACCENT,
             0.92,
         ).setOrigin(0, 0.5);
@@ -2770,7 +2770,7 @@ export class DeckManagementPanel extends GameObjects.Container {
 
         const closeButton = this.createButton(
             panelX + panelWidth / 2 - 60,
-            titleTop + topUtilityHeight / 2,
+            titleTop + 13,
             68,
             24,
             '返回',
@@ -2782,34 +2782,15 @@ export class DeckManagementPanel extends GameObjects.Container {
             false,
             { hoverFillColor: 0x334155, strokeColor: 0x64748b, fontSize: '12px' },
         );
-        const keyboardGuideTop = titleTop + topUtilityHeight + 6;
         const keyboardGuideWidth = panelWidth - 68;
-        const keyboardGuideHeight = 22;
-        this.keyboardGuideBg = this.scene.add.rectangle(
-            panelX,
-            keyboardGuideTop + keyboardGuideHeight / 2,
-            keyboardGuideWidth,
-            keyboardGuideHeight,
-            0x0f172a,
-            0.9,
-        );
-        this.keyboardGuideBg.setStrokeStyle(1, SELECTED_ACCENT, 0.62);
-        this.keyboardGuideAccent = this.scene.add.rectangle(
-            titleX + 5,
-            keyboardGuideTop + keyboardGuideHeight / 2,
-            4,
-            keyboardGuideHeight - 10,
-            SELECTED_ACCENT,
-            0.88,
-        ).setOrigin(0, 0.5);
-        const keyboardGuideY = keyboardGuideTop + keyboardGuideHeight / 2;
+        const keyboardGuideY = titleTop + 34;
         this.keyboardGuideHeadline = this.scene.add.text(titleX + 18, keyboardGuideY, '', {
             fontFamily: 'Arial',
             fontSize: '9px',
             color: '#dbeafe',
             fontStyle: 'bold',
         }).setOrigin(0, 0.5);
-        this.keyboardGuideDetail = this.scene.add.text(titleX + 144, keyboardGuideY, '', {
+        this.keyboardGuideDetail = this.scene.add.text(titleX + 132, keyboardGuideY, '', {
             fontFamily: 'Arial',
             fontSize: '8px',
             color: '#bfdbfe',
@@ -2824,21 +2805,21 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.keyboardGuidePillBg = keyboardGuidePillBg;
         this.keyboardGuidePillText = keyboardGuidePillText;
 
-        const contentY = keyboardGuideTop + keyboardGuideHeight + 8;
-        const contentH = panelY + panelHeight / 2 - 24 - contentY;
+        const contentY = titleTop + headerHeight + 8;
+        const contentH = panelY + panelHeight / 2 - 20 - contentY;
 
-        const columnGap = 12;
+        const columnGap = 10;
         const leftColX = panelX - panelWidth / 2 + 26;
         const contentWidth = panelWidth - 72;
-        const rightColW = Math.max(320, Math.min(336, Math.floor(contentWidth * 0.308)));
+        const rightColW = Math.max(308, Math.min(330, Math.floor(contentWidth * 0.302)));
         const leftWorkspaceW = contentWidth - rightColW - columnGap;
         const rightColX = leftColX + leftWorkspaceW + columnGap;
-        const leftWorkspaceInnerX = leftColX + 12;
-        const leftWorkspaceInnerY = contentY + 10;
+        const leftWorkspaceInnerX = leftColX + 10;
+        const leftWorkspaceInnerY = contentY + 6;
         const leftWorkspaceInnerW = leftWorkspaceW - 24;
-        const leftWorkspaceInnerH = contentH - 16;
-        const deckTrayW = Math.max(112, Math.min(122, Math.floor(leftWorkspaceInnerW * 0.162)));
-        const leftWorkspaceInnerGap = 10;
+        const leftWorkspaceInnerH = contentH - 10;
+        const deckTrayW = Math.max(108, Math.min(118, Math.floor(leftWorkspaceInnerW * 0.156)));
+        const leftWorkspaceInnerGap = 8;
         const editorW = leftWorkspaceInnerW - deckTrayW - leftWorkspaceInnerGap;
         const editorX = leftWorkspaceInnerX;
         const deckTrayX = editorX + editorW + leftWorkspaceInnerGap;
@@ -2862,13 +2843,11 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.add([
             overlay,
             panel,
-            topUtility,
-            topUtilityAccent,
+            this.keyboardGuideBg,
+            this.keyboardGuideAccent,
             title,
             subtitle,
             ...closeButton,
-            this.keyboardGuideBg,
-            this.keyboardGuideAccent,
             this.keyboardGuideHeadline,
             this.keyboardGuideDetail,
             this.keyboardGuidePillBg,
@@ -3081,6 +3060,51 @@ export class DeckManagementPanel extends GameObjects.Container {
         return [glow, outer, header, rarityBadge, rarityText, glyphText, footer, footerText];
     }
 
+    private createCompactCardGlyphBadge(
+        x: number,
+        y: number,
+        kind: CardKind | undefined,
+        rarity: CardRarity | undefined,
+    ): Phaser.GameObjects.GameObject[] {
+        const theme = getPreviewTheme(kind);
+        const rarityColor = getRarityAccentColor(rarity);
+        const glyph = getCardKindGlyph(kind);
+
+        const glow = this.scene.add.rectangle(x + 16, y + 18, 32, 40, theme.heroGlowColor, 0.08);
+        glow.setStrokeStyle(1, theme.heroGlowColor, 0.08);
+
+        const outer = this.scene.add.rectangle(
+            x + 16,
+            y + 18,
+            28,
+            36,
+            blendColor(0x0f172a, theme.heroFillColor, 0.76),
+            0.98,
+        );
+        outer.setStrokeStyle(1, theme.borderColor, 0.78);
+
+        const accent = this.scene.add.rectangle(
+            x + 4,
+            y + 18,
+            4,
+            24,
+            theme.accentColor,
+            0.92,
+        ).setOrigin(0, 0.5);
+
+        const rarityPip = this.scene.add.rectangle(x + 24, y + 6, 10, 10, rarityColor, 0.96);
+        rarityPip.setStrokeStyle(1, 0xffffff, 0.14);
+
+        const glyphText = this.scene.add.text(x + 16, y + 18, glyph, {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#f8fafc',
+            fontStyle: 'bold',
+        }).setOrigin(0.5).setAlpha(0.88);
+
+        return [glow, outer, accent, rarityPip, glyphText];
+    }
+
     private createSectionFrame(
         x: number,
         y: number,
@@ -3120,23 +3144,11 @@ export class DeckManagementPanel extends GameObjects.Container {
         const background = this.scene.add.rectangle(x + w / 2, y + h / 2, w, h, SECTION_FILL, 0.95);
         background.setStrokeStyle(1, SECTION_BORDER, 0.82);
 
-        const topBand = this.scene.add.rectangle(x + w / 2, y + 12, w - 18, 16, 0x0f172a, 0.56);
-        topBand.setStrokeStyle(1, blendColor(SECTION_BORDER, accentColor, 0.24), 0.34);
-        const accent = this.scene.add.rectangle(x + 16, y + 12, 5, 10, accentColor, 0.92).setOrigin(0, 0.5);
-        const titleText = this.scene.add.text(x + 27, y + 5, '当前卡组主编辑区', {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#dbeafe',
-            fontStyle: 'bold',
-        });
-        const detailText = this.scene.add.text(x + w - 16, y + 5, '牌名与牌表优先 · 其余信息按需展开', {
-            fontFamily: 'Arial',
-            fontSize: '8px',
-            color: '#94a3b8',
-            fontStyle: 'bold',
-        }).setOrigin(1, 0);
+        const topBand = this.scene.add.rectangle(x + w / 2, y + 10, w - 18, 10, 0x0f172a, 0.42);
+        topBand.setStrokeStyle(1, blendColor(SECTION_BORDER, accentColor, 0.24), 0.22);
+        const accent = this.scene.add.rectangle(x + 16, y + 10, 42, 3, accentColor, 0.86).setOrigin(0, 0.5);
 
-        return [background, topBand, accent, titleText, detailText];
+        return [background, topBand, accent];
     }
 
     private createEmbeddedSectionSurface(
@@ -3743,15 +3755,15 @@ export class DeckManagementPanel extends GameObjects.Container {
         const deck = this.getSelectedDeck();
         const namingActive = this.isDeckNamingActive(deck);
         const detailExpanded = !namingActive && this.detailPaneExpanded;
-        const targetSummaryH = namingActive ? 272 : detailExpanded ? 196 : 140;
+        const targetSummaryH = namingActive ? 272 : detailExpanded ? 152 : 118;
         const summaryH = namingActive
             ? Math.min(targetSummaryH, Math.max(184, contentH - 130))
             : detailExpanded
-                ? Math.min(targetSummaryH, Math.max(184, contentH - 138))
-                : Math.min(targetSummaryH, Math.max(136, contentH - 146));
-        const listHeaderY = summaryH + 6;
+                ? Math.min(targetSummaryH, Math.max(148, contentH - 122))
+                : Math.min(targetSummaryH, Math.max(112, contentH - 130));
+        const listHeaderY = summaryH + 4;
         const scrollBtnY = contentH - 10;
-        const listTop = listHeaderY + 38;
+        const listTop = listHeaderY + 28;
         const listBottom = scrollBtnY - 8;
         const listH = Math.max(82, listBottom - listTop);
 
@@ -3809,6 +3821,10 @@ export class DeckManagementPanel extends GameObjects.Container {
             fontStyle: 'bold',
         });
         this.editorContainer.add(eyebrow);
+
+        let ctaButton: GameObjects.Rectangle | null = null;
+        let ctaLabel: GameObjects.Text | null = null;
+        let returnHintText: GameObjects.Text | null = null;
 
         if (namingActive) {
             const namingTitle = this.scene.add.text(localX + 16, 38, this.namingMode === 'create' ? '给新卡组起个名字' : '修改卡组名称', {
@@ -3903,36 +3919,17 @@ export class DeckManagementPanel extends GameObjects.Container {
             this.syncNamingTextEntry();
         } else {
             this.nativeTextEntry.deactivate(DECK_NAMING_TEXT_ENTRY_SESSION_ID);
-            eyebrow.setPosition(localX + 16, 12);
-            const titleBar = this.scene.add.rectangle(localX + summaryW / 2, 28, summaryW - 16, 42, 0x151d2b, 0.94);
-            titleBar.setStrokeStyle(1, blendColor(summary.accentColor, SECTION_BORDER, 0.28), 0.72);
-            const titleBarDivider = this.scene.add.rectangle(localX + summaryW / 2, 48, summaryW - 28, 1, 0xe2e8f0, 0.18);
-            const deckBadge = this.scene.add.rectangle(localX + 34, 28, 28, 28, PANEL_ACCENT, 0.84);
-            deckBadge.setStrokeStyle(1, 0xd8b4fe, 0.8);
-            const deckBadgeText = this.scene.add.text(localX + 34, 28, '组', {
-                fontFamily: 'Arial',
-                fontSize: '16px',
-                color: '#f8fafc',
-                fontStyle: 'bold',
-            }).setOrigin(0.5);
-            const titleLabel = this.scene.add.text(localX + 56, 9, '当前带入卡组', {
-                fontFamily: 'Arial',
-                fontSize: '9px',
-                color: '#bfdbfe',
-                fontStyle: 'bold',
-            });
-            const nameText = this.scene.add.text(localX + 56, 19, deck.name, {
-                fontFamily: 'Arial',
-                fontSize: '26px',
-                color: '#f8fafc',
-                fontStyle: 'bold',
-                wordWrap: { width: summaryW - 166 },
-            });
+            eyebrow.setText('当前带入卡组');
+            eyebrow.setPosition(localX + 24, 9);
+            const titleBar = this.scene.add.rectangle(localX + summaryW / 2, 18, summaryW - 16, 26, 0x151d2b, 0.92);
+            titleBar.setStrokeStyle(1, blendColor(summary.accentColor, SECTION_BORDER, 0.28), 0.68);
+            const titleBarAccent = this.scene.add.rectangle(localX + 16, 18, 4, 14, summary.accentColor, 0.92).setOrigin(0, 0.5);
+            const returnCta = createReturnCtaState(summary);
             const renameButton = this.createButton(
-                localX + summaryW - 44,
-                22,
-                72,
-                22,
+                localX + summaryW - 162,
+                18,
+                68,
+                18,
                 '✎ 名称',
                 0x0f172a,
                 () => this.beginRenameSelectedDeck(),
@@ -3940,30 +3937,80 @@ export class DeckManagementPanel extends GameObjects.Container {
                 {
                     hoverFillColor: 0x1e293b,
                     strokeColor: 0xe2e8f0,
-                    fontSize: '10px',
+                    fontSize: '9px',
                 },
             );
+            ctaButton = this.scene.add.rectangle(
+                localX + summaryW - 52,
+                18,
+                96,
+                20,
+                returnCta.buttonFillColor,
+                1,
+            );
+            ctaButton.setStrokeStyle(this.keyboardZone === 'return' ? 2 : 1, returnCta.buttonStrokeColor, 0.95);
+            ctaButton.setInteractive({ useHandCursor: true });
+            ctaButton.on('pointerover', () => ctaButton?.setFillStyle(returnCta.buttonHoverFillColor, 1));
+            ctaButton.on('pointerout', () => ctaButton?.setFillStyle(returnCta.buttonFillColor, 1));
+            ctaButton.on('pointerdown', () => {
+                this.setKeyboardZone('return');
+                this.config.onClose();
+            });
+            ctaLabel = this.scene.add.text(localX + summaryW - 52, 18, '返回远征准备', {
+                fontFamily: 'Arial',
+                fontSize: '9px',
+                color: returnCta.buttonTextColor,
+                fontStyle: 'bold',
+            }).setOrigin(0.5);
+            const returnHintLabel = summary.availabilityIssues.length > 0
+                ? '返回前先补库存'
+                : summary.sizeIssue?.kind === 'too-few-cards'
+                    ? `还差 ${summary.sizeIssue.min - summary.sizeIssue.count} 张`
+                    : summary.sizeIssue?.kind === 'too-many-cards'
+                        ? `超出 ${summary.sizeIssue.count - summary.sizeIssue.max} 张`
+                        : '已可直接返回';
+            returnHintText = this.scene.add.text(localX + summaryW - 4, 30, returnHintLabel, {
+                fontFamily: 'Arial',
+                fontSize: '8px',
+                color: returnCta.buttonTextColor,
+                fontStyle: 'bold',
+            }).setOrigin(1, 0);
+            const nameText = this.scene.add.text(localX + 20, 36, deck.name, {
+                fontFamily: 'Arial',
+                fontSize: '24px',
+                color: '#f8fafc',
+                fontStyle: 'bold',
+                wordWrap: { width: summaryW - 176 },
+            });
             nameText.setInteractive({ useHandCursor: true });
             nameText.on('pointerdown', () => {
                 this.setKeyboardZone('decks');
                 this.beginRenameSelectedDeck();
             });
-            this.editorContainer.add([titleBar, titleBarDivider, deckBadge, deckBadgeText, titleLabel, nameText, ...renameButton]);
+            this.editorContainer.add([
+                titleBar,
+                titleBarAccent,
+                nameText,
+                ...renameButton,
+                ctaButton,
+                ctaLabel,
+                returnHintText,
+            ]);
         }
 
-        const detailY = namingActive ? 132 : 48;
-        const detailSurfaceWidth = namingActive ? 0 : detailExpanded ? 180 : 0;
+        const detailY = namingActive ? 132 : 62;
+        const detailSurfaceWidth = namingActive ? 0 : detailExpanded ? 168 : 0;
         const detailPaneX = detailSurfaceWidth > 0
-            ? localX + summaryW - detailSurfaceWidth - 14
+            ? localX + summaryW - detailSurfaceWidth - 12
             : localX + summaryW;
-        const detailPaneY = namingActive ? 44 : 14;
+        const detailPaneY = namingActive ? 44 : 44;
         const leftSummaryW = detailSurfaceWidth > 0
-            ? detailPaneX - (localX + 20) - 8
-            : summaryW - 32;
+            ? detailPaneX - (localX + 20) - 10
+            : summaryW - (namingActive ? 32 : 156);
         const detailSurfacePulseTargets: (TweenableMotionTarget | null | undefined)[] = [];
         const countText = this.scene.add.text(localX + 20, detailY, `${summary.count} / ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, {
             fontFamily: 'Arial',
-            fontSize: namingActive ? '19px' : '20px',
+            fontSize: namingActive ? '19px' : '18px',
             color: summary.isValid ? '#86efac' : summary.pillTextColor,
             fontStyle: 'bold',
             wordWrap: { width: leftSummaryW },
@@ -3971,7 +4018,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         const statusPillRightX = localX + 16 + leftSummaryW;
         const [statusPillBg, statusPillText] = this.createRightAlignedPill(
             statusPillRightX,
-            detailY + (namingActive ? 30 : 12),
+            detailY + (namingActive ? 30 : 10),
             summary.statusLabel,
             summary.pillFillColor,
             summary.pillTextColor,
@@ -3981,12 +4028,12 @@ export class DeckManagementPanel extends GameObjects.Container {
             : truncateLabel(
                 joinPreviewFacts(
                     [summary.detailLabel, summarySnapshot.summaryLine],
-                    detailExpanded ? 54 : 82,
+                    detailExpanded ? 46 : 64,
                 ) ?? summary.detailLabel,
-                detailExpanded ? 54 : 82,
+                detailExpanded ? 46 : 64,
             ), {
             fontFamily: 'Arial',
-            fontSize: namingActive ? '12px' : '11px',
+            fontSize: namingActive ? '12px' : '10px',
             color: summary.isValid ? '#93c5fd' : summary.pillTextColor,
             wordWrap: { width: leftSummaryW },
         });
@@ -3994,12 +4041,12 @@ export class DeckManagementPanel extends GameObjects.Container {
 
         const compactSummaryMetrics = !namingActive && !detailExpanded;
         const capacitySummaryY = detailY + (namingActive ? 68 : compactSummaryMetrics ? 36 : 42);
-        const capacityTrackY = detailY + (namingActive ? 88 : compactSummaryMetrics ? 56 : 66);
+        const capacityTrackY = detailY + (namingActive ? 88 : compactSummaryMetrics ? 46 : 62);
         const showCapacityRangeLabel = namingActive || detailExpanded;
         const capacitySummaryText = this.scene.add.text(localX + 20, capacitySummaryY, joinPreviewFacts([
             getDeckCapacityProgressLabel(capacity),
             getDeckCapacityHeadroomLabel(capacity),
-        ], detailExpanded ? 52 : 78) ?? getDeckCapacityProgressLabel(capacity), {
+        ], detailExpanded ? 50 : 62) ?? getDeckCapacityProgressLabel(capacity), {
             fontFamily: 'Arial',
             fontSize: '10px',
             color: capacityTextColor,
@@ -4052,9 +4099,9 @@ export class DeckManagementPanel extends GameObjects.Container {
             : truncateLabel(
                 joinPreviewFacts(
                     [`${DECK_CARD_MIN} 张出征线`, `${DECK_CARD_MAX} 张上限`, summarySnapshot.detailLabel],
-                    detailExpanded ? 58 : 84,
+                    detailExpanded ? 52 : 72,
                 ) ?? `${DECK_CARD_MIN} 张出征线 · ${DECK_CARD_MAX} 张上限`,
-                detailExpanded ? 58 : 84,
+                detailExpanded ? 52 : 72,
             ), {
             fontFamily: 'Arial',
             fontSize: '10px',
@@ -4066,115 +4113,11 @@ export class DeckManagementPanel extends GameObjects.Container {
             ? [capacityMinimumMarker, capacityRangeLabel]
             : [capacityMinimumMarker]);
 
-        const nextStepLabel = summary.availabilityIssues.length > 0
-            ? '下一步：先补齐库存短缺，再返回远征准备。'
-            : summary.sizeIssue?.kind === 'too-few-cards'
-                ? '下一步：继续从右侧补牌，直到达到出征线。'
-                : summary.sizeIssue?.kind === 'too-many-cards'
-                    ? '下一步：先在这里移除多余卡牌，再返回远征准备。'
-                    : '下一步：当前卡组已就绪，可直接返回远征准备确认带入。';
-        const returnCta = createReturnCtaState(summary);
-        const exitStripX = localX + 16;
-        const ctaButtonWidth = namingActive ? 112 : 104;
-        const ctaButtonHeight = namingActive ? 24 : 20;
-        const exitStripY = namingActive ? summaryH - 36 : summaryH - 22;
-        const exitStripW = namingActive
-            ? summaryW - 32
-            : Math.max(152, leftSummaryW - ctaButtonWidth - 12);
-        const exitStripH = namingActive ? 30 : 22;
-        const exitStrip = this.scene.add.rectangle(
-            exitStripX + exitStripW / 2,
-            exitStripY + exitStripH / 2,
-            exitStripW,
-            exitStripH,
-            returnCta.stripFillColor,
-            0.92,
-        );
-        exitStrip.setStrokeStyle(this.keyboardZone === 'return' ? 2 : 1, summary.accentColor, 0.56);
-        exitStrip.setInteractive({ useHandCursor: true });
-        exitStrip.on('pointerover', () => exitStrip.setFillStyle(blendColor(returnCta.stripFillColor, returnCta.buttonFillColor, 0.1), 0.94));
-        exitStrip.on('pointerout', () => exitStrip.setFillStyle(returnCta.stripFillColor, 0.92));
-        exitStrip.on('pointerdown', () => {
-            this.setKeyboardZone('return');
-            this.config.onClose();
-        });
-
-        const exitHeader = this.scene.add.text(exitStripX + 10, exitStripY + (namingActive ? 6 : 3), '返回前摘要', {
-            fontFamily: 'Arial',
-            fontSize: namingActive ? '8px' : '7px',
-            color: returnCta.stripTextColor,
-            fontStyle: 'bold',
-        });
-        const exitHint = this.scene.add.text(exitStripX + exitStripW - 8, exitStripY + (namingActive ? 6 : 3), '摘要区可直接返回远征准备', {
-            fontFamily: 'Arial',
-            fontSize: namingActive ? '7px' : '6px',
-            color: this.keyboardZone === 'return' ? '#fef3c7' : returnCta.stripTextColor,
-            fontStyle: 'bold',
-        }).setOrigin(1, 0);
-
-        const [returnStatusBg, returnStatusText] = this.createPill(
-            exitStripX + 10,
-            exitStripY + exitStripH / 2,
-            returnCta.buttonStatusLabel,
-            blendColor(returnCta.stripFillColor, returnCta.buttonFillColor, 0.36),
-            returnCta.stripTextColor,
-        );
-        const exitSummary = this.scene.add.text(exitStripX + 20 + returnStatusBg.width, exitStripY + exitStripH / 2, truncateLabel(
-            joinPreviewFacts(
-                [returnCta.summaryLabel, nextStepLabel],
-                namingActive ? 74 : detailExpanded ? 46 : 58,
-            ) ?? returnCta.summaryLabel,
-            namingActive ? 54 : detailExpanded ? 36 : 46,
-        ), {
-            fontFamily: 'Arial',
-            fontSize: namingActive ? '9px' : '8px',
-            color: '#e2e8f0',
-            wordWrap: { width: Math.max(52, exitStripW - returnStatusBg.width - 24) },
-        }).setOrigin(0, 0.5);
-
-        const ctaButtonX = namingActive
-            ? exitStripX + exitStripW - ctaButtonWidth / 2 - 8
-            : exitStripX + exitStripW + 10 + ctaButtonWidth / 2;
-        const ctaButtonY = exitStripY + exitStripH / 2;
-        const ctaButton = this.scene.add.rectangle(
-            ctaButtonX,
-            ctaButtonY,
-            ctaButtonWidth,
-            ctaButtonHeight,
-            returnCta.buttonFillColor,
-            1,
-        );
-        ctaButton.setStrokeStyle(this.keyboardZone === 'return' ? 2 : 1, returnCta.buttonStrokeColor, 0.95);
-        ctaButton.setInteractive({ useHandCursor: true });
-        ctaButton.on('pointerover', () => ctaButton.setFillStyle(returnCta.buttonHoverFillColor, 1));
-        ctaButton.on('pointerout', () => ctaButton.setFillStyle(returnCta.buttonFillColor, 1));
-        ctaButton.on('pointerdown', () => {
-            this.setKeyboardZone('return');
-            this.config.onClose();
-        });
-
-        const ctaLabel = this.scene.add.text(ctaButtonX, ctaButtonY, '返回远征准备', {
-            fontFamily: 'Arial',
-            fontSize: namingActive ? '11px' : '10px',
-            color: returnCta.buttonTextColor,
-            fontStyle: 'bold',
-        }).setOrigin(0.5);
-        this.editorContainer.add([
-            exitStrip,
-            exitHeader,
-            exitHint,
-            returnStatusBg,
-            returnStatusText,
-            exitSummary,
-            ctaButton,
-            ctaLabel,
-        ]);
-
         let inspectFocusButton: [GameObjects.Rectangle, GameObjects.Text] | null = null;
         if (!namingActive) {
             if (detailExpanded) {
-                const detailPaneBottom = summaryH - 14;
-                const detailPaneH = Math.max(124, detailPaneBottom - detailPaneY);
+                const detailPaneBottom = summaryH - 12;
+                const detailPaneH = Math.max(96, detailPaneBottom - detailPaneY);
                 this.detailPaneContainer = this.scene.add.container(detailPaneX, detailPaneY);
                 this.detailPaneWidth = detailSurfaceWidth;
                 this.detailPaneHeight = detailPaneH;
@@ -4183,10 +4126,10 @@ export class DeckManagementPanel extends GameObjects.Container {
                 detailSurfacePulseTargets.push(this.detailPaneContainer);
             } else {
                 inspectFocusButton = this.createButton(
-                    summaryW - 54,
-                    listHeaderY + 11,
-                    108,
-                    20,
+                    summaryW - 48,
+                    listHeaderY + 10,
+                    96,
+                    18,
                     '查看当前焦点',
                     0x312e81,
                     () => {
@@ -4197,16 +4140,16 @@ export class DeckManagementPanel extends GameObjects.Container {
                     {
                         hoverFillColor: 0x4338ca,
                         strokeColor: 0xa5b4fc,
-                        fontSize: '10px',
+                        fontSize: '9px',
                     },
                 );
             }
         }
 
-        const listHeaderBand = this.scene.add.rectangle(summaryW / 2, listHeaderY + 10, summaryW, 24, 0x111827, 0.94);
+        const listHeaderBand = this.scene.add.rectangle(summaryW / 2, listHeaderY + 10, summaryW, 20, 0x111827, 0.94);
         listHeaderBand.setStrokeStyle(1, SECTION_BORDER, 0.54);
-        const listHeaderAccent = this.scene.add.rectangle(4, listHeaderY + 10, 5, 16, summary.accentColor, 0.92).setOrigin(0, 0.5);
-        const listCountRightX = inspectFocusButton ? summaryW - 126 : summaryW - 12;
+        const listHeaderAccent = this.scene.add.rectangle(4, listHeaderY + 10, 5, 14, summary.accentColor, 0.92).setOrigin(0, 0.5);
+        const listCountRightX = inspectFocusButton ? summaryW - 106 : summaryW - 12;
         const [listCountBg, listCountText] = this.createRightAlignedPill(
             listCountRightX,
             listHeaderY + 10,
@@ -4216,28 +4159,14 @@ export class DeckManagementPanel extends GameObjects.Container {
         );
         this.editorContainer.add([listHeaderBand, listHeaderAccent, listCountBg, listCountText]);
 
-        const cardListTitle = this.scene.add.text(localX, listHeaderY, `当前卡牌（在这里移除）· ${deck.cards.length} 个条目 / ${summary.count} 张`, {
+        const cardListTitle = this.scene.add.text(localX, listHeaderY, `当前卡牌（在这里移除） · ${deck.cards.length} 个条目`, {
             fontFamily: 'Arial',
-            fontSize: '14px',
+            fontSize: '13px',
             color: '#f8fafc',
             fontStyle: 'bold',
         });
-        const cardListSubtitle = this.scene.add.text(
-            localX,
-            listHeaderY + 28,
-            detailExpanded
-                ? '卡组名称与条目仍保持主位；焦点牌面已按需展开，悬停或上下切换会同步更新。'
-                : '选中条目后可移除 1 张或清空整行；焦点牌面默认收起详情，按 I 或点右侧查看当前焦点。',
-            {
-                fontFamily: 'Arial',
-                fontSize: '10px',
-                color: '#94a3b8',
-                wordWrap: { width: detailExpanded ? summaryW : summaryW - 132 },
-            },
-        );
         this.editorContainer.add([
             cardListTitle,
-            cardListSubtitle,
             ...(inspectFocusButton ? inspectFocusButton : []),
         ]);
 
@@ -4304,25 +4233,15 @@ export class DeckManagementPanel extends GameObjects.Container {
                         ? '#fde68a'
                         : '#93c5fd';
                 const availabilityLabel = shortageCount > 0
-                    ? `袋中${ownedCount} · 缺${shortageCount}张`
+                    ? `库存${ownedCount} · 缺${shortageCount}张`
                     : remainingCount === 0
-                        ? `袋中${ownedCount} · 已占满库存`
-                        : `袋中${ownedCount} · 可再加${remainingCount}张`;
+                        ? `库存${ownedCount} · 已占满库存`
+                        : `库存${ownedCount} · 还可补${remainingCount}张`;
                 const stateLabel = shortageCount > 0
                     ? `缺 ${shortageCount} 张`
                     : remainingCount === 0
                         ? '已占满'
                         : `可再加 ${remainingCount}`;
-                const stateFillColor = shortageCount > 0
-                    ? 0x3f1d24
-                    : remainingCount === 0
-                        ? 0x3b2a0e
-                        : 0x15372a;
-                const stateTextColor = shortageCount > 0
-                    ? '#fecaca'
-                    : remainingCount === 0
-                        ? '#fde68a'
-                        : '#bbf7d0';
                 const spotlightTheme = getPreviewTheme(this.config.metadata?.[stack.id]?.kind);
                 const hoverFillColor = shortageCount > 0
                     ? 0x27141c
@@ -4356,38 +4275,46 @@ export class DeckManagementPanel extends GameObjects.Container {
                 this.registerSpotlightRow(this.editorSpotlightRows, spotlightRow);
                 const accent = this.scene.add.rectangle(5, rowY + EDITOR_ROW_HEIGHT / 2, 6, EDITOR_ROW_HEIGHT - 14, rowAccentColor, 1)
                     .setOrigin(0, 0.5);
-                const cardTile = this.createCardTileChrome(
+                const cardGlyph = this.createCompactCardGlyphBadge(
                     14,
-                    rowY + 8,
-                    42,
-                    56,
+                    rowY + 10,
                     metadataEntry?.kind,
                     metadataEntry?.rarity,
-                    `×${stack.count}`,
                 );
 
-                const nameText = this.scene.add.text(64, rowY + 14, displayName, {
+                const nameText = this.scene.add.text(50, rowY + 10, displayName, {
                     fontFamily: 'Arial',
-                    fontSize: '15px',
+                    fontSize: '14px',
                     color: '#f8fafc',
                     fontStyle: 'bold',
-                    wordWrap: { width: Math.max(96, summaryW - 312) },
+                    wordWrap: { width: Math.max(96, summaryW - 188) },
                 });
-                const metaText = this.scene.add.text(64, rowY + 40, `${metaLabel} · ${availabilityLabel}`, {
+                const metaText = this.scene.add.text(50, rowY + 30, `${metaLabel} · 卡组×${stack.count} · ${availabilityLabel}`, {
                     fontFamily: 'Arial',
-                    fontSize: '11px',
+                    fontSize: '10px',
                     color: detailColor,
-                    wordWrap: { width: Math.max(96, summaryW - 312) },
+                    wordWrap: { width: Math.max(96, summaryW - 188) },
                 });
-
-                const [countPillBg, countPillText] = this.createPill(summaryW - 196, rowY + 20, `卡组 ×${stack.count}`, 0x1d4ed8, '#dbeafe');
-                const [statePillBg, statePillText] = this.createPill(summaryW - 196, rowY + 48, stateLabel, stateFillColor, stateTextColor);
+                const countText = this.scene.add.text(summaryW - 108, rowY + 11, `×${stack.count}`, {
+                    fontFamily: 'Arial',
+                    fontSize: '16px',
+                    color: '#dbeafe',
+                    fontStyle: 'bold',
+                }).setOrigin(0.5, 0);
+                const stateText = this.scene.add.text(summaryW - 108, rowY + 30, stateLabel, {
+                    fontFamily: 'Arial',
+                    fontSize: '9px',
+                    color: detailColor,
+                    fontStyle: 'bold',
+                    align: 'center',
+                    wordWrap: { width: 64 },
+                }).setOrigin(0.5, 0);
                 const removeButton = this.createButton(
-                    summaryW - 50,
-                    rowY + 22,
-                    84,
-                    22,
-                    '移除 1',
+                    summaryW - 56,
+                    rowY + 17,
+                    42,
+                    18,
+                    '-1',
                     0x7f1d1d,
                     () => {
                         this.setKeyboardZone('editor');
@@ -4398,15 +4325,15 @@ export class DeckManagementPanel extends GameObjects.Container {
                     {
                         hoverFillColor: 0x991b1b,
                         strokeColor: 0xfca5a5,
-                        fontSize: '11px',
+                        fontSize: '10px',
                     },
                 );
                 const clearButton = this.createButton(
-                    summaryW - 50,
-                    rowY + 50,
-                    84,
-                    22,
-                    '全部移除',
+                    summaryW - 56,
+                    rowY + 39,
+                    42,
+                    18,
+                    '清空',
                     0x991b1b,
                     () => {
                         this.setKeyboardZone('editor');
@@ -4417,20 +4344,18 @@ export class DeckManagementPanel extends GameObjects.Container {
                     {
                         hoverFillColor: 0xb91c1c,
                         strokeColor: 0xfca5a5,
-                        fontSize: '11px',
+                        fontSize: '10px',
                     },
                 );
 
                 cardsInner.add([
                     rowBg,
                     accent,
-                    ...cardTile,
+                    ...cardGlyph,
                     nameText,
                     metaText,
-                    countPillBg,
-                    countPillText,
-                    statePillBg,
-                    statePillText,
+                    countText,
+                    stateText,
                     ...removeButton,
                     ...clearButton,
                 ]);
@@ -4494,23 +4419,17 @@ export class DeckManagementPanel extends GameObjects.Container {
 
         if (deckSelectionChanged) {
             this.playMotionPulse(
-                    [
-                        summaryCard,
-                        countText,
-                        statusPillBg,
-                        statusPillText,
-                        detailText,
-                        exitStrip,
-                        exitHeader,
-                        exitHint,
-                        returnStatusBg,
-                        returnStatusText,
-                        exitSummary,
-                        ctaButton,
-                        ctaLabel,
-                        ...detailSurfacePulseTargets,
-                        cardListTitle,
-                        cardListSubtitle,
+                [
+                    summaryCard,
+                    countText,
+                    statusPillBg,
+                    statusPillText,
+                    detailText,
+                    returnHintText,
+                    ctaButton,
+                    ctaLabel,
+                    ...detailSurfacePulseTargets,
+                    cardListTitle,
                     cardsOuter,
                 ],
                 {
@@ -4527,8 +4446,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                         countText,
                         detailText,
                         capacitySummaryText,
-                        exitSummary,
-                        exitHint,
+                        returnHintText,
                     ],
                     {
                         alphaFrom: 0.52,
@@ -4545,12 +4463,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                         summaryCard,
                         statusPillBg,
                         statusPillText,
-                        exitStrip,
-                        exitHeader,
-                        exitHint,
-                        returnStatusBg,
-                        returnStatusText,
-                        exitSummary,
+                        returnHintText,
                         ctaButton,
                         ctaLabel,
                     ],
@@ -4572,20 +4485,20 @@ export class DeckManagementPanel extends GameObjects.Container {
     }
 
     private createBrowserColumn(x: number, y: number, colW: number, colH: number): void {
-        this.add(this.createSectionFrame(x, y, colW, colH, '从储物袋加入', '储物袋浏览：搜索 / 筛选 / 排序集中成一个控制块，加入动作直接跟在结果行右侧。/ 搜索 · Enter 加入 · F 一键加满。', VALID_ACCENT));
+        this.add(this.createSectionFrame(x, y, colW, colH, '从储物袋加入', '搜索 / 筛选 / 排序集中在这里；结果行保留直接加入动作。/ 搜索 · Enter 加入 · F 一键加满。', VALID_ACCENT));
 
         const innerX = x + 16;
         const innerW = colW - 32;
-        const railTop = y + 50;
-        const railHeight = 76;
+        const railTop = y + 44;
+        const railHeight = 66;
         const railLabelY = railTop + 4;
-        const searchY = railTop + 24;
-        const controlsY = railTop + 48;
-        const summaryY = railTop + 62;
-        const summaryHeight = 16;
+        const searchY = railTop + 22;
+        const controlsY = railTop + 46;
+        const summaryY = railTop + railHeight + 2;
+        const summaryHeight = 14;
         const deleteY = y + colH - 28;
         const scrollBtnY = deleteY - 42;
-        const listTop = railTop + railHeight + 6;
+        const listTop = summaryY + summaryHeight + 4;
         const listBottom = scrollBtnY - 16;
         const listH = Math.max(120, listBottom - listTop);
 
@@ -4958,9 +4871,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                     secondaryParts.push(`空位${deckSlotsRemaining}`);
                 }
 
-                let stateLabel = `一键 +${quickAddCount}`;
-                let stateFillColor = 0x15372a;
-                let stateTextColor = '#bbf7d0';
+                let stateLabel = `可加 ${Math.max(available, 0)}`;
                 let borderColor = VALID_ACCENT;
                 let fillColor = 0x0d1b13;
                 let nameColor = '#f8fafc';
@@ -4971,8 +4882,6 @@ export class DeckManagementPanel extends GameObjects.Container {
 
                 if (!hasDeck) {
                     stateLabel = '先选卡组';
-                    stateFillColor = 0x1f2937;
-                    stateTextColor = '#cbd5e1';
                     borderColor = SECTION_BORDER;
                     fillColor = 0x111827;
                     nameColor = '#e2e8f0';
@@ -4980,8 +4889,6 @@ export class DeckManagementPanel extends GameObjects.Container {
                     disabledStrokeColor = 0x475569;
                 } else if (deckFull) {
                     stateLabel = '卡组已满';
-                    stateFillColor = 0x3b2a0e;
-                    stateTextColor = '#fde68a';
                     borderColor = WARNING_ACCENT;
                     fillColor = 0x1c1a12;
                     detailColor = '#fde68a';
@@ -4990,8 +4897,6 @@ export class DeckManagementPanel extends GameObjects.Container {
                     disabledTextColor = '#fde68a';
                 } else if (available <= 0) {
                     stateLabel = '已耗尽';
-                    stateFillColor = 0x3f1d24;
-                    stateTextColor = '#fecaca';
                     borderColor = INVALID_ACCENT;
                     fillColor = 0x201018;
                     nameColor = row.count > 0 || inDeck > 0 ? '#e2e8f0' : '#94a3b8';
@@ -5029,43 +4934,41 @@ export class DeckManagementPanel extends GameObjects.Container {
                 this.registerSpotlightRow(this.browserSpotlightRows, spotlightRow);
                 const accent = this.scene.add.rectangle(5, rowY + BROWSER_ROW_HEIGHT / 2, 6, BROWSER_ROW_HEIGHT - 14, borderColor, 1)
                     .setOrigin(0, 0.5);
-                const browserTile = this.createCardTileChrome(
+                const browserGlyph = this.createCompactCardGlyphBadge(
                     14,
-                    rowY + 8,
-                    42,
-                    56,
+                    rowY + 10,
                     row.kind,
                     this.config.metadata?.[row.id]?.rarity,
-                    `可加${Math.max(available, 0)}`,
                 );
 
-                const nameText = this.scene.add.text(64, rowY + 14, displayName, {
+                const nameText = this.scene.add.text(50, rowY + 10, displayName, {
                     fontFamily: 'Arial',
-                    fontSize: '15px',
+                    fontSize: '14px',
                     color: nameColor,
                     fontStyle: 'bold',
-                    wordWrap: { width: Math.max(96, this.browserArea.w - 320) },
+                    wordWrap: { width: Math.max(96, this.browserArea.w - 176) },
                 });
-                const detailText = this.scene.add.text(64, rowY + 40, secondaryParts.join(' · '), {
+                const detailText = this.scene.add.text(50, rowY + 30, secondaryParts.join(' · '), {
                     fontFamily: 'Arial',
-                    fontSize: '11px',
+                    fontSize: '10px',
                     color: detailColor,
-                    wordWrap: { width: Math.max(96, this.browserArea.w - 320) },
+                    wordWrap: { width: Math.max(96, this.browserArea.w - 176) },
                 });
-                const [statePillBg, statePillText] = this.createPill(
-                    this.browserArea.w - 210,
-                    rowY + 20,
-                    stateLabel,
-                    stateFillColor,
-                    stateTextColor,
-                );
+                const stateText = this.scene.add.text(this.browserArea.w - 96, rowY + 11, stateLabel, {
+                    fontFamily: 'Arial',
+                    fontSize: '10px',
+                    color: detailColor,
+                    fontStyle: 'bold',
+                    align: 'center',
+                    wordWrap: { width: 72 },
+                }).setOrigin(0.5, 0);
 
                 const addButton = this.createButton(
                     this.browserArea.w - 50,
-                    rowY + 22,
-                    84,
-                    22,
-                    '加入 1',
+                    rowY + 17,
+                    42,
+                    18,
+                    '+1',
                     0x166534,
                     () => {
                         this.setKeyboardZone('browser');
@@ -5081,15 +4984,15 @@ export class DeckManagementPanel extends GameObjects.Container {
                         disabledFillColor,
                         disabledStrokeColor,
                         disabledTextColor,
-                        fontSize: '11px',
+                        fontSize: '10px',
                     },
                 );
                 const quickAddButton = this.createButton(
                     this.browserArea.w - 50,
-                    rowY + 50,
-                    84,
-                    22,
-                    '一键加满',
+                    rowY + 39,
+                    42,
+                    18,
+                    '加满',
                     0x15803d,
                     () => {
                         this.setKeyboardZone('browser');
@@ -5105,11 +5008,11 @@ export class DeckManagementPanel extends GameObjects.Container {
                         disabledFillColor,
                         disabledStrokeColor,
                         disabledTextColor,
-                        fontSize: '11px',
+                        fontSize: '10px',
                     },
                 );
 
-                this.browserInner.add([rowBg, accent, ...browserTile, nameText, detailText, statePillBg, statePillText, ...addButton, ...quickAddButton]);
+                this.browserInner.add([rowBg, accent, ...browserGlyph, nameText, detailText, stateText, ...addButton, ...quickAddButton]);
             }
         }
 

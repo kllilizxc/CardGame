@@ -92,27 +92,25 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).not.toContain('spiritStones：');
     });
 
-    it('uses Chinese exit-summary labels in the deck management panel', () => {
+    it('uses Chinese return-support labels in the deck management panel', () => {
         const panel = read('src/game/ui/deckbuilder/DeckManagementPanel.ts');
         const model = read('src/game/scenes/expedition/entryFlowModel.ts');
         const deckManagerCopy = `${panel}\n${model}`;
 
-        expect(panel).toContain('返回前摘要');
         expect(panel).toContain('返回远征准备');
-        expect(panel).toContain('摘要区可直接返回远征准备');
+        expect(panel).toContain('已可直接返回');
         expect(panel).toContain('键盘焦点：');
         expect(panel).toContain('Tab 切换区域 · Esc 返回');
         expect(panel).toContain('↑↓ 切换卡组');
         expect(panel).toContain('Enter 加入 1');
         expect(panel).toContain('Enter 直接返回远征准备');
-        expect(panel).toContain('当前卡组：');
         expect(panel).toContain('先切换卡组，再从右侧加入或在中间移除');
         expect(panel).toContain('从储物袋加入');
         expect(panel).toContain('当前卡牌（在这里移除）');
-        expect(panel).toContain('下一步：');
-        expect(panel).toContain('卡组 ×');
         expect(panel).toContain('一键加满');
-        expect(panel).toContain('全部移除');
+        expect(panel).toContain('+1');
+        expect(panel).toContain('加满');
+        expect(panel).toContain('清空');
         expect(panel).toContain('支持输入法');
         expect(deckManagerCopy).toContain('入口：');
         expect(deckManagerCopy).not.toContain('整理时留意');
@@ -131,8 +129,8 @@ describe('expedition UI Chinese copy', () => {
         const panel = read('src/game/ui/deckbuilder/DeckManagementPanel.ts');
 
         expect(panel).toContain('焦点牌面');
-        expect(panel).toContain('默认收起详情');
         expect(panel).toContain('查看当前焦点');
+        expect(panel).toContain('悬停卡组或储物袋条目即可切换焦点牌面');
         expect(panel).toContain('效果要点');
         expect(panel).toContain('剩余');
         expect(panel).toContain('缺口');
