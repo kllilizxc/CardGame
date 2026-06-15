@@ -300,3 +300,6 @@ npm run build      # 或 npm run build-nolog
 3. 截图或 BattleLog 片段
 
 祝开发顺利，玩得开心！
+
+### ExpeditionScene shared-shell follow-up
+补充说明：在这之后，ExpeditionScene 又做了一轮更安静的 shared-shell 收尾：breadcrumb 的提示文案进一步缩短为“可出发 / 可返回准备”等低强调提醒，departure handoff 收成只确认已锁定卡组的 compact support slab，arrival cue 也压到 HUD 下方的次级提示卡里，让远征准备与卡组管理面板继续作为视觉主角。

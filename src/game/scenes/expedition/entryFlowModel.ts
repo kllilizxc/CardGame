@@ -714,10 +714,10 @@ export function createExpeditionDepartureHandoffSummary(
 
     return {
         badgeLabel: '出发确认',
-        headline: `${deckLabel}从${entryLabel}进入${map.name}`,
-        detail: `首层：${openingSummary}`,
+        headline: `${deckLabel}已准备就绪`,
+        detail: `${map.name} · ${entryLabel}`,
         routeLine: routeStageLine,
-        loadoutLine: `带入：${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
+        loadoutLine: `${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
         revealStatusText: `已进入${map.name}：${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石；首层：${openingSummary}。`,
     };
 }
@@ -748,10 +748,10 @@ export function createExpeditionArrivalCueSummary(
 
     return {
         badgeLabel: '抵达提示',
-        headline: `已抵达${map.name} · ${entryLabel}`,
+        headline: `${map.name} · ${entryLabel}`,
         detail: '首层分路已高亮；点按节点后收起。',
         routeLine: routeStageLine,
-        loadoutLine: `带入：${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
+        loadoutLine: `${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
     };
 }
 

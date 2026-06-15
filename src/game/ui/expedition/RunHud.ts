@@ -52,6 +52,16 @@ export class RunHud extends GameObjects.Container {
         }).setOrigin(0, 0.5);
     }
 
+    private measureTextHeight(
+        text: string,
+        style: Phaser.Types.GameObjects.Text.TextStyle,
+    ): number {
+        const probe = this.scene.add.text(-10000, -10000, text, style);
+        const height = probe.height;
+        probe.destroy();
+        return height;
+    }
+
     public updateFromRun(run: RunSnapshot, currentNodeLabel?: string): void {
         const summary = createRunSummary(run, { currentNodeLabel });
 
@@ -79,52 +89,129 @@ export class RunHud extends GameObjects.Container {
         this.hideArrivalCue();
 
         const { width } = this.scene.scale;
-        const panelWidth = Math.min(width - 160, 1060);
+        const panelWidth = Math.min(width - 220, 840);
         const panelX = width / 2;
-        const panelY = 146;
-        const panelHeight = 118;
+        const panelY = 152;
         const panelLeft = panelX - panelWidth / 2 + 28;
-        const overlay = this.scene.add.container(0, 0);
-        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.96);
-        panel.setStrokeStyle(2, 0x38bdf8, 0.84);
-        const accent = this.scene.add.rectangle(panelX, panelY - panelHeight / 2 + 8, panelWidth - 64, 4, 0x38bdf8, 1);
-        const badge = this.scene.add.text(panelLeft, panelY - panelHeight / 2 + 16, summary.badgeLabel, {
+        const contentWidth = panelWidth - 56;
+        const supportWidth = panelWidth - 56;
+        const supportInnerWidth = supportWidth - 24;
+        const badgeHeight = this.measureTextHeight(summary.badgeLabel, {
             fontFamily: 'Arial',
-            fontSize: '12px',
-            color: '#dbeafe',
+            fontSize: '10px',
             fontStyle: 'bold',
-            backgroundColor: '#1d4ed8',
-            padding: { left: 10, right: 10, top: 5, bottom: 5 },
-        }).setOrigin(0, 0);
-        const headline = this.scene.add.text(panelLeft + 108, panelY - panelHeight / 2 + 18, summary.headline, {
+        }) + 8;
+        const headlineHeight = this.measureTextHeight(summary.headline, {
             fontFamily: 'Arial',
-            fontSize: '22px',
+            fontSize: '18px',
+            fontStyle: 'bold',
+            wordWrap: { width: contentWidth },
+        });
+        const detailHeight = this.measureTextHeight(summary.detail, {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            wordWrap: { width: contentWidth },
+        });
+        const routeLabelHeight = this.measureTextHeight('路线', {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            fontStyle: 'bold',
+        });
+        const routeHeight = this.measureTextHeight(summary.routeLine, {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            wordWrap: { width: supportInnerWidth },
+            lineSpacing: 2,
+        });
+        const loadoutLabelHeight = this.measureTextHeight('带入', {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            fontStyle: 'bold',
+        });
+        const loadoutHeight = this.measureTextHeight(summary.loadoutLine, {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            wordWrap: { width: supportInnerWidth },
+            lineSpacing: 2,
+        });
+        const supportHeight = 12
+            + routeLabelHeight
+            + 2
+            + routeHeight
+            + 8
+            + loadoutLabelHeight
+            + 2
+            + loadoutHeight
+            + 12;
+        const panelHeight = Math.max(
+            104,
+            14
+            + badgeHeight
+            + 8
+            + headlineHeight
+            + 6
+            + detailHeight
+            + 10
+            + supportHeight
+            + 14,
+        );
+        const panelTop = panelY - panelHeight / 2;
+        const overlay = this.scene.add.container(0, 0);
+        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.92);
+        panel.setStrokeStyle(1, 0x334155, 0.74);
+        const accent = this.scene.add.rectangle(panelX, panelTop + 5, panelWidth - 52, 2, 0x38bdf8, 0.66);
+        const badge = this.scene.add.text(panelLeft, panelTop + 14, summary.badgeLabel, {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: '#bfdbfe',
+            fontStyle: 'bold',
+            backgroundColor: '#10233d',
+            padding: { left: 8, right: 8, top: 4, bottom: 4 },
+        }).setOrigin(0, 0);
+        const headline = this.scene.add.text(panelLeft, badge.y + badge.height + 8, summary.headline, {
+            fontFamily: 'Arial',
+            fontSize: '18px',
             color: '#f8fafc',
             fontStyle: 'bold',
-            wordWrap: { width: panelWidth - 164 },
+            wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
-        const detail = this.scene.add.text(panelLeft, panelY - 6, summary.detail, {
+        const detail = this.scene.add.text(panelLeft, headline.y + headline.height + 6, summary.detail, {
             fontFamily: 'Arial',
-            fontSize: '15px',
-            color: '#bfdbfe',
-            wordWrap: { width: panelWidth - 56 },
-        }).setOrigin(0, 0.5);
-        const routeLine = this.scene.add.text(panelLeft, panelY + 26, summary.routeLine, {
+            fontSize: '13px',
+            color: '#94a3b8',
+            wordWrap: { width: contentWidth },
+        }).setOrigin(0, 0);
+        const supportTop = detail.y + detail.height + 10;
+        const supportPlate = this.scene.add.rectangle(panelX, supportTop + supportHeight / 2, supportWidth, supportHeight, 0x0c1626, 0.94);
+        supportPlate.setStrokeStyle(1, 0x334155, 0.68);
+        const routeLabel = this.scene.add.text(panelLeft + 12, supportTop + 12, '路线', {
             fontFamily: 'Arial',
-            fontSize: '15px',
-            color: '#e0f2fe',
+            fontSize: '10px',
+            color: '#93c5fd',
             fontStyle: 'bold',
-            wordWrap: { width: panelWidth - 56 },
-        }).setOrigin(0, 0.5);
-        const loadoutLine = this.scene.add.text(panelLeft, panelY + 52, summary.loadoutLine, {
+        }).setOrigin(0, 0);
+        const routeLine = this.scene.add.text(panelLeft + 12, routeLabel.y + routeLabel.height + 2, summary.routeLine, {
             fontFamily: 'Arial',
-            fontSize: '15px',
+            fontSize: '13px',
+            color: '#dbeafe',
+            wordWrap: { width: supportInnerWidth },
+            lineSpacing: 2,
+        }).setOrigin(0, 0);
+        const loadoutLabel = this.scene.add.text(panelLeft + 12, routeLine.y + routeLine.height + 8, '带入', {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: '#86efac',
+            fontStyle: 'bold',
+        }).setOrigin(0, 0);
+        const loadoutLine = this.scene.add.text(panelLeft + 12, loadoutLabel.y + loadoutLabel.height + 2, summary.loadoutLine, {
+            fontFamily: 'Arial',
+            fontSize: '13px',
             color: '#d1fae5',
-            fontStyle: 'bold',
-            wordWrap: { width: panelWidth - 56 },
-        }).setOrigin(0, 0.5);
+            wordWrap: { width: supportInnerWidth },
+            lineSpacing: 2,
+        }).setOrigin(0, 0);
 
-        overlay.add([panel, accent, badge, headline, detail, routeLine, loadoutLine]);
+        overlay.add([panel, accent, badge, headline, detail, supportPlate, routeLabel, routeLine, loadoutLabel, loadoutLine]);
         overlay.setAlpha(0);
         overlay.setY(10);
 
