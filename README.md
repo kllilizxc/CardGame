@@ -284,6 +284,7 @@ npm run build      # 或 npm run build-nolog
 - `.planning/PROJECT.md`：产品定位、核心价值与当前约束。
 - `.planning/REQUIREMENTS.md`：Phase 01 可检查需求与范围外项。
 - `.planning/phases/01-first-playable-expedition/01-CONTEXT.md`：首个可玩秘境闭环的决策、上下文和 canonical refs。
+- `src/game/ui/expedition/PreparationPanel.ts`：远征准备现以 confirm-or-manage 预检卡为主，主 hero 同屏汇总当前带入卡组、放行/阻塞结论与确认/管理动作，卡组切换与补充明细退居次级辅助层。
 - `public/data/docs/battle-rules.md`：战斗假设、卡牌类型与回合流程。
 - `public/data/docs/CARD_GENERATION_GUIDE.md`：卡牌字段、数值与 AI 生成指南。
 - `public/data/docs/CARD_DESIGN_RULES.md`：卡牌资源收益与强度约束。

@@ -9,14 +9,14 @@ import {
 } from './PreparationPanelLayout';
 
 describe('PreparationPanel layout helpers', () => {
-    it('gives deck cards enough room for the comparison panels below typical one-line and two-line names', () => {
+    it('gives compact deck cards enough room for chip rows and the status footer below typical names', () => {
         for (const deckNameHeight of [22, 44]) {
             const cardHeight = calculateDeckCardHeight(deckNameHeight);
-            const comparisonTop = 86 + deckNameHeight;
-            const footerTop = cardHeight - 35;
-            const comparisonHeight = footerTop - comparisonTop - 8;
+            const focusChipBottom = 44 + deckNameHeight + 45;
+            const footerTop = cardHeight - 32;
 
-            expect(comparisonHeight).toBeGreaterThanOrEqual(64);
+            expect(footerTop - focusChipBottom).toBeGreaterThanOrEqual(0);
+            expect(cardHeight).toBeGreaterThanOrEqual(192);
         }
     });
 
@@ -58,18 +58,18 @@ describe('PreparationPanel layout helpers', () => {
             const leftColumnBottom = 30 + headerHeight + 12 + sectionHeight + 10 + shortcutHintHeight;
             const rightColumnBottom = 30 + actionColumnHeight;
 
-            expect(heroHeight - Math.max(leftColumnBottom, rightColumnBottom)).toBeGreaterThanOrEqual(22);
-            expect(heroHeight).toBeGreaterThanOrEqual(324);
+            expect(heroHeight - Math.max(leftColumnBottom, rightColumnBottom)).toBeGreaterThanOrEqual(18);
+            expect(heroHeight).toBeGreaterThanOrEqual(260);
         }
     });
 
-    it('gives the subordinate loadout detail card enough room for manifest content and the carry footer', () => {
+    it('gives the subordinate loadout detail card enough room for compact manifest content and an optional footer', () => {
         for (const [contentHeight, footerHeight] of [[176, 30], [212, 45]] as const) {
             const detailHeight = calculateLoadoutDetailHeight(contentHeight, footerHeight);
-            const contentBottom = 48 + contentHeight + 12 + footerHeight;
+            const contentBottom = 28 + contentHeight + 8 + footerHeight;
 
             expect(detailHeight - contentBottom).toBeGreaterThanOrEqual(0);
-            expect(detailHeight).toBeGreaterThanOrEqual(220);
+            expect(detailHeight).toBeGreaterThanOrEqual(148);
         }
     });
 });
