@@ -1,7 +1,6 @@
 import { GameObjects, Scene } from 'phaser';
 
 import type { CardKind, CardRarity } from '@data/types/cards/core';
-import type { ExpeditionRouteBriefingSummary } from '../../scenes/expedition/entryFlowModel';
 import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import {
     computeCardCollectionViewModel,
@@ -36,7 +35,6 @@ import {
 export interface DeckManagementPanelConfig {
     stash: PersistentStash;
     metadata?: CardMetadataMap;
-    routeBriefing?: ExpeditionRouteBriefingSummary;
     initialKeyboardZone?: 'decks' | 'editor' | 'browser' | 'return';
     onStashChange: (stash: PersistentStash) => void;
     onClose: () => void;
@@ -1147,10 +1145,6 @@ function createReturnCtaState(summary: DeckStatusSummary): ReturnCtaState {
     };
 }
 
-function buildDeckManagerRouteBannerDetail(routeBriefing: ExpeditionRouteBriefingSummary): string {
-    return truncateLabel(routeBriefing.description, 120);
-}
-
 export class DeckManagementPanel extends GameObjects.Container {
     private stash: PersistentStash;
     private readonly config: DeckManagementPanelConfig;
@@ -1398,7 +1392,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.keyboardGuideAccent.setFillStyle(copy.accentColor, 0.95);
         this.keyboardGuideHeadline.setText(copy.headline);
         this.keyboardGuideHeadline.setColor(copy.headlineColor);
-        this.keyboardGuideDetail.setText(truncateLabel(copy.detail, this.config.routeBriefing ? 64 : 76));
+        this.keyboardGuideDetail.setText(truncateLabel(copy.detail, 76));
         this.keyboardGuideDetail.setColor(copy.detailColor);
         this.keyboardGuidePillText.setText(this.dialogMode || this.namingMode || this.searchFocus
             ? 'Enter 确认 · Esc 取消'
@@ -2771,11 +2765,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             false,
             { hoverFillColor: 0x334155, strokeColor: 0x64748b, fontSize: '13px' },
         );
-        const routeBriefingElements: Phaser.GameObjects.GameObject[] = [];
-        const hasRouteBriefing = Boolean(this.config.routeBriefing);
-        const routeBriefingTop = subtitle.y + subtitle.height + 4;
-        const routeBriefingHeight = hasRouteBriefing ? 12 : 0;
-        const keyboardGuideTop = routeBriefingTop + routeBriefingHeight + (hasRouteBriefing ? 4 : 2);
+        const keyboardGuideTop = subtitle.y + subtitle.height + 8;
         const keyboardGuideWidth = panelWidth - 68;
         const keyboardGuideHeight = 26;
         this.keyboardGuideBg = this.scene.add.rectangle(
@@ -2795,20 +2785,6 @@ export class DeckManagementPanel extends GameObjects.Container {
             SELECTED_ACCENT,
             0.95,
         ).setOrigin(0, 0.5);
-        if (this.config.routeBriefing) {
-            const routeDetail = truncateLabel(
-                `路线：${buildDeckManagerRouteBannerDetail(this.config.routeBriefing)}`,
-                92,
-            );
-            const routeLabel = this.scene.add.text(titleX + 4, routeBriefingTop, routeDetail, {
-                fontFamily: 'Arial',
-                fontSize: '10px',
-                color: '#93c5fd',
-                fontStyle: 'bold',
-            });
-            routeBriefingElements.push(routeLabel);
-        }
-
         const keyboardGuideY = keyboardGuideTop + keyboardGuideHeight / 2;
         this.keyboardGuideHeadline = this.scene.add.text(titleX + 18, keyboardGuideY, '', {
             fontFamily: 'Arial',
@@ -2874,7 +2850,6 @@ export class DeckManagementPanel extends GameObjects.Container {
             ...closeButton,
             this.keyboardGuideBg,
             this.keyboardGuideAccent,
-            ...routeBriefingElements,
             this.keyboardGuideHeadline,
             this.keyboardGuideDetail,
             this.keyboardGuidePillBg,

@@ -17,7 +17,6 @@ import {
     createPreparationDeckCardPreview,
     createPreparationDeckContext,
     createPreparationDeckHandoffSummary,
-    createExpeditionPreflightStatusSummary,
     createExpeditionRouteBriefingSummary,
     createPreparationSelectedLoadoutSummary,
     createPostRunEntranceStatus,
@@ -127,60 +126,6 @@ describe('entryFlowModel', () => {
                 '三层：引路散修·店',
                 '终层：问心回响·首 / 索桥撤离点·撤',
             ],
-        });
-    });
-
-    it('builds a ready-to-depart preflight shell summary for preparation mode', () => {
-        const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
-            starterDeck: structuredClone(starterDeckJson),
-        });
-
-        expect(createExpeditionPreflightStatusSummary(state.persistentStash, 'preparation')).toEqual({
-            mode: 'preparation',
-            steps: [
-                { index: 1, label: '确认路线与带入', state: 'current' },
-                { index: 2, label: '卡组管理', state: 'upcoming' },
-            ],
-            badgeLabel: '可出发',
-            headline: '当前带入「功能测试卡组」 · 20 张',
-            detail: '20-40 张与库存已通过；携带 3 件道具 · 36 枚灵石。可直接出发。',
-            tone: 'positive',
-        });
-    });
-
-    it('builds a warning preflight shell summary for deck-management edits that are not ready', () => {
-        const stash = {
-            stashId: 'phase01.starter-stash',
-            cards: [
-                { id: 'AR_001', count: 3 },
-                { id: 'AR_002', count: 2 },
-            ],
-            savedDecks: [{
-                id: 'shortage',
-                name: '缺牌卡组',
-                cards: [
-                    { id: 'AR_001', count: 4 },
-                    { id: 'AR_002', count: 3 },
-                    { id: 'AR_003', count: 13 },
-                ],
-            }],
-            selectedDeckId: 'shortage',
-            items: [],
-            spiritStones: 18,
-            lastRunSummary: null,
-        };
-
-        expect(createExpeditionPreflightStatusSummary(stash, 'deckManager')).toEqual({
-            mode: 'deckManager',
-            steps: [
-                { index: 1, label: '确认路线与带入', state: 'complete' },
-                { index: 2, label: '卡组管理', state: 'current' },
-            ],
-            badgeLabel: '库存不足',
-            headline: '当前带入「缺牌卡组」 · 20 张',
-            detail: '3 种卡牌库存不足，共缺 15 张；携带 0 件道具 · 18 枚灵石。',
-            tone: 'warning',
         });
     });
 

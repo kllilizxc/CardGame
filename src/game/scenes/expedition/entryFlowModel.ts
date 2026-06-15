@@ -156,23 +156,6 @@ export interface ExpeditionRouteBriefingSummary {
     glanceLines: string[];
 }
 
-export type ExpeditionPreflightStepState = 'current' | 'complete' | 'upcoming';
-
-export interface ExpeditionPreflightStepSummary {
-    index: 1 | 2;
-    label: string;
-    state: ExpeditionPreflightStepState;
-}
-
-export interface ExpeditionPreflightStatusSummary {
-    mode: ExpeditionRouteBriefingMode;
-    steps: [ExpeditionPreflightStepSummary, ExpeditionPreflightStepSummary];
-    badgeLabel: string;
-    headline: string;
-    detail: string;
-    tone: PreparationDeckHandoffSummary['tone'];
-}
-
 export interface ExpeditionDepartureHandoffSummary {
     badgeLabel: string;
     headline: string;
@@ -812,86 +795,6 @@ function getRouteBriefingShellCopy(mode: ExpeditionRouteBriefingMode): {
     };
 }
 
-function createExpeditionPreflightSteps(mode: ExpeditionRouteBriefingMode): [ExpeditionPreflightStepSummary, ExpeditionPreflightStepSummary] {
-    if (mode === 'deckManager') {
-        return [
-            { index: 1, label: '确认路线与带入', state: 'complete' },
-            { index: 2, label: '卡组管理', state: 'current' },
-        ];
-    }
-
-    return [
-        { index: 1, label: '确认路线与带入', state: 'current' },
-        { index: 2, label: '卡组管理', state: 'upcoming' },
-    ];
-}
-
-function getExpeditionPreflightBadgeLabel(
-    mode: ExpeditionRouteBriefingMode,
-    readiness: PreparationDeckReadiness,
-): string {
-    switch (readiness) {
-        case 'ready':
-            return mode === 'deckManager' ? '可返回确认' : '可出发';
-        case 'none':
-            return '待选卡组';
-        case 'too-few-cards':
-            return '缺出征线';
-        case 'too-many-cards':
-            return '超出上限';
-        case 'insufficient-copies':
-            return '库存不足';
-    }
-}
-
-function getExpeditionPreflightTone(readiness: PreparationDeckReadiness): PreparationDeckHandoffSummary['tone'] {
-    return readiness === 'ready' ? 'positive' : 'warning';
-}
-
-function formatExpeditionPreflightHeadline(context: PreparationDeckContext): string {
-    if (!context.selectedDeckId || !context.selectedDeckName) {
-        return '尚未选定本次带入卡组';
-    }
-
-    return `当前带入「${context.selectedDeckName}」 · ${context.deckCount} 张`;
-}
-
-function formatExpeditionPreflightInventory(stash: PersistentStash): string {
-    return `${countStacks(stash.items)} 件道具 · ${stash.spiritStones} 枚灵石`;
-}
-
-function createExpeditionPreflightDetail(
-    mode: ExpeditionRouteBriefingMode,
-    stash: PersistentStash,
-    readiness: PreparationDeckReadiness,
-    sizeIssue: DeckValidityReason | null,
-    availabilityIssues: DeckValidityReason[],
-): string {
-    const inventorySummary = formatExpeditionPreflightInventory(stash);
-
-    switch (readiness) {
-        case 'ready':
-            return mode === 'deckManager'
-                ? `20-40 张与库存已通过；携带 ${inventorySummary}。可返回确认。`
-                : `20-40 张与库存已通过；携带 ${inventorySummary}。可直接出发。`;
-        case 'none':
-            return mode === 'deckManager'
-                ? `先选或新建一套卡组；携带 ${inventorySummary}。`
-                : `先选或新建一套卡组；携带 ${inventorySummary}。`;
-        case 'too-few-cards':
-            return `还差 ${sizeIssue?.kind === 'too-few-cards' ? sizeIssue.min - sizeIssue.count : DECK_CARD_MIN} 张达到 ${DECK_CARD_MIN} 张；携带 ${inventorySummary}。`;
-        case 'too-many-cards':
-            return `超出 ${sizeIssue?.kind === 'too-many-cards' ? sizeIssue.count - sizeIssue.max : 0} 张，请精简到 ${DECK_CARD_MAX} 张内；携带 ${inventorySummary}。`;
-        case 'insufficient-copies': {
-            const missingCopies = countPreparationMissingCopies(availabilityIssues);
-
-            return availabilityIssues.length === 1
-                ? `1 种卡牌库存不足，共缺 ${missingCopies} 张；携带 ${inventorySummary}。`
-                : `${availabilityIssues.length} 种卡牌库存不足，共缺 ${missingCopies} 张；携带 ${inventorySummary}。`;
-        }
-    }
-}
-
 export function createExpeditionRouteBriefingSummary(
     map: ExpeditionMapDefinition,
     mode: ExpeditionRouteBriefingMode,
@@ -930,25 +833,6 @@ export function createExpeditionRouteBriefingSummary(
         telemetryChips: createRouteTelemetryChips(map),
         glanceTitle: '分层速览',
         glanceLines: createRouteGlanceLines(map),
-    };
-}
-
-export function createExpeditionPreflightStatusSummary(
-    stash: PersistentStash,
-    mode: ExpeditionRouteBriefingMode,
-): ExpeditionPreflightStatusSummary {
-    const context = createPreparationDeckContext(stash);
-    const selectedDeck = getSelectedSavedDeck(stash);
-    const sizeIssue = selectedDeck ? validateDeckSize(selectedDeck.cards) : null;
-    const availabilityIssues = selectedDeck ? validateDeckAvailability(selectedDeck.cards, stash.cards) : [];
-
-    return {
-        mode,
-        steps: createExpeditionPreflightSteps(mode),
-        badgeLabel: getExpeditionPreflightBadgeLabel(mode, context.readiness),
-        headline: formatExpeditionPreflightHeadline(context),
-        detail: createExpeditionPreflightDetail(mode, stash, context.readiness, sizeIssue, availabilityIssues),
-        tone: getExpeditionPreflightTone(context.readiness),
     };
 }
 
