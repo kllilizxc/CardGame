@@ -16,7 +16,7 @@ describe('PreparationPanel layout helpers', () => {
             const footerTop = cardHeight - 28;
             const comparisonHeight = footerTop - comparisonTop - 8;
 
-            expect(comparisonHeight).toBeGreaterThanOrEqual(56);
+            expect(comparisonHeight).toBeGreaterThanOrEqual(42);
         }
     });
 
@@ -25,7 +25,7 @@ describe('PreparationPanel layout helpers', () => {
             const summaryHeight = calculateSelectedLoadoutSummaryHeight(nameHeight, footerHeight, manifestStackHeight);
             const compositionBottom = 200 + nameHeight;
             const footerTop = summaryHeight - 18 - footerHeight;
-            const previewPanelHeight = summaryHeight - 96;
+            const previewPanelHeight = summaryHeight - 88;
 
             expect(footerTop - compositionBottom).toBeGreaterThanOrEqual(8);
             expect(previewPanelHeight).toBeGreaterThanOrEqual(manifestStackHeight);
@@ -43,7 +43,7 @@ describe('PreparationPanel layout helpers', () => {
             const shortcutHintBottom = 38 + headlineHeight + 6 + detailHeight + 6 + nextStepHeight + 6 + shortcutHintHeight;
 
             expect(railHeight - 18 - shortcutHintBottom).toBeGreaterThanOrEqual(0);
-            expect(railHeight).toBeGreaterThanOrEqual(148);
+            expect(railHeight).toBeGreaterThanOrEqual(136);
         }
     });
 
@@ -58,8 +58,8 @@ describe('PreparationPanel layout helpers', () => {
             const leftColumnBottom = 30 + headerHeight + 12 + sectionHeight + 10 + shortcutHintHeight;
             const rightColumnBottom = 30 + actionColumnHeight;
 
-            expect(heroHeight - Math.max(leftColumnBottom, rightColumnBottom)).toBeGreaterThanOrEqual(18);
-            expect(heroHeight).toBeGreaterThanOrEqual(288);
+            expect(heroHeight - Math.max(leftColumnBottom, rightColumnBottom)).toBeGreaterThanOrEqual(14);
+            expect(heroHeight).toBeGreaterThanOrEqual(244);
         }
     });
 
@@ -69,7 +69,7 @@ describe('PreparationPanel layout helpers', () => {
             const contentBottom = 36 + contentHeight + 10 + footerHeight;
 
             expect(detailHeight - contentBottom).toBeGreaterThanOrEqual(0);
-            expect(detailHeight).toBeGreaterThanOrEqual(144);
+            expect(detailHeight).toBeGreaterThanOrEqual(120);
         }
     });
 });
