@@ -960,31 +960,31 @@ export function createPreparationSelectedLoadoutSummary(
     const shortageCardKinds = availabilityIssues.length;
     const shortageCardCopies = countPreparationMissingCopies(availabilityIssues);
 
-    let headline = '尚未选择卡组';
-    let detail = '请先选择或创建一套满足要求的卡组，再确认本次带入。';
+    let headline = '先选一套可带入的卡组';
+    let detail = '没有选中卡组时，暂时不能确认出发。';
     let footer = '当前不会创建新的秘境带入快照。';
 
     switch (readiness) {
         case 'ready':
-            headline = '当前卡组已可带入';
-            detail = '满足 20-40 张且所有卡牌均在储物袋中。';
-            footer = `确认时会携带 ${deckCount} 张卡、${itemCount} 件道具与 ${stash.spiritStones} 枚灵石进入秘境。`;
+            headline = '可以直接确认出发';
+            detail = '张数与库存都已核对。';
+            footer = `确认时会按当前清单带入 ${deckCount} 张卡、${itemCount} 件道具与 ${stash.spiritStones} 枚灵石。`;
             break;
         case 'too-few-cards':
-            headline = '当前卡组张数不足';
-            detail = `还差 ${(sizeIssue?.kind === 'too-few-cards' ? sizeIssue.min - sizeIssue.count : DECK_CARD_MIN - deckCount)} 张才能达到 ${DECK_CARD_MIN} 张。`;
+            headline = `还差 ${(sizeIssue?.kind === 'too-few-cards' ? sizeIssue.min - sizeIssue.count : DECK_CARD_MIN - deckCount)} 张才能出发`;
+            detail = `先补到 ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张，再回来确认。`;
             footer = '补足牌数后，会按当前所示卡组与物资进入秘境。';
             break;
         case 'too-many-cards':
-            headline = '当前卡组超出上限';
-            detail = `超出 ${(sizeIssue?.kind === 'too-many-cards' ? sizeIssue.count - sizeIssue.max : deckCount - DECK_CARD_MAX)} 张，请精简到 ${DECK_CARD_MAX} 张内。`;
+            headline = `超出上限 ${(sizeIssue?.kind === 'too-many-cards' ? sizeIssue.count - sizeIssue.max : deckCount - DECK_CARD_MAX)} 张`;
+            detail = `先精简到 ${DECK_CARD_MAX} 张内，再回来确认。`;
             footer = '精简卡组后，会按当前所示卡组与物资进入秘境。';
             break;
         case 'insufficient-copies':
-            headline = '当前卡组库存不足';
+            headline = `库存还缺 ${shortageCardCopies} 张`;
             detail = shortageCardKinds === 1
-                ? `1 种卡牌库存不足，共缺 ${shortageCardCopies} 张。`
-                : `${shortageCardKinds} 种卡牌库存不足，共缺 ${shortageCardCopies} 张。`;
+                ? '先补齐这 1 种缺牌，再回来确认。'
+                : `先补齐 ${shortageCardKinds} 种缺牌，再回来确认。`;
             footer = '补齐库存卡牌后，会按当前所示卡组与物资进入秘境。';
             break;
         case 'none':

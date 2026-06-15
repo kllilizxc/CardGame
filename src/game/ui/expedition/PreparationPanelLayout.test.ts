@@ -9,14 +9,14 @@ import {
 } from './PreparationPanelLayout';
 
 describe('PreparationPanel layout helpers', () => {
-    it('gives deck cards enough room for the comparison panels below typical one-line and two-line names', () => {
+    it('gives the lighter deck-switch cards enough room for the status line and footer below one-line and two-line names', () => {
         for (const deckNameHeight of [22, 44]) {
             const cardHeight = calculateDeckCardHeight(deckNameHeight);
-            const comparisonTop = 76 + deckNameHeight;
-            const footerTop = cardHeight - 28;
-            const comparisonHeight = footerTop - comparisonTop - 8;
+            const issueTop = 58 + deckNameHeight;
+            const footerTop = cardHeight - 26;
+            const issueHeight = footerTop - issueTop - 8;
 
-            expect(comparisonHeight).toBeGreaterThanOrEqual(42);
+            expect(issueHeight).toBeGreaterThanOrEqual(18);
         }
     });
 
@@ -47,8 +47,8 @@ describe('PreparationPanel layout helpers', () => {
         }
     });
 
-    it('gives the readiness hero enough room for the headline stack, support panels, and CTA column', () => {
-        for (const [headerHeight, sectionHeight, shortcutHintHeight, actionColumnHeight] of [[150, 88, 18, 188], [214, 116, 36, 214]] as const) {
+    it('gives the shorter decision hero enough room for the headline stack, support panel, and CTA column', () => {
+        for (const [headerHeight, sectionHeight, shortcutHintHeight, actionColumnHeight] of [[130, 74, 18, 170], [186, 104, 36, 198]] as const) {
             const heroHeight = calculateReadinessHeroHeight(
                 headerHeight,
                 sectionHeight,
@@ -58,18 +58,18 @@ describe('PreparationPanel layout helpers', () => {
             const leftColumnBottom = 30 + headerHeight + 12 + sectionHeight + 10 + shortcutHintHeight;
             const rightColumnBottom = 30 + actionColumnHeight;
 
-            expect(heroHeight - Math.max(leftColumnBottom, rightColumnBottom)).toBeGreaterThanOrEqual(14);
-            expect(heroHeight).toBeGreaterThanOrEqual(244);
+            expect(heroHeight - Math.max(leftColumnBottom, rightColumnBottom)).toBeGreaterThanOrEqual(12);
+            expect(heroHeight).toBeGreaterThanOrEqual(220);
         }
     });
 
-    it('gives the subordinate loadout detail card enough room for manifest content and the carry footer', () => {
-        for (const [contentHeight, footerHeight] of [[112, 24], [148, 36]] as const) {
+    it('gives the subordinate loadout detail card enough room for manifest content and the quieter footer', () => {
+        for (const [contentHeight, footerHeight] of [[96, 24], [132, 36]] as const) {
             const detailHeight = calculateLoadoutDetailHeight(contentHeight, footerHeight);
             const contentBottom = 36 + contentHeight + 10 + footerHeight;
 
             expect(detailHeight - contentBottom).toBeGreaterThanOrEqual(0);
-            expect(detailHeight).toBeGreaterThanOrEqual(120);
+            expect(detailHeight).toBeGreaterThanOrEqual(112);
         }
     });
 });
