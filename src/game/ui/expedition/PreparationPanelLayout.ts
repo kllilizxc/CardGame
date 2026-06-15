@@ -1,17 +1,17 @@
-const DECK_CARD_MIN_HEIGHT = 192;
-const DECK_CARD_COMPARISON_MIN_HEIGHT = 42;
+const DECK_CARD_MIN_HEIGHT = 204;
+const DECK_CARD_COMPARISON_MIN_HEIGHT = 56;
 const LOADOUT_SUMMARY_MIN_HEIGHT = 332;
 const LOADOUT_MANIFEST_STACK_TOP_OFFSET = 96;
 const ACTION_RAIL_MIN_HEIGHT = 148;
 const ACTION_RAIL_BUTTON_STACK_MIN_HEIGHT = 148;
-const READINESS_HERO_MIN_HEIGHT = 260;
+const READINESS_HERO_MIN_HEIGHT = 288;
 const READINESS_HERO_BOTTOM_PADDING = 18;
-const LOADOUT_DETAIL_MIN_HEIGHT = 148;
+const LOADOUT_DETAIL_MIN_HEIGHT = 144;
 
 export function calculateDeckCardHeight(deckNameHeight: number): number {
     return Math.max(
         DECK_CARD_MIN_HEIGHT,
-        deckNameHeight + 86 + DECK_CARD_COMPARISON_MIN_HEIGHT,
+        deckNameHeight + 112 + DECK_CARD_COMPARISON_MIN_HEIGHT,
     );
 }
 
@@ -67,6 +67,6 @@ export function calculateLoadoutDetailHeight(
 ): number {
     return Math.max(
         LOADOUT_DETAIL_MIN_HEIGHT,
-        28 + contentHeight + (footerHeight > 0 ? 8 + footerHeight : 0),
+        36 + contentHeight + 10 + footerHeight,
     );
 }

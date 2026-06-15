@@ -9,14 +9,14 @@ import {
 } from './PreparationPanelLayout';
 
 describe('PreparationPanel layout helpers', () => {
-    it('gives compact deck cards enough room for chip rows and the status footer below typical names', () => {
+    it('gives deck cards enough room for the comparison panels below typical one-line and two-line names', () => {
         for (const deckNameHeight of [22, 44]) {
             const cardHeight = calculateDeckCardHeight(deckNameHeight);
-            const focusChipBottom = 44 + deckNameHeight + 45;
-            const footerTop = cardHeight - 32;
+            const comparisonTop = 76 + deckNameHeight;
+            const footerTop = cardHeight - 28;
+            const comparisonHeight = footerTop - comparisonTop - 8;
 
-            expect(footerTop - focusChipBottom).toBeGreaterThanOrEqual(0);
-            expect(cardHeight).toBeGreaterThanOrEqual(192);
+            expect(comparisonHeight).toBeGreaterThanOrEqual(56);
         }
     });
 
@@ -59,17 +59,17 @@ describe('PreparationPanel layout helpers', () => {
             const rightColumnBottom = 30 + actionColumnHeight;
 
             expect(heroHeight - Math.max(leftColumnBottom, rightColumnBottom)).toBeGreaterThanOrEqual(18);
-            expect(heroHeight).toBeGreaterThanOrEqual(260);
+            expect(heroHeight).toBeGreaterThanOrEqual(288);
         }
     });
 
-    it('gives the subordinate loadout detail card enough room for compact manifest content and an optional footer', () => {
-        for (const [contentHeight, footerHeight] of [[176, 30], [212, 45]] as const) {
+    it('gives the subordinate loadout detail card enough room for manifest content and the carry footer', () => {
+        for (const [contentHeight, footerHeight] of [[112, 24], [148, 36]] as const) {
             const detailHeight = calculateLoadoutDetailHeight(contentHeight, footerHeight);
-            const contentBottom = 28 + contentHeight + 8 + footerHeight;
+            const contentBottom = 36 + contentHeight + 10 + footerHeight;
 
             expect(detailHeight - contentBottom).toBeGreaterThanOrEqual(0);
-            expect(detailHeight).toBeGreaterThanOrEqual(148);
+            expect(detailHeight).toBeGreaterThanOrEqual(144);
         }
     });
 });
