@@ -3733,15 +3733,15 @@ export class DeckManagementPanel extends GameObjects.Container {
         const namingActive = this.isDeckNamingActive(deck);
         const detailExpanded = !namingActive && this.detailPaneExpanded;
         const compactSummaryMetrics = !namingActive && !detailExpanded;
-        const targetSummaryH = namingActive ? 248 : detailExpanded ? 172 : 152;
+        const targetSummaryH = namingActive ? 248 : detailExpanded ? 172 : 104;
         const summaryH = namingActive
             ? Math.min(targetSummaryH, Math.max(196, contentH - 118))
             : detailExpanded
                 ? Math.min(targetSummaryH, Math.max(160, contentH - 96))
-                : Math.min(targetSummaryH, Math.max(142, contentH - 100));
-        const listHeaderY = summaryH + 12;
+                : Math.min(targetSummaryH, Math.max(92, contentH - 148));
+        const listHeaderY = compactSummaryMetrics ? summaryH : summaryH + 12;
         const scrollBtnY = contentH - 12;
-        const listTop = listHeaderY + 20;
+        const listTop = compactSummaryMetrics ? summaryH + 8 : listHeaderY + 20;
         const listBottom = scrollBtnY - 14;
         const listH = Math.max(82, listBottom - listTop);
         const editorRowHeight = detailExpanded ? EDITOR_ROW_HEIGHT + 4 : EDITOR_ROW_HEIGHT;
@@ -3853,6 +3853,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         let ctaLabel: GameObjects.Text | null = null;
         let returnHintText: GameObjects.Text | null = null;
         let headerMetaText: GameObjects.Text | null = null;
+        let compactHeaderTextWidth = leftSummaryW;
 
         if (namingActive) {
             const namingTitle = this.scene.add.text(localX + 16, 38, this.namingMode === 'create' ? '给新卡组起个名字' : '修改卡组名称', {
@@ -3959,14 +3960,34 @@ export class DeckManagementPanel extends GameObjects.Container {
                 compactSummaryMetrics ? 0.26 : 0.34,
             );
             const returnCta = createReturnCtaState(summary);
-            const returnButtonCenterX = localX + summaryW - 48;
-            const deleteButtonCenterX = returnButtonCenterX - 45 - 4 - 24;
-            const renameButtonCenterX = deleteButtonCenterX - 24 - 4 - 21;
-            const newDeckButtonCenterX = renameButtonCenterX - 21 - 4 - 21;
+            const actionButtonGap = 4;
+            const returnButtonWidth = 90;
+            const inspectButtonWidth = compactSummaryMetrics ? 74 : 0;
+            const deleteButtonWidth = 48;
+            const renameButtonWidth = 42;
+            const newDeckButtonWidth = 42;
+            const deckStepButtonWidth = compactSummaryMetrics && decks.length > 1 ? 18 : 0;
+            let actionCursorRight = localX + summaryW - 8;
+            const placeActionButton = (width: number): number => {
+                const centerX = actionCursorRight - width / 2;
+                actionCursorRight = centerX - width / 2 - actionButtonGap;
+                return centerX;
+            };
+
+            const returnButtonCenterX = placeActionButton(returnButtonWidth);
+            const inspectButtonCenterX = compactSummaryMetrics ? placeActionButton(inspectButtonWidth) : null;
+            const deleteButtonCenterX = placeActionButton(deleteButtonWidth);
+            const renameButtonCenterX = placeActionButton(renameButtonWidth);
+            const newDeckButtonCenterX = placeActionButton(newDeckButtonWidth);
+            const nextDeckButtonCenterX = deckStepButtonWidth > 0 ? placeActionButton(deckStepButtonWidth) : null;
+            const prevDeckButtonCenterX = deckStepButtonWidth > 0 ? placeActionButton(deckStepButtonWidth) : null;
+            compactHeaderTextWidth = compactSummaryMetrics
+                ? Math.max(220, actionCursorRight - (localX + 20))
+                : leftSummaryW;
             const newDeckButton = this.createButton(
                 newDeckButtonCenterX,
                 12,
-                42,
+                newDeckButtonWidth,
                 18,
                 '新建',
                 0x2563eb,
@@ -3981,7 +4002,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             const renameButton = this.createButton(
                 renameButtonCenterX,
                 12,
-                42,
+                renameButtonWidth,
                 18,
                 '改名',
                 0x0f172a,
@@ -3996,7 +4017,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             const [deleteDeckButton, deleteDeckLabel] = this.createButton(
                 deleteButtonCenterX,
                 12,
-                48,
+                deleteButtonWidth,
                 18,
                 '删除',
                 0xb91c1c,
@@ -4010,10 +4031,64 @@ export class DeckManagementPanel extends GameObjects.Container {
             );
             this.deleteDeckBtn = deleteDeckButton;
             this.deleteDeckLabel = deleteDeckLabel;
+            const prevDeckButton = deckStepButtonWidth > 0 && prevDeckButtonCenterX !== null
+                ? this.createButton(
+                    prevDeckButtonCenterX,
+                    12,
+                    deckStepButtonWidth,
+                    18,
+                    '‹',
+                    0x1f2937,
+                    () => this.focusNextDeck(-1),
+                    selectedDeckIndex <= 0,
+                    {
+                        hoverFillColor: 0x334155,
+                        strokeColor: 0x475569,
+                        fontSize: '10px',
+                    },
+                )
+                : null;
+            const nextDeckButton = deckStepButtonWidth > 0 && nextDeckButtonCenterX !== null
+                ? this.createButton(
+                    nextDeckButtonCenterX,
+                    12,
+                    deckStepButtonWidth,
+                    18,
+                    '›',
+                    0x1f2937,
+                    () => this.focusNextDeck(1),
+                    selectedDeckIndex >= decks.length - 1,
+                    {
+                        hoverFillColor: 0x334155,
+                        strokeColor: 0x475569,
+                        fontSize: '10px',
+                    },
+                )
+                : null;
+            const inspectFocusAction = compactSummaryMetrics && inspectButtonCenterX !== null
+                ? this.createButton(
+                    inspectButtonCenterX,
+                    12,
+                    inspectButtonWidth,
+                    18,
+                    '查看当前焦点',
+                    0x0f172a,
+                    () => {
+                        this.setKeyboardZone('editor');
+                        this.toggleDetailPane(true);
+                    },
+                    false,
+                    {
+                        hoverFillColor: 0x172033,
+                        strokeColor: 0x475569,
+                        fontSize: '8px',
+                    },
+                )
+                : null;
             ctaButton = this.scene.add.rectangle(
                 returnButtonCenterX,
                 12,
-                90,
+                returnButtonWidth,
                 18,
                 returnCta.buttonFillColor,
                 1,
@@ -4056,7 +4131,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                 fontSize: compactSummaryMetrics ? '24px' : '28px',
                 color: '#f8fafc',
                 fontStyle: 'bold',
-                wordWrap: { width: Math.max(144, leftSummaryW - (compactSummaryMetrics ? 222 : 128)) },
+                wordWrap: { width: Math.max(144, compactSummaryMetrics ? compactHeaderTextWidth : leftSummaryW - 128) },
             });
             nameText.setInteractive({ useHandCursor: true });
             nameText.on('pointerdown', () => {
@@ -4085,7 +4160,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                     fontSize: compactSummaryMetrics ? '10px' : '11px',
                     color: '#cbd5e1',
                     fontStyle: compactSummaryMetrics ? 'normal' : 'bold',
-                    wordWrap: { width: Math.max(132, leftSummaryW - (compactSummaryMetrics ? 218 : 8)) },
+                    wordWrap: { width: Math.max(132, compactSummaryMetrics ? compactHeaderTextWidth : leftSummaryW - 8) },
                 },
             );
             this.editorContainer.add([
@@ -4093,10 +4168,13 @@ export class DeckManagementPanel extends GameObjects.Container {
                 titleDivider,
                 nameText,
                 headerMetaText,
+                ...(prevDeckButton ? prevDeckButton : []),
+                ...(nextDeckButton ? nextDeckButton : []),
                 ...newDeckButton,
                 ...renameButton,
                 deleteDeckButton,
                 deleteDeckLabel,
+                ...(inspectFocusAction ? inspectFocusAction : []),
                 ctaButton,
                 ctaLabel,
                 ...(returnHintText ? [returnHintText] : []),
@@ -4142,7 +4220,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                     fontSize: '9px',
                     color: capacityTextColor,
                     fontStyle: 'bold',
-                    wordWrap: { width: leftSummaryW },
+                    wordWrap: { width: Math.max(180, compactHeaderTextWidth) },
                 },
             );
             capacitySummaryText = detailText;
@@ -4296,7 +4374,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                 : [capacityMinimumMarker]);
         }
 
-        if (!namingActive) {
+        if (!namingActive && !compactSummaryMetrics) {
             const maxVisibleDeckChips = 4;
             const visibleStart = Phaser.Math.Clamp(
                 selectedDeckIndex - Math.floor((maxVisibleDeckChips - 1) / 2),
@@ -4408,7 +4486,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                 this.editorContainer.add(this.detailPaneContainer);
                 this.refreshDetailPane(deckSelectionChanged);
                 detailSurfacePulseTargets.push(this.detailPaneContainer);
-            } else {
+            } else if (!compactSummaryMetrics) {
                 inspectFocusButton = this.createButton(
                     summaryW - 36,
                     listHeaderY + 6,
@@ -4430,19 +4508,22 @@ export class DeckManagementPanel extends GameObjects.Container {
             }
         }
 
-        const listHeaderDivider = this.scene.add.rectangle(summaryW / 2, listHeaderY + 12, summaryW - 4, 1, summary.accentColor, 0.1);
-        const cardListTitle = this.scene.add.text(localX, listHeaderY - 1, `当前卡牌（在这里移除） · ${deck.cards.length} 个条目`, {
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: '#94a3b8',
-            fontStyle: 'bold',
-            wordWrap: { width: inspectFocusButton ? summaryW - 98 : summaryW - 12 },
-        });
-        this.editorContainer.add([
-            listHeaderDivider,
-            cardListTitle,
-            ...(inspectFocusButton ? inspectFocusButton : []),
-        ]);
+        let cardListTitle: GameObjects.Text | null = null;
+        if (!compactSummaryMetrics) {
+            const listHeaderDivider = this.scene.add.rectangle(summaryW / 2, listHeaderY + 12, summaryW - 4, 1, summary.accentColor, 0.1);
+            cardListTitle = this.scene.add.text(localX, listHeaderY - 1, `当前卡牌（在这里移除） · ${deck.cards.length} 个条目`, {
+                fontFamily: 'Arial',
+                fontSize: '10px',
+                color: '#94a3b8',
+                fontStyle: 'bold',
+                wordWrap: { width: inspectFocusButton ? summaryW - 98 : summaryW - 12 },
+            });
+            this.editorContainer.add([
+                listHeaderDivider,
+                cardListTitle,
+                ...(inspectFocusButton ? inspectFocusButton : []),
+            ]);
+        }
 
         const listSurface = this.scene.add.rectangle(summaryW / 2, listTop + listH / 2, summaryW - 6, listH, 0x09111f, 0.34);
         listSurface.setStrokeStyle(1, blendColor(summary.accentColor, SECTION_BORDER, 0.18), 0.18);
