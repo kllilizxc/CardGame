@@ -694,12 +694,12 @@ export function createExpeditionDepartureHandoffSummary(
     const routeStageLine = createRouteStageLine(openingSummary, terminalSummary);
 
     return {
-        badgeLabel: '出发确认',
-        headline: `${deckLabel}已准备就绪`,
-        detail: `${map.name} · ${entryLabel}`,
+        badgeLabel: '出发提示',
+        headline: deckLabel,
+        detail: `${map.name} · 入口：${entryLabel}`,
         routeLine: routeStageLine,
-        loadoutLine: `${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
-        revealStatusText: `已进入${map.name}：${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石；首层：${openingSummary}。`,
+        loadoutLine: `带入：${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
+        revealStatusText: `已进入${map.name}：${entryLabel} · ${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石。`,
     };
 }
 
@@ -712,27 +712,21 @@ export function createExpeditionArrivalCueSummary(
     const entryNode = map.nodes.find((node) => node.id === map.entryNodeId);
     const entryLabel = options.currentNodeLabel ?? entryNode?.label ?? run.currentNodeId;
     const openingNodes = getRouteOpeningNodes(map, entryNode);
-    const terminalNodes = getRouteTerminalNodes(map);
     const openingSummary = formatRouteNodeLabels(openingNodes, {
         limit: 2,
         emptyLabel: '入口后的推进顺序',
-    });
-    const terminalSummary = formatRouteNodeLabels(terminalNodes, {
-        limit: 2,
-        emptyLabel: '终段节点',
     });
     const selectedDeckName = getSelectedSavedDeck(stash)?.name?.trim();
     const deckLabel = selectedDeckName && selectedDeckName.length > 0 ? `「${selectedDeckName}」` : '当前卡组';
     const carriedDeckCount = countStacks(run.carriedDeck);
     const carriedItemCount = countStacks(run.carriedItems);
-    const routeStageLine = createRouteStageLine(openingSummary, terminalSummary);
 
     return {
         badgeLabel: '抵达提示',
         headline: `${map.name} · ${entryLabel}`,
-        detail: '首层分路已高亮；点按节点后收起。',
-        routeLine: routeStageLine,
-        loadoutLine: `${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
+        detail: '首层分路已高亮。',
+        routeLine: `首层：${openingSummary}`,
+        loadoutLine: `带入：${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
     };
 }
 

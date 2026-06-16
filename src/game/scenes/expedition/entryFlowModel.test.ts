@@ -88,12 +88,12 @@ describe('entryFlowModel', () => {
             run,
             { currentNodeLabel: '山门入口' },
         )).toEqual({
-            badgeLabel: '出发确认',
-            headline: '「功能测试卡组」已准备就绪',
-            detail: '青云外山试炼 · 山门入口',
+            badgeLabel: '出发提示',
+            headline: '「功能测试卡组」',
+            detail: '青云外山试炼 · 入口：山门入口',
             routeLine: '首层：雾林伏击 / 弃置行囊 · 收官：悬桥撤离点 / 封印守关者',
-            loadoutLine: '20 张卡 · 3 件道具 · 36 枚灵石',
-            revealStatusText: '已进入青云外山试炼：「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石；首层：雾林伏击 / 弃置行囊。',
+            loadoutLine: '带入：20 张卡 · 3 件道具 · 36 枚灵石',
+            revealStatusText: '已进入青云外山试炼：山门入口 · 「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石。',
         });
     });
 
@@ -116,9 +116,9 @@ describe('entryFlowModel', () => {
         )).toEqual({
             badgeLabel: '抵达提示',
             headline: '青云外山试炼 · 山门入口',
-            detail: '首层分路已高亮；点按节点后收起。',
-            routeLine: '首层：雾林伏击 / 弃置行囊 · 收官：悬桥撤离点 / 封印守关者',
-            loadoutLine: '「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石',
+            detail: '首层分路已高亮。',
+            routeLine: '首层：雾林伏击 / 弃置行囊',
+            loadoutLine: '带入：「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石',
         });
     });
 

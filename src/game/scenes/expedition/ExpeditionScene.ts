@@ -83,14 +83,11 @@ type EntryShellMode = 'preparation' | 'deckManager';
 interface EntryShellVisuals {
     container: Phaser.GameObjects.Container;
     routeText: Phaser.GameObjects.Text;
-    divider: Phaser.GameObjects.Rectangle;
     returnLabel: Phaser.GameObjects.Text;
 }
 
 interface EntryShellModeVisualConfig {
     routeColor: string;
-    dividerColor: number;
-    dividerAlpha: number;
     returnLabelColor: string;
     returnLabelHoverColor: string;
 }
@@ -292,33 +289,32 @@ export class ExpeditionScene extends Scene {
         const routeBriefing = this.getEntryRouteBriefing('preparation');
         const routeText = this.add.text(0, 0, routeBriefing.shellRouteLabel, {
             fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#94a3b8',
+            fontSize: '10px',
+            color: '#64748b',
         }).setOrigin(0, 0.5);
-        const divider = this.add.rectangle(0, 0, 1, 12, 0x475569, 0.26);
         const returnLabel = this.add.text(0, 0, '返回大地图', {
             fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#cbd5e1',
-            padding: { left: 6, right: 6, top: 4, bottom: 4 },
+            fontSize: '10px',
+            color: '#94a3b8',
+            padding: { left: 2, right: 2, top: 2, bottom: 2 },
         }).setOrigin(1, 0.5);
-        returnLabel.setAlpha(0.84);
+        routeText.setAlpha(0.76);
+        returnLabel.setAlpha(0.74);
         returnLabel.setInteractive({ useHandCursor: true });
         returnLabel.on('pointerover', () => {
             const modeConfig = this.getEntryShellModeVisualConfig(this.currentEntryShellMode);
             returnLabel.setColor(modeConfig.returnLabelHoverColor);
-            returnLabel.setAlpha(1);
+            returnLabel.setAlpha(0.96);
         });
         returnLabel.on('pointerout', () => {
             const modeConfig = this.getEntryShellModeVisualConfig(this.currentEntryShellMode);
             returnLabel.setColor(modeConfig.returnLabelColor);
-            returnLabel.setAlpha(0.84);
+            returnLabel.setAlpha(0.74);
         });
         returnLabel.on('pointerdown', () => this.returnToWorldMap());
 
         container.add([
             routeText,
-            divider,
             returnLabel,
         ]);
         container.setDepth(1300);
@@ -328,7 +324,6 @@ export class ExpeditionScene extends Scene {
         this.entryShell = {
             container,
             routeText,
-            divider,
             returnLabel,
         };
 
@@ -348,20 +343,16 @@ export class ExpeditionScene extends Scene {
     private getEntryShellModeVisualConfig(mode: EntryShellMode): EntryShellModeVisualConfig {
         if (mode === 'deckManager') {
             return {
-                routeColor: '#94a3b8',
-                dividerColor: 0x475569,
-                dividerAlpha: 0.22,
-                returnLabelColor: '#cbd5e1',
-                returnLabelHoverColor: '#f8fafc',
+                routeColor: '#64748b',
+                returnLabelColor: '#94a3b8',
+                returnLabelHoverColor: '#e2e8f0',
             };
         }
 
         return {
-            routeColor: '#94a3b8',
-            dividerColor: 0x475569,
-            dividerAlpha: 0.26,
-            returnLabelColor: '#cbd5e1',
-            returnLabelHoverColor: '#f8fafc',
+            routeColor: '#64748b',
+            returnLabelColor: '#94a3b8',
+            returnLabelHoverColor: '#e2e8f0',
         };
     }
 
@@ -376,17 +367,17 @@ export class ExpeditionScene extends Scene {
         this.entryShell.routeText.setText(routeBriefing.shellRouteLabel);
         this.entryShell.routeText.setStyle({
             fontFamily: 'Arial',
-            fontSize: '11px',
+            fontSize: '10px',
             color: modeConfig.routeColor,
         });
-        this.entryShell.divider.setFillStyle(modeConfig.dividerColor, modeConfig.dividerAlpha);
         this.entryShell.returnLabel.setStyle({
             fontFamily: 'Arial',
-            fontSize: '11px',
+            fontSize: '10px',
             color: modeConfig.returnLabelColor,
-            padding: { left: 6, right: 6, top: 4, bottom: 4 },
+            padding: { left: 2, right: 2, top: 2, bottom: 2 },
         });
-        this.entryShell.returnLabel.setAlpha(0.84);
+        this.entryShell.routeText.setAlpha(0.76);
+        this.entryShell.returnLabel.setAlpha(0.74);
     }
 
     private updateEntryShellLayout(mode: EntryShellMode, animate: boolean): void {
@@ -403,19 +394,14 @@ export class ExpeditionScene extends Scene {
             : Math.min(820, height * 0.88);
         const panelX = width / 2;
         const panelY = mode === 'deckManager' ? (height / 2 + 18) : (height / 2 + 24);
-        const breadcrumbWidth = Math.max(520, Math.min(panelWidth - 72, mode === 'deckManager' ? 760 : 640));
+        const breadcrumbWidth = Math.max(520, panelWidth - (mode === 'deckManager' ? 84 : 72));
         const breadcrumbX = panelX;
-        const breadcrumbY = Math.max(52, panelY - panelHeight / 2 - 16);
+        const breadcrumbY = Math.max(48, panelY - panelHeight / 2 - 8);
         const breadcrumbLeft = breadcrumbX - breadcrumbWidth / 2;
         const breadcrumbRight = breadcrumbX + breadcrumbWidth / 2;
         const returnX = breadcrumbRight;
-        const returnLeft = returnX - this.entryShell.returnLabel.width;
-        const dividerX = returnLeft - 10;
         const routeX = breadcrumbLeft;
-        const routeWrapWidth = Math.max(200, dividerX - routeX - 16);
-        const shellTargets: Array<[Phaser.GameObjects.Rectangle, number, number, number, number]> = [
-            [this.entryShell.divider, dividerX, breadcrumbY, 1, 12],
-        ];
+        const routeWrapWidth = Math.max(220, breadcrumbWidth - this.entryShell.returnLabel.width - 20);
         const textTargets: Array<[Phaser.GameObjects.Text, number, number]> = [
             [this.entryShell.routeText, routeX, breadcrumbY],
             [this.entryShell.returnLabel, returnX, breadcrumbY],
@@ -424,26 +410,10 @@ export class ExpeditionScene extends Scene {
         this.entryShell.routeText.setWordWrapWidth(routeWrapWidth);
 
         if (!animate) {
-            shellTargets.forEach(([target, x, y, displayWidth, displayHeight]) => {
-                target.setPosition(x, y);
-                target.setDisplaySize(displayWidth, displayHeight);
-            });
             textTargets.forEach(([target, x, y]) => target.setPosition(x, y));
             return;
         }
 
-        shellTargets.forEach(([target, x, y, displayWidth, displayHeight]) => {
-            this.tweens.killTweensOf(target);
-            this.tweens.add({
-                targets: target,
-                x,
-                y,
-                displayWidth,
-                displayHeight,
-                duration: 240,
-                ease: 'Cubic.easeOut',
-            });
-        });
         textTargets.forEach(([target, x, y]) => {
             this.tweens.killTweensOf(target);
             this.tweens.add({
@@ -548,88 +518,74 @@ export class ExpeditionScene extends Scene {
         this.destroyDepartureHandoffOverlay();
 
         const { width, height } = this.scale;
-        const panelWidth = Math.min(720, width * 0.64);
+        const panelWidth = Math.min(620, width * 0.54);
         const panelX = width / 2;
-        const panelY = height / 2 + 18;
-        const panelLeft = panelX - panelWidth / 2 + 42;
-        const contentWidth = panelWidth - 84;
-        const supportWidth = panelWidth - 84;
+        const panelY = height / 2 + 14;
+        const panelLeft = panelX - panelWidth / 2 + 32;
+        const contentWidth = panelWidth - 64;
+        const supportWidth = panelWidth - 64;
         const supportInnerWidth = supportWidth - 28;
         const footerCopy = '点按任意处或按 Enter / Space 继续。';
-        const routeLabelHeight = this.measureSceneTextHeight('路线', {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            fontStyle: 'bold',
-        });
-        const loadoutLabelHeight = this.measureSceneTextHeight('带入', {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            fontStyle: 'bold',
-        });
         const headlineHeight = this.measureSceneTextHeight(summary.headline, {
             fontFamily: 'Arial',
-            fontSize: '23px',
+            fontSize: '21px',
             fontStyle: 'bold',
             wordWrap: { width: contentWidth },
         });
         const detailHeight = this.measureSceneTextHeight(summary.detail, {
             fontFamily: 'Arial',
-            fontSize: '15px',
+            fontSize: '13px',
             wordWrap: { width: contentWidth },
         });
         const routeHeight = this.measureSceneTextHeight(summary.routeLine, {
             fontFamily: 'Arial',
-            fontSize: '14px',
+            fontSize: '13px',
             wordWrap: { width: supportInnerWidth },
             lineSpacing: 2,
         });
         const loadoutHeight = this.measureSceneTextHeight(summary.loadoutLine, {
             fontFamily: 'Arial',
-            fontSize: '14px',
+            fontSize: '13px',
             wordWrap: { width: supportInnerWidth },
             lineSpacing: 2,
         });
         const footerHeight = this.measureSceneTextHeight(footerCopy, {
             fontFamily: 'Arial',
-            fontSize: '13px',
+            fontSize: '12px',
             wordWrap: { width: contentWidth },
         });
-        const supportHeight = 16
-            + routeLabelHeight
-            + 4
+        const supportHeight = 14
             + routeHeight
-            + 10
-            + loadoutLabelHeight
-            + 4
-            + loadoutHeight
-            + 16;
-        const panelHeight = Math.max(
-            260,
-            24
-            + 28
-            + 12
-            + headlineHeight
             + 8
+            + loadoutHeight
+            + 14;
+        const panelHeight = Math.max(
+            214,
+            20
+            + 24
+            + 8
+            + headlineHeight
+            + 6
             + detailHeight
-            + 18
-            + supportHeight
-            + 20
-            + 44
             + 12
+            + supportHeight
+            + 16
+            + 38
+            + 10
             + footerHeight
-            + 22,
+            + 18,
         );
         const panelTop = panelY - panelHeight / 2;
         const container = this.add.container(0, 0);
-        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.68);
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.62);
         overlay.setInteractive({ useHandCursor: true });
-        const shadow = this.add.rectangle(panelX, panelY + 8, panelWidth, panelHeight, 0x01040a, 0.28);
+        const shadow = this.add.rectangle(panelX, panelY + 6, panelWidth, panelHeight, 0x01040a, 0.2);
         const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.96);
-        panel.setStrokeStyle(1, 0x334155, 0.78);
-        const accentTop = this.add.rectangle(panelX, panelTop + 6, panelWidth - 52, 2, 0x38bdf8, 0.68);
+        panel.setStrokeStyle(1, 0x334155, 0.72);
+        const accentTop = this.add.rectangle(panelX, panelTop + 6, panelWidth - 44, 1, 0x38bdf8, 0.4);
         const badge = this.add.text(panelLeft, panelTop + 24, summary.badgeLabel, {
             fontFamily: 'Arial',
-            fontSize: '11px',
+            fontSize: '10px',
             color: '#bfdbfe',
             fontStyle: 'bold',
             backgroundColor: '#10233d',
@@ -637,42 +593,30 @@ export class ExpeditionScene extends Scene {
         }).setOrigin(0, 0);
         const headline = this.add.text(panelLeft, badge.y + badge.height + 12, summary.headline, {
             fontFamily: 'Arial',
-            fontSize: '23px',
+            fontSize: '21px',
             color: '#f8fafc',
             fontStyle: 'bold',
             wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
-        const detail = this.add.text(panelLeft, headline.y + headline.height + 10, summary.detail, {
+        const detail = this.add.text(panelLeft, headline.y + headline.height + 8, summary.detail, {
             fontFamily: 'Arial',
-            fontSize: '15px',
+            fontSize: '13px',
             color: '#94a3b8',
             wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
-        const supportTop = detail.y + detail.height + 18;
-        const supportPlate = this.add.rectangle(panelX, supportTop + supportHeight / 2, supportWidth, supportHeight, 0x0c1626, 0.96);
-        supportPlate.setStrokeStyle(1, 0x334155, 0.72);
-        const routeLabel = this.add.text(panelLeft + 14, supportTop + 14, '路线', {
+        const supportTop = detail.y + detail.height + 12;
+        const supportPlate = this.add.rectangle(panelX, supportTop + supportHeight / 2, supportWidth, supportHeight, 0x0c1626, 0.88);
+        supportPlate.setStrokeStyle(1, 0x334155, 0.52);
+        const routeText = this.add.text(panelLeft + 14, supportTop + 14, summary.routeLine, {
             fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#93c5fd',
-            fontStyle: 'bold',
-        }).setOrigin(0, 0);
-        const routeText = this.add.text(panelLeft + 14, routeLabel.y + routeLabel.height + 4, summary.routeLine, {
-            fontFamily: 'Arial',
-            fontSize: '14px',
+            fontSize: '13px',
             color: '#dbeafe',
             wordWrap: { width: supportInnerWidth },
             lineSpacing: 2,
         }).setOrigin(0, 0);
-        const loadoutLabel = this.add.text(panelLeft + 14, routeText.y + routeText.height + 10, '带入', {
+        const loadoutText = this.add.text(panelLeft + 14, routeText.y + routeText.height + 8, summary.loadoutLine, {
             fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#86efac',
-            fontStyle: 'bold',
-        }).setOrigin(0, 0);
-        const loadoutText = this.add.text(panelLeft + 14, loadoutLabel.y + loadoutLabel.height + 4, summary.loadoutLine, {
-            fontFamily: 'Arial',
-            fontSize: '14px',
+            fontSize: '13px',
             color: '#d1fae5',
             wordWrap: { width: supportInnerWidth },
             lineSpacing: 2,
@@ -680,16 +624,16 @@ export class ExpeditionScene extends Scene {
         let acknowledge: () => void = () => undefined;
         const continueButton = this.createButton({
             x: panelX,
-            y: supportTop + supportHeight + 20 + 22,
-            width: 228,
-            height: 44,
+            y: supportTop + supportHeight + 16 + 19,
+            width: 190,
+            height: 38,
             label: '进入秘境',
             fillColor: 0x1d4ed8,
             onClick: () => acknowledge(),
         });
-        const footer = this.add.text(panelX, continueButton[0].y + 34, footerCopy, {
+        const footer = this.add.text(panelX, continueButton[0].y + 30, footerCopy, {
             fontFamily: 'Arial',
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#cbd5e1',
             align: 'center',
             wordWrap: { width: contentWidth },
@@ -749,9 +693,7 @@ export class ExpeditionScene extends Scene {
             headline,
             detail,
             supportPlate,
-            routeLabel,
             routeText,
-            loadoutLabel,
             loadoutText,
             ...continueButton,
             footer,
