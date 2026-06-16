@@ -74,7 +74,7 @@ const DECK_LIST_SUMMARY_HEIGHT = 64;
 const DECK_ROW_HEIGHT = 84;
 const COMPACT_DECK_LIST_SUMMARY_HEIGHT = 18;
 const COMPACT_DECK_ROW_HEIGHT = 36;
-const EDITOR_ROW_HEIGHT = 56;
+const EDITOR_ROW_HEIGHT = 68;
 const EDITOR_TILE_HEIGHT = 112;
 const EDITOR_TILE_GAP = 10;
 const EDITOR_TILE_MIN_WIDTH = 176;
@@ -720,7 +720,7 @@ function createKeyboardGuideCopy(
                 fillColor: 0x1f1732,
                 accentColor: PANEL_ACCENT,
                 headline: `键盘焦点：${getKeyboardZoneLabel(zone)}`,
-                detail: '↑↓ 按列跳转 · ←→ 切换卡牌 · Enter 移除 1 · X 清空整格 · I 检视当前焦点',
+                detail: '↑↓ 浏览卡牌 · ←→ 切换焦点 · Enter 移除 1 · X 清空整格 · I 检视当前焦点',
                 headlineColor: '#ede9fe',
                 detailColor: '#ddd6fe',
             };
@@ -2805,7 +2805,7 @@ export class DeckManagementPanel extends GameObjects.Container {
         const columnGap = 8;
         const leftColX = panelLeft + 18;
         const contentWidth = panelWidth - 36;
-        const rightColW = Math.max(284, Math.min(296, Math.floor(contentWidth * 0.226)));
+        const rightColW = Math.max(272, Math.min(284, Math.floor(contentWidth * 0.21)));
         const leftWorkspaceW = contentWidth - rightColW - columnGap;
         const rightColX = leftColX + leftWorkspaceW + columnGap;
         const leftWorkspaceInnerX = leftColX + 10;
@@ -3733,26 +3733,21 @@ export class DeckManagementPanel extends GameObjects.Container {
         const namingActive = this.isDeckNamingActive(deck);
         const detailExpanded = !namingActive && this.detailPaneExpanded;
         const compactSummaryMetrics = !namingActive && !detailExpanded;
-        const targetSummaryH = namingActive ? 248 : detailExpanded ? 182 : 118;
+        const targetSummaryH = namingActive ? 248 : detailExpanded ? 172 : 152;
         const summaryH = namingActive
-            ? Math.min(targetSummaryH, Math.max(184, contentH - 128))
+            ? Math.min(targetSummaryH, Math.max(196, contentH - 118))
             : detailExpanded
-                ? Math.min(targetSummaryH, Math.max(176, contentH - 108))
-                : Math.min(targetSummaryH, Math.max(110, contentH - 124));
-        const listHeaderY = summaryH + (compactSummaryMetrics ? 4 : 10);
-        const scrollBtnY = contentH - 10;
-        const listTop = listHeaderY + (compactSummaryMetrics ? 18 : 24);
-        const listBottom = scrollBtnY - 8;
+                ? Math.min(targetSummaryH, Math.max(160, contentH - 96))
+                : Math.min(targetSummaryH, Math.max(142, contentH - 100));
+        const listHeaderY = summaryH + 12;
+        const scrollBtnY = contentH - 12;
+        const listTop = listHeaderY + 20;
+        const listBottom = scrollBtnY - 14;
         const listH = Math.max(82, listBottom - listTop);
-        const editorTileHeight = detailExpanded ? EDITOR_TILE_HEIGHT - 8 : EDITOR_TILE_HEIGHT;
-        this.editorGridColumns = Math.max(
-            3,
-            Math.min(5, Math.floor((summaryW + EDITOR_TILE_GAP) / (EDITOR_TILE_MIN_WIDTH + EDITOR_TILE_GAP))),
-        );
-        const editorTileWidth = Math.max(
-            148,
-            Math.floor((summaryW - EDITOR_TILE_GAP * Math.max(this.editorGridColumns - 1, 0)) / this.editorGridColumns),
-        );
+        const editorRowHeight = detailExpanded ? EDITOR_ROW_HEIGHT + 4 : EDITOR_ROW_HEIGHT;
+        const editorRowGap = detailExpanded ? 6 : 4;
+        const editorRowStride = editorRowHeight + editorRowGap;
+        this.editorGridColumns = 1;
 
         this.editorArea = {
             x: this.editorContainer.x,
@@ -3760,7 +3755,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             w: summaryW,
             h: listH,
         };
-        this.editorVisibleRows = Math.max(1, Math.floor((listH + EDITOR_TILE_GAP) / (editorTileHeight + EDITOR_TILE_GAP)));
+        this.editorVisibleRows = Math.max(1, Math.floor((listH + editorRowGap) / editorRowStride));
         this.ensureDetailCardSelection();
         this.deleteDeckBtn = undefined;
         this.deleteDeckLabel = undefined;
@@ -3800,31 +3795,48 @@ export class DeckManagementPanel extends GameObjects.Container {
         const readinessChanged = previousFeedback?.deckId === deck.id && previousFeedback.readinessTier !== readinessTier;
         const summaryGlow = this.scene.add.rectangle(
             localX + summaryW / 2,
-            summaryH / 2 + 2,
+            contentH / 2 + 2,
             summaryW + 4,
-            summaryH + 4,
+            contentH + 4,
             summary.accentColor,
             compactSummaryMetrics ? 0.05 : 0.08,
         );
         const summaryCard = this.scene.add.rectangle(
             localX + summaryW / 2,
-            summaryH / 2,
+            contentH / 2,
             summaryW,
-            summaryH,
-            compactSummaryMetrics ? 0x0b1324 : 0x0f172a,
-            compactSummaryMetrics ? 0.96 : 0.98,
+            contentH,
+            0x0b1324,
+            0.98,
         );
-        summaryCard.setStrokeStyle(1, summary.accentColor, compactSummaryMetrics ? 0.72 : 0.9);
-        this.editorContainer.add([summaryGlow, summaryCard]);
+        summaryCard.setStrokeStyle(1, blendColor(summary.accentColor, SECTION_BORDER, 0.18), compactSummaryMetrics ? 0.76 : 0.92);
+        const headerSurface = this.scene.add.rectangle(
+            localX + summaryW / 2,
+            summaryH / 2,
+            summaryW - 4,
+            summaryH - 4,
+            compactSummaryMetrics ? 0x0f172a : 0x101827,
+            compactSummaryMetrics ? 0.92 : 0.95,
+        );
+        headerSurface.setStrokeStyle(1, blendColor(summary.accentColor, SECTION_BORDER, 0.22), 0.38);
+        const headerSurfaceAccent = this.scene.add.rectangle(
+            localX + 18,
+            18,
+            Math.min(94, summaryW - 40),
+            3,
+            summary.accentColor,
+            0.72,
+        ).setOrigin(0, 0.5);
+        this.editorContainer.add([summaryGlow, summaryCard, headerSurface, headerSurfaceAccent]);
 
-        const detailSurfaceWidth = namingActive ? 0 : detailExpanded ? 168 : 0;
+        const detailSurfaceWidth = namingActive ? 0 : detailExpanded ? 184 : 0;
         const detailPaneX = detailSurfaceWidth > 0
-            ? localX + summaryW - detailSurfaceWidth - 10
+            ? localX + summaryW - detailSurfaceWidth - 16
             : localX + summaryW;
-        const detailPaneY = namingActive ? 44 : 40;
+        const detailPaneY = namingActive ? 44 : 28;
         const leftSummaryW = detailSurfaceWidth > 0
-            ? detailPaneX - (localX + 20) - 12
-            : summaryW - (namingActive ? 32 : 24);
+            ? detailPaneX - (localX + 20) - 14
+            : summaryW - (namingActive ? 32 : 28);
         const detailSurfacePulseTargets: (TweenableMotionTarget | null | undefined)[] = [];
 
         const eyebrow = this.scene.add.text(localX + 16, namingActive ? 16 : 74, namingActive
@@ -4292,39 +4304,18 @@ export class DeckManagementPanel extends GameObjects.Container {
                 Math.max(0, decks.length - maxVisibleDeckChips),
             );
             const visibleDecks = decks.slice(visibleStart, visibleStart + maxVisibleDeckChips);
-            const deckChipY = compactSummaryMetrics ? 104 : summaryH - 20;
-            const deckChipLabelY = compactSummaryMetrics ? 86 : summaryH - 40;
+            const deckChipY = summaryH - 20;
             const deckChipH = 18;
             const deckChipGap = 6;
-            const deckChipAreaW = Math.max(220, summaryW - 40);
+            const deckChipAreaW = Math.max(220, leftSummaryW);
             const deckChipW = Math.min(
-                136,
+                148,
                 Math.max(
                     76,
                     Math.floor((deckChipAreaW - deckChipGap * Math.max(visibleDecks.length - 1, 0)) / Math.max(visibleDecks.length, 1)),
                 ),
             );
             const deckChipLeft = localX + 20;
-
-            const switcherLabel = this.scene.add.text(deckChipLeft, deckChipLabelY, '切换卡组', {
-                fontFamily: 'Arial',
-                fontSize: '9px',
-                color: '#93c5fd',
-                fontStyle: 'bold',
-            });
-            const switcherHint = this.scene.add.text(
-                localX + summaryW - 20,
-                deckChipLabelY,
-                truncateLabel(`已存 ${decks.length} 套 · ↑↓ 切换`, detailExpanded ? 18 : 24),
-                {
-                    fontFamily: 'Arial',
-                    fontSize: '8px',
-                    color: '#94a3b8',
-                    fontStyle: 'bold',
-                },
-            ).setOrigin(1, 0);
-
-            this.editorContainer.add([switcherLabel, switcherHint]);
 
             visibleDecks.forEach((candidate, visibleIndex) => {
                 const candidateSummary = summarizeDeckStatus(candidate, this.stash.cards);
@@ -4453,9 +4444,9 @@ export class DeckManagementPanel extends GameObjects.Container {
             ...(inspectFocusButton ? inspectFocusButton : []),
         ]);
 
-        const listSurface = this.scene.add.rectangle(summaryW / 2, listTop + listH / 2, summaryW, listH, 0x09111f, 0.82);
-        listSurface.setStrokeStyle(1, blendColor(summary.accentColor, SECTION_BORDER, 0.24), 0.44);
-        const listSurfaceAccent = this.scene.add.rectangle(summaryW / 2, listTop + 1, summaryW - 12, 2, summary.accentColor, 0.18);
+        const listSurface = this.scene.add.rectangle(summaryW / 2, listTop + listH / 2, summaryW - 6, listH, 0x09111f, 0.34);
+        listSurface.setStrokeStyle(1, blendColor(summary.accentColor, SECTION_BORDER, 0.18), 0.18);
+        const listSurfaceAccent = this.scene.add.rectangle(summaryW / 2, listTop + 1, summaryW - 18, 2, summary.accentColor, 0.12);
         this.editorContainer.add([listSurface, listSurfaceAccent]);
 
         const maskGraphics = this.scene.make.graphics({});
@@ -4468,8 +4459,8 @@ export class DeckManagementPanel extends GameObjects.Container {
         cardsOuter.add(cardsInner);
         this.editorContainer.add([maskGraphics, cardsOuter]);
 
-        const visibleCardCount = Math.max(1, this.editorVisibleRows * this.editorGridColumns);
-        const maxOffset = Math.max(0, Math.ceil(deck.cards.length / this.editorGridColumns) - this.editorVisibleRows);
+        const visibleCardCount = Math.max(1, this.editorVisibleRows);
+        const maxOffset = Math.max(0, deck.cards.length - visibleCardCount);
         this.editorScrollOffset = Phaser.Math.Clamp(this.editorScrollOffset, 0, maxOffset);
 
         if (deck.cards.length === 0) {
@@ -4490,16 +4481,13 @@ export class DeckManagementPanel extends GameObjects.Container {
             }).setOrigin(0.5);
             cardsInner.add([emptyCard, emptyTitle, emptyBody]);
         } else {
-            const start = this.editorScrollOffset * this.editorGridColumns;
+            const start = this.editorScrollOffset;
             const end = Math.min(start + visibleCardCount, deck.cards.length);
 
             for (let index = start; index < end; index += 1) {
                 const stack = deck.cards[index];
-                const visibleIndex = index - start;
-                const gridColumn = visibleIndex % this.editorGridColumns;
-                const gridRow = Math.floor(visibleIndex / this.editorGridColumns);
-                const tileX = gridColumn * (editorTileWidth + EDITOR_TILE_GAP);
-                const tileY = gridRow * (editorTileHeight + EDITOR_TILE_GAP);
+                const rowY = (index - start) * editorRowStride;
+                const rowCenterY = rowY + editorRowHeight / 2;
                 const displayName = getCardDisplayName(stack.id, this.config.metadata);
                 const metaLabel = getCardMetaLabel(stack.id, this.config.metadata);
                 const metadataEntry = this.config.metadata?.[stack.id];
@@ -4517,10 +4505,10 @@ export class DeckManagementPanel extends GameObjects.Container {
                         ? WARNING_ACCENT
                         : SECTION_BORDER;
                 const rowFillColor = shortageCount > 0
-                    ? 0x201018
+                    ? 0x1b1320
                     : remainingCount === 0
-                        ? 0x1b1a12
-                        : 0x111827;
+                        ? 0x1c180f
+                        : 0x101827;
                 const detailColor = shortageCount > 0
                     ? '#fecaca'
                     : remainingCount === 0
@@ -4533,10 +4521,10 @@ export class DeckManagementPanel extends GameObjects.Container {
                         : `库存${ownedCount} · 还可补${remainingCount}张`;
                 const spotlightTheme = getPreviewTheme(this.config.metadata?.[stack.id]?.kind);
                 const hoverFillColor = shortageCount > 0
-                    ? 0x27141c
+                    ? 0x261626
                     : remainingCount === 0
-                        ? 0x252015
-                        : 0x172033;
+                        ? 0x272016
+                        : 0x162136;
                 const activeFillColor = blendColor(rowFillColor, spotlightTheme.headerFillColor, 0.52);
                 const tileStatusLabel = shortageCount > 0
                     ? `缺 ${shortageCount}`
@@ -4545,10 +4533,10 @@ export class DeckManagementPanel extends GameObjects.Container {
                         : `剩 ${remainingCount}`;
 
                 const rowBg = this.scene.add.rectangle(
-                    tileX + editorTileWidth / 2,
-                    tileY + editorTileHeight / 2,
-                    editorTileWidth,
-                    editorTileHeight,
+                    summaryW / 2,
+                    rowCenterY,
+                    summaryW - 8,
+                    editorRowHeight,
                     rowFillColor,
                     0.98,
                 );
@@ -4574,62 +4562,63 @@ export class DeckManagementPanel extends GameObjects.Container {
                     this.setDetailCardId(stack.id);
                 });
                 this.registerSpotlightRow(this.editorSpotlightRows, spotlightRow);
-                const accent = this.scene.add.rectangle(tileX + 6, tileY + editorTileHeight / 2, 6, editorTileHeight - 18, rowAccentColor, 1)
+                const accent = this.scene.add.rectangle(8, rowCenterY, 5, editorRowHeight - 18, rowAccentColor, 0.96)
                     .setOrigin(0, 0.5);
                 const cardGlyph = this.createCompactCardGlyphBadge(
-                    tileX + 12,
-                    tileY + 10,
+                    16,
+                    rowY + 12,
                     metadataEntry?.kind,
                     metadataEntry?.rarity,
                 );
 
                 const [statusPillBgLocal, statusPillTextLocal] = this.createRightAlignedPill(
-                    tileX + editorTileWidth - 8,
-                    tileY + 12,
+                    summaryW - 12,
+                    rowY + 16,
                     tileStatusLabel,
                     shortageCount > 0 ? 0x5b1520 : remainingCount === 0 ? 0x4d3709 : 0x102750,
                     shortageCount > 0 ? '#fecaca' : remainingCount === 0 ? '#fde68a' : '#bfdbfe',
                 );
-                const nameText = this.scene.add.text(tileX + 48, tileY + 10, displayName, {
+                const nameText = this.scene.add.text(56, rowY + 11, displayName, {
                     fontFamily: 'Arial',
-                    fontSize: '13px',
+                    fontSize: '14px',
                     color: '#f8fafc',
                     fontStyle: 'bold',
-                    wordWrap: { width: Math.max(88, editorTileWidth - 106) },
+                    wordWrap: { width: Math.max(180, summaryW - 236) },
                 });
-                const metaText = this.scene.add.text(tileX + 48, tileY + 30, truncateLabel(metaLabel, 20), {
+                const metaText = this.scene.add.text(56, rowY + 30, truncateLabel(metaLabel, detailExpanded ? 28 : 36), {
                     fontFamily: 'Arial',
                     fontSize: '9px',
                     color: '#cbd5e1',
-                    wordWrap: { width: Math.max(88, editorTileWidth - 60) },
+                    wordWrap: { width: Math.max(180, summaryW - 236) },
                 });
-                const availabilityText = this.scene.add.text(tileX + 14, tileY + 54, availabilityLabel, {
+                const availabilityText = this.scene.add.text(56, rowY + 48, availabilityLabel, {
                     fontFamily: 'Arial',
-                    fontSize: '9px',
+                    fontSize: '10px',
                     color: detailColor,
-                    wordWrap: { width: Math.max(112, editorTileWidth - 28) },
+                    wordWrap: { width: Math.max(180, summaryW - 236) },
                 });
                 const footerDivider = this.scene.add.rectangle(
-                    tileX + editorTileWidth / 2,
-                    tileY + editorTileHeight - 30,
-                    editorTileWidth - 18,
+                    summaryW / 2,
+                    rowY + editorRowHeight - 24,
+                    summaryW - 22,
                     1,
                     rowAccentColor,
                     0.16,
                 );
-                const countBadgeBg = this.scene.add.rectangle(tileX + 32, tileY + editorTileHeight - 16, 48, 20, 0x0f172a, 0.96);
+                const actionY = rowY + editorRowHeight - 12;
+                const countBadgeBg = this.scene.add.rectangle(summaryW - 128, actionY, 48, 18, 0x0f172a, 0.96);
                 countBadgeBg.setStrokeStyle(1, rowBorderColor, 0.52);
-                const countText = this.scene.add.text(tileX + 32, tileY + editorTileHeight - 16, `×${stack.count}`, {
+                const countBadgeText = this.scene.add.text(summaryW - 128, actionY, `×${stack.count}`, {
                     fontFamily: 'Arial',
-                    fontSize: '12px',
+                    fontSize: '11px',
                     color: '#dbeafe',
                     fontStyle: 'bold',
                 }).setOrigin(0.5);
                 const removeButton = this.createButton(
-                    tileX + editorTileWidth - 70,
-                    tileY + editorTileHeight - 16,
-                    32,
-                    16,
+                    summaryW - 72,
+                    actionY,
+                    34,
+                    18,
                     '-1',
                     0x3f1d24,
                     () => {
@@ -4645,10 +4634,10 @@ export class DeckManagementPanel extends GameObjects.Container {
                     },
                 );
                 const clearButton = this.createButton(
-                    tileX + editorTileWidth - 26,
-                    tileY + editorTileHeight - 16,
+                    summaryW - 26,
+                    actionY,
                     42,
-                    16,
+                    18,
                     '清空',
                     0x51202a,
                     () => {
@@ -4675,7 +4664,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                     availabilityText,
                     footerDivider,
                     countBadgeBg,
-                    countText,
+                    countBadgeText,
                     ...removeButton,
                     ...clearButton,
                 ]);
@@ -4683,8 +4672,8 @@ export class DeckManagementPanel extends GameObjects.Container {
         }
 
         const total = deck.cards.length;
-        const start = total === 0 ? 0 : this.editorScrollOffset * this.editorGridColumns + 1;
-        const end = total === 0 ? 0 : Math.min(this.editorScrollOffset * this.editorGridColumns + visibleCardCount, total);
+        const start = total === 0 ? 0 : this.editorScrollOffset + 1;
+        const end = total === 0 ? 0 : Math.min(this.editorScrollOffset + visibleCardCount, total);
         const posText = this.scene.add.text(localX, scrollBtnY, `显示 ${start}-${end} / ${total}`, {
             fontFamily: 'Arial',
             fontSize: '12px',
