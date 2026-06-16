@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'bun:test';
 
 import {
-    calculateActionRailHeight,
+    calculateDeckSwitcherHeight,
     calculateDeckCardHeight,
-    calculateLoadoutDetailHeight,
+    calculateLoadoutSupportStripHeight,
     calculateReadinessHeroHeight,
-    calculateSelectedLoadoutSummaryHeight,
 } from './PreparationPanelLayout';
 
 describe('PreparationPanel layout helpers', () => {
@@ -15,33 +14,6 @@ describe('PreparationPanel layout helpers', () => {
             const noteBottom = 58 + deckNameHeight + 12;
 
             expect(cardHeight - noteBottom).toBeGreaterThanOrEqual(12);
-        }
-    });
-
-    it('gives the selected-loadout summary enough room for the footer and carried-manifest utility stack', () => {
-        for (const [nameHeight, footerHeight, manifestStackHeight] of [[29, 30, 224], [58, 30, 236]] as const) {
-            const summaryHeight = calculateSelectedLoadoutSummaryHeight(nameHeight, footerHeight, manifestStackHeight);
-            const compositionBottom = 200 + nameHeight;
-            const footerTop = summaryHeight - 18 - footerHeight;
-            const previewPanelHeight = summaryHeight - 88;
-
-            expect(footerTop - compositionBottom).toBeGreaterThanOrEqual(8);
-            expect(previewPanelHeight).toBeGreaterThanOrEqual(manifestStackHeight);
-        }
-    });
-
-    it('gives the departure readiness rail enough room for wrapped copy and stacked CTAs', () => {
-        for (const [headlineHeight, detailHeight, nextStepHeight, shortcutHintHeight] of [[27, 18, 18, 18], [54, 36, 36, 36]] as const) {
-            const railHeight = calculateActionRailHeight(
-                headlineHeight,
-                detailHeight,
-                nextStepHeight,
-                shortcutHintHeight,
-            );
-            const shortcutHintBottom = 38 + headlineHeight + 6 + detailHeight + 6 + nextStepHeight + 6 + shortcutHintHeight;
-
-            expect(railHeight - 18 - shortcutHintBottom).toBeGreaterThanOrEqual(0);
-            expect(railHeight).toBeGreaterThanOrEqual(136);
         }
     });
 
@@ -61,13 +33,23 @@ describe('PreparationPanel layout helpers', () => {
         }
     });
 
-    it('gives the subordinate loadout detail card enough room for manifest content and the quieter footer', () => {
-        for (const [contentHeight, footerHeight] of [[96, 24], [132, 36]] as const) {
-            const detailHeight = calculateLoadoutDetailHeight(contentHeight, footerHeight);
-            const contentBottom = 36 + contentHeight + 10 + footerHeight;
+    it('gives the quieter loadout support strip enough room for summary lines and a follow-up footer', () => {
+        for (const [bodyHeight, footerHeight] of [[34, 24], [68, 36]] as const) {
+            const stripHeight = calculateLoadoutSupportStripHeight(bodyHeight, footerHeight);
+            const footerBottom = 34 + bodyHeight + 8 + footerHeight;
 
-            expect(detailHeight - contentBottom).toBeGreaterThanOrEqual(0);
-            expect(detailHeight).toBeGreaterThanOrEqual(112);
+            expect(stripHeight - footerBottom).toBeGreaterThanOrEqual(12);
+            expect(stripHeight).toBeGreaterThanOrEqual(94);
+        }
+    });
+
+    it('keeps the deck switcher subordinate while leaving room for a compact header and the card row', () => {
+        for (const [headerHeight, cardHeight] of [[64, 120], [86, 136]] as const) {
+            const switcherHeight = calculateDeckSwitcherHeight(headerHeight, cardHeight);
+            const contentBottom = 14 + headerHeight + 8 + cardHeight;
+
+            expect(switcherHeight - contentBottom).toBeGreaterThanOrEqual(12);
+            expect(switcherHeight).toBeGreaterThanOrEqual(176);
         }
     });
 });
