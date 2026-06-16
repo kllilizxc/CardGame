@@ -1,16 +1,16 @@
-const DECK_CARD_MIN_HEIGHT = 132;
+const DECK_CARD_MIN_HEIGHT = 120;
 const LOADOUT_SUMMARY_MIN_HEIGHT = 300;
 const LOADOUT_MANIFEST_STACK_TOP_OFFSET = 88;
 const ACTION_RAIL_MIN_HEIGHT = 136;
 const ACTION_RAIL_BUTTON_STACK_MIN_HEIGHT = 136;
-const READINESS_HERO_MIN_HEIGHT = 220;
+const READINESS_HERO_MIN_HEIGHT = 200;
 const READINESS_HERO_BOTTOM_PADDING = 12;
 const LOADOUT_DETAIL_MIN_HEIGHT = 112;
 
 export function calculateDeckCardHeight(deckNameHeight: number): number {
     return Math.max(
         DECK_CARD_MIN_HEIGHT,
-        deckNameHeight + 110,
+        deckNameHeight + 84,
     );
 }
 

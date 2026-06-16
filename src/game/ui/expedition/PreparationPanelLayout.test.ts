@@ -9,14 +9,12 @@ import {
 } from './PreparationPanelLayout';
 
 describe('PreparationPanel layout helpers', () => {
-    it('gives the lighter deck-switch cards enough room for the status line and footer below one-line and two-line names', () => {
+    it('gives the shorter deck-switch cards enough room for the count row and one-line readiness note below one-line and two-line names', () => {
         for (const deckNameHeight of [22, 44]) {
             const cardHeight = calculateDeckCardHeight(deckNameHeight);
-            const issueTop = 58 + deckNameHeight;
-            const footerTop = cardHeight - 26;
-            const issueHeight = footerTop - issueTop - 8;
+            const noteBottom = 58 + deckNameHeight + 12;
 
-            expect(issueHeight).toBeGreaterThanOrEqual(18);
+            expect(cardHeight - noteBottom).toBeGreaterThanOrEqual(12);
         }
     });
 
@@ -47,7 +45,7 @@ describe('PreparationPanel layout helpers', () => {
         }
     });
 
-    it('gives the shorter decision hero enough room for the headline stack, support panel, and CTA column', () => {
+    it('gives the shorter decision hero enough room for the headline stack, support tiles, and CTA column', () => {
         for (const [headerHeight, sectionHeight, shortcutHintHeight, actionColumnHeight] of [[130, 74, 18, 170], [186, 104, 36, 198]] as const) {
             const heroHeight = calculateReadinessHeroHeight(
                 headerHeight,
@@ -59,7 +57,7 @@ describe('PreparationPanel layout helpers', () => {
             const rightColumnBottom = 30 + actionColumnHeight;
 
             expect(heroHeight - Math.max(leftColumnBottom, rightColumnBottom)).toBeGreaterThanOrEqual(12);
-            expect(heroHeight).toBeGreaterThanOrEqual(220);
+            expect(heroHeight).toBeGreaterThanOrEqual(200);
         }
     });
 
