@@ -2789,21 +2789,21 @@ export class DeckManagementPanel extends GameObjects.Container {
         const contentBottom = footerY - keyboardGuideHeight / 2 - 10;
         const contentH = contentBottom - contentY;
 
-        const columnGap = 8;
+        const columnGap = 6;
         const leftColX = panelLeft + 18;
         const contentWidth = panelWidth - 36;
-        const rightColW = Math.max(292, Math.min(324, Math.floor(contentWidth * 0.27)));
+        const rightColW = Math.max(292, Math.min(312, Math.floor(contentWidth * 0.255)));
         const leftWorkspaceW = contentWidth - rightColW - columnGap;
         const rightColX = leftColX + leftWorkspaceW + columnGap;
         const leftWorkspaceInnerX = leftColX + 10;
         const leftWorkspaceInnerY = contentY + 8;
         const leftWorkspaceInnerW = leftWorkspaceW - 20;
         const leftWorkspaceInnerH = contentH - 14;
-        const deckTrayW = Math.max(58, Math.min(64, Math.floor(leftWorkspaceInnerW * 0.082)));
-        const leftWorkspaceInnerGap = 8;
+        const deckTrayW = Math.max(54, Math.min(58, Math.floor(leftWorkspaceInnerW * 0.072)));
+        const leftWorkspaceInnerGap = 6;
         const editorW = leftWorkspaceInnerW - deckTrayW - leftWorkspaceInnerGap;
-        const deckTrayX = leftWorkspaceInnerX;
-        const editorX = deckTrayX + deckTrayW + leftWorkspaceInnerGap;
+        const editorX = leftWorkspaceInnerX;
+        const deckTrayX = editorX + editorW + leftWorkspaceInnerGap;
 
         this.add([
             overlay,
