@@ -206,8 +206,8 @@ interface LoadoutDetailMetrics {
     height: number;
 }
 
-const DECK_CARD_WIDTH = 192;
-const DECK_CARD_GAP = 10;
+const DECK_CARD_WIDTH = 184;
+const DECK_CARD_GAP = 8;
 const PANEL_MIN_HEIGHT = 500;
 const PANEL_MAX_HEIGHT = 900;
 const PANEL_MAX_HEIGHT_RATIO = 0.95;
@@ -382,6 +382,7 @@ function getReadinessHeroMetrics(
     readinessBody: string,
     actionBody: string,
     shortcutHint: string,
+    extraHeaderHeight = 0,
 ): ReadinessHeroMetrics {
     const textWidth = contentWidth - buttonColumnWidth - 48;
     const validationPanelWidth = textWidth;
@@ -421,19 +422,20 @@ function getReadinessHeroMetrics(
         lineSpacing: 3,
         wordWrap: { width: buttonColumnWidth - 24 },
     });
-    const headerHeight = 84
+    const headerHeight = 74
+        + extraHeaderHeight
         + deckNameHeight
         + detailHeight
         + headlineHeight;
-    const actionColumnHeight = 44
+    const actionColumnHeight = 28
         + actionBodyHeight
-        + 8
+        + 6
         + shortcutHintHeight
-        + 12
+        + 10
         + ACTION_BUTTON_PRIMARY_HEIGHT
         + ACTION_BUTTON_GAP
         + ACTION_BUTTON_SECONDARY_HEIGHT
-        + 14;
+        + 10;
 
     return {
         textWidth,
@@ -1094,6 +1096,7 @@ export class PreparationPanel extends GameObjects.Container {
             Math.max(198, Math.floor(contentWidth * 0.28)),
         );
         const selectorInnerWidth = contentWidth - 36;
+        const preparationTitle = '出发前确认';
         const preparationSubtitle = '能出发就确认；不能就管理卡组。';
         const itemPreviewText = formatPreviewBulletList(selectedLoadoutSummary.itemPreviewLines, 2);
         const validationLines = formatPreparationValidationLines(validation, this.metadata);
@@ -1111,6 +1114,27 @@ export class PreparationPanel extends GameObjects.Container {
             ? '执行提示'
             : '修整建议';
         const actionSummaryText = actionColors.nextStepLabel.replace(/^下一步：/, '');
+        const subtitleHeight = measureTextHeight(
+            this.scene,
+            preparationSubtitle,
+            {
+                fontFamily: 'Arial',
+                fontSize: '12px',
+                wordWrap: { width: contentWidth - buttonColumnWidth - 48 },
+            },
+        );
+        const handoffDetailHeight = this.deckHandoffSummary
+            ? measureTextHeight(this.scene, this.deckHandoffSummary.detail, {
+                fontFamily: 'Arial',
+                fontSize: '12px',
+                wordWrap: { width: contentWidth - buttonColumnWidth - 72 },
+                lineSpacing: 3,
+            })
+            : 0;
+        const handoffBannerHeight = this.deckHandoffSummary
+            ? Math.max(42, 22 + handoffDetailHeight + 8)
+            : 0;
+        const heroLeadHeight = subtitleHeight + 8 + (handoffBannerHeight > 0 ? handoffBannerHeight + 8 : 0);
         const heroMetrics = getReadinessHeroMetrics(
             this.scene,
             contentWidth,
@@ -1121,6 +1145,7 @@ export class PreparationPanel extends GameObjects.Container {
             validationChecklistBody,
             actionSummaryText,
             actionColors.shortcutHint,
+            heroLeadHeight,
         );
         const detailCompositionBody = [
             `构成速览：${selectedLoadoutSummary.kindSummaryLine}`,
@@ -1137,81 +1162,47 @@ export class PreparationPanel extends GameObjects.Container {
         );
         const supportHeadingHeight = measureTextHeight(this.scene, '带入清单', {
             fontFamily: 'Arial',
-            fontSize: '13px',
+            fontSize: '12px',
             fontStyle: 'bold',
         });
         const deckCardHeight = getDeckCardHeight(this.scene, this.stash.savedDecks);
         const selectorHeadingHeight = measureTextHeight(this.scene, '改用其他卡组', {
             fontFamily: 'Arial',
-            fontSize: '13px',
+            fontSize: '12px',
             fontStyle: 'bold',
         });
         const selectorRosterHeight = measureTextHeight(this.scene, deckCarouselSummary.rosterSummaryLine, {
-            fontFamily: 'Arial',
-            fontSize: '12px',
-            lineSpacing: 3,
-            wordWrap: { width: selectorInnerWidth },
-        });
-        const selectorProgressHeight = measureTextHeight(this.scene, carouselProgressMeasurementText, {
             fontFamily: 'Arial',
             fontSize: '11px',
             lineSpacing: 3,
             wordWrap: { width: selectorInnerWidth },
         });
-        const deckSwitcherSectionHeaderHeight = 10
-            + Math.max(selectorHeadingHeight, 20)
+        const selectorProgressHeight = measureTextHeight(this.scene, carouselProgressMeasurementText, {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            lineSpacing: 3,
+            wordWrap: { width: selectorInnerWidth },
+        });
+        const deckSwitcherSectionHeaderHeight = 8
+            + Math.max(selectorHeadingHeight, 18)
             + 4
             + selectorRosterHeight
-            + 6
-            + selectorProgressHeight
-            + 8
             + 4
-            + 10;
-        const deckSwitcherSectionHeight = deckSwitcherSectionHeaderHeight + deckCardHeight + 14;
-        const primaryPreflightHeight = heroMetrics.height + 10 + deckSwitcherSectionHeight + 12;
-        const subtitleHeight = measureTextHeight(
-            this.scene,
-            preparationSubtitle,
-            {
-                fontFamily: 'Arial',
-                fontSize: '12px',
-                wordWrap: { width: contentWidth },
-            },
-        );
-        const preparationTitle = '出发前确认';
-        const titleHeight = measureTextHeight(this.scene, preparationTitle, {
-            fontFamily: 'Arial',
-            fontSize: '14px',
-            fontStyle: 'bold',
-        });
-        const headerBlockHeight = titleHeight + 4 + subtitleHeight;
-        const handoffDetailHeight = this.deckHandoffSummary
-            ? measureTextHeight(this.scene, this.deckHandoffSummary.detail, {
-                fontFamily: 'Arial',
-                fontSize: '13px',
-                wordWrap: { width: contentWidth - 36 },
-                lineSpacing: 3,
-            })
-            : 0;
-        const handoffBannerHeight = this.deckHandoffSummary
-            ? Math.max(48, 28 + handoffDetailHeight + 10)
-            : 0;
-        const titleTop = 24;
-        const subtitleTop = titleTop + titleHeight + 4;
-        const handoffTopOffset = this.deckHandoffSummary
-            ? subtitleTop + subtitleHeight + 8
-            : null;
-        const readinessHeroOffsetY = handoffTopOffset !== null
-            ? handoffTopOffset + handoffBannerHeight + 10
-            : titleTop + headerBlockHeight + 10;
-        const detailSectionOffsetY = readinessHeroOffsetY + primaryPreflightHeight + 10;
-        const detailCardHeight = 18
-            + Math.max(supportHeadingHeight, 16)
+            + selectorProgressHeight
+            + 4
+            + 4
+            + 8;
+        const deckSwitcherSectionHeight = deckSwitcherSectionHeaderHeight + deckCardHeight + 8;
+        const primaryPreflightHeight = heroMetrics.height + 8 + deckSwitcherSectionHeight + 10;
+        const preflightTopOffset = 24;
+        const detailSectionOffsetY = preflightTopOffset + primaryPreflightHeight + 10;
+        const detailCardHeight = 14
+            + Math.max(supportHeadingHeight, 14)
             + 10
             + detailMetrics.panelHeight
-            + 10
+            + 8
             + detailMetrics.footerHeight
-            + 14;
+            + 12;
         const panelHeight = Math.min(
             Math.max(PANEL_MIN_HEIGHT, detailSectionOffsetY + detailCardHeight + 24),
             Math.min(PANEL_MAX_HEIGHT, Math.floor(height * PANEL_MAX_HEIGHT_RATIO)),
@@ -1220,7 +1211,7 @@ export class PreparationPanel extends GameObjects.Container {
         const panelLeft = panelX - panelWidth / 2;
         const panelTop = panelY - panelHeight / 2;
         const contentLeft = panelLeft + 48;
-        const readinessHeroTop = panelTop + readinessHeroOffsetY;
+        const readinessHeroTop = panelTop + preflightTopOffset;
         const detailSectionTop = panelTop + detailSectionOffsetY;
 
         const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x030712, 0.8);
@@ -1228,54 +1219,7 @@ export class PreparationPanel extends GameObjects.Container {
         const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x0f172a, 0.98);
         panel.setStrokeStyle(3, 0x60a5fa, 0.82);
         const panelAccent = this.scene.add.rectangle(panelX, panelTop + 6, panelWidth - 36, 6, 0x7c3aed, 0.96).setOrigin(0.5, 0);
-
-        const title = this.scene.add.text(contentLeft, panelTop + titleTop, preparationTitle, {
-            fontFamily: 'Arial',
-            fontSize: '14px',
-            color: '#c4b5fd',
-            fontStyle: 'bold',
-        });
-
-        const subtitle = this.scene.add.text(contentLeft, panelTop + subtitleTop, preparationSubtitle, {
-            fontFamily: 'Arial',
-            fontSize: '12px',
-            color: '#94a3b8',
-            wordWrap: { width: contentWidth },
-        });
         const handoffSummary = this.deckHandoffSummary;
-        const handoffElements: Phaser.GameObjects.GameObject[] = [];
-
-        if (handoffSummary) {
-            const bannerColors = getDeckHandoffBannerColors(handoffSummary.tone);
-            const bannerTop = panelTop + (handoffTopOffset ?? subtitleTop + subtitleHeight + 8);
-            const bannerHeight = handoffBannerHeight;
-            const banner = this.scene.add.rectangle(
-                panelX,
-                bannerTop + bannerHeight / 2,
-                contentWidth,
-                bannerHeight,
-                bannerColors.fillColor,
-                0.94,
-            );
-            banner.setStrokeStyle(2, bannerColors.borderColor, 0.88);
-            const bannerTitle = this.scene.add.text(contentLeft + 18, bannerTop + 8, handoffSummary.title, {
-                fontFamily: 'Arial',
-                fontSize: '11px',
-                color: bannerColors.badgeColor,
-                fontStyle: 'bold',
-                backgroundColor: bannerColors.badgeBackgroundColor,
-                padding: { left: 8, right: 8, top: 4, bottom: 4 },
-            });
-            const bannerDetail = this.scene.add.text(contentLeft + 18, bannerTitle.y + bannerTitle.height + 6, handoffSummary.detail, {
-                fontFamily: 'Arial',
-                fontSize: '12px',
-                color: bannerColors.detailColor,
-                wordWrap: { width: contentWidth - 36 },
-                lineSpacing: 3,
-            });
-
-            handoffElements.push(banner, bannerTitle, bannerDetail);
-        }
 
         const heroInnerLeft = contentLeft + 18;
         const heroButtonLeft = contentLeft + contentWidth - buttonColumnWidth - 20;
@@ -1323,7 +1267,47 @@ export class PreparationPanel extends GameObjects.Container {
                 padding: { left: 10, right: 10, top: 5, bottom: 5 },
             },
         ).setOrigin(1, 0);
-        const heroDeckLabel = this.scene.add.text(heroInnerLeft, heroRailLabel.y + 22, '当前带入', {
+        const heroIntro = this.scene.add.text(heroInnerLeft, heroRailLabel.y + heroRailLabel.height + 4, preparationSubtitle, {
+            fontFamily: 'Arial',
+            fontSize: '12px',
+            color: '#cbd5e1',
+            wordWrap: { width: heroMetrics.textWidth },
+        });
+        const heroHandoffElements: Phaser.GameObjects.GameObject[] = [];
+        let heroBodyTop = heroIntro.y + heroIntro.height + 10;
+
+        if (handoffSummary) {
+            const bannerColors = getDeckHandoffBannerColors(handoffSummary.tone);
+            const compactBanner = this.scene.add.rectangle(
+                heroInnerLeft + heroMetrics.textWidth / 2,
+                heroBodyTop + handoffBannerHeight / 2,
+                heroMetrics.textWidth,
+                handoffBannerHeight,
+                bannerColors.fillColor,
+                0.46,
+            ).setOrigin(0.5, 0.5);
+            compactBanner.setStrokeStyle(1, bannerColors.borderColor, 0.54);
+            const compactBannerTitle = this.scene.add.text(heroInnerLeft + 12, heroBodyTop + 8, handoffSummary.title, {
+                fontFamily: 'Arial',
+                fontSize: '10px',
+                color: bannerColors.badgeColor,
+                fontStyle: 'bold',
+                backgroundColor: bannerColors.badgeBackgroundColor,
+                padding: { left: 8, right: 8, top: 3, bottom: 3 },
+            });
+            const compactBannerDetail = this.scene.add.text(heroInnerLeft + 12, compactBannerTitle.y + compactBannerTitle.height + 4, handoffSummary.detail, {
+                fontFamily: 'Arial',
+                fontSize: '12px',
+                color: bannerColors.detailColor,
+                wordWrap: { width: heroMetrics.textWidth - 24 },
+                lineSpacing: 3,
+            });
+
+            heroBodyTop += handoffBannerHeight + 10;
+            heroHandoffElements.push(compactBanner, compactBannerTitle, compactBannerDetail);
+        }
+
+        const heroDeckLabel = this.scene.add.text(heroInnerLeft, heroBodyTop, '当前带入', {
             fontFamily: 'Arial',
             fontSize: '12px',
             color: selectedLoadoutColors.mutedColor,
@@ -1404,6 +1388,8 @@ export class PreparationPanel extends GameObjects.Container {
         const heroSummaryContainer = this.scene.add.container(0, 0, [
             heroRailLabel,
             heroStateBadge,
+            heroIntro,
+            ...heroHandoffElements,
             heroDeckLabel,
             heroDeckName,
             heroConclusionLabel,
@@ -1422,16 +1408,24 @@ export class PreparationPanel extends GameObjects.Container {
             actionColors.actionGlowColor,
             actionColors.actionGlowAlpha,
         );
-        const actionSlot = this.scene.add.rectangle(
+        const actionColumnPlate = this.scene.add.rectangle(
             heroButtonLeft + buttonColumnWidth / 2,
             readinessHeroTop + heroMetrics.height / 2,
             buttonColumnWidth,
-            heroMetrics.height - 30,
+            heroMetrics.height - 36,
             actionColors.barFillColor,
-            0.66,
+            0.28,
         );
-        actionSlot.setStrokeStyle(1, actionColors.barBorderColor, 0.5);
-        const actionSlotLabel = this.scene.add.text(heroButtonLeft, readinessHeroTop + 16, actionColors.railLabel, {
+        actionColumnPlate.setStrokeStyle(1, actionColors.barBorderColor, 0.24);
+        const actionDivider = this.scene.add.rectangle(
+            heroButtonLeft - 10,
+            readinessHeroTop + heroMetrics.height / 2,
+            1,
+            heroMetrics.height - 42,
+            actionColors.barBorderColor,
+            0.36,
+        ).setOrigin(0.5, 0.5);
+        const actionSlotLabel = this.scene.add.text(heroButtonLeft, readinessHeroTop + 18, actionColors.railLabel, {
             fontFamily: 'Arial',
             fontSize: '12px',
             color: actionColors.supportColor,
@@ -1458,7 +1452,10 @@ export class PreparationPanel extends GameObjects.Container {
             wordWrap: { width: buttonColumnWidth - 24 },
         });
         const buttonStackHeight = ACTION_BUTTON_PRIMARY_HEIGHT + ACTION_BUTTON_GAP + ACTION_BUTTON_SECONDARY_HEIGHT;
-        const buttonStackTop = readinessHeroTop + heroMetrics.height - 14 - buttonStackHeight;
+        const buttonStackTop = Math.max(
+            actionShortcutHint.y + actionShortcutHint.height + 12,
+            readinessHeroTop + heroMetrics.height - 16 - buttonStackHeight,
+        );
         const primaryButtonY = buttonStackTop + ACTION_BUTTON_PRIMARY_HEIGHT / 2;
         const secondaryButtonY = buttonStackTop + ACTION_BUTTON_PRIMARY_HEIGHT + ACTION_BUTTON_GAP + ACTION_BUTTON_SECONDARY_HEIGHT / 2;
         const manageButtonHeight = actionColors.primaryAction === 'manage'
@@ -1500,7 +1497,8 @@ export class PreparationPanel extends GameObjects.Container {
         );
         const actionContainer = this.scene.add.container(0, 0, [
             actionGlow,
-            actionSlot,
+            actionColumnPlate,
+            actionDivider,
             actionSlotLabel,
             actionSummaryHeading,
             actionSummary,
@@ -1511,62 +1509,62 @@ export class PreparationPanel extends GameObjects.Container {
         ]);
 
         const selectorInnerLeft = contentLeft + 18;
-        const deckSwitcherTop = readinessHeroTop + heroMetrics.height + 10;
+        const deckSwitcherTop = readinessHeroTop + heroMetrics.height + 8;
         const switcherDivider = this.scene.add.rectangle(
             panelX,
-            deckSwitcherTop - 4,
+            deckSwitcherTop - 2,
             contentWidth - 36,
             1,
             selectedLoadoutColors.borderColor,
-            0.26,
+            0.18,
         ).setOrigin(0.5, 0);
         const switcherPanel = this.scene.add.rectangle(
             panelX,
-            deckSwitcherTop + deckSwitcherSectionHeight / 2 - 2,
+            deckSwitcherTop + deckSwitcherSectionHeight / 2,
             contentWidth - 20,
-            deckSwitcherSectionHeight - 4,
+            deckSwitcherSectionHeight,
             0x08111f,
-            0.34,
+            0.18,
         );
-        switcherPanel.setStrokeStyle(1, selectedLoadoutColors.borderColor, 0.14);
-        const selectorHeading = this.scene.add.text(selectorInnerLeft, deckSwitcherTop + 10, '改用其他卡组', {
+        switcherPanel.setStrokeStyle(1, selectedLoadoutColors.borderColor, 0.1);
+        const selectorHeading = this.scene.add.text(selectorInnerLeft, deckSwitcherTop + 8, '改用其他卡组', {
             fontFamily: 'Arial',
-            fontSize: '13px',
-            color: '#cbd5e1',
+            fontSize: '12px',
+            color: '#bfdbfe',
             fontStyle: 'bold',
         });
         const selectorPositionBadge = this.scene.add.text(
             contentLeft + contentWidth - 18,
-            deckSwitcherTop + 8,
+            deckSwitcherTop + 6,
             deckCarouselSummary.positionLabel,
             {
                 fontFamily: 'Arial',
                 fontSize: '10px',
                 color: '#e2e8f0',
                 fontStyle: 'bold',
-                backgroundColor: '#1e293b',
-                padding: { left: 10, right: 10, top: 5, bottom: 5 },
+                backgroundColor: '#0f172a',
+                padding: { left: 9, right: 9, top: 4, bottom: 4 },
             },
         ).setOrigin(1, 0);
         const selectorRosterSummary = this.scene.add.text(
             selectorInnerLeft,
-            selectorHeading.y + selectorHeading.height + 6,
+            selectorHeading.y + selectorHeading.height + 4,
             deckCarouselSummary.rosterSummaryLine,
             {
                 fontFamily: 'Arial',
-                fontSize: '12px',
-                color: '#cbd5e1',
+                fontSize: '11px',
+                color: '#94a3b8',
                 lineSpacing: 3,
                 wordWrap: { width: selectorInnerWidth },
             },
         );
         const carouselProgressText = this.scene.add.text(
             selectorInnerLeft,
-            selectorRosterSummary.y + selectorRosterSummary.height + 6,
+            selectorRosterSummary.y + selectorRosterSummary.height + 4,
             '',
             {
                 fontFamily: 'Arial',
-                fontSize: '11px',
+                fontSize: '10px',
                 color: this.maxScrollX > 0 ? '#c4b5fd' : '#94a3b8',
                 lineSpacing: 3,
                 wordWrap: { width: selectorInnerWidth },
@@ -1574,7 +1572,7 @@ export class PreparationPanel extends GameObjects.Container {
         );
         const carouselProgressTrack = this.scene.add.rectangle(
             selectorInnerLeft,
-            carouselProgressText.y + carouselProgressText.height + 8,
+            carouselProgressText.y + carouselProgressText.height + 4,
             selectorInnerWidth,
             4,
             0x1e293b,
@@ -1600,7 +1598,7 @@ export class PreparationPanel extends GameObjects.Container {
         };
         const deckCardRow = this.createDeckCardRow(
             selectorInnerLeft,
-            carouselProgressTrack.y + 12,
+            carouselProgressTrack.y + 8,
             selectorInnerWidth,
             selectedDeckId,
             deckCardHeight,
@@ -1626,23 +1624,20 @@ export class PreparationPanel extends GameObjects.Container {
             deckSwitcherContainer,
         ]);
 
-        const detailHeading = this.scene.add.text(contentLeft + 18, detailSectionTop + 18, '带入清单', {
+        const detailHeading = this.scene.add.text(contentLeft + 18, detailSectionTop + 14, '带入清单', {
             fontFamily: 'Arial',
-            fontSize: '13px',
-            color: '#cbd5e1',
+            fontSize: '12px',
+            color: '#94a3b8',
             fontStyle: 'bold',
         });
         const detailBadge = this.scene.add.text(
             contentLeft + contentWidth - 18,
-            detailSectionTop + 18,
+            detailSectionTop + 14,
             `物资：${selectedLoadoutSummary.itemCount} 件道具 · 灵石 ${selectedLoadoutSummary.spiritStones} 枚`,
             {
                 fontFamily: 'Arial',
                 fontSize: '10px',
-                color: '#cbd5e1',
-                fontStyle: 'bold',
-                backgroundColor: '#1e293b',
-                padding: { left: 10, right: 10, top: 4, bottom: 4 },
+                color: '#94a3b8',
             },
         ).setOrigin(1, 0);
         const supportGlow = this.scene.add.rectangle(
@@ -1651,22 +1646,22 @@ export class PreparationPanel extends GameObjects.Container {
             contentWidth + 10,
             detailCardHeight + 8,
             0x020617,
-            0.08,
+            0.04,
         );
-        supportGlow.setStrokeStyle(1, 0x334155, 0.22);
+        supportGlow.setStrokeStyle(1, 0x1f2937, 0.08);
         const supportCard = this.scene.add.rectangle(
             panelX,
             detailSectionTop + detailCardHeight / 2,
             contentWidth,
             detailCardHeight,
-            0x0b1220,
-            0.94,
+            0x09111d,
+            0.9,
         );
-        supportCard.setStrokeStyle(1, 0x334155, 0.62);
+        supportCard.setStrokeStyle(1, 0x1f2937, 0.42);
         const detailPanelTop = Math.max(
             detailHeading.y + detailHeading.height,
             detailBadge.y + detailBadge.height,
-        ) + 10;
+        ) + 8;
         const detailCompositionPanel = createManifestPanel(
             this.scene,
             contentLeft + 18,
@@ -1676,8 +1671,8 @@ export class PreparationPanel extends GameObjects.Container {
             '构成速览',
             detailCompositionBody,
             {
-                fillColor: 0x101b30,
-                borderColor: 0x334155,
+                fillColor: 0x0f1727,
+                borderColor: 0x243244,
                 titleColor: '#94a3b8',
                 bodyColor: '#e2e8f0',
                 badgeColor: selectedLoadoutColors.badgeColor,
@@ -1697,10 +1692,10 @@ export class PreparationPanel extends GameObjects.Container {
             '物资封单',
             `携带道具 ${selectedLoadoutSummary.itemCount} 件 · 灵石 ${selectedLoadoutSummary.spiritStones} 枚\n${itemPreviewText}`,
             {
-                fillColor: 0x0d1b15,
-                borderColor: 0x22c55e,
-                titleColor: '#86efac',
-                bodyColor: '#dcfce7',
+                fillColor: 0x0d1821,
+                borderColor: 0x334155,
+                titleColor: '#94a3b8',
+                bodyColor: '#dbeafe',
             },
         );
         const detailFooter = this.scene.add.text(
@@ -1732,9 +1727,6 @@ export class PreparationPanel extends GameObjects.Container {
             shadow,
             panel,
             panelAccent,
-            title,
-            subtitle,
-            ...handoffElements,
             readinessHeroContainer,
             selectedLoadoutSupportContainer,
         ]);
@@ -1840,7 +1832,7 @@ export class PreparationPanel extends GameObjects.Container {
             const isSelected = deck.id === selectedDeckId;
             const displayState = createDeckDisplayState(deck, this.stash.cards, isSelected, this.metadata);
             const cardCount = countDeckCards(deck.cards);
-            const selectedLift = isSelected ? -8 : 0;
+            const selectedLift = isSelected ? -6 : 0;
             const spotlight = isSelected
                 ? this.scene.add.rectangle(0, 0, cardWidth + 12, cardHeight + 12, displayState.borderColor, 0.08)
                 : undefined;
@@ -1848,28 +1840,28 @@ export class PreparationPanel extends GameObjects.Container {
             const shadow = this.scene.add.rectangle(4, 6, cardWidth, cardHeight, displayState.shadowColor, displayState.shadowAlpha);
             spotlight?.setStrokeStyle(1, displayState.borderColor, 0.32);
             const bg = this.scene.add.rectangle(0, 0, cardWidth, cardHeight, displayState.fillColor, 0.98);
-            bg.setStrokeStyle(isSelected ? 3 : 2, displayState.borderColor, 1);
+            bg.setStrokeStyle(isSelected ? 2 : 1, displayState.borderColor, isSelected ? 1 : 0.88);
 
             const accent = this.scene.add.rectangle(0, -cardHeight / 2 + 5, cardWidth - 12, 6, displayState.accentColor, 1).setOrigin(0.5, 0);
             const selection = this.scene.add.text(-cardWidth / 2 + 16, -cardHeight / 2 + 14, displayState.selectionLabel, {
                 fontFamily: 'Arial',
-                fontSize: '11px',
+                fontSize: '10px',
                 color: displayState.selectionBadgeColor,
                 fontStyle: 'bold',
                 backgroundColor: displayState.selectionBadgeBackgroundColor,
-                padding: { left: 7, right: 7, top: 4, bottom: 4 },
+                padding: { left: 6, right: 6, top: 3, bottom: 3 },
             });
             const status = this.scene.add.text(cardWidth / 2 - 16, -cardHeight / 2 + 14, displayState.statusLabel, {
                 fontFamily: 'Arial',
-                fontSize: '11px',
+                fontSize: '10px',
                 color: displayState.statusBadgeColor,
                 fontStyle: 'bold',
                 backgroundColor: displayState.statusBadgeBackgroundColor,
-                padding: { left: 7, right: 7, top: 4, bottom: 4 },
+                padding: { left: 6, right: 6, top: 3, bottom: 3 },
             }).setOrigin(1, 0);
             const deckName = this.scene.add.text(-cardWidth / 2 + 16, selection.y + 24, deck.name, {
                 fontFamily: 'Arial',
-                fontSize: '15px',
+                fontSize: '14px',
                 color: '#f8fafc',
                 fontStyle: 'bold',
                 wordWrap: { width: cardWidth - 32 },
@@ -1880,14 +1872,14 @@ export class PreparationPanel extends GameObjects.Container {
                 `${cardCount} 张 · ${displayState.uniqueCardCount} 种卡`,
                 {
                     fontFamily: 'Arial',
-                    fontSize: '12px',
+                    fontSize: '11px',
                     color: displayState.countColor,
                 },
             );
             const statusNote = this.scene.add.text(
                 -cardWidth / 2 + 16,
                 countText.y + 16,
-                truncateSingleLine(displayState.comparisonLines[0] ?? displayState.focusSummaryLine, 19),
+                truncateSingleLine(displayState.comparisonLines[0] ?? displayState.focusSummaryLine, 17),
                 {
                     fontFamily: 'Arial',
                     fontSize: '10px',
