@@ -2728,8 +2728,8 @@ export class DeckManagementPanel extends GameObjects.Container {
 
     private createPanel(): void {
         const { width, height } = this.scene.scale;
-        const panelWidth = Math.min(1312, width * 0.968);
-        const panelHeight = Math.min(842, height * 0.94);
+        const panelWidth = Math.min(1392, width * 0.978);
+        const panelHeight = Math.min(850, height * 0.944);
         const panelX = width / 2;
         const panelY = height / 2 + 12;
 
@@ -2743,8 +2743,8 @@ export class DeckManagementPanel extends GameObjects.Container {
         const panelRight = panelX + panelWidth / 2;
         const panelTop = panelY - panelHeight / 2;
         const panelBottom = panelY + panelHeight / 2;
-        const keyboardGuideWidth = Math.min(436, Math.max(332, panelWidth * 0.35));
-        const keyboardGuideHeight = 28;
+        const keyboardGuideWidth = Math.min(304, Math.max(248, panelWidth * 0.23));
+        const keyboardGuideHeight = 24;
         const footerY = panelBottom - 14;
         const keyboardGuideLeft = panelRight - 22 - keyboardGuideWidth;
         this.keyboardGuideBg = this.scene.add.rectangle(
@@ -2760,19 +2760,19 @@ export class DeckManagementPanel extends GameObjects.Container {
             keyboardGuideLeft + 10,
             footerY,
             3,
-            keyboardGuideHeight - 10,
+            keyboardGuideHeight - 8,
             PANEL_ACCENT,
             0.52,
         ).setOrigin(0, 0.5);
         this.keyboardGuideHeadline = this.scene.add.text(keyboardGuideLeft + 18, footerY, '', {
             fontFamily: 'Arial',
-            fontSize: '8px',
+            fontSize: '7px',
             color: '#dbeafe',
             fontStyle: 'bold',
         }).setOrigin(0, 0.5);
         this.keyboardGuideDetail = this.scene.add.text(keyboardGuideLeft + 96, footerY, '', {
             fontFamily: 'Arial',
-            fontSize: '8px',
+            fontSize: '7px',
             color: '#bfdbfe',
         }).setOrigin(0, 0.5);
         const [keyboardGuidePillBg, keyboardGuidePillText] = this.createRightAlignedPill(
@@ -2789,21 +2789,18 @@ export class DeckManagementPanel extends GameObjects.Container {
         const contentBottom = footerY - keyboardGuideHeight / 2 - 10;
         const contentH = contentBottom - contentY;
 
-        const columnGap = 6;
+        const columnGap = 8;
         const leftColX = panelLeft + 18;
         const contentWidth = panelWidth - 36;
-        const rightColW = Math.max(292, Math.min(312, Math.floor(contentWidth * 0.255)));
+        const rightColW = Math.max(284, Math.min(296, Math.floor(contentWidth * 0.226)));
         const leftWorkspaceW = contentWidth - rightColW - columnGap;
         const rightColX = leftColX + leftWorkspaceW + columnGap;
         const leftWorkspaceInnerX = leftColX + 10;
         const leftWorkspaceInnerY = contentY + 8;
         const leftWorkspaceInnerW = leftWorkspaceW - 20;
         const leftWorkspaceInnerH = contentH - 14;
-        const deckTrayW = Math.max(54, Math.min(58, Math.floor(leftWorkspaceInnerW * 0.072)));
-        const leftWorkspaceInnerGap = 6;
-        const editorW = leftWorkspaceInnerW - deckTrayW - leftWorkspaceInnerGap;
+        const editorW = leftWorkspaceInnerW;
         const editorX = leftWorkspaceInnerX;
-        const deckTrayX = editorX + editorW + leftWorkspaceInnerGap;
 
         this.add([
             overlay,
@@ -2817,10 +2814,6 @@ export class DeckManagementPanel extends GameObjects.Container {
             contentH,
             PANEL_ACCENT,
         ));
-        this.createDeckListColumn(deckTrayX, leftWorkspaceInnerY, deckTrayW, leftWorkspaceInnerH, {
-            embedded: true,
-            compact: true,
-        });
         this.createEditorColumn(editorX, leftWorkspaceInnerY, editorW, leftWorkspaceInnerH, { embedded: true });
         this.createBrowserColumn(rightColX, contentY, rightColW, contentH);
         this.add([
@@ -3726,15 +3719,15 @@ export class DeckManagementPanel extends GameObjects.Container {
         const namingActive = this.isDeckNamingActive(deck);
         const detailExpanded = !namingActive && this.detailPaneExpanded;
         const compactSummaryMetrics = !namingActive && !detailExpanded;
-        const targetSummaryH = namingActive ? 248 : detailExpanded ? 168 : 94;
+        const targetSummaryH = namingActive ? 248 : detailExpanded ? 182 : 118;
         const summaryH = namingActive
             ? Math.min(targetSummaryH, Math.max(184, contentH - 128))
             : detailExpanded
-                ? Math.min(targetSummaryH, Math.max(160, contentH - 116))
-                : Math.min(targetSummaryH, Math.max(92, contentH - 140));
-        const listHeaderY = summaryH + (compactSummaryMetrics ? 2 : 8);
+                ? Math.min(targetSummaryH, Math.max(176, contentH - 108))
+                : Math.min(targetSummaryH, Math.max(110, contentH - 124));
+        const listHeaderY = summaryH + (compactSummaryMetrics ? 4 : 10);
         const scrollBtnY = contentH - 10;
-        const listTop = listHeaderY + (compactSummaryMetrics ? 16 : 22);
+        const listTop = listHeaderY + (compactSummaryMetrics ? 18 : 24);
         const listBottom = scrollBtnY - 8;
         const listH = Math.max(82, listBottom - listTop);
 
@@ -4268,6 +4261,128 @@ export class DeckManagementPanel extends GameObjects.Container {
                 : [capacityMinimumMarker]);
         }
 
+        if (!namingActive) {
+            const maxVisibleDeckChips = 4;
+            const visibleStart = Phaser.Math.Clamp(
+                selectedDeckIndex - Math.floor((maxVisibleDeckChips - 1) / 2),
+                0,
+                Math.max(0, decks.length - maxVisibleDeckChips),
+            );
+            const visibleDecks = decks.slice(visibleStart, visibleStart + maxVisibleDeckChips);
+            const deckChipY = compactSummaryMetrics ? 104 : summaryH - 20;
+            const deckChipLabelY = compactSummaryMetrics ? 86 : summaryH - 40;
+            const deckChipH = 18;
+            const deckChipGap = 6;
+            const deckChipAreaW = Math.max(220, summaryW - 40);
+            const deckChipW = Math.min(
+                136,
+                Math.max(
+                    76,
+                    Math.floor((deckChipAreaW - deckChipGap * Math.max(visibleDecks.length - 1, 0)) / Math.max(visibleDecks.length, 1)),
+                ),
+            );
+            const deckChipLeft = localX + 20;
+
+            const switcherLabel = this.scene.add.text(deckChipLeft, deckChipLabelY, '切换卡组', {
+                fontFamily: 'Arial',
+                fontSize: '9px',
+                color: '#93c5fd',
+                fontStyle: 'bold',
+            });
+            const switcherHint = this.scene.add.text(
+                localX + summaryW - 20,
+                deckChipLabelY,
+                truncateLabel(`已存 ${decks.length} 套 · ↑↓ 切换`, detailExpanded ? 18 : 24),
+                {
+                    fontFamily: 'Arial',
+                    fontSize: '8px',
+                    color: '#94a3b8',
+                    fontStyle: 'bold',
+                },
+            ).setOrigin(1, 0);
+
+            this.editorContainer.add([switcherLabel, switcherHint]);
+
+            visibleDecks.forEach((candidate, visibleIndex) => {
+                const candidateSummary = summarizeDeckStatus(candidate, this.stash.cards);
+                const candidateX = deckChipLeft + deckChipW / 2 + visibleIndex * (deckChipW + deckChipGap);
+                const isSelected = candidate.id === deck.id;
+                const chipFillColor = isSelected ? 0x102750 : 0x0f172a;
+                const chipHoverFillColor = isSelected ? 0x17346a : 0x172033;
+                const chipBorderColor = isSelected
+                    ? blendColor(SELECTED_ACCENT, candidateSummary.accentColor, candidateSummary.isValid ? 0.18 : 0.55)
+                    : blendColor(SECTION_BORDER, candidateSummary.accentColor, 0.32);
+                const chipTextColor = isSelected ? '#f8fafc' : '#e2e8f0';
+                const chipDetailColor = candidateSummary.isValid ? '#93c5fd' : candidateSummary.pillTextColor;
+
+                const chipBg = this.scene.add.rectangle(
+                    candidateX,
+                    deckChipY,
+                    deckChipW,
+                    deckChipH,
+                    chipFillColor,
+                    0.98,
+                );
+                chipBg.setStrokeStyle(isSelected ? 2 : 1, chipBorderColor, isSelected ? 0.95 : 0.72);
+                chipBg.setInteractive({ useHandCursor: true });
+                chipBg.on('pointerover', () => chipBg.setFillStyle(chipHoverFillColor, 1));
+                chipBg.on('pointerout', () => chipBg.setFillStyle(chipFillColor, 1));
+                chipBg.on('pointerdown', () => {
+                    this.setKeyboardZone('decks');
+                    this.applyStashChange(selectDeckInStash(this.stash, candidate.id));
+                    this.refreshDeckViews();
+                });
+
+                const accent = this.scene.add.rectangle(
+                    candidateX - deckChipW / 2 + 6,
+                    deckChipY,
+                    4,
+                    deckChipH - 6,
+                    candidateSummary.accentColor,
+                    0.96,
+                ).setOrigin(0, 0.5);
+                const name = this.scene.add.text(candidateX - deckChipW / 2 + 14, deckChipY - 1, truncateLabel(candidate.name, 10), {
+                    fontFamily: 'Arial',
+                    fontSize: '9px',
+                    color: chipTextColor,
+                    fontStyle: 'bold',
+                }).setOrigin(0, 0.5);
+                const count = this.scene.add.text(candidateX + deckChipW / 2 - 8, deckChipY - 1, `${countDeckCards(candidate.cards)} 张`, {
+                    fontFamily: 'Arial',
+                    fontSize: '8px',
+                    color: chipDetailColor,
+                    fontStyle: 'bold',
+                }).setOrigin(1, 0.5);
+
+                this.editorContainer.add([chipBg, accent, name, count]);
+            });
+
+            if (visibleStart > 0) {
+                const moreLeft = this.scene.add.text(deckChipLeft - 10, deckChipY, '‹', {
+                    fontFamily: 'Arial',
+                    fontSize: '13px',
+                    color: '#64748b',
+                    fontStyle: 'bold',
+                }).setOrigin(0.5);
+                this.editorContainer.add(moreLeft);
+            }
+
+            if (visibleStart + visibleDecks.length < decks.length) {
+                const moreRight = this.scene.add.text(
+                    deckChipLeft + visibleDecks.length * deckChipW + Math.max(0, visibleDecks.length - 1) * deckChipGap + 10,
+                    deckChipY,
+                    '›',
+                    {
+                        fontFamily: 'Arial',
+                        fontSize: '13px',
+                        color: '#64748b',
+                        fontStyle: 'bold',
+                    },
+                ).setOrigin(0.5);
+                this.editorContainer.add(moreRight);
+            }
+        }
+
         let inspectFocusButton: [GameObjects.Rectangle, GameObjects.Text] | null = null;
         if (!namingActive) {
             if (detailExpanded) {
@@ -4704,10 +4819,10 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.queryClearBtn.setVisible(this.filterQuery.length > 0);
 
         const buttonGap = 4;
-        const kindButtonWidth = 82;
-        const hideZeroButtonWidth = 50;
-        const sortFieldButtonWidth = 82;
-        const sortDirButtonWidth = 50;
+        const kindButtonWidth = 68;
+        const hideZeroButtonWidth = 44;
+        const sortFieldButtonWidth = 68;
+        const sortDirButtonWidth = 44;
         const sortDirButtonX = innerX + innerW - sortDirButtonWidth / 2;
         const sortFieldButtonX = sortDirButtonX - sortDirButtonWidth / 2 - buttonGap - sortFieldButtonWidth / 2;
         const hideZeroButtonX = sortFieldButtonX - sortFieldButtonWidth / 2 - buttonGap - hideZeroButtonWidth / 2;
@@ -4728,7 +4843,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             {
                 hoverFillColor: 0x4338ca,
                 strokeColor: 0xa5b4fc,
-                fontSize: '11px',
+                fontSize: '10px',
             },
         );
         this.kindBtn = kindButton[0];
@@ -4749,7 +4864,7 @@ export class DeckManagementPanel extends GameObjects.Container {
             {
                 hoverFillColor: this.filterHideZero ? 0x2563eb : 0x334155,
                 strokeColor: this.filterHideZero ? 0x93c5fd : 0x475569,
-                fontSize: '11px',
+                fontSize: '10px',
             },
         );
         this.hideZeroBtn = hideZeroButton[0];
@@ -4767,7 +4882,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                 this.cycleBrowserSortField();
             },
             false,
-            { hoverFillColor: 0x334155, strokeColor: 0x475569, fontSize: '11px' },
+            { hoverFillColor: 0x334155, strokeColor: 0x475569, fontSize: '10px' },
         );
         this.sortFieldBtn = sortFieldButton[0];
         this.sortFieldBtnText = sortFieldButton[1];
@@ -4784,7 +4899,7 @@ export class DeckManagementPanel extends GameObjects.Container {
                 this.toggleBrowserSortDirection();
             },
             false,
-            { hoverFillColor: 0x334155, strokeColor: 0x475569, fontSize: '11px' },
+            { hoverFillColor: 0x334155, strokeColor: 0x475569, fontSize: '10px' },
         );
         this.sortDirBtn = sortDirButton[0];
         this.sortDirBtnText = sortDirButton[1];
