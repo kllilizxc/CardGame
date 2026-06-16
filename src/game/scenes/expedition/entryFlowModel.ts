@@ -575,10 +575,6 @@ function createDeckCountDeltaText(before: number, after: number): string {
     return `已保存卡组数从 ${before} 套变为 ${after} 套。`;
 }
 
-function getRouteDepth(map: ExpeditionMapDefinition): number {
-    return getRouteLayerGroups(map).length;
-}
-
 function createRouteNodeLookup(map: ExpeditionMapDefinition): Map<string, ExpeditionMapDefinition['nodes'][number]> {
     return new Map(map.nodes.map((node) => [node.id, node]));
 }
@@ -593,32 +589,6 @@ function getRouteOpeningNodes(map: ExpeditionMapDefinition, entryNode: Expeditio
     return entryNode.outgoingNodeIds
         .map((nodeId) => nodeLookup.get(nodeId))
         .filter((node): node is ExpeditionMapDefinition['nodes'][number] => node !== undefined);
-}
-
-function getRouteTerminalNodes(map: ExpeditionMapDefinition) {
-    return map.nodes.filter((node) => node.outgoingNodeIds.length === 0 && node.id !== map.entryNodeId);
-}
-
-function getRouteLayerGroups(map: ExpeditionMapDefinition) {
-    const layers = new Map<number, ExpeditionMapDefinition['nodes'][number][]>();
-
-    for (const node of map.nodes) {
-        if (node.id === map.entryNodeId) {
-            continue;
-        }
-
-        const current = layers.get(node.layer);
-
-        if (current) {
-            current.push(node);
-        } else {
-            layers.set(node.layer, [node]);
-        }
-    }
-
-    return [...layers.entries()]
-        .sort((left, right) => left[0] - right[0])
-        .map(([, nodes]) => nodes);
 }
 
 function formatRouteNodeLabels(
@@ -648,13 +618,8 @@ function createRouteShellLabel(
     entryNode: ExpeditionMapDefinition['nodes'][number] | undefined,
 ): string {
     const entryLabel = entryNode?.label ?? map.entryNodeId;
-    const routeDepth = getRouteDepth(map);
 
-    return `大地图 / ${map.name} · 入口：${entryLabel} · ${routeDepth} 层`;
-}
-
-function createRouteStageLine(openingSummary: string, terminalSummary: string): string {
-    return `首层：${openingSummary} · 收官：${terminalSummary}`;
+    return `大地图 / ${map.name} · ${entryLabel}`;
 }
 
 export function createExpeditionRouteBriefingSummary(
@@ -678,28 +643,22 @@ export function createExpeditionDepartureHandoffSummary(
     const entryNode = map.nodes.find((node) => node.id === map.entryNodeId);
     const entryLabel = options.currentNodeLabel ?? entryNode?.label ?? run.currentNodeId;
     const openingNodes = getRouteOpeningNodes(map, entryNode);
-    const terminalNodes = getRouteTerminalNodes(map);
     const openingSummary = formatRouteNodeLabels(openingNodes, {
         limit: 2,
         emptyLabel: '入口后的推进顺序',
-    });
-    const terminalSummary = formatRouteNodeLabels(terminalNodes, {
-        limit: 2,
-        emptyLabel: '终段节点',
     });
     const selectedDeckName = getSelectedSavedDeck(stash)?.name?.trim();
     const deckLabel = selectedDeckName && selectedDeckName.length > 0 ? `「${selectedDeckName}」` : '当前卡组';
     const carriedDeckCount = countStacks(run.carriedDeck);
     const carriedItemCount = countStacks(run.carriedItems);
-    const routeStageLine = createRouteStageLine(openingSummary, terminalSummary);
 
     return {
-        badgeLabel: '出发提示',
-        headline: deckLabel,
-        detail: `${map.name} · 入口：${entryLabel}`,
-        routeLine: routeStageLine,
-        loadoutLine: `带入：${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
-        revealStatusText: `已进入${map.name}：${entryLabel} · ${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石。`,
+        badgeLabel: '出发',
+        headline: `${map.name} · ${entryLabel}`,
+        detail: '本次带入已锁定。',
+        routeLine: `首层：${openingSummary}`,
+        loadoutLine: `${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
+        revealStatusText: `已进入${map.name} · ${entryLabel} · ${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石。`,
     };
 }
 
@@ -722,11 +681,11 @@ export function createExpeditionArrivalCueSummary(
     const carriedItemCount = countStacks(run.carriedItems);
 
     return {
-        badgeLabel: '抵达提示',
+        badgeLabel: '抵达',
         headline: `${map.name} · ${entryLabel}`,
         detail: '首层分路已高亮。',
         routeLine: `首层：${openingSummary}`,
-        loadoutLine: `带入：${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
+        loadoutLine: `${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
     };
 }
 

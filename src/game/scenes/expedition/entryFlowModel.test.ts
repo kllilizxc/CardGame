@@ -54,20 +54,20 @@ describe('entryFlowModel', () => {
     it('builds a quiet route breadcrumb from the expedition map and current shell step', () => {
         expect(createExpeditionRouteBriefingSummary(prototypeMapJson, 'preparation')).toEqual({
             mode: 'preparation',
-            shellRouteLabel: '大地图 / 青云外山试炼 · 入口：山门入口 · 3 层',
+            shellRouteLabel: '大地图 / 青云外山试炼 · 山门入口',
         });
     });
 
     it('keeps the same route identity in deck management without extra shell narration', () => {
         expect(createExpeditionRouteBriefingSummary(jadeCaveMapJson, 'deckManager')).toEqual({
             mode: 'deckManager',
-            shellRouteLabel: '大地图 / 青玉洞试炼 · 入口：青玉洞口 · 3 层',
+            shellRouteLabel: '大地图 / 青玉洞试炼 · 青玉洞口',
         });
     });
 
     it('keeps tutorial maps on the same quiet breadcrumb shape even with longer routes', () => {
         expect(createExpeditionRouteBriefingSummary(tutorialQingyunMapJson, 'preparation')).toMatchObject({
-            shellRouteLabel: '大地图 / 教程 · 青云外山试炼 · 入口：外山入口 · 4 层',
+            shellRouteLabel: '大地图 / 教程 · 青云外山试炼 · 外山入口',
         });
     });
 
@@ -88,12 +88,12 @@ describe('entryFlowModel', () => {
             run,
             { currentNodeLabel: '山门入口' },
         )).toEqual({
-            badgeLabel: '出发提示',
-            headline: '「功能测试卡组」',
-            detail: '青云外山试炼 · 入口：山门入口',
-            routeLine: '首层：雾林伏击 / 弃置行囊 · 收官：悬桥撤离点 / 封印守关者',
-            loadoutLine: '带入：20 张卡 · 3 件道具 · 36 枚灵石',
-            revealStatusText: '已进入青云外山试炼：山门入口 · 「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石。',
+            badgeLabel: '出发',
+            headline: '青云外山试炼 · 山门入口',
+            detail: '本次带入已锁定。',
+            routeLine: '首层：雾林伏击 / 弃置行囊',
+            loadoutLine: '「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石',
+            revealStatusText: '已进入青云外山试炼 · 山门入口 · 「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石。',
         });
     });
 
@@ -114,11 +114,11 @@ describe('entryFlowModel', () => {
             run,
             { currentNodeLabel: '山门入口' },
         )).toEqual({
-            badgeLabel: '抵达提示',
+            badgeLabel: '抵达',
             headline: '青云外山试炼 · 山门入口',
             detail: '首层分路已高亮。',
             routeLine: '首层：雾林伏击 / 弃置行囊',
-            loadoutLine: '带入：「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石',
+            loadoutLine: '「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石',
         });
     });
 
