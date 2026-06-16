@@ -135,7 +135,6 @@ export type ExpeditionRouteBriefingMode = 'preparation' | 'deckManager';
 
 export interface ExpeditionRouteBriefingSummary {
     mode: ExpeditionRouteBriefingMode;
-    shellBadgeLabel: string;
     shellRouteLabel: string;
 }
 
@@ -651,25 +650,11 @@ function createRouteShellLabel(
     const entryLabel = entryNode?.label ?? map.entryNodeId;
     const routeDepth = getRouteDepth(map);
 
-    return `大地图 / ${map.name} · 入口：${entryLabel} · ${routeDepth} 层路线`;
+    return `大地图 / ${map.name} · 入口：${entryLabel} · ${routeDepth} 层`;
 }
 
 function createRouteStageLine(openingSummary: string, terminalSummary: string): string {
     return `首层：${openingSummary} · 收官：${terminalSummary}`;
-}
-
-function getRouteBriefingShellCopy(mode: ExpeditionRouteBriefingMode): {
-    badgeLabel: string;
-} {
-    if (mode === 'deckManager') {
-        return {
-            badgeLabel: '卡组管理',
-        };
-    }
-
-    return {
-        badgeLabel: '远征准备',
-    };
 }
 
 export function createExpeditionRouteBriefingSummary(
@@ -677,11 +662,9 @@ export function createExpeditionRouteBriefingSummary(
     mode: ExpeditionRouteBriefingMode,
 ): ExpeditionRouteBriefingSummary {
     const entryNode = map.nodes.find((node) => node.id === map.entryNodeId);
-    const shellCopy = getRouteBriefingShellCopy(mode);
 
     return {
         mode,
-        shellBadgeLabel: shellCopy.badgeLabel,
         shellRouteLabel: createRouteShellLabel(map, entryNode),
     };
 }

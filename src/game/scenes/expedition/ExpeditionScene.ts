@@ -45,7 +45,6 @@ import {
     type ExpeditionDepartureHandoffSummary,
     type ExpeditionArrivalCueSummary,
     type PreparationDeckContext,
-    type PreparationDeckReadiness,
     type PreparationDeckHandoffSummary,
     type RunSummaryMode,
 } from './entryFlowModel';
@@ -83,31 +82,17 @@ type EntryShellMode = 'preparation' | 'deckManager';
 
 interface EntryShellVisuals {
     container: Phaser.GameObjects.Container;
-    shadow: Phaser.GameObjects.Rectangle;
-    plate: Phaser.GameObjects.Rectangle;
-    accent: Phaser.GameObjects.Rectangle;
     routeText: Phaser.GameObjects.Text;
-    cueText: Phaser.GameObjects.Text;
-    modeBadgeText: Phaser.GameObjects.Text;
-    returnPlate: Phaser.GameObjects.Rectangle;
+    divider: Phaser.GameObjects.Rectangle;
     returnLabel: Phaser.GameObjects.Text;
 }
 
 interface EntryShellModeVisualConfig {
-    badgeBackgroundColor: string;
-    badgeColor: string;
-    plateFillColor: number;
-    plateFillAlpha: number;
-    plateBorderColor: number;
-    plateBorderAlpha: number;
-    accentColor: number;
     routeColor: string;
-    cueColor: string;
-    returnPlateFillColor: number;
-    returnPlateFillAlpha: number;
-    returnPlateBorderColor: number;
-    returnPlateBorderAlpha: number;
+    dividerColor: number;
+    dividerAlpha: number;
     returnLabelColor: string;
+    returnLabelHoverColor: string;
 }
 
 export class ExpeditionScene extends Scene {
@@ -303,59 +288,37 @@ export class ExpeditionScene extends Scene {
     }
 
     private createEntryShell(): void {
-        const { width } = this.scale;
         const container = this.add.container(0, 0);
         const routeBriefing = this.getEntryRouteBriefing('preparation');
         const routeText = this.add.text(0, 0, routeBriefing.shellRouteLabel, {
             fontFamily: 'Arial',
             fontSize: '11px',
-            color: '#e2e8f0',
-        }).setOrigin(0, 0.5);
-        const cueText = this.add.text(0, 0, '', {
-            fontFamily: 'Arial',
-            fontSize: '10px',
             color: '#94a3b8',
-            fontStyle: 'bold',
-        }).setOrigin(1, 0.5);
-        const modeBadgeText = this.add.text(0, 0, routeBriefing.shellBadgeLabel, {
-            fontFamily: 'Arial',
-            fontSize: '9px',
-            color: '#bfdbfe',
-            fontStyle: 'bold',
-            backgroundColor: '#10233d',
-            padding: { left: 6, right: 6, top: 3, bottom: 3 },
         }).setOrigin(0, 0.5);
-        const shadow = this.add.rectangle(width / 2, 0, 0, 0, 0x020617, 0.22);
-        const plate = this.add.rectangle(width / 2, 0, 0, 0, 0x08111d, 0.64);
-        plate.setStrokeStyle(1, 0x334155, 0.28);
-        const accent = this.add.rectangle(width / 2, 0, 0, 0, 0x38bdf8, 0.46);
-        const returnPlate = this.add.rectangle(0, 0, 0, 0, 0x08111d, 0.16);
-        returnPlate.setStrokeStyle(1, 0x64748b, 0.26);
-        returnPlate.setInteractive({ useHandCursor: true });
-        returnPlate.on('pointerover', () => {
-            const modeConfig = this.getEntryShellModeVisualConfig(this.currentEntryShellMode);
-            returnPlate.setFillStyle(modeConfig.returnPlateFillColor, Math.min(modeConfig.returnPlateFillAlpha + 0.12, 0.34));
-        });
-        returnPlate.on('pointerout', () => {
-            const modeConfig = this.getEntryShellModeVisualConfig(this.currentEntryShellMode);
-            returnPlate.setFillStyle(modeConfig.returnPlateFillColor, modeConfig.returnPlateFillAlpha);
-        });
-        returnPlate.on('pointerdown', () => this.returnToWorldMap());
+        const divider = this.add.rectangle(0, 0, 1, 12, 0x475569, 0.26);
         const returnLabel = this.add.text(0, 0, '返回大地图', {
             fontFamily: 'Arial',
-            fontSize: '10px',
+            fontSize: '11px',
             color: '#cbd5e1',
-            fontStyle: 'bold',
-        }).setOrigin(0.5);
+            padding: { left: 6, right: 6, top: 4, bottom: 4 },
+        }).setOrigin(1, 0.5);
+        returnLabel.setAlpha(0.84);
+        returnLabel.setInteractive({ useHandCursor: true });
+        returnLabel.on('pointerover', () => {
+            const modeConfig = this.getEntryShellModeVisualConfig(this.currentEntryShellMode);
+            returnLabel.setColor(modeConfig.returnLabelHoverColor);
+            returnLabel.setAlpha(1);
+        });
+        returnLabel.on('pointerout', () => {
+            const modeConfig = this.getEntryShellModeVisualConfig(this.currentEntryShellMode);
+            returnLabel.setColor(modeConfig.returnLabelColor);
+            returnLabel.setAlpha(0.84);
+        });
+        returnLabel.on('pointerdown', () => this.returnToWorldMap());
 
         container.add([
-            shadow,
-            plate,
-            accent,
-            modeBadgeText,
             routeText,
-            cueText,
-            returnPlate,
+            divider,
             returnLabel,
         ]);
         container.setDepth(1300);
@@ -364,13 +327,8 @@ export class ExpeditionScene extends Scene {
 
         this.entryShell = {
             container,
-            shadow,
-            plate,
-            accent,
             routeText,
-            cueText,
-            modeBadgeText,
-            returnPlate,
+            divider,
             returnLabel,
         };
 
@@ -387,78 +345,23 @@ export class ExpeditionScene extends Scene {
         return createExpeditionRouteBriefingSummary(this.mapDefinition, mode);
     }
 
-    private getEntryShellHeaderCopy(
-        mode: EntryShellMode,
-        routeBriefing: ReturnType<typeof createExpeditionRouteBriefingSummary>,
-        readiness: PreparationDeckReadiness,
-    ) {
-        const hintLabel = mode === 'deckManager'
-            ? this.getDeckManagerBreadcrumbReminder(readiness)
-            : this.getPreparationBreadcrumbReminder(readiness);
-
-        return {
-            badgeLabel: routeBriefing.shellBadgeLabel,
-            routeLabel: routeBriefing.shellRouteLabel,
-            cueLabel: hintLabel,
-        };
-    }
-
-    private getPreparationBreadcrumbReminder(readiness: PreparationDeckReadiness): string {
-        switch (readiness) {
-            case 'ready':
-                return '可出发';
-            case 'none':
-                return '先选卡组';
-            case 'too-few-cards':
-                return '补足牌数';
-            case 'too-many-cards':
-                return '精简卡组';
-            case 'insufficient-copies':
-                return '补齐库存';
-        }
-    }
-
-    private getDeckManagerBreadcrumbReminder(readiness: PreparationDeckReadiness): string {
-        return readiness === 'ready'
-            ? '可返回准备'
-            : '补齐后返回';
-    }
-
     private getEntryShellModeVisualConfig(mode: EntryShellMode): EntryShellModeVisualConfig {
         if (mode === 'deckManager') {
             return {
-                badgeBackgroundColor: '#28133f',
-                badgeColor: '#e9d5ff',
-                plateFillColor: 0x0f0b19,
-                plateFillAlpha: 0.62,
-                plateBorderColor: 0x4c1d95,
-                plateBorderAlpha: 0.26,
-                accentColor: 0xc084fc,
-                routeColor: '#ede9fe',
-                cueColor: '#d8b4fe',
-                returnPlateFillColor: 0x110d1a,
-                returnPlateFillAlpha: 0.16,
-                returnPlateBorderColor: 0x7c3aed,
-                returnPlateBorderAlpha: 0.22,
-                returnLabelColor: '#f3e8ff',
+                routeColor: '#94a3b8',
+                dividerColor: 0x475569,
+                dividerAlpha: 0.22,
+                returnLabelColor: '#cbd5e1',
+                returnLabelHoverColor: '#f8fafc',
             };
         }
 
         return {
-            badgeBackgroundColor: '#10233d',
-            badgeColor: '#bfdbfe',
-            plateFillColor: 0x08111d,
-            plateFillAlpha: 0.6,
-            plateBorderColor: 0x1d4ed8,
-            plateBorderAlpha: 0.24,
-            accentColor: 0x38bdf8,
-            routeColor: '#dbeafe',
-            cueColor: '#cbd5e1',
-            returnPlateFillColor: 0x08111d,
-            returnPlateFillAlpha: 0.16,
-            returnPlateBorderColor: 0x475569,
-            returnPlateBorderAlpha: 0.26,
+            routeColor: '#94a3b8',
+            dividerColor: 0x475569,
+            dividerAlpha: 0.26,
             returnLabelColor: '#cbd5e1',
+            returnLabelHoverColor: '#f8fafc',
         };
     }
 
@@ -469,42 +372,21 @@ export class ExpeditionScene extends Scene {
 
         this.currentEntryShellMode = mode;
         const routeBriefing = this.getEntryRouteBriefing(mode);
-        const deckContext = createPreparationDeckContext(this.expeditionState.persistentStash);
-        const headerCopy = this.getEntryShellHeaderCopy(mode, routeBriefing, deckContext.readiness);
         const modeConfig = this.getEntryShellModeVisualConfig(mode);
-        this.entryShell.plate.setFillStyle(modeConfig.plateFillColor, modeConfig.plateFillAlpha);
-        this.entryShell.plate.setStrokeStyle(1, modeConfig.plateBorderColor, modeConfig.plateBorderAlpha);
-        this.entryShell.accent.setFillStyle(modeConfig.accentColor, 0.42);
-        this.entryShell.modeBadgeText.setText(headerCopy.badgeLabel);
-        this.entryShell.modeBadgeText.setStyle({
-            fontFamily: 'Arial',
-            fontSize: '9px',
-            color: modeConfig.badgeColor,
-            backgroundColor: modeConfig.badgeBackgroundColor,
-            fontStyle: 'bold',
-            padding: { left: 6, right: 6, top: 3, bottom: 3 },
-        });
-        this.entryShell.routeText.setText(headerCopy.routeLabel);
+        this.entryShell.routeText.setText(routeBriefing.shellRouteLabel);
         this.entryShell.routeText.setStyle({
             fontFamily: 'Arial',
             fontSize: '11px',
             color: modeConfig.routeColor,
         });
-        this.entryShell.cueText.setText(headerCopy.cueLabel);
-        this.entryShell.cueText.setStyle({
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: modeConfig.cueColor,
-            fontStyle: 'bold',
-        });
-        this.entryShell.returnPlate.setFillStyle(modeConfig.returnPlateFillColor, modeConfig.returnPlateFillAlpha);
-        this.entryShell.returnPlate.setStrokeStyle(1, modeConfig.returnPlateBorderColor, modeConfig.returnPlateBorderAlpha);
+        this.entryShell.divider.setFillStyle(modeConfig.dividerColor, modeConfig.dividerAlpha);
         this.entryShell.returnLabel.setStyle({
             fontFamily: 'Arial',
-            fontSize: '10px',
+            fontSize: '11px',
             color: modeConfig.returnLabelColor,
-            fontStyle: 'bold',
+            padding: { left: 6, right: 6, top: 4, bottom: 4 },
         });
+        this.entryShell.returnLabel.setAlpha(0.84);
     }
 
     private updateEntryShellLayout(mode: EntryShellMode, animate: boolean): void {
@@ -521,33 +403,22 @@ export class ExpeditionScene extends Scene {
             : Math.min(820, height * 0.88);
         const panelX = width / 2;
         const panelY = mode === 'deckManager' ? (height / 2 + 18) : (height / 2 + 24);
-        const breadcrumbWidth = Math.max(500, Math.min(panelWidth - 92, mode === 'deckManager' ? 680 : 620));
-        const breadcrumbHeight = 42;
+        const breadcrumbWidth = Math.max(520, Math.min(panelWidth - 72, mode === 'deckManager' ? 760 : 640));
         const breadcrumbX = panelX;
-        const breadcrumbY = Math.max(54, panelY - panelHeight / 2 - 12);
+        const breadcrumbY = Math.max(52, panelY - panelHeight / 2 - 16);
         const breadcrumbLeft = breadcrumbX - breadcrumbWidth / 2;
-        const breadcrumbTop = breadcrumbY - breadcrumbHeight / 2;
-        const returnChipWidth = 94;
-        const returnChipHeight = 20;
-        const returnChipX = breadcrumbLeft + breadcrumbWidth - returnChipWidth / 2 - 10;
-        const returnChipY = breadcrumbY;
-        const badgeX = breadcrumbLeft + 12;
-        const badgeY = breadcrumbY;
-        const routeX = badgeX + this.entryShell.modeBadgeText.width + 12;
-        const cueX = returnChipX - returnChipWidth / 2 - 12;
-        const cueLeft = cueX - this.entryShell.cueText.width;
-        const routeWrapWidth = Math.max(200, cueLeft - routeX - 14);
+        const breadcrumbRight = breadcrumbX + breadcrumbWidth / 2;
+        const returnX = breadcrumbRight;
+        const returnLeft = returnX - this.entryShell.returnLabel.width;
+        const dividerX = returnLeft - 10;
+        const routeX = breadcrumbLeft;
+        const routeWrapWidth = Math.max(200, dividerX - routeX - 16);
         const shellTargets: Array<[Phaser.GameObjects.Rectangle, number, number, number, number]> = [
-            [this.entryShell.shadow, breadcrumbX, breadcrumbY + 2, breadcrumbWidth, breadcrumbHeight],
-            [this.entryShell.plate, breadcrumbX, breadcrumbY, breadcrumbWidth, breadcrumbHeight],
-            [this.entryShell.accent, breadcrumbX, breadcrumbTop + 4, breadcrumbWidth - 28, 2],
-            [this.entryShell.returnPlate, returnChipX, returnChipY, returnChipWidth, returnChipHeight],
+            [this.entryShell.divider, dividerX, breadcrumbY, 1, 12],
         ];
         const textTargets: Array<[Phaser.GameObjects.Text, number, number]> = [
-            [this.entryShell.modeBadgeText, badgeX, badgeY],
             [this.entryShell.routeText, routeX, breadcrumbY],
-            [this.entryShell.cueText, cueX, breadcrumbY],
-            [this.entryShell.returnLabel, returnChipX, returnChipY],
+            [this.entryShell.returnLabel, returnX, breadcrumbY],
         ];
 
         this.entryShell.routeText.setWordWrapWidth(routeWrapWidth);

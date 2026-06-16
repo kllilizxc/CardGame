@@ -9,20 +9,21 @@ describe('expedition UI Chinese copy', () => {
         const model = read('src/game/scenes/expedition/entryFlowModel.ts');
         const sceneCopy = `${scene}\n${model}`;
 
-        expect(sceneCopy).toContain('远征准备');
         expect(sceneCopy).toContain('大地图 /');
         expect(sceneCopy).toContain('返回大地图');
-        expect(sceneCopy).toContain('可返回准备');
-        expect(sceneCopy).toContain('可出发');
         expect(sceneCopy).toContain('入口：');
         expect(sceneCopy).toContain('首层：');
         expect(sceneCopy).toContain('收官');
-        expect(sceneCopy).toContain('卡组管理');
         expect(sceneCopy).toContain('进入秘境');
         expect(sceneCopy).toContain('点按任意处或按 Enter / Space 继续。');
         expect(sceneCopy).not.toContain('路线简报');
         expect(sceneCopy).not.toContain('分层速览');
+        expect(sceneCopy).not.toContain('层路线');
         expect(sceneCopy).not.toContain('开局');
+        expect(sceneCopy).not.toContain('远征准备');
+        expect(sceneCopy).not.toContain('卡组管理');
+        expect(sceneCopy).not.toContain('可返回准备');
+        expect(sceneCopy).not.toContain('可出发');
         expect(sceneCopy).not.toContain('当前操作：选定带入');
         expect(sceneCopy).not.toContain('当前操作：整理卡组');
         expect(sceneCopy).not.toContain('当前带入可直接确认出发');

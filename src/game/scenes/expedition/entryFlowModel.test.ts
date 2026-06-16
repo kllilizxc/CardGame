@@ -51,25 +51,23 @@ describe('entryFlowModel', () => {
         });
     });
 
-    it('builds a route briefing from the expedition map and current shell step', () => {
+    it('builds a quiet route breadcrumb from the expedition map and current shell step', () => {
         expect(createExpeditionRouteBriefingSummary(prototypeMapJson, 'preparation')).toEqual({
             mode: 'preparation',
-            shellBadgeLabel: '远征准备',
-            shellRouteLabel: '大地图 / 青云外山试炼 · 入口：山门入口 · 3 层路线',
+            shellRouteLabel: '大地图 / 青云外山试炼 · 入口：山门入口 · 3 层',
         });
     });
 
-    it('keeps the same route identity while changing the shell framing for deck management', () => {
+    it('keeps the same route identity in deck management without extra shell narration', () => {
         expect(createExpeditionRouteBriefingSummary(jadeCaveMapJson, 'deckManager')).toEqual({
             mode: 'deckManager',
-            shellBadgeLabel: '卡组管理',
-            shellRouteLabel: '大地图 / 青玉洞试炼 · 入口：青玉洞口 · 3 层路线',
+            shellRouteLabel: '大地图 / 青玉洞试炼 · 入口：青玉洞口 · 3 层',
         });
     });
 
     it('keeps tutorial maps on the same quiet breadcrumb shape even with longer routes', () => {
         expect(createExpeditionRouteBriefingSummary(tutorialQingyunMapJson, 'preparation')).toMatchObject({
-            shellRouteLabel: '大地图 / 教程 · 青云外山试炼 · 入口：外山入口 · 4 层路线',
+            shellRouteLabel: '大地图 / 教程 · 青云外山试炼 · 入口：外山入口 · 4 层',
         });
     });
 
