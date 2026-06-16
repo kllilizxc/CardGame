@@ -2743,9 +2743,9 @@ export class DeckManagementPanel extends GameObjects.Container {
         const panelRight = panelX + panelWidth / 2;
         const panelTop = panelY - panelHeight / 2;
         const panelBottom = panelY + panelHeight / 2;
-        const keyboardGuideWidth = Math.min(452, Math.max(340, panelWidth * 0.37));
-        const keyboardGuideHeight = 30;
-        const footerY = panelBottom - 16;
+        const keyboardGuideWidth = Math.min(436, Math.max(332, panelWidth * 0.35));
+        const keyboardGuideHeight = 28;
+        const footerY = panelBottom - 14;
         const keyboardGuideLeft = panelRight - 22 - keyboardGuideWidth;
         this.keyboardGuideBg = this.scene.add.rectangle(
             keyboardGuideLeft + keyboardGuideWidth / 2,
@@ -2785,22 +2785,22 @@ export class DeckManagementPanel extends GameObjects.Container {
         this.keyboardGuidePillBg = keyboardGuidePillBg;
         this.keyboardGuidePillText = keyboardGuidePillText;
 
-        const contentY = panelTop + 18;
-        const contentBottom = footerY - keyboardGuideHeight / 2 - 12;
+        const contentY = panelTop + 16;
+        const contentBottom = footerY - keyboardGuideHeight / 2 - 10;
         const contentH = contentBottom - contentY;
 
-        const columnGap = 12;
+        const columnGap = 10;
         const leftColX = panelLeft + 18;
         const contentWidth = panelWidth - 36;
-        const rightColW = Math.max(304, Math.min(336, Math.floor(contentWidth * 0.278)));
+        const rightColW = Math.max(292, Math.min(324, Math.floor(contentWidth * 0.27)));
         const leftWorkspaceW = contentWidth - rightColW - columnGap;
         const rightColX = leftColX + leftWorkspaceW + columnGap;
         const leftWorkspaceInnerX = leftColX + 10;
         const leftWorkspaceInnerY = contentY + 8;
         const leftWorkspaceInnerW = leftWorkspaceW - 20;
         const leftWorkspaceInnerH = contentH - 14;
-        const deckTrayW = Math.max(76, Math.min(84, Math.floor(leftWorkspaceInnerW * 0.105)));
-        const leftWorkspaceInnerGap = 12;
+        const deckTrayW = Math.max(70, Math.min(78, Math.floor(leftWorkspaceInnerW * 0.098)));
+        const leftWorkspaceInnerGap = 10;
         const editorW = leftWorkspaceInnerW - deckTrayW - leftWorkspaceInnerGap;
         const deckTrayX = leftWorkspaceInnerX;
         const editorX = deckTrayX + deckTrayW + leftWorkspaceInnerGap;
@@ -3735,15 +3735,15 @@ export class DeckManagementPanel extends GameObjects.Container {
         const namingActive = this.isDeckNamingActive(deck);
         const detailExpanded = !namingActive && this.detailPaneExpanded;
         const compactSummaryMetrics = !namingActive && !detailExpanded;
-        const targetSummaryH = namingActive ? 248 : detailExpanded ? 168 : 124;
+        const targetSummaryH = namingActive ? 248 : detailExpanded ? 168 : 94;
         const summaryH = namingActive
             ? Math.min(targetSummaryH, Math.max(184, contentH - 128))
             : detailExpanded
                 ? Math.min(targetSummaryH, Math.max(160, contentH - 116))
-                : Math.min(targetSummaryH, Math.max(118, contentH - 134));
-        const listHeaderY = summaryH + 10;
+                : Math.min(targetSummaryH, Math.max(92, contentH - 140));
+        const listHeaderY = summaryH + (compactSummaryMetrics ? 6 : 10);
         const scrollBtnY = contentH - 10;
-        const listTop = listHeaderY + 24;
+        const listTop = listHeaderY + (compactSummaryMetrics ? 18 : 24);
         const listBottom = scrollBtnY - 8;
         const listH = Math.max(82, listBottom - listTop);
 
@@ -3787,9 +3787,23 @@ export class DeckManagementPanel extends GameObjects.Container {
         const deckSelectionChanged = this.pendingSelectedDeckMotionId === deck.id;
         const countChanged = previousFeedback?.deckId === deck.id && previousFeedback.count !== summary.count;
         const readinessChanged = previousFeedback?.deckId === deck.id && previousFeedback.readinessTier !== readinessTier;
-        const summaryGlow = this.scene.add.rectangle(localX + summaryW / 2, summaryH / 2 + 2, summaryW + 4, summaryH + 4, summary.accentColor, 0.08);
-        const summaryCard = this.scene.add.rectangle(localX + summaryW / 2, summaryH / 2, summaryW, summaryH, 0x0f172a, 0.98);
-        summaryCard.setStrokeStyle(1, summary.accentColor, 0.9);
+        const summaryGlow = this.scene.add.rectangle(
+            localX + summaryW / 2,
+            summaryH / 2 + 2,
+            summaryW + 4,
+            summaryH + 4,
+            summary.accentColor,
+            compactSummaryMetrics ? 0.05 : 0.08,
+        );
+        const summaryCard = this.scene.add.rectangle(
+            localX + summaryW / 2,
+            summaryH / 2,
+            summaryW,
+            summaryH,
+            compactSummaryMetrics ? 0x0b1324 : 0x0f172a,
+            compactSummaryMetrics ? 0.96 : 0.98,
+        );
+        summaryCard.setStrokeStyle(1, summary.accentColor, compactSummaryMetrics ? 0.72 : 0.9);
         this.editorContainer.add([summaryGlow, summaryCard]);
 
         const detailSurfaceWidth = namingActive ? 0 : detailExpanded ? 168 : 0;
@@ -3911,9 +3925,16 @@ export class DeckManagementPanel extends GameObjects.Container {
         } else {
             this.nativeTextEntry.deactivate(DECK_NAMING_TEXT_ENTRY_SESSION_ID);
             eyebrow.setText('当前带入卡组');
-            eyebrow.setPosition(localX + 20, 10);
+            eyebrow.setPosition(localX + 20, compactSummaryMetrics ? 8 : 10);
             const titleBarAccent = this.scene.add.rectangle(localX + 14, 14, 4, 12, summary.accentColor, 0.9).setOrigin(0, 0.5);
-            const titleDivider = this.scene.add.rectangle(localX + summaryW / 2, 24, summaryW - 16, 1, blendColor(summary.accentColor, SECTION_BORDER, 0.22), 0.34);
+            const titleDivider = this.scene.add.rectangle(
+                localX + summaryW / 2,
+                compactSummaryMetrics ? 22 : 24,
+                summaryW - 16,
+                1,
+                blendColor(summary.accentColor, SECTION_BORDER, 0.22),
+                compactSummaryMetrics ? 0.26 : 0.34,
+            );
             const returnCta = createReturnCtaState(summary);
             const renameButton = this.createButton(
                 localX + summaryW - 142,
@@ -3952,24 +3973,31 @@ export class DeckManagementPanel extends GameObjects.Container {
                 color: returnCta.buttonTextColor,
                 fontStyle: 'bold',
             }).setOrigin(0.5);
-            const returnHintLabel = summary.availabilityIssues.length > 0
-                ? '返回前先补库存'
-                : summary.sizeIssue?.kind === 'too-few-cards'
-                    ? `还差 ${summary.sizeIssue.min - summary.sizeIssue.count} 张`
-                : summary.sizeIssue?.kind === 'too-many-cards'
-                        ? `超出 ${summary.sizeIssue.count - summary.sizeIssue.max} 张`
-                        : '已可直接返回';
-            returnHintText = this.scene.add.text(localX + summaryW - 8, 24, returnHintLabel, {
+            if (!compactSummaryMetrics) {
+                const returnHintLabel = summary.availabilityIssues.length > 0
+                    ? '返回前先补库存'
+                    : summary.sizeIssue?.kind === 'too-few-cards'
+                        ? `还差 ${summary.sizeIssue.min - summary.sizeIssue.count} 张`
+                    : summary.sizeIssue?.kind === 'too-many-cards'
+                            ? `超出 ${summary.sizeIssue.count - summary.sizeIssue.max} 张`
+                            : '已可直接返回';
+                returnHintText = this.scene.add.text(localX + summaryW - 8, 24, returnHintLabel, {
+                    fontFamily: 'Arial',
+                    fontSize: '8px',
+                    color: returnCta.buttonTextColor,
+                    fontStyle: 'bold',
+                }).setOrigin(1, 0);
+            }
+            const nameText = this.scene.add.text(
+                localX + 20,
+                compactSummaryMetrics ? 26 : 34,
+                truncateLabel(deck.name, detailExpanded ? 16 : compactSummaryMetrics ? 20 : 22),
+                {
                 fontFamily: 'Arial',
-                fontSize: '8px',
-                color: returnCta.buttonTextColor,
-                fontStyle: 'bold',
-            }).setOrigin(1, 0);
-            const nameText = this.scene.add.text(localX + 20, 34, truncateLabel(deck.name, detailExpanded ? 16 : 22), {
-                fontFamily: 'Arial',
-                fontSize: '28px',
+                fontSize: compactSummaryMetrics ? '24px' : '28px',
                 color: '#f8fafc',
                 fontStyle: 'bold',
+                wordWrap: { width: Math.max(164, leftSummaryW - (compactSummaryMetrics ? 108 : 12)) },
             });
             nameText.setInteractive({ useHandCursor: true });
             nameText.on('pointerdown', () => {
@@ -3978,14 +4006,24 @@ export class DeckManagementPanel extends GameObjects.Container {
             });
             headerMetaText = this.scene.add.text(
                 localX + 20,
-                compactSummaryMetrics ? 58 : 66,
-                truncateLabel(summarySnapshot.metaLabel, detailExpanded ? 34 : compactSummaryMetrics ? 42 : 48),
+                compactSummaryMetrics ? 50 : 66,
+                truncateLabel(
+                    compactSummaryMetrics
+                        ? (joinPreviewFacts(
+                            summary.isValid
+                                ? [`${summarySnapshot.uniqueCardCount} 种卡`, summarySnapshot.detailLabel]
+                                : [summary.detailLabel, `${summarySnapshot.uniqueCardCount} 种卡`, summarySnapshot.detailLabel],
+                            60,
+                        ) ?? summary.detailLabel)
+                        : summarySnapshot.metaLabel,
+                    detailExpanded ? 34 : compactSummaryMetrics ? 60 : 48,
+                ),
                 {
                     fontFamily: 'Arial',
-                    fontSize: '11px',
+                    fontSize: compactSummaryMetrics ? '10px' : '11px',
                     color: '#cbd5e1',
-                    fontStyle: 'bold',
-                    wordWrap: { width: Math.max(180, leftSummaryW - 8) },
+                    fontStyle: compactSummaryMetrics ? 'normal' : 'bold',
+                    wordWrap: { width: Math.max(148, leftSummaryW - (compactSummaryMetrics ? 106 : 8)) },
                 },
             );
             this.editorContainer.add([
@@ -3996,116 +4034,201 @@ export class DeckManagementPanel extends GameObjects.Container {
                 ...renameButton,
                 ctaButton,
                 ctaLabel,
-                returnHintText,
+                ...(returnHintText ? [returnHintText] : []),
             ]);
         }
 
-        const detailY = namingActive ? 132 : compactSummaryMetrics ? 64 : 82;
-        const countText = this.scene.add.text(localX + 20, detailY, `${summary.count} / ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, {
-            fontFamily: 'Arial',
-            fontSize: namingActive ? '19px' : compactSummaryMetrics ? '18px' : '20px',
-            color: summary.isValid ? '#86efac' : summary.pillTextColor,
-            fontStyle: 'bold',
-            wordWrap: { width: leftSummaryW },
-        });
-        const statusPillRightX = localX + 16 + leftSummaryW;
-        const [statusPillBg, statusPillText] = this.createRightAlignedPill(
-            statusPillRightX,
-            detailY + (namingActive ? 30 : compactSummaryMetrics ? 8 : 10),
-            summary.statusLabel,
-            summary.pillFillColor,
-            summary.pillTextColor,
-        );
-        const detailText = this.scene.add.text(localX + 20, detailY + (namingActive ? 50 : compactSummaryMetrics ? 18 : 22), namingActive
-            ? summary.detailLabel
-            : truncateLabel(
-                joinPreviewFacts(
-                    summary.isValid
-                        ? [summarySnapshot.detailLabel]
-                        : [summary.detailLabel, summarySnapshot.detailLabel],
-                    detailExpanded ? 46 : compactSummaryMetrics ? 56 : 68,
-                ) ?? summary.detailLabel,
-                detailExpanded ? 46 : compactSummaryMetrics ? 56 : 68,
-            ), {
-            fontFamily: 'Arial',
-            fontSize: namingActive ? '12px' : compactSummaryMetrics ? '9px' : '10px',
-            color: summary.isValid ? '#93c5fd' : summary.pillTextColor,
-            wordWrap: { width: leftSummaryW },
-        });
-        this.editorContainer.add([countText, statusPillBg, statusPillText, detailText]);
-
-        const capacitySummaryY = detailY + (namingActive ? 68 : compactSummaryMetrics ? 34 : 42);
-        const capacityTrackY = detailY + (namingActive ? 88 : compactSummaryMetrics ? 48 : 60);
-        const showCapacityRangeLabel = namingActive || detailExpanded;
-        const capacitySummaryText = this.scene.add.text(localX + 20, capacitySummaryY, joinPreviewFacts([
-            getDeckCapacityProgressLabel(capacity),
-            getDeckCapacityHeadroomLabel(capacity),
-        ], detailExpanded ? 50 : 62) ?? getDeckCapacityProgressLabel(capacity), {
-            fontFamily: 'Arial',
-            fontSize: compactSummaryMetrics ? '9px' : '10px',
-            color: capacityTextColor,
-            fontStyle: 'bold',
-            wordWrap: { width: leftSummaryW },
-        });
-        this.editorContainer.add(capacitySummaryText);
-
-        const capacityTrackX = localX + 20;
-        const capacityTrackW = Math.max(88, leftSummaryW - 10);
-        const capacityTrackH = 11;
-        const capacityFillWidth = capacityTrackW * Phaser.Math.Clamp(capacity.count / DECK_CARD_MAX, 0, 1);
-        const previousCapacityFillWidth = previousFeedback?.deckId === deck.id
-            ? capacityTrackW * Phaser.Math.Clamp(previousFeedback.count / DECK_CARD_MAX, 0, 1)
-            : 0;
-        const capacityTrackBg = this.scene.add.rectangle(
-            capacityTrackX + capacityTrackW / 2,
-            capacityTrackY,
-            capacityTrackW,
-            capacityTrackH,
-            0x172033,
-            1,
-        );
-        capacityTrackBg.setStrokeStyle(1, SECTION_BORDER, 0.9);
-        this.editorContainer.add(capacityTrackBg);
-
+        let countText: GameObjects.Text | null = null;
+        let detailText: GameObjects.Text | null = null;
+        let statusPillBg: GameObjects.Rectangle | null = null;
+        let statusPillText: GameObjects.Text | null = null;
+        let capacitySummaryText: GameObjects.Text | null = null;
         let capacityFill: GameObjects.Rectangle | undefined;
-        if (capacityFillWidth > 0) {
-            capacityFill = this.scene.add.rectangle(
-                capacityTrackX,
-                capacityTrackY,
-                capacityFillWidth,
-                capacityTrackH - 4,
-                capacityAccentColor,
-                1,
-            ).setOrigin(0, 0.5);
-            this.editorContainer.add(capacityFill);
-        }
+        let capacityFillWidth = 0;
+        let previousCapacityFillWidth = 0;
 
-        const capacityMinimumMarker = this.scene.add.rectangle(
-            capacityTrackX + capacityTrackW * (DECK_CARD_MIN / DECK_CARD_MAX),
-            capacityTrackY,
-            3,
-            capacityTrackH + 6,
-            0xe2e8f0,
-            0.9,
-        );
-        const capacityRangeLabel = this.scene.add.text(capacityTrackX, capacityTrackY + 12, namingActive
-            ? `${DECK_CARD_MIN} 张出征线 · ${DECK_CARD_MAX} 张上限`
-            : truncateLabel(
-                joinPreviewFacts(
-                    [`${DECK_CARD_MIN} 张出征线`, `${DECK_CARD_MAX} 张上限`, summarySnapshot.detailLabel],
+        if (compactSummaryMetrics) {
+            countText = this.scene.add.text(localX + 16 + leftSummaryW, 48, `${summary.count} / ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, {
+                fontFamily: 'Arial',
+                fontSize: '10px',
+                color: summary.isValid ? '#86efac' : summary.pillTextColor,
+                fontStyle: 'bold',
+            }).setOrigin(1, 0);
+            [statusPillBg, statusPillText] = this.createRightAlignedPill(
+                localX + 16 + leftSummaryW,
+                30,
+                summary.statusLabel,
+                summary.pillFillColor,
+                summary.pillTextColor,
+            );
+            detailText = this.scene.add.text(
+                localX + 20,
+                66,
+                truncateLabel(
+                    joinPreviewFacts([
+                        getDeckCapacityProgressLabel(capacity),
+                        getDeckCapacityHeadroomLabel(capacity),
+                    ], 72) ?? getDeckCapacityProgressLabel(capacity),
+                    72,
+                ),
+                {
+                    fontFamily: 'Arial',
+                    fontSize: '9px',
+                    color: capacityTextColor,
+                    fontStyle: 'bold',
+                    wordWrap: { width: leftSummaryW },
+                },
+            );
+            capacitySummaryText = detailText;
+            this.editorContainer.add([countText, statusPillBg, statusPillText, detailText]);
+
+            const capacityTrackX = localX + 20;
+            const capacityTrackW = Math.max(88, leftSummaryW - 8);
+            const capacityTrackY = 82;
+            const capacityTrackH = 10;
+            capacityFillWidth = capacityTrackW * Phaser.Math.Clamp(capacity.count / DECK_CARD_MAX, 0, 1);
+            previousCapacityFillWidth = previousFeedback?.deckId === deck.id
+                ? capacityTrackW * Phaser.Math.Clamp(previousFeedback.count / DECK_CARD_MAX, 0, 1)
+                : 0;
+            const capacityTrackBg = this.scene.add.rectangle(
+                capacityTrackX + capacityTrackW / 2,
+                capacityTrackY,
+                capacityTrackW,
+                capacityTrackH,
+                0x172033,
+                1,
+            );
+            capacityTrackBg.setStrokeStyle(1, SECTION_BORDER, 0.82);
+            this.editorContainer.add(capacityTrackBg);
+
+            if (capacityFillWidth > 0) {
+                capacityFill = this.scene.add.rectangle(
+                    capacityTrackX,
+                    capacityTrackY,
+                    capacityFillWidth,
+                    capacityTrackH - 4,
+                    capacityAccentColor,
+                    1,
+                ).setOrigin(0, 0.5);
+                this.editorContainer.add(capacityFill);
+            }
+
+            const capacityMinimumMarker = this.scene.add.rectangle(
+                capacityTrackX + capacityTrackW * (DECK_CARD_MIN / DECK_CARD_MAX),
+                capacityTrackY,
+                3,
+                capacityTrackH + 4,
+                0xe2e8f0,
+                0.86,
+            );
+            this.editorContainer.add(capacityMinimumMarker);
+        } else {
+            const detailY = namingActive ? 132 : 82;
+            countText = this.scene.add.text(localX + 20, detailY, `${summary.count} / ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, {
+                fontFamily: 'Arial',
+                fontSize: namingActive ? '19px' : '20px',
+                color: summary.isValid ? '#86efac' : summary.pillTextColor,
+                fontStyle: 'bold',
+                wordWrap: { width: leftSummaryW },
+            });
+            const statusPillRightX = localX + 16 + leftSummaryW;
+            [statusPillBg, statusPillText] = this.createRightAlignedPill(
+                statusPillRightX,
+                detailY + (namingActive ? 30 : 10),
+                summary.statusLabel,
+                summary.pillFillColor,
+                summary.pillTextColor,
+            );
+            detailText = this.scene.add.text(localX + 20, detailY + (namingActive ? 50 : 22), namingActive
+                ? summary.detailLabel
+                : truncateLabel(
+                    joinPreviewFacts(
+                        summary.isValid
+                            ? [summarySnapshot.detailLabel]
+                            : [summary.detailLabel, summarySnapshot.detailLabel],
+                        detailExpanded ? 46 : 68,
+                    ) ?? summary.detailLabel,
+                    detailExpanded ? 46 : 68,
+                ), {
+                fontFamily: 'Arial',
+                fontSize: namingActive ? '12px' : '10px',
+                color: summary.isValid ? '#93c5fd' : summary.pillTextColor,
+                wordWrap: { width: leftSummaryW },
+            });
+            this.editorContainer.add([countText, statusPillBg, statusPillText, detailText]);
+
+            const capacitySummaryY = detailY + (namingActive ? 68 : 42);
+            const capacityTrackY = detailY + (namingActive ? 88 : 60);
+            const showCapacityRangeLabel = namingActive || detailExpanded;
+            capacitySummaryText = this.scene.add.text(localX + 20, capacitySummaryY, joinPreviewFacts([
+                getDeckCapacityProgressLabel(capacity),
+                getDeckCapacityHeadroomLabel(capacity),
+            ], detailExpanded ? 50 : 62) ?? getDeckCapacityProgressLabel(capacity), {
+                fontFamily: 'Arial',
+                fontSize: '10px',
+                color: capacityTextColor,
+                fontStyle: 'bold',
+                wordWrap: { width: leftSummaryW },
+            });
+            this.editorContainer.add(capacitySummaryText);
+
+            const capacityTrackX = localX + 20;
+            const capacityTrackW = Math.max(88, leftSummaryW - 10);
+            const capacityTrackH = 11;
+            capacityFillWidth = capacityTrackW * Phaser.Math.Clamp(capacity.count / DECK_CARD_MAX, 0, 1);
+            previousCapacityFillWidth = previousFeedback?.deckId === deck.id
+                ? capacityTrackW * Phaser.Math.Clamp(previousFeedback.count / DECK_CARD_MAX, 0, 1)
+                : 0;
+            const capacityTrackBg = this.scene.add.rectangle(
+                capacityTrackX + capacityTrackW / 2,
+                capacityTrackY,
+                capacityTrackW,
+                capacityTrackH,
+                0x172033,
+                1,
+            );
+            capacityTrackBg.setStrokeStyle(1, SECTION_BORDER, 0.9);
+            this.editorContainer.add(capacityTrackBg);
+
+            if (capacityFillWidth > 0) {
+                capacityFill = this.scene.add.rectangle(
+                    capacityTrackX,
+                    capacityTrackY,
+                    capacityFillWidth,
+                    capacityTrackH - 4,
+                    capacityAccentColor,
+                    1,
+                ).setOrigin(0, 0.5);
+                this.editorContainer.add(capacityFill);
+            }
+
+            const capacityMinimumMarker = this.scene.add.rectangle(
+                capacityTrackX + capacityTrackW * (DECK_CARD_MIN / DECK_CARD_MAX),
+                capacityTrackY,
+                3,
+                capacityTrackH + 6,
+                0xe2e8f0,
+                0.9,
+            );
+            const capacityRangeLabel = this.scene.add.text(capacityTrackX, capacityTrackY + 12, namingActive
+                ? `${DECK_CARD_MIN} 张出征线 · ${DECK_CARD_MAX} 张上限`
+                : truncateLabel(
+                    joinPreviewFacts(
+                        [`${DECK_CARD_MIN} 张出征线`, `${DECK_CARD_MAX} 张上限`, summarySnapshot.detailLabel],
+                        detailExpanded ? 52 : 72,
+                    ) ?? `${DECK_CARD_MIN} 张出征线 · ${DECK_CARD_MAX} 张上限`,
                     detailExpanded ? 52 : 72,
-                ) ?? `${DECK_CARD_MIN} 张出征线 · ${DECK_CARD_MAX} 张上限`,
-                detailExpanded ? 52 : 72,
-            ), {
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: '#94a3b8',
-            fontStyle: 'bold',
-            wordWrap: { width: leftSummaryW },
-        });
-        this.editorContainer.add(showCapacityRangeLabel
-            ? [capacityMinimumMarker, capacityRangeLabel]
-            : [capacityMinimumMarker]);
+                ), {
+                fontFamily: 'Arial',
+                fontSize: '10px',
+                color: '#94a3b8',
+                fontStyle: 'bold',
+                wordWrap: { width: leftSummaryW },
+            });
+            this.editorContainer.add(showCapacityRangeLabel
+                ? [capacityMinimumMarker, capacityRangeLabel]
+                : [capacityMinimumMarker]);
+        }
 
         let inspectFocusButton: [GameObjects.Rectangle, GameObjects.Text] | null = null;
         if (!namingActive) {
