@@ -55,8 +55,7 @@ describe('entryFlowModel', () => {
         expect(createExpeditionRouteBriefingSummary(prototypeMapJson, 'preparation')).toEqual({
             mode: 'preparation',
             shellBadgeLabel: '远征准备',
-            shellTitle: '大地图 / 青云外山试炼',
-            shellSubtitle: '入口：山门入口 · 3 层路线',
+            shellRouteLabel: '大地图 / 青云外山试炼 · 入口：山门入口 · 3 层路线',
         });
     });
 
@@ -64,15 +63,13 @@ describe('entryFlowModel', () => {
         expect(createExpeditionRouteBriefingSummary(jadeCaveMapJson, 'deckManager')).toEqual({
             mode: 'deckManager',
             shellBadgeLabel: '卡组管理',
-            shellTitle: '大地图 / 青玉洞试炼',
-            shellSubtitle: '入口：青玉洞口 · 3 层路线',
+            shellRouteLabel: '大地图 / 青玉洞试炼 · 入口：青玉洞口 · 3 层路线',
         });
     });
 
     it('keeps tutorial maps on the same quiet breadcrumb shape even with longer routes', () => {
         expect(createExpeditionRouteBriefingSummary(tutorialQingyunMapJson, 'preparation')).toMatchObject({
-            shellTitle: '大地图 / 教程 · 青云外山试炼',
-            shellSubtitle: '入口：外山入口 · 4 层路线',
+            shellRouteLabel: '大地图 / 教程 · 青云外山试炼 · 入口：外山入口 · 4 层路线',
         });
     });
 

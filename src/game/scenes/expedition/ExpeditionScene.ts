@@ -86,9 +86,8 @@ interface EntryShellVisuals {
     shadow: Phaser.GameObjects.Rectangle;
     plate: Phaser.GameObjects.Rectangle;
     accent: Phaser.GameObjects.Rectangle;
-    titleText: Phaser.GameObjects.Text;
-    subtitleText: Phaser.GameObjects.Text;
-    hintText: Phaser.GameObjects.Text;
+    routeText: Phaser.GameObjects.Text;
+    cueText: Phaser.GameObjects.Text;
     modeBadgeText: Phaser.GameObjects.Text;
     returnPlate: Phaser.GameObjects.Rectangle;
     returnLabel: Phaser.GameObjects.Text;
@@ -102,8 +101,8 @@ interface EntryShellModeVisualConfig {
     plateBorderColor: number;
     plateBorderAlpha: number;
     accentColor: number;
-    subtitleColor: string;
-    hintColor: string;
+    routeColor: string;
+    cueColor: string;
     returnPlateFillColor: number;
     returnPlateFillAlpha: number;
     returnPlateBorderColor: number;
@@ -307,21 +306,16 @@ export class ExpeditionScene extends Scene {
         const { width } = this.scale;
         const container = this.add.container(0, 0);
         const routeBriefing = this.getEntryRouteBriefing('preparation');
-        const titleText = this.add.text(0, 0, routeBriefing.shellTitle, {
+        const routeText = this.add.text(0, 0, routeBriefing.shellRouteLabel, {
             fontFamily: 'Arial',
-            fontSize: '14px',
+            fontSize: '11px',
             color: '#e2e8f0',
+        }).setOrigin(0, 0.5);
+        const cueText = this.add.text(0, 0, '', {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: '#94a3b8',
             fontStyle: 'bold',
-        }).setOrigin(0, 0.5);
-        const subtitleText = this.add.text(0, 0, routeBriefing.shellSubtitle, {
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: '#94a3b8',
-        }).setOrigin(0, 0.5);
-        const hintText = this.add.text(0, 0, '', {
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: '#94a3b8',
         }).setOrigin(1, 0.5);
         const modeBadgeText = this.add.text(0, 0, routeBriefing.shellBadgeLabel, {
             fontFamily: 'Arial',
@@ -330,7 +324,7 @@ export class ExpeditionScene extends Scene {
             fontStyle: 'bold',
             backgroundColor: '#10233d',
             padding: { left: 6, right: 6, top: 3, bottom: 3 },
-        }).setOrigin(0, 0);
+        }).setOrigin(0, 0.5);
         const shadow = this.add.rectangle(width / 2, 0, 0, 0, 0x020617, 0.22);
         const plate = this.add.rectangle(width / 2, 0, 0, 0, 0x08111d, 0.64);
         plate.setStrokeStyle(1, 0x334155, 0.28);
@@ -359,9 +353,8 @@ export class ExpeditionScene extends Scene {
             plate,
             accent,
             modeBadgeText,
-            titleText,
-            subtitleText,
-            hintText,
+            routeText,
+            cueText,
             returnPlate,
             returnLabel,
         ]);
@@ -374,9 +367,8 @@ export class ExpeditionScene extends Scene {
             shadow,
             plate,
             accent,
-            titleText,
-            subtitleText,
-            hintText,
+            routeText,
+            cueText,
             modeBadgeText,
             returnPlate,
             returnLabel,
@@ -406,9 +398,8 @@ export class ExpeditionScene extends Scene {
 
         return {
             badgeLabel: routeBriefing.shellBadgeLabel,
-            title: routeBriefing.shellTitle,
-            subtitle: routeBriefing.shellSubtitle,
-            hint: hintLabel,
+            routeLabel: routeBriefing.shellRouteLabel,
+            cueLabel: hintLabel,
         };
     }
 
@@ -443,8 +434,8 @@ export class ExpeditionScene extends Scene {
                 plateBorderColor: 0x4c1d95,
                 plateBorderAlpha: 0.26,
                 accentColor: 0xc084fc,
-                subtitleColor: '#c4b5fd',
-                hintColor: '#d8b4fe',
+                routeColor: '#ede9fe',
+                cueColor: '#d8b4fe',
                 returnPlateFillColor: 0x110d1a,
                 returnPlateFillAlpha: 0.16,
                 returnPlateBorderColor: 0x7c3aed,
@@ -461,8 +452,8 @@ export class ExpeditionScene extends Scene {
             plateBorderColor: 0x1d4ed8,
             plateBorderAlpha: 0.24,
             accentColor: 0x38bdf8,
-            subtitleColor: '#93c5fd',
-            hintColor: '#cbd5e1',
+            routeColor: '#dbeafe',
+            cueColor: '#cbd5e1',
             returnPlateFillColor: 0x08111d,
             returnPlateFillAlpha: 0.16,
             returnPlateBorderColor: 0x475569,
@@ -493,24 +484,18 @@ export class ExpeditionScene extends Scene {
             fontStyle: 'bold',
             padding: { left: 6, right: 6, top: 3, bottom: 3 },
         });
-        this.entryShell.titleText.setText(headerCopy.title);
-        this.entryShell.titleText.setStyle({
+        this.entryShell.routeText.setText(headerCopy.routeLabel);
+        this.entryShell.routeText.setStyle({
             fontFamily: 'Arial',
-            fontSize: '14px',
-            color: '#e2e8f0',
+            fontSize: '11px',
+            color: modeConfig.routeColor,
+        });
+        this.entryShell.cueText.setText(headerCopy.cueLabel);
+        this.entryShell.cueText.setStyle({
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            color: modeConfig.cueColor,
             fontStyle: 'bold',
-        });
-        this.entryShell.subtitleText.setText(headerCopy.subtitle);
-        this.entryShell.subtitleText.setStyle({
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: modeConfig.subtitleColor,
-        });
-        this.entryShell.hintText.setText(headerCopy.hint);
-        this.entryShell.hintText.setStyle({
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: modeConfig.hintColor,
         });
         this.entryShell.returnPlate.setFillStyle(modeConfig.returnPlateFillColor, modeConfig.returnPlateFillAlpha);
         this.entryShell.returnPlate.setStrokeStyle(1, modeConfig.returnPlateBorderColor, modeConfig.returnPlateBorderAlpha);
@@ -536,26 +521,22 @@ export class ExpeditionScene extends Scene {
             : Math.min(820, height * 0.88);
         const panelX = width / 2;
         const panelY = mode === 'deckManager' ? (height / 2 + 18) : (height / 2 + 24);
-        const breadcrumbWidth = Math.max(500, Math.min(panelWidth - 72, mode === 'deckManager' ? 700 : 660));
-        const breadcrumbHeight = 50;
+        const breadcrumbWidth = Math.max(500, Math.min(panelWidth - 92, mode === 'deckManager' ? 680 : 620));
+        const breadcrumbHeight = 42;
         const breadcrumbX = panelX;
-        const breadcrumbY = Math.max(56, panelY - panelHeight / 2 - 10);
+        const breadcrumbY = Math.max(54, panelY - panelHeight / 2 - 12);
         const breadcrumbLeft = breadcrumbX - breadcrumbWidth / 2;
         const breadcrumbTop = breadcrumbY - breadcrumbHeight / 2;
         const returnChipWidth = 94;
-        const returnChipHeight = 22;
-        const returnChipX = breadcrumbLeft + breadcrumbWidth - returnChipWidth / 2 - 12;
-        const returnChipY = breadcrumbTop + breadcrumbHeight - returnChipHeight / 2 - 8;
-        const badgeX = breadcrumbLeft + 16;
-        const badgeY = breadcrumbTop + 7;
-        const titleX = badgeX + this.entryShell.modeBadgeText.width + 10;
-        const titleY = breadcrumbTop + 15;
-        const subtitleX = titleX;
-        const subtitleY = breadcrumbTop + breadcrumbHeight - 13;
-        const hintX = breadcrumbLeft + breadcrumbWidth - 16;
-        const hintY = breadcrumbTop + 15;
-        const titleWrapWidth = Math.max(220, hintX - titleX - 22);
-        const subtitleWrapWidth = Math.max(200, returnChipX - returnChipWidth / 2 - subtitleX - 14);
+        const returnChipHeight = 20;
+        const returnChipX = breadcrumbLeft + breadcrumbWidth - returnChipWidth / 2 - 10;
+        const returnChipY = breadcrumbY;
+        const badgeX = breadcrumbLeft + 12;
+        const badgeY = breadcrumbY;
+        const routeX = badgeX + this.entryShell.modeBadgeText.width + 12;
+        const cueX = returnChipX - returnChipWidth / 2 - 12;
+        const cueLeft = cueX - this.entryShell.cueText.width;
+        const routeWrapWidth = Math.max(200, cueLeft - routeX - 14);
         const shellTargets: Array<[Phaser.GameObjects.Rectangle, number, number, number, number]> = [
             [this.entryShell.shadow, breadcrumbX, breadcrumbY + 2, breadcrumbWidth, breadcrumbHeight],
             [this.entryShell.plate, breadcrumbX, breadcrumbY, breadcrumbWidth, breadcrumbHeight],
@@ -564,14 +545,12 @@ export class ExpeditionScene extends Scene {
         ];
         const textTargets: Array<[Phaser.GameObjects.Text, number, number]> = [
             [this.entryShell.modeBadgeText, badgeX, badgeY],
-            [this.entryShell.titleText, titleX, titleY],
-            [this.entryShell.subtitleText, subtitleX, subtitleY],
-            [this.entryShell.hintText, hintX, hintY],
+            [this.entryShell.routeText, routeX, breadcrumbY],
+            [this.entryShell.cueText, cueX, breadcrumbY],
             [this.entryShell.returnLabel, returnChipX, returnChipY],
         ];
 
-        this.entryShell.titleText.setWordWrapWidth(titleWrapWidth);
-        this.entryShell.subtitleText.setWordWrapWidth(subtitleWrapWidth);
+        this.entryShell.routeText.setWordWrapWidth(routeWrapWidth);
 
         if (!animate) {
             shellTargets.forEach(([target, x, y, displayWidth, displayHeight]) => {

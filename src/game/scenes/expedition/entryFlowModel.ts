@@ -136,8 +136,7 @@ export type ExpeditionRouteBriefingMode = 'preparation' | 'deckManager';
 export interface ExpeditionRouteBriefingSummary {
     mode: ExpeditionRouteBriefingMode;
     shellBadgeLabel: string;
-    shellTitle: string;
-    shellSubtitle: string;
+    shellRouteLabel: string;
 }
 
 export interface ExpeditionDepartureHandoffSummary {
@@ -645,14 +644,14 @@ function formatRouteNodeLabels(
         : label;
 }
 
-function createRouteShellSubtitle(
+function createRouteShellLabel(
     map: ExpeditionMapDefinition,
     entryNode: ExpeditionMapDefinition['nodes'][number] | undefined,
 ): string {
     const entryLabel = entryNode?.label ?? map.entryNodeId;
     const routeDepth = getRouteDepth(map);
 
-    return `入口：${entryLabel} · ${routeDepth} 层路线`;
+    return `大地图 / ${map.name} · 入口：${entryLabel} · ${routeDepth} 层路线`;
 }
 
 function createRouteStageLine(openingSummary: string, terminalSummary: string): string {
@@ -683,8 +682,7 @@ export function createExpeditionRouteBriefingSummary(
     return {
         mode,
         shellBadgeLabel: shellCopy.badgeLabel,
-        shellTitle: `大地图 / ${map.name}`,
-        shellSubtitle: createRouteShellSubtitle(map, entryNode),
+        shellRouteLabel: createRouteShellLabel(map, entryNode),
     };
 }
 
