@@ -89,105 +89,80 @@ export class RunHud extends GameObjects.Container {
         this.hideArrivalCue();
 
         const { width } = this.scene.scale;
-        const panelWidth = Math.min(width - 320, 680);
+        const panelWidth = Math.max(320, Math.min(width - 160, 560));
         const panelX = width / 2;
-        const panelY = 150;
-        const panelLeft = panelX - panelWidth / 2 + 24;
-        const contentWidth = panelWidth - 48;
-        const supportWidth = panelWidth - 48;
-        const supportInnerWidth = supportWidth - 24;
-        const badgeHeight = this.measureTextHeight(summary.badgeLabel, {
+        const panelY = 132;
+        const panelLeft = panelX - panelWidth / 2 + 18;
+        const contentWidth = panelWidth - 36;
+        const headlineLine = `${summary.badgeLabel} · ${summary.headline}`;
+        const headlineHeight = this.measureTextHeight(headlineLine, {
             fontFamily: 'Arial',
-            fontSize: '10px',
+            fontSize: '13px',
             fontStyle: 'bold',
-        }) + 8;
-        const headlineHeight = this.measureTextHeight(summary.headline, {
-            fontFamily: 'Arial',
-            fontSize: '16px',
-            fontStyle: 'bold',
-            wordWrap: { width: contentWidth },
         });
         const detailHeight = this.measureTextHeight(summary.detail, {
             fontFamily: 'Arial',
-            fontSize: '12px',
+            fontSize: '11px',
             wordWrap: { width: contentWidth },
         });
         const routeHeight = this.measureTextHeight(summary.routeLine, {
             fontFamily: 'Arial',
-            fontSize: '12px',
-            wordWrap: { width: supportInnerWidth },
+            fontSize: '11px',
+            wordWrap: { width: contentWidth },
             lineSpacing: 2,
         });
         const loadoutHeight = this.measureTextHeight(summary.loadoutLine, {
             fontFamily: 'Arial',
-            fontSize: '12px',
-            wordWrap: { width: supportInnerWidth },
+            fontSize: '11px',
+            wordWrap: { width: contentWidth },
             lineSpacing: 2,
         });
-        const supportHeight = 12
-            + routeHeight
-            + 6
-            + loadoutHeight
-            + 12;
         const panelHeight = Math.max(
-            92,
             12
-            + badgeHeight
-            + 6
             + headlineHeight
             + 4
             + detailHeight
-            + 8
-            + supportHeight
+            + 6
+            + routeHeight
+            + 4
+            + loadoutHeight
             + 12,
         );
         const panelTop = panelY - panelHeight / 2;
         const overlay = this.scene.add.container(0, 0);
-        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.92);
-        panel.setStrokeStyle(1, 0x334155, 0.7);
-        const accent = this.scene.add.rectangle(panelX, panelTop + 5, panelWidth - 40, 1, 0x38bdf8, 0.4);
-        const badge = this.scene.add.text(panelLeft, panelTop + 14, summary.badgeLabel, {
+        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.78);
+        panel.setStrokeStyle(1, 0x334155, 0.42);
+        const accent = this.scene.add.rectangle(panelX - panelWidth / 2 + 3, panelY, 3, panelHeight - 18, 0x38bdf8, 0.28);
+        const headline = this.scene.add.text(panelLeft, panelTop + 12, headlineLine, {
             fontFamily: 'Arial',
-            fontSize: '10px',
-            color: '#bfdbfe',
+            fontSize: '13px',
+            color: '#dbeafe',
             fontStyle: 'bold',
-            backgroundColor: '#10233d',
-            padding: { left: 8, right: 8, top: 4, bottom: 4 },
-        }).setOrigin(0, 0);
-        const headline = this.scene.add.text(panelLeft, badge.y + badge.height + 8, summary.headline, {
-            fontFamily: 'Arial',
-            fontSize: '16px',
-            color: '#f8fafc',
-            fontStyle: 'bold',
-            wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
         const detail = this.scene.add.text(panelLeft, headline.y + headline.height + 4, summary.detail, {
             fontFamily: 'Arial',
-            fontSize: '12px',
+            fontSize: '11px',
             color: '#94a3b8',
             wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
-        const supportTop = detail.y + detail.height + 8;
-        const supportPlate = this.scene.add.rectangle(panelX, supportTop + supportHeight / 2, supportWidth, supportHeight, 0x0c1626, 0.88);
-        supportPlate.setStrokeStyle(1, 0x334155, 0.52);
-        const routeLine = this.scene.add.text(panelLeft + 12, supportTop + 12, summary.routeLine, {
+        const routeLine = this.scene.add.text(panelLeft, detail.y + detail.height + 6, summary.routeLine, {
             fontFamily: 'Arial',
-            fontSize: '12px',
+            fontSize: '11px',
             color: '#dbeafe',
-            wordWrap: { width: supportInnerWidth },
+            wordWrap: { width: contentWidth },
             lineSpacing: 2,
         }).setOrigin(0, 0);
-        const loadoutLine = this.scene.add.text(panelLeft + 12, routeLine.y + routeLine.height + 6, summary.loadoutLine, {
+        const loadoutLine = this.scene.add.text(panelLeft, routeLine.y + routeLine.height + 4, summary.loadoutLine, {
             fontFamily: 'Arial',
-            fontSize: '12px',
-            color: '#d1fae5',
-            wordWrap: { width: supportInnerWidth },
+            fontSize: '11px',
+            color: '#bbf7d0',
+            wordWrap: { width: contentWidth },
             lineSpacing: 2,
         }).setOrigin(0, 0);
 
-        overlay.add([panel, accent, badge, headline, detail, supportPlate, routeLine, loadoutLine]);
+        overlay.add([panel, accent, headline, detail, routeLine, loadoutLine]);
         overlay.setAlpha(0);
-        overlay.setY(10);
+        overlay.setY(8);
 
         this.add(overlay);
         this.arrivalCueOverlay = overlay;

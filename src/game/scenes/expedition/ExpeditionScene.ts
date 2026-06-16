@@ -102,6 +102,7 @@ export class ExpeditionScene extends Scene {
     private preparationPanel?: PreparationPanel;
     private deckManagementPanel?: DeckManagementPanel;
     private runHud!: RunHud;
+    private statusPlate!: Phaser.GameObjects.Rectangle;
     private statusText!: Phaser.GameObjects.Text;
     private nodeMenu?: Phaser.GameObjects.Container;
     private activeNodePanel?: Phaser.GameObjects.Container;
@@ -184,17 +185,20 @@ export class ExpeditionScene extends Scene {
 
         this.runHud = new RunHud(this);
         this.runHud.setVisible(false);
-        const statusPlate = this.add.rectangle(width / 2, height - 92, Math.min(width - 220, 980), 74, 0x07111f, 0.72);
-        statusPlate.setStrokeStyle(1, 0x334155, 0.82);
-        statusPlate.setDepth(60);
-        this.statusText = this.add.text(width / 2, height - 92, '', {
+        const statusPlateWidth = Math.max(360, Math.min(width - 360, 720));
+        const statusTextWidth = Math.max(280, statusPlateWidth - 52);
+        this.statusPlate = this.add.rectangle(width / 2, height - 54, statusPlateWidth, 56, 0x020617, 0.44);
+        this.statusPlate.setStrokeStyle(1, 0x334155, 0.4);
+        this.statusPlate.setDepth(60);
+        this.statusText = this.add.text(width / 2, height - 54, '', {
             fontFamily: 'Arial',
-            fontSize: '20px',
-            color: '#cbd5e1',
+            fontSize: '16px',
+            color: '#94a3b8',
             align: 'center',
-            wordWrap: { width: width - 220 },
+            wordWrap: { width: statusTextWidth },
         }).setOrigin(0.5);
         this.statusText.setDepth(61);
+        this.setStatusPlateVisible(false);
 
         if (this.pendingBattleResult) {
             this.handleBattleResult(this.pendingBattleResult);
@@ -205,7 +209,7 @@ export class ExpeditionScene extends Scene {
                 this.showActiveRun(initialView.activeRun, 'resumed');
             } else {
                 this.showPreparationPanel();
-                this.statusText.setText(this.launchData.statusText ?? initialView.statusText);
+                this.updateStatusPlate(this.launchData.statusText ?? initialView.statusText, false);
             }
         }
 
@@ -264,6 +268,16 @@ export class ExpeditionScene extends Scene {
             innerFrame,
             pathLines,
         ].forEach((gameObject) => gameObject.setDepth(-20));
+    }
+
+    private setStatusPlateVisible(visible: boolean): void {
+        this.statusPlate.setVisible(visible);
+        this.statusText.setVisible(visible);
+    }
+
+    private updateStatusPlate(text: string, visible: boolean): void {
+        this.statusText.setText(text);
+        this.setStatusPlateVisible(visible);
     }
 
     private getDeckbuilderCardMetadataResources(): DeckbuilderCardMetadataResources {
@@ -518,122 +532,121 @@ export class ExpeditionScene extends Scene {
         this.destroyDepartureHandoffOverlay();
 
         const { width, height } = this.scale;
-        const panelWidth = Math.min(620, width * 0.54);
+        const panelWidth = Math.min(width - 80, Math.max(360, Math.min(520, width * 0.46)));
         const panelX = width / 2;
-        const panelY = height / 2 + 14;
-        const panelLeft = panelX - panelWidth / 2 + 32;
-        const contentWidth = panelWidth - 64;
-        const supportWidth = panelWidth - 64;
-        const supportInnerWidth = supportWidth - 28;
+        const panelY = height / 2;
+        const panelLeft = panelX - panelWidth / 2 + 28;
+        const contentWidth = panelWidth - 56;
         const footerCopy = '点按任意处或按 Enter / Space 继续。';
+        const badgeHeight = this.measureSceneTextHeight(summary.badgeLabel, {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            fontStyle: 'bold',
+        });
         const headlineHeight = this.measureSceneTextHeight(summary.headline, {
             fontFamily: 'Arial',
-            fontSize: '21px',
+            fontSize: '18px',
             fontStyle: 'bold',
             wordWrap: { width: contentWidth },
         });
         const detailHeight = this.measureSceneTextHeight(summary.detail, {
             fontFamily: 'Arial',
-            fontSize: '13px',
+            fontSize: '12px',
             wordWrap: { width: contentWidth },
         });
         const routeHeight = this.measureSceneTextHeight(summary.routeLine, {
             fontFamily: 'Arial',
-            fontSize: '13px',
-            wordWrap: { width: supportInnerWidth },
+            fontSize: '12px',
+            wordWrap: { width: contentWidth },
             lineSpacing: 2,
         });
         const loadoutHeight = this.measureSceneTextHeight(summary.loadoutLine, {
             fontFamily: 'Arial',
-            fontSize: '13px',
-            wordWrap: { width: supportInnerWidth },
+            fontSize: '12px',
+            wordWrap: { width: contentWidth },
             lineSpacing: 2,
         });
         const footerHeight = this.measureSceneTextHeight(footerCopy, {
             fontFamily: 'Arial',
-            fontSize: '12px',
+            fontSize: '11px',
             wordWrap: { width: contentWidth },
         });
-        const supportHeight = 14
-            + routeHeight
-            + 8
-            + loadoutHeight
-            + 14;
         const panelHeight = Math.max(
-            214,
+            188,
             20
-            + 24
+            + badgeHeight
             + 8
             + headlineHeight
             + 6
             + detailHeight
             + 12
-            + supportHeight
+            + 1
+            + 12
+            + routeHeight
+            + 4
+            + loadoutHeight
             + 16
-            + 38
+            + 34
             + 10
             + footerHeight
             + 18,
         );
         const panelTop = panelY - panelHeight / 2;
         const container = this.add.container(0, 0);
-        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.62);
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.52);
         overlay.setInteractive({ useHandCursor: true });
-        const shadow = this.add.rectangle(panelX, panelY + 6, panelWidth, panelHeight, 0x01040a, 0.2);
-        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.96);
-        panel.setStrokeStyle(1, 0x334155, 0.72);
-        const accentTop = this.add.rectangle(panelX, panelTop + 6, panelWidth - 44, 1, 0x38bdf8, 0.4);
-        const badge = this.add.text(panelLeft, panelTop + 24, summary.badgeLabel, {
+        const shadow = this.add.rectangle(panelX, panelY + 4, panelWidth, panelHeight, 0x01040a, 0.12);
+        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.92);
+        panel.setStrokeStyle(1, 0x334155, 0.58);
+        const accentTop = this.add.rectangle(panelX, panelTop + 6, panelWidth - 52, 1, 0x38bdf8, 0.24);
+        const badge = this.add.text(panelLeft, panelTop + 20, summary.badgeLabel, {
             fontFamily: 'Arial',
-            fontSize: '10px',
-            color: '#bfdbfe',
+            fontSize: '11px',
+            color: '#93c5fd',
             fontStyle: 'bold',
-            backgroundColor: '#10233d',
-            padding: { left: 8, right: 8, top: 4, bottom: 4 },
         }).setOrigin(0, 0);
-        const headline = this.add.text(panelLeft, badge.y + badge.height + 12, summary.headline, {
+        const headline = this.add.text(panelLeft, badge.y + badge.height + 8, summary.headline, {
             fontFamily: 'Arial',
-            fontSize: '21px',
+            fontSize: '18px',
             color: '#f8fafc',
             fontStyle: 'bold',
             wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
-        const detail = this.add.text(panelLeft, headline.y + headline.height + 8, summary.detail, {
+        const detail = this.add.text(panelLeft, headline.y + headline.height + 6, summary.detail, {
             fontFamily: 'Arial',
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#94a3b8',
             wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
-        const supportTop = detail.y + detail.height + 12;
-        const supportPlate = this.add.rectangle(panelX, supportTop + supportHeight / 2, supportWidth, supportHeight, 0x0c1626, 0.88);
-        supportPlate.setStrokeStyle(1, 0x334155, 0.52);
-        const routeText = this.add.text(panelLeft + 14, supportTop + 14, summary.routeLine, {
+        const dividerY = detail.y + detail.height + 12;
+        const divider = this.add.rectangle(panelX, dividerY, panelWidth - 56, 1, 0x334155, 0.52);
+        const routeText = this.add.text(panelLeft, dividerY + 10, summary.routeLine, {
             fontFamily: 'Arial',
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#dbeafe',
-            wordWrap: { width: supportInnerWidth },
+            wordWrap: { width: contentWidth },
             lineSpacing: 2,
         }).setOrigin(0, 0);
-        const loadoutText = this.add.text(panelLeft + 14, routeText.y + routeText.height + 8, summary.loadoutLine, {
+        const loadoutText = this.add.text(panelLeft, routeText.y + routeText.height + 4, summary.loadoutLine, {
             fontFamily: 'Arial',
-            fontSize: '13px',
-            color: '#d1fae5',
-            wordWrap: { width: supportInnerWidth },
+            fontSize: '12px',
+            color: '#bbf7d0',
+            wordWrap: { width: contentWidth },
             lineSpacing: 2,
         }).setOrigin(0, 0);
         let acknowledge: () => void = () => undefined;
         const continueButton = this.createButton({
             x: panelX,
-            y: supportTop + supportHeight + 16 + 19,
-            width: 190,
-            height: 38,
+            y: loadoutText.y + loadoutText.height + 18,
+            width: 164,
+            height: 34,
             label: '进入秘境',
             fillColor: 0x1d4ed8,
             onClick: () => acknowledge(),
         });
         const footer = this.add.text(panelX, continueButton[0].y + 30, footerCopy, {
             fontFamily: 'Arial',
-            fontSize: '12px',
+            fontSize: '11px',
             color: '#cbd5e1',
             align: 'center',
             wordWrap: { width: contentWidth },
@@ -692,7 +705,7 @@ export class ExpeditionScene extends Scene {
             badge,
             headline,
             detail,
-            supportPlate,
+            divider,
             routeText,
             loadoutText,
             ...continueButton,
@@ -859,6 +872,7 @@ export class ExpeditionScene extends Scene {
         this.destroyDepartureHandoffOverlay();
         this.runHud.hideArrivalCue();
         this.runHud.setVisible(false);
+        this.setStatusPlateVisible(false);
         this.clearMapViews();
         this.destroyNodeMenu();
         this.destroyActiveNodePanel();
@@ -906,6 +920,7 @@ export class ExpeditionScene extends Scene {
     private showDeckManagementPanel(): void {
         this.deckManagerEntryContext = createPreparationDeckContext(this.expeditionState.persistentStash);
         const currentPanel = this.getCurrentEntryPanel();
+        this.setStatusPlateVisible(false);
         const nextPanel = new DeckManagementPanel(this, {
             stash: this.expeditionState.persistentStash,
             metadata: this.deckbuilderCardMetadata,
@@ -987,10 +1002,11 @@ export class ExpeditionScene extends Scene {
         this.runHud.updateFromRun(activeRun, currentNodeLabel);
         if (options?.arrivalCueSummary) {
             this.runHud.showArrivalCue(options.arrivalCueSummary);
+            this.updateStatusPlate(options.statusTextOverride ?? summary.statusText, false);
         } else {
             this.runHud.hideArrivalCue();
+            this.updateStatusPlate(options?.statusTextOverride ?? summary.statusText, true);
         }
-        this.statusText.setText(options?.statusTextOverride ?? summary.statusText);
         this.renderMap(activeRun);
         this.renderNodeMenu(activeRun);
     }
@@ -1098,12 +1114,13 @@ export class ExpeditionScene extends Scene {
 
     private handleMapNodeSelected(nodeId: string): void {
         this.runHud.hideArrivalCue(true);
+        this.setStatusPlateVisible(true);
         const activeRun = this.expeditionState.activeRun;
         const node = this.mapDefinition.nodes.find((candidate) => candidate.id === nodeId);
         const canReopenNode = !!node && this.canReopenNonCombatNode(activeRun, node);
 
         if (!activeRun || (!isReachableNode(this.mapDefinition, activeRun, nodeId) && !canReopenNode)) {
-            this.statusText.setText('该节点尚未连通；只能前往当前节点直接连接的下一层节点。');
+            this.updateStatusPlate('该节点尚未连通；只能前往当前节点直接连接的下一层节点。', true);
             return;
         }
 
@@ -1119,7 +1136,7 @@ export class ExpeditionScene extends Scene {
         );
 
         if (!nextRun) {
-            this.statusText.setText('该节点尚未连通；路线保持不变。');
+            this.updateStatusPlate('该节点尚未连通；路线保持不变。', true);
             return;
         }
 
@@ -1135,12 +1152,12 @@ export class ExpeditionScene extends Scene {
         }
 
         if (nextRun.pendingEncounter) {
-            this.statusText.setText(`已进入 ${nodeLabel}，正在启动战斗场景。`);
+            this.updateStatusPlate(`已进入 ${nodeLabel}，正在启动战斗场景。`, true);
             this.scene.start('BattleScene', createBattleSceneStartPayload(nextRun.pendingEncounter));
             return;
         }
 
-        this.statusText.setText(`已进入 ${nodeLabel}。事件、商店、撤离结算 UI 尚未在本任务中解析。`);
+        this.updateStatusPlate(`已进入 ${nodeLabel}。事件、商店、撤离结算 UI 尚未在本任务中解析。`, true);
     }
 
     private renderNodeMenu(activeRun: RunSnapshot): void {
@@ -1208,15 +1225,16 @@ export class ExpeditionScene extends Scene {
 
     private handleNonCombatNodeSelected(node: NonCombatMapNode): void {
         this.runHud.hideArrivalCue(true);
+        this.setStatusPlateVisible(true);
         const activeRun = this.expeditionState.activeRun;
 
         if (!activeRun) {
-            this.statusText.setText('没有进行中的秘境探索。');
+            this.updateStatusPlate('没有进行中的秘境探索。', true);
             return;
         }
 
         if (!isReachableNode(this.mapDefinition, activeRun, node.id) && !this.canReopenNonCombatNode(activeRun, node)) {
-            this.statusText.setText('该节点尚未连通；只能前往当前节点直接连接的下一层节点。');
+            this.updateStatusPlate('该节点尚未连通；只能前往当前节点直接连接的下一层节点。', true);
             return;
         }
 
@@ -1232,7 +1250,7 @@ export class ExpeditionScene extends Scene {
         );
 
         if (!enteredRun) {
-            this.statusText.setText('该节点尚未连通；路线保持不变。');
+            this.updateStatusPlate('该节点尚未连通；路线保持不变。', true);
             return;
         }
 
@@ -1456,7 +1474,7 @@ export class ExpeditionScene extends Scene {
         this.runHud.updateFromRun(activeRun, currentNodeLabel);
         this.renderMap(activeRun);
         this.renderNodeMenu(activeRun);
-        this.statusText.setText(createRunSummary(activeRun, { currentNodeLabel }).statusText);
+        this.updateStatusPlate(createRunSummary(activeRun, { currentNodeLabel }).statusText, true);
     }
 
     private handleBattleResult(result: ExpeditionBattleCompleteEvent): void {
@@ -1464,7 +1482,7 @@ export class ExpeditionScene extends Scene {
 
         if (!activeRun || activeRun.runId !== result.runId) {
             this.showPreparationPanel();
-            this.statusText.setText(`收到战斗结果 ${result.outcome}，但没有匹配的 active run。`);
+            this.updateStatusPlate(`收到战斗结果 ${result.outcome}，但没有匹配的 active run。`, false);
             return;
         }
 
@@ -1500,7 +1518,7 @@ export class ExpeditionScene extends Scene {
 
         this.expeditionState.activeRun = victoryResolution.run;
         this.showActiveRun(victoryResolution.run, 'resumed');
-        this.statusText.setText(`战斗节点 ${this.getNodeLabel(result.nodeId)} 返回：${result.outcome}。路线继续。`);
+        this.updateStatusPlate(`战斗节点 ${this.getNodeLabel(result.nodeId)} 返回：${result.outcome}。路线继续。`, true);
     }
 
     private showTerminalSummary(summary: RunResolutionSummary): void {
@@ -1514,10 +1532,11 @@ export class ExpeditionScene extends Scene {
     private returnToEntrance(summary?: RunResolutionSummary): void {
         this.expeditionState.resetToEntranceState();
         this.showPreparationPanel();
-        this.statusText.setText(
+        this.updateStatusPlate(
             summary
                 ? createPostRunEntranceStatus(this.expeditionState.persistentStash, summary)
                 : createPreparationSummary(this.expeditionState.persistentStash).statusText,
+            false,
         );
     }
 
