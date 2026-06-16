@@ -136,6 +136,7 @@ export type ExpeditionRouteBriefingMode = 'preparation' | 'deckManager';
 export interface ExpeditionRouteBriefingSummary {
     mode: ExpeditionRouteBriefingMode;
     shellRouteLabel: string;
+    shellSupportLabel: string;
 }
 
 export interface ExpeditionDepartureHandoffSummary {
@@ -622,15 +623,21 @@ function createRouteShellLabel(
     return `大地图 / ${map.name} · ${entryLabel}`;
 }
 
+function createRouteShellSupportLabel(routeLabel: string): string {
+    return `返回${routeLabel}`;
+}
+
 export function createExpeditionRouteBriefingSummary(
     map: ExpeditionMapDefinition,
     mode: ExpeditionRouteBriefingMode,
 ): ExpeditionRouteBriefingSummary {
     const entryNode = map.nodes.find((node) => node.id === map.entryNodeId);
+    const shellRouteLabel = createRouteShellLabel(map, entryNode);
 
     return {
         mode,
-        shellRouteLabel: createRouteShellLabel(map, entryNode),
+        shellRouteLabel,
+        shellSupportLabel: createRouteShellSupportLabel(shellRouteLabel),
     };
 }
 
@@ -655,7 +662,7 @@ export function createExpeditionDepartureHandoffSummary(
     return {
         badgeLabel: '出发',
         headline: `${map.name} · ${entryLabel}`,
-        detail: '本次带入已锁定。',
+        detail: '带入已锁定',
         routeLine: `首层：${openingSummary}`,
         loadoutLine: `${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
         revealStatusText: `已进入${map.name} · ${entryLabel} · ${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石。`,
@@ -683,7 +690,7 @@ export function createExpeditionArrivalCueSummary(
     return {
         badgeLabel: '抵达',
         headline: `${map.name} · ${entryLabel}`,
-        detail: '首层分路已高亮。',
+        detail: '首层已高亮',
         routeLine: `首层：${openingSummary}`,
         loadoutLine: `${deckLabel} · ${carriedDeckCount} 张卡 · ${carriedItemCount} 件道具 · ${run.spiritStones} 枚灵石`,
     };

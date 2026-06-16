@@ -15,7 +15,7 @@ describe('expedition UI Chinese copy', () => {
         expect(sceneCopy).toContain('进入秘境');
         expect(sceneCopy).toContain('点按任意处或按 Enter / Space 继续。');
         expect(sceneCopy).toContain('出发');
-        expect(sceneCopy).toContain('本次带入已锁定。');
+        expect(sceneCopy).toContain('带入已锁定');
         expect(sceneCopy).not.toContain('路线简报');
         expect(sceneCopy).not.toContain('分层速览');
         expect(sceneCopy).not.toContain('层路线');
@@ -177,8 +177,8 @@ describe('expedition UI Chinese copy', () => {
         expect(hud).toContain('携带道具：0');
         expect(hud).toContain('灵石：0');
         expect(hudCopy).toContain('抵达');
-        expect(hudCopy).toContain('首层分路已高亮。');
-        expect(hudCopy).toContain('本次带入已锁定。');
+        expect(hudCopy).toContain('首层已高亮');
+        expect(hudCopy).toContain('带入已锁定');
         expect(hudCopy).not.toContain('首层分路已高亮；点按节点后收起。');
         expect(hudCopy).not.toContain('首个分路已高亮；点按节点后收起此提示。');
         expect(hudCopy).not.toContain('抵达提示');

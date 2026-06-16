@@ -82,14 +82,20 @@ type EntryShellMode = 'preparation' | 'deckManager';
 
 interface EntryShellVisuals {
     container: Phaser.GameObjects.Container;
-    routeText: Phaser.GameObjects.Text;
-    returnLabel: Phaser.GameObjects.Text;
+    plate: Phaser.GameObjects.Rectangle;
+    accent: Phaser.GameObjects.Rectangle;
+    supportText: Phaser.GameObjects.Text;
 }
 
 interface EntryShellModeVisualConfig {
-    routeColor: string;
-    returnLabelColor: string;
-    returnLabelHoverColor: string;
+    plateFillColor: number;
+    plateFillAlpha: number;
+    plateHoverFillAlpha: number;
+    plateBorderColor: number;
+    plateBorderAlpha: number;
+    accentColor: number;
+    textColor: string;
+    hoverTextColor: string;
 }
 
 export class ExpeditionScene extends Scene {
@@ -301,35 +307,23 @@ export class ExpeditionScene extends Scene {
     private createEntryShell(): void {
         const container = this.add.container(0, 0);
         const routeBriefing = this.getEntryRouteBriefing('preparation');
-        const routeText = this.add.text(0, 0, routeBriefing.shellRouteLabel, {
+        const plate = this.add.rectangle(0, 0, 320, 24, 0x08101b, 0.42);
+        plate.setStrokeStyle(1, 0x334155, 0.32);
+        plate.setInteractive({ useHandCursor: true });
+        const accent = this.add.rectangle(0, 0, 2, 12, 0x60a5fa, 0.62);
+        const supportText = this.add.text(0, 0, routeBriefing.shellSupportLabel, {
             fontFamily: 'Arial',
             fontSize: '10px',
-            color: '#64748b',
+            color: '#cbd5e1',
         }).setOrigin(0, 0.5);
-        const returnLabel = this.add.text(0, 0, '返回大地图', {
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: '#94a3b8',
-            padding: { left: 2, right: 2, top: 2, bottom: 2 },
-        }).setOrigin(1, 0.5);
-        routeText.setAlpha(0.76);
-        returnLabel.setAlpha(0.74);
-        returnLabel.setInteractive({ useHandCursor: true });
-        returnLabel.on('pointerover', () => {
-            const modeConfig = this.getEntryShellModeVisualConfig(this.currentEntryShellMode);
-            returnLabel.setColor(modeConfig.returnLabelHoverColor);
-            returnLabel.setAlpha(0.96);
-        });
-        returnLabel.on('pointerout', () => {
-            const modeConfig = this.getEntryShellModeVisualConfig(this.currentEntryShellMode);
-            returnLabel.setColor(modeConfig.returnLabelColor);
-            returnLabel.setAlpha(0.74);
-        });
-        returnLabel.on('pointerdown', () => this.returnToWorldMap());
+        plate.on('pointerover', () => this.setEntryShellHoverState(true));
+        plate.on('pointerout', () => this.setEntryShellHoverState(false));
+        plate.on('pointerdown', () => this.returnToWorldMap());
 
         container.add([
-            routeText,
-            returnLabel,
+            plate,
+            accent,
+            supportText,
         ]);
         container.setDepth(1300);
         container.setVisible(false);
@@ -337,8 +331,9 @@ export class ExpeditionScene extends Scene {
 
         this.entryShell = {
             container,
-            routeText,
-            returnLabel,
+            plate,
+            accent,
+            supportText,
         };
 
         this.entryTransitionBlocker = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 0.001);
@@ -357,17 +352,43 @@ export class ExpeditionScene extends Scene {
     private getEntryShellModeVisualConfig(mode: EntryShellMode): EntryShellModeVisualConfig {
         if (mode === 'deckManager') {
             return {
-                routeColor: '#64748b',
-                returnLabelColor: '#94a3b8',
-                returnLabelHoverColor: '#e2e8f0',
+                plateFillColor: 0x08101b,
+                plateFillAlpha: 0.4,
+                plateHoverFillAlpha: 0.58,
+                plateBorderColor: 0x334155,
+                plateBorderAlpha: 0.34,
+                accentColor: 0x60a5fa,
+                textColor: '#cbd5e1',
+                hoverTextColor: '#f8fafc',
             };
         }
 
         return {
-            routeColor: '#64748b',
-            returnLabelColor: '#94a3b8',
-            returnLabelHoverColor: '#e2e8f0',
+            plateFillColor: 0x08101b,
+            plateFillAlpha: 0.38,
+            plateHoverFillAlpha: 0.56,
+            plateBorderColor: 0x334155,
+            plateBorderAlpha: 0.32,
+            accentColor: 0x60a5fa,
+            textColor: '#cbd5e1',
+            hoverTextColor: '#f8fafc',
         };
+    }
+
+    private setEntryShellHoverState(hovered: boolean): void {
+        if (!this.entryShell) {
+            return;
+        }
+
+        const modeConfig = this.getEntryShellModeVisualConfig(this.currentEntryShellMode);
+        this.entryShell.plate.setFillStyle(
+            modeConfig.plateFillColor,
+            hovered ? modeConfig.plateHoverFillAlpha : modeConfig.plateFillAlpha,
+        );
+        this.entryShell.plate.setStrokeStyle(1, modeConfig.plateBorderColor, modeConfig.plateBorderAlpha);
+        this.entryShell.accent.setFillStyle(modeConfig.accentColor, hovered ? 0.84 : 0.62);
+        this.entryShell.supportText.setColor(hovered ? modeConfig.hoverTextColor : modeConfig.textColor);
+        this.entryShell.supportText.setAlpha(hovered ? 0.96 : 0.82);
     }
 
     private updateEntryShellMode(mode: EntryShellMode): void {
@@ -377,21 +398,13 @@ export class ExpeditionScene extends Scene {
 
         this.currentEntryShellMode = mode;
         const routeBriefing = this.getEntryRouteBriefing(mode);
-        const modeConfig = this.getEntryShellModeVisualConfig(mode);
-        this.entryShell.routeText.setText(routeBriefing.shellRouteLabel);
-        this.entryShell.routeText.setStyle({
+        this.entryShell.supportText.setText(routeBriefing.shellSupportLabel);
+        this.entryShell.supportText.setStyle({
             fontFamily: 'Arial',
             fontSize: '10px',
-            color: modeConfig.routeColor,
+            wordWrap: { width: 520 },
         });
-        this.entryShell.returnLabel.setStyle({
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: modeConfig.returnLabelColor,
-            padding: { left: 2, right: 2, top: 2, bottom: 2 },
-        });
-        this.entryShell.routeText.setAlpha(0.76);
-        this.entryShell.returnLabel.setAlpha(0.74);
+        this.setEntryShellHoverState(false);
     }
 
     private updateEntryShellLayout(mode: EntryShellMode, animate: boolean): void {
@@ -408,27 +421,40 @@ export class ExpeditionScene extends Scene {
             : Math.min(820, height * 0.88);
         const panelX = width / 2;
         const panelY = mode === 'deckManager' ? (height / 2 + 18) : (height / 2 + 24);
-        const breadcrumbWidth = Math.max(520, panelWidth - (mode === 'deckManager' ? 84 : 72));
+        const breadcrumbWidth = Math.max(360, Math.min(640, panelWidth - (mode === 'deckManager' ? 84 : 72)));
         const breadcrumbX = panelX;
         const breadcrumbY = Math.max(48, panelY - panelHeight / 2 - 8);
-        const breadcrumbLeft = breadcrumbX - breadcrumbWidth / 2;
-        const breadcrumbRight = breadcrumbX + breadcrumbWidth / 2;
-        const returnX = breadcrumbRight;
-        const routeX = breadcrumbLeft;
-        const routeWrapWidth = Math.max(220, breadcrumbWidth - this.entryShell.returnLabel.width - 20);
-        const textTargets: Array<[Phaser.GameObjects.Text, number, number]> = [
-            [this.entryShell.routeText, routeX, breadcrumbY],
-            [this.entryShell.returnLabel, returnX, breadcrumbY],
+        const supportPaddingX = 16;
+        const supportPaddingY = 6;
+        const accentWidth = 2;
+        const accentGap = 8;
+        const supportWrapWidth = Math.max(220, breadcrumbWidth - supportPaddingX * 2 - accentWidth - accentGap);
+
+        this.entryShell.supportText.setWordWrapWidth(supportWrapWidth);
+
+        const plateWidth = Math.min(
+            breadcrumbWidth,
+            Math.max(320, this.entryShell.supportText.width + supportPaddingX * 2 + accentWidth + accentGap),
+        );
+        const plateHeight = Math.max(24, this.entryShell.supportText.height + supportPaddingY * 2);
+        const breadcrumbLeft = breadcrumbX - plateWidth / 2;
+        const accentX = breadcrumbLeft + supportPaddingX;
+        const supportTextX = accentX + accentWidth + accentGap;
+
+        this.entryShell.plate.setSize(plateWidth, plateHeight);
+        this.entryShell.accent.setSize(accentWidth, Math.max(10, plateHeight - 12));
+        const targets: Array<[Phaser.GameObjects.GameObject, number, number]> = [
+            [this.entryShell.plate, breadcrumbX, breadcrumbY],
+            [this.entryShell.accent, accentX, breadcrumbY],
+            [this.entryShell.supportText, supportTextX, breadcrumbY],
         ];
 
-        this.entryShell.routeText.setWordWrapWidth(routeWrapWidth);
-
         if (!animate) {
-            textTargets.forEach(([target, x, y]) => target.setPosition(x, y));
+            targets.forEach(([target, x, y]) => target.setPosition(x, y));
             return;
         }
 
-        textTargets.forEach(([target, x, y]) => {
+        targets.forEach(([target, x, y]) => {
             this.tweens.killTweensOf(target);
             this.tweens.add({
                 targets: target,
@@ -525,6 +551,10 @@ export class ExpeditionScene extends Scene {
             || event.code === 'Space';
     }
 
+    private createDepartureHandoffSupportLine(summary: ExpeditionDepartureHandoffSummary): string {
+        return `${summary.detail} · ${summary.routeLine}`;
+    }
+
     private playDepartureHandoff(
         summary: ExpeditionDepartureHandoffSummary,
         onAcknowledge: () => void,
@@ -532,39 +562,29 @@ export class ExpeditionScene extends Scene {
         this.destroyDepartureHandoffOverlay();
 
         const { width, height } = this.scale;
-        const panelWidth = Math.min(width - 80, Math.max(360, Math.min(520, width * 0.46)));
+        const panelWidth = Math.min(width - 80, Math.max(340, Math.min(460, width * 0.42)));
         const panelX = width / 2;
         const panelY = height / 2;
-        const panelLeft = panelX - panelWidth / 2 + 28;
-        const contentWidth = panelWidth - 56;
+        const panelLeft = panelX - panelWidth / 2 + 22;
+        const contentWidth = panelWidth - 44;
         const footerCopy = '点按任意处或按 Enter / Space 继续。';
-        const badgeHeight = this.measureSceneTextHeight(summary.badgeLabel, {
+        const headlineLine = `${summary.badgeLabel} · ${summary.headline}`;
+        const supportLine = this.createDepartureHandoffSupportLine(summary);
+        const headlineHeight = this.measureSceneTextHeight(headlineLine, {
+            fontFamily: 'Arial',
+            fontSize: '16px',
+            fontStyle: 'bold',
+            wordWrap: { width: contentWidth },
+        });
+        const supportHeight = this.measureSceneTextHeight(supportLine, {
             fontFamily: 'Arial',
             fontSize: '11px',
-            fontStyle: 'bold',
-        });
-        const headlineHeight = this.measureSceneTextHeight(summary.headline, {
-            fontFamily: 'Arial',
-            fontSize: '18px',
-            fontStyle: 'bold',
             wordWrap: { width: contentWidth },
-        });
-        const detailHeight = this.measureSceneTextHeight(summary.detail, {
-            fontFamily: 'Arial',
-            fontSize: '12px',
-            wordWrap: { width: contentWidth },
-        });
-        const routeHeight = this.measureSceneTextHeight(summary.routeLine, {
-            fontFamily: 'Arial',
-            fontSize: '12px',
-            wordWrap: { width: contentWidth },
-            lineSpacing: 2,
         });
         const loadoutHeight = this.measureSceneTextHeight(summary.loadoutLine, {
             fontFamily: 'Arial',
-            fontSize: '12px',
+            fontSize: '11px',
             wordWrap: { width: contentWidth },
-            lineSpacing: 2,
         });
         const footerHeight = this.measureSceneTextHeight(footerCopy, {
             fontFamily: 'Arial',
@@ -572,74 +592,53 @@ export class ExpeditionScene extends Scene {
             wordWrap: { width: contentWidth },
         });
         const panelHeight = Math.max(
-            188,
-            20
-            + badgeHeight
+            152,
+            18
             + 8
             + headlineHeight
-            + 6
-            + detailHeight
-            + 12
-            + 1
-            + 12
-            + routeHeight
+            + 8
+            + supportHeight
             + 4
             + loadoutHeight
-            + 16
-            + 34
+            + 14
+            + 32
             + 10
             + footerHeight
-            + 18,
+            + 16,
         );
         const panelTop = panelY - panelHeight / 2;
         const container = this.add.container(0, 0);
-        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.52);
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.48);
         overlay.setInteractive({ useHandCursor: true });
-        const shadow = this.add.rectangle(panelX, panelY + 4, panelWidth, panelHeight, 0x01040a, 0.12);
-        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.92);
-        panel.setStrokeStyle(1, 0x334155, 0.58);
-        const accentTop = this.add.rectangle(panelX, panelTop + 6, panelWidth - 52, 1, 0x38bdf8, 0.24);
-        const badge = this.add.text(panelLeft, panelTop + 20, summary.badgeLabel, {
+        const shadow = this.add.rectangle(panelX, panelY + 4, panelWidth, panelHeight, 0x01040a, 0.1);
+        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.88);
+        panel.setStrokeStyle(1, 0x334155, 0.42);
+        const accent = this.add.rectangle(panelX - panelWidth / 2 + 3, panelY, 3, panelHeight - 16, 0x38bdf8, 0.28);
+        const headline = this.add.text(panelLeft, panelTop + 18, headlineLine, {
             fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#93c5fd',
-            fontStyle: 'bold',
-        }).setOrigin(0, 0);
-        const headline = this.add.text(panelLeft, badge.y + badge.height + 8, summary.headline, {
-            fontFamily: 'Arial',
-            fontSize: '18px',
+            fontSize: '16px',
             color: '#f8fafc',
             fontStyle: 'bold',
             wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
-        const detail = this.add.text(panelLeft, headline.y + headline.height + 6, summary.detail, {
+        const supportText = this.add.text(panelLeft, headline.y + headline.height + 8, supportLine, {
             fontFamily: 'Arial',
-            fontSize: '12px',
+            fontSize: '11px',
             color: '#94a3b8',
             wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
-        const dividerY = detail.y + detail.height + 12;
-        const divider = this.add.rectangle(panelX, dividerY, panelWidth - 56, 1, 0x334155, 0.52);
-        const routeText = this.add.text(panelLeft, dividerY + 10, summary.routeLine, {
+        const loadoutText = this.add.text(panelLeft, supportText.y + supportText.height + 4, summary.loadoutLine, {
             fontFamily: 'Arial',
-            fontSize: '12px',
-            color: '#dbeafe',
-            wordWrap: { width: contentWidth },
-            lineSpacing: 2,
-        }).setOrigin(0, 0);
-        const loadoutText = this.add.text(panelLeft, routeText.y + routeText.height + 4, summary.loadoutLine, {
-            fontFamily: 'Arial',
-            fontSize: '12px',
+            fontSize: '11px',
             color: '#bbf7d0',
             wordWrap: { width: contentWidth },
-            lineSpacing: 2,
         }).setOrigin(0, 0);
         let acknowledge: () => void = () => undefined;
         const continueButton = this.createButton({
             x: panelX,
-            y: loadoutText.y + loadoutText.height + 18,
-            width: 164,
-            height: 34,
+            y: loadoutText.y + loadoutText.height + 16,
+            width: 152,
+            height: 32,
             label: '进入秘境',
             fillColor: 0x1d4ed8,
             onClick: () => acknowledge(),
@@ -701,12 +700,9 @@ export class ExpeditionScene extends Scene {
             overlay,
             shadow,
             panel,
-            accentTop,
-            badge,
+            accent,
             headline,
-            detail,
-            divider,
-            routeText,
+            supportText,
             loadoutText,
             ...continueButton,
             footer,

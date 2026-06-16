@@ -55,6 +55,7 @@ describe('entryFlowModel', () => {
         expect(createExpeditionRouteBriefingSummary(prototypeMapJson, 'preparation')).toEqual({
             mode: 'preparation',
             shellRouteLabel: '大地图 / 青云外山试炼 · 山门入口',
+            shellSupportLabel: '返回大地图 / 青云外山试炼 · 山门入口',
         });
     });
 
@@ -62,12 +63,14 @@ describe('entryFlowModel', () => {
         expect(createExpeditionRouteBriefingSummary(jadeCaveMapJson, 'deckManager')).toEqual({
             mode: 'deckManager',
             shellRouteLabel: '大地图 / 青玉洞试炼 · 青玉洞口',
+            shellSupportLabel: '返回大地图 / 青玉洞试炼 · 青玉洞口',
         });
     });
 
     it('keeps tutorial maps on the same quiet breadcrumb shape even with longer routes', () => {
         expect(createExpeditionRouteBriefingSummary(tutorialQingyunMapJson, 'preparation')).toMatchObject({
             shellRouteLabel: '大地图 / 教程 · 青云外山试炼 · 外山入口',
+            shellSupportLabel: '返回大地图 / 教程 · 青云外山试炼 · 外山入口',
         });
     });
 
@@ -90,7 +93,7 @@ describe('entryFlowModel', () => {
         )).toEqual({
             badgeLabel: '出发',
             headline: '青云外山试炼 · 山门入口',
-            detail: '本次带入已锁定。',
+            detail: '带入已锁定',
             routeLine: '首层：雾林伏击 / 弃置行囊',
             loadoutLine: '「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石',
             revealStatusText: '已进入青云外山试炼 · 山门入口 · 「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石。',
@@ -116,7 +119,7 @@ describe('entryFlowModel', () => {
         )).toEqual({
             badgeLabel: '抵达',
             headline: '青云外山试炼 · 山门入口',
-            detail: '首层分路已高亮。',
+            detail: '首层已高亮',
             routeLine: '首层：雾林伏击 / 弃置行囊',
             loadoutLine: '「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石',
         });

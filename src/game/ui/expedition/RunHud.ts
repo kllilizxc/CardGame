@@ -85,52 +85,54 @@ export class RunHud extends GameObjects.Container {
         this.spiritStonesValue.setText(`灵石：${spiritStones}`);
     }
 
+    private createArrivalSupportLine(summary: ExpeditionArrivalCueSummary): string {
+        const routePreview = summary.routeLine.startsWith('首层：')
+            ? summary.routeLine.slice('首层：'.length)
+            : summary.routeLine;
+
+        return `${summary.detail}：${routePreview}`;
+    }
+
     public showArrivalCue(summary: ExpeditionArrivalCueSummary): void {
         this.hideArrivalCue();
 
         const { width } = this.scene.scale;
-        const panelWidth = Math.max(320, Math.min(width - 160, 560));
+        const panelWidth = Math.max(320, Math.min(width - 180, 520));
         const panelX = width / 2;
-        const panelY = 132;
+        const panelY = 126;
         const panelLeft = panelX - panelWidth / 2 + 18;
         const contentWidth = panelWidth - 36;
         const headlineLine = `${summary.badgeLabel} · ${summary.headline}`;
+        const supportLine = this.createArrivalSupportLine(summary);
         const headlineHeight = this.measureTextHeight(headlineLine, {
             fontFamily: 'Arial',
             fontSize: '13px',
             fontStyle: 'bold',
+            wordWrap: { width: contentWidth },
         });
-        const detailHeight = this.measureTextHeight(summary.detail, {
+        const supportHeight = this.measureTextHeight(supportLine, {
             fontFamily: 'Arial',
             fontSize: '11px',
             wordWrap: { width: contentWidth },
-        });
-        const routeHeight = this.measureTextHeight(summary.routeLine, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            wordWrap: { width: contentWidth },
-            lineSpacing: 2,
         });
         const loadoutHeight = this.measureTextHeight(summary.loadoutLine, {
             fontFamily: 'Arial',
             fontSize: '11px',
             wordWrap: { width: contentWidth },
-            lineSpacing: 2,
         });
         const panelHeight = Math.max(
+            68,
             12
             + headlineHeight
             + 4
-            + detailHeight
-            + 6
-            + routeHeight
+            + supportHeight
             + 4
             + loadoutHeight
             + 12,
         );
         const panelTop = panelY - panelHeight / 2;
         const overlay = this.scene.add.container(0, 0);
-        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.78);
+        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.74);
         panel.setStrokeStyle(1, 0x334155, 0.42);
         const accent = this.scene.add.rectangle(panelX - panelWidth / 2 + 3, panelY, 3, panelHeight - 18, 0x38bdf8, 0.28);
         const headline = this.scene.add.text(panelLeft, panelTop + 12, headlineLine, {
@@ -138,29 +140,22 @@ export class RunHud extends GameObjects.Container {
             fontSize: '13px',
             color: '#dbeafe',
             fontStyle: 'bold',
+            wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
-        const detail = this.scene.add.text(panelLeft, headline.y + headline.height + 4, summary.detail, {
+        const supportText = this.scene.add.text(panelLeft, headline.y + headline.height + 4, supportLine, {
             fontFamily: 'Arial',
             fontSize: '11px',
             color: '#94a3b8',
             wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
-        const routeLine = this.scene.add.text(panelLeft, detail.y + detail.height + 6, summary.routeLine, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#dbeafe',
-            wordWrap: { width: contentWidth },
-            lineSpacing: 2,
-        }).setOrigin(0, 0);
-        const loadoutLine = this.scene.add.text(panelLeft, routeLine.y + routeLine.height + 4, summary.loadoutLine, {
+        const loadoutLine = this.scene.add.text(panelLeft, supportText.y + supportText.height + 4, summary.loadoutLine, {
             fontFamily: 'Arial',
             fontSize: '11px',
             color: '#bbf7d0',
             wordWrap: { width: contentWidth },
-            lineSpacing: 2,
         }).setOrigin(0, 0);
 
-        overlay.add([panel, accent, headline, detail, routeLine, loadoutLine]);
+        overlay.add([panel, accent, headline, supportText, loadoutLine]);
         overlay.setAlpha(0);
         overlay.setY(8);
 
