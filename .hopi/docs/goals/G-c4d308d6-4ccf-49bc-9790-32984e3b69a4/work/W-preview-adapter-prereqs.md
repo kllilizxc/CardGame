@@ -1,14 +1,16 @@
 ---
 id: W-preview-adapter-prereqs
 title: Repair Preview startup prerequisite preparation
-kind: engineering
-stage: generate
 notBefore: null
 dependsOn:
   - W-preview-adapter
 contractRevision: 2
-evidenceRefs: []
+evidenceRefs:
+  - E-R-58176db9-5dd6-4a61-8ab5-c3c200e652ff
+  - E-R-4ac9d3d4-f948-4cb2-af49-28acc7eee023
 attempts: 0
+kind: engineering
+stage: done
 ---
 ## Objective
 

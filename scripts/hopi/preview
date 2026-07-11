@@ -22,19 +22,31 @@ if ! command -v bun >/dev/null 2>&1; then
     exit 127
 fi
 
-local_bin_dir=$project_root/node_modules/.bin
-if [ -d "$local_bin_dir" ]; then
-    export PATH=$local_bin_dir:$PATH
-fi
-
-if ! command -v vite >/dev/null 2>&1; then
-    echo "HOPI preview adapter error: vite is required but was not found; install project dependencies under $project_root before launching Preview" >&2
-    exit 127
-fi
+local_vite=$project_root/node_modules/.bin/vite
+bun_cache_dir=
 
 if [ -n "${HOPI_PREVIEW_RUNTIME_DIR:-}" ]; then
-    mkdir -p -- "$HOPI_PREVIEW_RUNTIME_DIR"
-    export TMPDIR=$HOPI_PREVIEW_RUNTIME_DIR
+    runtime_tmp_dir=$HOPI_PREVIEW_RUNTIME_DIR/tmp
+    bun_cache_dir=$HOPI_PREVIEW_RUNTIME_DIR/bun-install-cache
+    mkdir -p -- "$runtime_tmp_dir" "$bun_cache_dir"
+    export TMPDIR=$runtime_tmp_dir
+    export BUN_TMPDIR=$runtime_tmp_dir
+fi
+
+if [ ! -x "$local_vite" ]; then
+    cd -- "$project_root"
+    mkdir -p -- "$project_root/node_modules" 2>/dev/null || true
+    echo "HOPI preview adapter: preparing local dependencies with bun install --frozen-lockfile" >&2
+    if [ -n "$bun_cache_dir" ]; then
+        bun install --frozen-lockfile --cache-dir "$bun_cache_dir"
+    else
+        bun install --frozen-lockfile
+    fi
+fi
+
+if [ ! -x "$local_vite" ]; then
+    echo "HOPI preview adapter error: vite was not installed under $project_root/node_modules/.bin" >&2
+    exit 127
 fi
 
 preview_url=http://127.0.0.1:8080
