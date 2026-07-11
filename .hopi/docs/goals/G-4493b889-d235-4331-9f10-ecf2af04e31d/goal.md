@@ -3,7 +3,7 @@ id: G-4493b889-d235-4331-9f10-ecf2af04e31d
 title: 将整体UI风格改成更古风游戏主题，更友好
 lifecycle: active
 priority: 0
-contractRevision: 3
+contractRevision: 4
 completionAttentionId: null
 ---
 ## Objective
@@ -44,3 +44,7 @@ phaser.js?v=4078f318:17957 Uncaught TypeError: Cannot read properties of undefin
     at SceneManager2.update (phaser.js?v=4078f318:110768:26)
     at Game2.step (phaser.js?v=4078f318:8624:32)
     at TimeStep2.step (phaser.js?v=4078f318:9078:26)
+
+## Accepted Inbox Instruction EV-36d017ab-a7d5-489f-9fcc-df31daa51273
+
+同样路径还有报错：

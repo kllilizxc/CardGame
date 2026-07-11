@@ -1,10 +1,10 @@
 ---
 id: G-41b9a706-2538-49fd-b935-1321668a7fce
 title: 验证 Bun 项目指导已就绪
-lifecycle: done
+lifecycle: cancelled
 priority: 0
-contractRevision: 1
-completionAttentionId: completion-bun-guidance-ready-fa64079e-be03-43c3-a9b1-add25de3bbc9
+contractRevision: 2
+completionAttentionId: null
 ---
 ## Objective
 
@@ -21,3 +21,7 @@ completionAttentionId: completion-bun-guidance-ready-fa64079e-be03-43c3-a9b1-add
 ## Success Criteria
 
 - The desired outcome is delivered against measurable criteria recorded in design and Engineering Work.
+
+## Accepted Inbox Instruction EV-24bc3f61-5fe1-465c-859f-78dd7ce38307
+
+Reopen Goal G-41b9a706-2538-49fd-b935-1321668a7fce and reassess its current contract.
