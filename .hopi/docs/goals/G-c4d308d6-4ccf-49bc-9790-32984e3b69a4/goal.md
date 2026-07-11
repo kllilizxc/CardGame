@@ -1,10 +1,10 @@
 ---
 id: G-c4d308d6-4ccf-49bc-9790-32984e3b69a4
 title: Create the managed Preview adapter
-lifecycle: active
+lifecycle: done
 priority: 0
 contractRevision: 1
-completionAttentionId: null
+completionAttentionId: completion-preview-adapter-d6c17d0f-af0b-4b42-a309-4b7203e8063f
 ---
 ## Objective
 
