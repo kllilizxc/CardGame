@@ -49,12 +49,117 @@ if [ ! -x "$local_vite" ]; then
     exit 127
 fi
 
-preview_url=http://127.0.0.1:8080
+choose_preview_port() {
+    bun --eval '
+const net = require("node:net");
+
+const server = net.createServer();
+server.unref();
+server.listen({ host: "127.0.0.1", port: 0 }, () => {
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    console.error("HOPI preview adapter error: failed to resolve an ephemeral loopback port");
+    process.exitCode = 1;
+    server.close();
+    return;
+  }
+
+  process.stdout.write(String(address.port));
+  server.close();
+});
+server.on("error", (error) => {
+  console.error(`HOPI preview adapter error: failed to select a preview port: ${error.message}`);
+  process.exit(1);
+});
+'
+}
+
+preview_endpoint_ready() {
+    PREVIEW_PORT=$1 bun --eval '
+const port = Number(process.env.PREVIEW_PORT);
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 750);
+
+fetch(`http://127.0.0.1:${port}`, { signal: controller.signal }).then(
+  () => {
+    clearTimeout(timeout);
+    process.exit(0);
+  },
+  () => {
+    clearTimeout(timeout);
+    process.exit(1);
+  },
+);
+' >/dev/null 2>&1
+}
+
+preview_pid=
+
+cleanup_preview_child() {
+    if [ -n "${preview_pid:-}" ] && kill -0 "$preview_pid" 2>/dev/null; then
+        kill "$preview_pid" 2>/dev/null || true
+        wait "$preview_pid" 2>/dev/null || true
+    fi
+}
+
+handle_termination() {
+    trap - EXIT HUP INT TERM
+    cleanup_preview_child
+    exit 143
+}
+
+wait_for_preview_ready() {
+    port=$1
+    attempts=120
+
+    while [ "$attempts" -gt 0 ]; do
+        if ! kill -0 "$preview_pid" 2>/dev/null; then
+            return 1
+        fi
+
+        if preview_endpoint_ready "$port"; then
+            return 0
+        fi
+
+        attempts=$((attempts - 1))
+        sleep 0.25
+    done
+
+    echo "HOPI preview adapter error: timed out waiting for http://127.0.0.1:$port to become reachable" >&2
+    return 1
+}
+
+preview_port=$(choose_preview_port)
+preview_url=http://127.0.0.1:$preview_port
 
 export HOPI_PROJECT_ROOT=$project_root
-export HOPI_PREVIEW_URL=$preview_url
 
-printf 'HOPI_PREVIEW_URL=%s\n' "$preview_url"
+trap cleanup_preview_child EXIT
+trap handle_termination HUP INT TERM
 
 cd -- "$project_root"
-exec bun run dev-nolog -- --host 127.0.0.1 --port 8080 --strictPort
+bun run dev-nolog -- --host 127.0.0.1 --port "$preview_port" --strictPort &
+preview_pid=$!
+
+if ! wait_for_preview_ready "$preview_port"; then
+    if kill -0 "$preview_pid" 2>/dev/null; then
+        cleanup_preview_child
+        exit 1
+    fi
+
+    if wait "$preview_pid"; then
+        echo "HOPI preview adapter error: preview process exited before readiness verification completed" >&2
+        exit 1
+    else
+        exit $?
+    fi
+fi
+
+export HOPI_PREVIEW_URL=$preview_url
+printf 'HOPI_PREVIEW_URL=%s\n' "$preview_url"
+
+if wait "$preview_pid"; then
+    exit 0
+else
+    exit $?
+fi
