@@ -1,15 +1,20 @@
 import { Scene } from 'phaser';
 import { BaseCardSprite } from './BaseCardSprite';
 import type { FieldCard } from '../../../data/types/cards/field';
+import {
+    battleColorToHex,
+    getBattleCardPalette,
+    getBattleCardTextStyle,
+} from '../ui/battle/battleTheme';
 
 /**
  * 场地卡精灵类
  * 场地卡改变战场环境，对双方或单方产生影响
  */
 export class FieldSprite extends BaseCardSprite {
+    private readonly palette = getBattleCardPalette('field');
     private cardData: FieldCard;
     private effectText!: Phaser.GameObjects.Text;
-    private symmetricIcon?: Phaser.GameObjects.Text;
 
     constructor(scene: Scene, x: number, y: number, cardData: FieldCard, cardScale: number) {
         super(scene, x, y, cardScale);
@@ -21,45 +26,44 @@ export class FieldSprite extends BaseCardSprite {
 
     private createVisuals(): void {
         // 创建场地卡背景 - 使用金色边框表示环境
-        this.createBackground(0x1a1a2e, 0xf39c12); // 深蓝背景，金色边框
+        this.createBackground(this.palette.shell, this.palette.border);
 
         // 添加场地图标
-        const iconBg = this.scene.add.circle(0, -80, 30, 0xf39c12, 0.3);
+        const iconBg = this.scene.add.circle(0, -82, 30, this.palette.accent, 0.24);
         this.add(iconBg);
 
-        const iconText = this.scene.add.text(0, -80, '🏞️', {
-            fontSize: '32px'
-        }).setOrigin(0.5);
+        const iconText = this.scene.add.text(0, -82, '境', getBattleCardTextStyle('name', {
+            fontSize: '28px',
+            color: battleColorToHex(this.palette.accentSoft),
+        })).setOrigin(0.5);
         this.add(iconText);
 
         // 卡牌名称
-        this.nameText = this.scene.add.text(0, -40, this.cardData.name, {
-            fontSize: '18px',
-            color: '#f39c12',
-            fontStyle: 'bold',
+        this.nameText = this.scene.add.text(0, -36, this.cardData.name, getBattleCardTextStyle('name', {
+            fontSize: '20px',
+            color: battleColorToHex(this.palette.accent),
             align: 'center',
-            wordWrap: { width: 150 }
-        }).setOrigin(0.5);
+            wordWrap: { width: 150 },
+        })).setOrigin(0.5);
         this.add(this.nameText);
 
         // 对称性标识
         if (this.cardData.symmetric) {
-            this.symmetricIcon = this.scene.add.text(0, -10, '⚖️ 双方生效', {
-                fontSize: '12px',
-                color: '#95a5a6',
-                fontStyle: 'italic'
-            }).setOrigin(0.5);
-            this.add(this.symmetricIcon);
+            this.createCardText(0, -6, '双方生效', 'meta', {
+                fontSize: '18px',
+                color: this.palette.supportText,
+                fontStyle: 'italic',
+            });
         }
 
         // 效果描述
         const effectDescription = this.getEffectDescription();
-        this.effectText = this.scene.add.text(0, 40, effectDescription, {
-            fontSize: '13px',
-            color: '#ecf0f1',
+        this.effectText = this.scene.add.text(0, 42, effectDescription, getBattleCardTextStyle('body', {
+            fontSize: '18px',
+            color: this.palette.bodyText,
             align: 'center',
-            wordWrap: { width: 150 }
-        }).setOrigin(0.5);
+            wordWrap: { width: 146 },
+        })).setOrigin(0.5);
         this.add(this.effectText);
 
         // 设置交互（使用拖拽）
@@ -75,7 +79,7 @@ export class FieldSprite extends BaseCardSprite {
         }
 
         const effectTexts: string[] = [];
-        this.cardData.effects.forEach(effect => {
+        this.cardData.effects.forEach((effect) => {
             if (effect.text) {
                 effectTexts.push(effect.text);
             }
@@ -85,7 +89,7 @@ export class FieldSprite extends BaseCardSprite {
     }
 
     protected getDefaultStrokeColor(): number {
-        return 0xf39c12; // 金色
+        return this.palette.border; // 金色
     }
 
     /**

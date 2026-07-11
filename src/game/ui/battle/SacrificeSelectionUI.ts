@@ -1,5 +1,7 @@
 import { GameObjects, Scene } from 'phaser';
 import type { CardSprite } from '../../objects/CardSprite';
+import { createSceneButton, createScenePanel, getSceneTextStyle, sceneTheme } from '../../scenes/shared/sceneTheme';
+import { battleColorToHex, battleTheme, createBattleOverlay } from './battleTheme';
 
 /**
  * 献祭选择UI
@@ -11,6 +13,8 @@ export class SacrificeSelectionUI extends GameObjects.Container {
     private instructionText: GameObjects.Text;
     private confirmButton: GameObjects.Container;
     private cancelButton: GameObjects.Container;
+    private confirmButtonBackground!: GameObjects.Rectangle;
+    private unitOriginalDepths: Map<CardSprite, number> = new Map();
     
     private availableUnits: CardSprite[] = [];
     private selectedUnits: CardSprite[] = [];
@@ -25,16 +29,8 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         super(scene, 0, 0);
         
         const { width, height } = scene.scale;
-        
-        // 半透明黑色背景（设置交互以阻止穿透到UI下层）
-        this.background = scene.add.rectangle(
-            width / 2,
-            height / 2,
-            width,
-            height,
-            0x000000,
-            0.8
-        );
+
+        this.background = createBattleOverlay(scene, 0.84);
         // 必须设置交互，否则用户可以继续操作其他卡牌
         this.background.setInteractive();
         this.background.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -43,23 +39,33 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         });
         this.add(this.background);
 
+        const panelY = height * 0.14;
+        const panelObjects = createScenePanel(scene, {
+            x: width / 2,
+            y: panelY,
+            width: Math.min(860, width * 0.7),
+            height: 170,
+        });
+        this.add(panelObjects);
+
         // 标题
-        this.titleText = scene.add.text(width / 2, height * 0.12, '献祭召唤', {
-            fontSize: '28px',
-            color: '#9b59b6',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
+        this.titleText = scene.add.text(width / 2, panelY - 28, '献祭召唤', getSceneTextStyle('panelTitle', {
+            fontSize: '38px',
+            color: battleColorToHex(sceneTheme.colors.goldSoft),
+        })).setOrigin(0.5);
         this.add(this.titleText);
 
         // 说明文字
         this.instructionText = scene.add.text(
             width / 2,
-            height * 0.18,
+            panelY + 18,
             '请选择要献祭的单位',
-            {
-                fontSize: '16px',
-                color: '#ffffff'
-            }
+            getSceneTextStyle('support', {
+                fontSize: '20px',
+                color: battleTheme.colors.textBody,
+                align: 'center',
+                wordWrap: { width: Math.min(760, width * 0.62) },
+            }),
         ).setOrigin(0.5);
         this.add(this.instructionText);
 
@@ -68,6 +74,8 @@ export class SacrificeSelectionUI extends GameObjects.Container {
             width / 2 - 100,
             height * 0.85,
             '确认献祭',
+            '选满后执行',
+            'primary',
             () => this.handleConfirm()
         );
         this.add(this.confirmButton);
@@ -77,6 +85,8 @@ export class SacrificeSelectionUI extends GameObjects.Container {
             width / 2 + 100,
             height * 0.85,
             '取消',
+            '返回斗法',
+            'secondary',
             () => this.handleCancel()
         );
         this.add(this.cancelButton);
@@ -93,30 +103,25 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         x: number,
         y: number,
         text: string,
+        description: string,
+        variant: 'primary' | 'secondary',
         onClick: () => void
     ): GameObjects.Container {
-        const container = this.scene.add.container(x, y);
-
-        const bg = this.scene.add.rectangle(0, 0, 150, 50, 0x2c3e50);
-        bg.setStrokeStyle(2, 0xffffff);
-        bg.setInteractive({ useHandCursor: true });
-        container.add(bg);
-
-        const label = this.scene.add.text(0, 0, text, {
-            fontSize: '16px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
-        container.add(label);
-
-        bg.on('pointerover', () => {
-            bg.setFillStyle(0x34495e);
+        const button = createSceneButton(this.scene, {
+            x,
+            y,
+            width: 176,
+            height: 64,
+            label: text,
+            description,
+            variant,
+            onClick,
         });
 
-        bg.on('pointerout', () => {
-            bg.setFillStyle(0x2c3e50);
-        });
-
-        bg.on('pointerdown', onClick);
+        const container = this.scene.add.container(0, 0, button.objects);
+        if (text === '确认献祭') {
+            this.confirmButtonBackground = button.background;
+        }
 
         return container;
     }
@@ -155,8 +160,10 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         this.unitHighlights.clear();
         this.unitOverlays.forEach(overlay => overlay.destroy());
         this.unitOverlays.clear();
+        this.unitOriginalDepths.clear();
 
         this.availableUnits.forEach(unit => {
+            this.unitOriginalDepths.set(unit, unit.depth);
             // 提升单位深度到UI之上
             unit.setDepth(5001);
             
@@ -186,7 +193,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
             // 遮罩层悬停事件
             overlay.on('pointerover', () => {
                 if (!this.selectedUnits.includes(unit)) {
-                    this.highlightUnit(unit, 0xffd700, 0.5);
+                    this.highlightUnit(unit, sceneTheme.colors.goldSoft, 0.62);
                 }
             });
             
@@ -210,13 +217,13 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         if (index > -1) {
             // 取消选择
             this.selectedUnits.splice(index, 1);
-            this.highlightUnit(unit, 0xffd700, 0.5); // 悬停色
+            this.highlightUnit(unit, sceneTheme.colors.goldSoft, 0.62);
         } else {
             // 选择单位
             if (this.selectedUnits.length < this.requiredCount) {
                 // 还没选满，直接添加
                 this.selectedUnits.push(unit);
-                this.highlightUnit(unit, 0x9b59b6, 0.8); // 紫色选中
+                this.highlightUnit(unit, battleTheme.colors.dangerSoft, 0.9);
             } else {
                 // 已经选满，移除第一个选择的单位，添加新的
                 const firstSelected = this.selectedUnits.shift();
@@ -226,7 +233,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
                 }
                 // 添加新选择的单位
                 this.selectedUnits.push(unit);
-                this.highlightUnit(unit, 0x9b59b6, 0.8); // 紫色选中
+                this.highlightUnit(unit, battleTheme.colors.dangerSoft, 0.9);
             }
         }
 
@@ -282,12 +289,19 @@ export class SacrificeSelectionUI extends GameObjects.Container {
      */
     private updateConfirmButton(): void {
         const canConfirm = this.selectedUnits.length === this.requiredCount;
-        const buttonBg = this.confirmButton.list[0] as GameObjects.Rectangle;
         
         if (canConfirm) {
-            buttonBg.setFillStyle(0x27ae60);
+            this.confirmButtonBackground.setFillStyle(sceneTheme.colors.ember, 0.96);
+            this.confirmButtonBackground.setStrokeStyle(2, sceneTheme.colors.goldSoft, 0.68);
+            if (this.confirmButtonBackground.input) {
+                this.confirmButtonBackground.input.enabled = true;
+            }
         } else {
-            buttonBg.setFillStyle(0x95a5a6);
+            this.confirmButtonBackground.setFillStyle(0x403730, 0.86);
+            this.confirmButtonBackground.setStrokeStyle(2, 0x9f9687, 0.28);
+            if (this.confirmButtonBackground.input) {
+                this.confirmButtonBackground.input.enabled = false;
+            }
         }
     }
 
@@ -336,11 +350,12 @@ export class SacrificeSelectionUI extends GameObjects.Container {
 
         // 恢复单位原始深度（不需要移除事件监听器，因为我们没有修改卡牌的事件）
         this.availableUnits.forEach(unit => {
-            unit.setDepth(0);
+            unit.setDepth(this.unitOriginalDepths.get(unit) ?? 0);
         });
 
         this.availableUnits = [];
         this.selectedUnits = [];
+        this.unitOriginalDepths.clear();
     }
 
     /**

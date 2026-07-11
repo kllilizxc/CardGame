@@ -1,4 +1,6 @@
 import type { Scene } from 'phaser';
+import { battleTheme, blendBattleColor } from '../battle/battleTheme';
+import { sceneTheme } from '../../scenes/shared/sceneTheme';
 
 /**
  * 功法悬浮提示框
@@ -28,8 +30,8 @@ export class GongfaTooltip {
         const { width, height } = this.scene.scale;
         const maxWidth = width * 0.3;
         const padding = 12;
-        const fontSize = Math.floor(height * 0.014);
-        const titleFontSize = Math.floor(height * 0.016);
+        const fontSize = Math.max(18, Math.floor(height * 0.017));
+        const titleFontSize = Math.max(20, Math.floor(height * 0.02));
 
         // 创建容器
         this.container = this.scene.add.container(0, 0);
@@ -37,17 +39,18 @@ export class GongfaTooltip {
 
         // 创建功法名文本（用于测量宽度）
         this.nameText = this.scene.add.text(0, 0, gongfaName, {
+            fontFamily: sceneTheme.fonts.display,
             fontSize: `${titleFontSize}px`,
-            color: '#ffd700',
-            fontStyle: 'bold',
-            wordWrap: { width: maxWidth - padding * 2 }
+            color: battleTheme.colors.textPrimary,
+            wordWrap: { width: maxWidth - padding * 2 },
         });
 
         // 创建描述文本
         this.descriptionText = this.scene.add.text(0, 0, gongfaDescription, {
+            fontFamily: sceneTheme.fonts.body,
             fontSize: `${fontSize}px`,
-            color: '#ecf0f1',
-            wordWrap: { width: maxWidth - padding * 2 }
+            color: battleTheme.colors.textBody,
+            wordWrap: { width: maxWidth - padding * 2 },
         });
 
         // 计算实际需要的宽高
@@ -57,8 +60,15 @@ export class GongfaTooltip {
         const totalWidth = Math.max(this.nameText.width, this.descriptionText.width) + padding * 2;
 
         // 创建背景
-        this.background = this.scene.add.rectangle(0, 0, totalWidth, totalHeight, 0x2c3e50, 0.95);
-        this.background.setStrokeStyle(2, 0xffd700);
+        this.background = this.scene.add.rectangle(
+            0,
+            0,
+            totalWidth,
+            totalHeight,
+            blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jade, 0.08),
+            0.96,
+        );
+        this.background.setStrokeStyle(2, sceneTheme.colors.gold, 0.72);
         this.background.setOrigin(0, 0);
 
         // 定位文本

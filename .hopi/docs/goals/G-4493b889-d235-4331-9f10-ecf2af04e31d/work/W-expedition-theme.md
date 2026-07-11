@@ -1,13 +1,17 @@
 ---
 id: W-expedition-theme
 title: Apply the shared theme to expedition entry and deck management
+notBefore: null
+dependsOn:
+  - W-theme-shell
+contractRevision: 1
+evidenceRefs:
+  - E-R-53cde021-a2d7-4e7f-9907-e106afd99563
+  - E-R-7a70acb0-92b8-477a-ad92-1b78ddb93bb4
+  - E-R-ab1c2d00-1951-4c33-80c9-f56655a3c1a2
+attempts: 0
 kind: engineering
 stage: generate
-notBefore: null
-dependsOn: [W-theme-shell]
-contractRevision: 1
-evidenceRefs: []
-attempts: 0
 ---
 ## Objective
 

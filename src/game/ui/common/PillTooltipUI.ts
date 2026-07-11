@@ -1,5 +1,7 @@
 import type { Scene } from 'phaser';
 import type { PillCard } from '../../../../public/data/types/cards/pill';
+import { battleTheme, blendBattleColor } from '../battle/battleTheme';
+import { sceneTheme } from '../../scenes/shared/sceneTheme';
 
 /**
  * 丹药提示框 UI
@@ -28,58 +30,88 @@ export class PillTooltipUI {
         this.tooltip.setDepth(depth);
 
         // 背景
-        const bgWidth = 250;
-        const bgHeight = 180;
-        const bg = this.scene.add.rectangle(0, 0, bgWidth, bgHeight, 0x1a1a2e, 0.95);
-        bg.setStrokeStyle(3, 0x2ecc71);
-        this.tooltip.add(bg);
+        const bgWidth = 320;
+        const bgHeight = pill.target ? 256 : 228;
+        const shadow = this.scene.add.rectangle(8, 10, bgWidth, bgHeight, sceneTheme.colors.shadow, 0.22);
+        const bg = this.scene.add.rectangle(0, 0, bgWidth, bgHeight, sceneTheme.colors.panel, 0.96);
+        bg.setStrokeStyle(2, sceneTheme.colors.gold, 0.68);
+        const inner = this.scene.add.rectangle(
+            0,
+            12,
+            bgWidth - 20,
+            bgHeight - 30,
+            blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jade, 0.1),
+            0.96,
+        );
+        inner.setStrokeStyle(1, sceneTheme.colors.jadeBright, 0.22);
+        const banner = this.scene.add.rectangle(
+            0,
+            -bgHeight / 2 + 30,
+            bgWidth - 28,
+            40,
+            blendBattleColor(sceneTheme.colors.banner, sceneTheme.colors.jade, 0.16),
+            0.9,
+        );
+        banner.setStrokeStyle(1, sceneTheme.colors.goldSoft, 0.24);
+        this.tooltip.add([shadow, bg, inner, banner]);
 
         // 丹药图标
-        const icon = this.scene.add.text(0, -60, '💊', {
-            fontSize: '40px'
+        const icon = this.scene.add.text(0, -76, '丹', {
+            fontFamily: sceneTheme.fonts.display,
+            fontSize: '36px',
+            color: battleTheme.colors.textPositive,
         }).setOrigin(0.5);
         this.tooltip.add(icon);
 
         // 丹药名称
-        const nameText = this.scene.add.text(0, -25, pill.name, {
-            fontSize: '18px',
-            color: '#2ecc71',
-            fontStyle: 'bold'
+        const nameText = this.scene.add.text(0, -34, pill.name, {
+            fontFamily: sceneTheme.fonts.display,
+            fontSize: '28px',
+            color: battleTheme.colors.textPrimary,
         }).setOrigin(0.5);
         this.tooltip.add(nameText);
 
         // 品级
         const gradeColors: { [key: string]: string } = {
-            '下品': '#95a5a6',
-            '中品': '#3498db',
-            '上品': '#9b59b6',
-            '极品': '#f39c12'
+            下品: battleTheme.colors.textMuted,
+            中品: '#8cb6d8',
+            上品: '#d8c08c',
+            极品: battleTheme.colors.textPositive,
         };
-        const gradeText = this.scene.add.text(0, 0, `品级：${pill.grade}`, {
-            fontSize: '14px',
-            color: gradeColors[pill.grade] || '#95a5a6'
+        const gradeText = this.scene.add.text(0, 2, `品级：${pill.grade}`, {
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: '18px',
+            color: gradeColors[pill.grade] || battleTheme.colors.textMuted,
         }).setOrigin(0.5);
         this.tooltip.add(gradeText);
 
         // 效果描述
-        const descText = this.scene.add.text(0, 25, pill.description, {
-            fontSize: '12px',
-            color: '#ecf0f1',
+        const descText = this.scene.add.text(0, 52, pill.description, {
+            fontFamily: sceneTheme.fonts.body,
+            fontSize: '18px',
+            color: battleTheme.colors.textBody,
             align: 'center',
-            wordWrap: { width: bgWidth - 20 }
+            wordWrap: { width: bgWidth - 48 },
         }).setOrigin(0.5);
         this.tooltip.add(descText);
 
         // 目标说明
         if (pill.target) {
             const targetLabels: { [key: string]: string } = {
-                'self': '自身',
-                'singleAlly': '单个友方',
-                'allAllies': '全体友方'
+                self: '自身',
+                player: '玩家',
+                unit: '单个单位',
+                all: '全部目标',
+                singleAlly: '单个友方',
+                allyUnits: '全体友方',
+                singleEnemy: '单个敌方',
+                enemyUnits: '全体敌方',
+                allUnits: '全部单位',
             };
-            const targetText = this.scene.add.text(0, 60, `目标：${targetLabels[pill.target] || pill.target}`, {
-                fontSize: '11px',
-                color: '#95a5a6'
+            const targetText = this.scene.add.text(0, 102, `目标：${targetLabels[pill.target] || pill.target}`, {
+                fontFamily: sceneTheme.fonts.ui,
+                fontSize: '18px',
+                color: battleTheme.colors.textSupport,
             }).setOrigin(0.5);
             this.tooltip.add(targetText);
         }

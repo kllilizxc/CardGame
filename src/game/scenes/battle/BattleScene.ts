@@ -4,23 +4,17 @@ import { CardSprite } from '../../objects/CardSprite';
 import { ArtifactSprite } from '../../objects/ArtifactSprite';
 import { TalismanSprite } from '../../objects/TalismanSprite';
 import { FieldSprite } from '../../objects/FieldSprite';
+import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 import type { UnitCard } from '../../../../public/data/types/cards/unit';
 import type { ArtifactCard, ArtifactWeaponType } from '../../../../public/data/types/cards/artifact';
 import type { TalismanCard } from '../../../../public/data/types/cards/talisman';
-import type { FieldCard } from '../../../../public/data/types/cards/field';
 import type { CombatBaselineConfig } from '../../../../public/data/types/combat-baseline';
 import type { ArtifactGradeConfig } from '../../../../public/data/types/artifact-grade';
-import { BattleLog } from '../../ui/battle/BattleLog';
 import { CardListView } from '../../ui/common/CardListView';
-import { BattleAnimationManager } from '../../managers/battle/BattleAnimationManager';
-import { CombatManager } from '../../managers/battle/CombatManager';
-import { CardManager } from '../../managers/battle/CardManager';
 import { getUnitStar, installRuntimeRealmConfig, resetRuntimeRealmConfig } from '../../utils/RealmHelper';
 import { installRuntimeArtifactGradeConfig, resetRuntimeArtifactGradeConfig } from '../../utils/ArtifactHelper';
-import { TurnManager } from '../../managers/battle/TurnManager';
 import { ArtifactManager } from '../../managers/battle/ArtifactManager';
 import { TalismanManager } from '../../managers/battle/TalismanManager';
-import { FieldManager } from '../../managers/battle/FieldManager';
 import { PillManager } from '../../managers/battle/PillManager';
 import { BattleEventManager } from '../../managers/battle/BattleEventManager';
 import { SacrificeManager } from '../../managers/battle/SacrificeManager';
@@ -48,6 +42,7 @@ import type { BattleLaunchPayload } from '../../types/expedition';
 import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import { createExpeditionBattleCompleteEvent } from './battleCompletion';
 import { createStoryBattleCompleteEvent } from '../story/storyBattleRoundTrip';
+import { createSceneBackdrop, sceneTheme } from '../shared/sceneTheme';
 import {
     BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
     BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
@@ -104,7 +99,6 @@ export class BattleScene extends Scene {
     // 其他管理器（不在 context 中的）
     private artifactManager!: ArtifactManager;
     private talismanManager!: TalismanManager;
-    private fieldManager!: FieldManager;
     private pillManager!: PillManager;
     private pillSlotUI!: PillSlotUI;
     private eventManager!: BattleEventManager;
@@ -280,7 +274,11 @@ export class BattleScene extends Scene {
         const { width, height } = this.scale;
 
         this.cardScale = this.calculateCardScale();
-        this.cameras.main.setBackgroundColor(0x1a1a2e);
+        this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
+        createSceneBackdrop(this);
+        this.add
+            .rectangle(width / 2, height / 2, width - 140, height - 180, sceneTheme.colors.ink, 0.14)
+            .setStrokeStyle(2, sceneTheme.colors.gold, 0.12);
         
         // 初始化游戏状态
         this.battleState = new BattleState();
@@ -314,7 +312,6 @@ export class BattleScene extends Scene {
         this.unitEffectManager = managers.unitEffectManager;
         this.artifactManager = managers.artifactManager;
         this.talismanManager = managers.talismanManager;
-        this.fieldManager = managers.fieldManager;
         this.pillManager = managers.pillManager;
         this.sacrificeManager = managers.sacrificeManager;
         this.eventManager = managers.eventManager;
@@ -415,7 +412,7 @@ export class BattleScene extends Scene {
         
         // 开始第一回合
         this.time.delayedCall(500, () => {
-            this.turnManager.showTurnAnimation(`回合 ${this.turnNumber}`, 0x2ecc71, () => {
+            this.turnManager.showTurnAnimation(`回合 ${this.turnNumber}`, sceneTheme.colors.jadeBright, () => {
                 this.turnManager.startPlayerTurn(this.getTurnContext());
             });
         });
@@ -610,7 +607,7 @@ export class BattleScene extends Scene {
 
     private setupCardPreview() {
         // 使用新的 CardPreviewManager
-        this.events.on('showCardPreview', (card: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite) => {
+        this.events.on('showCardPreview', (card: BaseCardSprite) => {
             this.cardPreviewManager.showFromSprite(card);
         });
 

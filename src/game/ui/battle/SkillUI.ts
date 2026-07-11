@@ -1,5 +1,7 @@
 import { GameObjects, Scene } from 'phaser';
 import type { SkillState } from '../../managers/battle/SkillManager';
+import { getSceneTextStyle, sceneTheme } from '../../scenes/shared/sceneTheme';
+import { battleColorToHex, battleTheme, blendBattleColor } from './battleTheme';
 
 /**
  * 技能UI组件
@@ -9,6 +11,7 @@ export class SkillUI extends GameObjects.Container {
     private skillButtons: GameObjects.Container[] = [];
     private skills: SkillState[] = [];
     private onSkillClick: ((skillIndex: number) => void) | null = null;
+    private readonly updateHandler = () => this.updateSkills();
 
     constructor(
         scene: Scene,
@@ -20,11 +23,11 @@ export class SkillUI extends GameObjects.Container {
         this.onSkillClick = onSkillClick || null;
 
         scene.add.existing(this);
-        this.setDepth(100);
+        this.setDepth(140);
 
         // 监听技能更新事件
-        scene.events.on('skillsUpdated', () => this.updateSkills(), this);
-        scene.events.on('skillUsed', () => this.updateSkills(), this);
+        scene.events.on('skillsUpdated', this.updateHandler);
+        scene.events.on('skillUsed', this.updateHandler);
     }
 
     /**
@@ -36,8 +39,8 @@ export class SkillUI extends GameObjects.Container {
         // 清空现有UI
         this.clearSkills();
 
-        const skillWidth = 120;
-        const spacing = 10;
+        const skillWidth = 170;
+        const spacing = 16;
         const startX = -(skills.length * (skillWidth + spacing)) / 2 + skillWidth / 2;
 
         skills.forEach((skillState, index) => {
@@ -59,44 +62,81 @@ export class SkillUI extends GameObjects.Container {
     ): GameObjects.Container {
         const container = this.scene.add.container(x, y);
         const skill = skillState.skill;
+        const width = 170;
+        const height = 104;
 
         // 技能背景
         const canUse = this.canUseSkill(skillState);
-        const bgColor = canUse ? 0x3498db : 0x555555;
-        const bg = this.scene.add.rectangle(0, 0, 120, 80, bgColor, 0.9);
-        bg.setStrokeStyle(3, canUse ? 0x2ecc71 : 0x7f8c8d);
+        const accent = canUse ? sceneTheme.colors.jadeBright : sceneTheme.colors.parchmentSoft;
+        const baseFill = canUse
+            ? blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jade, 0.26)
+            : blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.slate, 0.24);
+        const hoverFill = canUse
+            ? blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jadeBright, 0.34)
+            : baseFill;
+
+        const shadow = this.scene.add.rectangle(4, 6, width, height, sceneTheme.colors.shadow, 0.22);
+        container.add(shadow);
+
+        const bg = this.scene.add.rectangle(0, 0, width, height, baseFill, 0.96);
+        bg.setStrokeStyle(2, accent, canUse ? 0.68 : 0.3);
         container.add(bg);
 
+        const banner = this.scene.add.rectangle(
+            0,
+            -height / 2 + 16,
+            width - 18,
+            24,
+            blendBattleColor(sceneTheme.colors.banner, accent, canUse ? 0.18 : 0.08),
+            0.82,
+        );
+        banner.setStrokeStyle(1, accent, canUse ? 0.28 : 0.14);
+        container.add(banner);
+
         // 技能名称
-        const name = this.scene.add.text(0, -20, skill.name, {
-            fontSize: '14px',
-            color: '#ffffff',
+        const name = this.scene.add.text(0, -16, skill.name, getSceneTextStyle('panelEyebrow', {
+            fontSize: '20px',
+            color: battleTheme.colors.textPrimary,
             fontStyle: 'bold',
             align: 'center',
-            wordWrap: { width: 110 }
-        }).setOrigin(0.5);
+            wordWrap: { width: width - 28 },
+        })).setOrigin(0.5);
         container.add(name);
 
         // 冷却状态
         const cooldownText = this.getCooldownText(skillState);
-        const statusText = this.scene.add.text(0, 10, cooldownText, {
-            fontSize: '12px',
-            color: canUse ? '#2ecc71' : '#e74c3c',
-            align: 'center'
-        }).setOrigin(0.5);
+        const statusText = this.scene.add.text(0, 20, cooldownText, getSceneTextStyle('support', {
+            fontSize: '18px',
+            color: canUse ? battleTheme.colors.textPositive : battleTheme.colors.textMuted,
+            align: 'center',
+            wordWrap: { width: width - 30 },
+        })).setOrigin(0.5);
         container.add(statusText);
+
+        const stateLine = this.scene.add.text(
+            0,
+            50,
+            canUse ? '可催动' : '暂不可用',
+            getSceneTextStyle('panelEyebrow', {
+                fontSize: '18px',
+                color: battleColorToHex(canUse ? sceneTheme.colors.goldSoft : sceneTheme.colors.parchmentSoft),
+            }),
+        ).setOrigin(0.5);
+        container.add(stateLine);
 
         // 设置交互
         if (canUse) {
             bg.setInteractive({ useHandCursor: true });
 
             bg.on('pointerover', () => {
-                bg.setStrokeStyle(4, 0xf39c12);
+                bg.setFillStyle(hoverFill, 1);
+                bg.setStrokeStyle(3, sceneTheme.colors.goldSoft, 0.9);
                 container.setScale(1.05);
             });
 
             bg.on('pointerout', () => {
-                bg.setStrokeStyle(3, 0x2ecc71);
+                bg.setFillStyle(baseFill, 0.96);
+                bg.setStrokeStyle(2, accent, 0.68);
                 container.setScale(1.0);
             });
 
@@ -167,8 +207,8 @@ export class SkillUI extends GameObjects.Container {
      * 销毁时清理
      */
     public destroy(fromScene?: boolean): void {
-        this.scene.events.off('skillsUpdated', this.updateSkills, this);
-        this.scene.events.off('skillUsed', this.updateSkills, this);
+        this.scene.events.off('skillsUpdated', this.updateHandler);
+        this.scene.events.off('skillUsed', this.updateHandler);
         super.destroy(fromScene);
     }
 }

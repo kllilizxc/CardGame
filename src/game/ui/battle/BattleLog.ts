@@ -2,6 +2,8 @@ import { Scene } from 'phaser';
 import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 import { GongfaTooltip } from '../common/GongfaTooltip';
 import type { PanelConfig } from '../../config/LayoutConfig';
+import { battleTheme, blendBattleColor } from './battleTheme';
+import { sceneTheme } from '../../scenes/shared/sceneTheme';
 
 interface LogEntry {
     text: string;
@@ -46,17 +48,35 @@ export class BattleLog {
         this.container = scene.add.container(this.LOG_X, this.LOG_Y);
         this.container.setDepth(1500);
 
-        // 背景
-        this.background = scene.add.rectangle(0, 0, this.LOG_WIDTH, this.LOG_HEIGHT, 0x1a1a2e, 0.9);
-        this.background.setStrokeStyle(3, 0xf39c12);
+        const shadow = scene.add.rectangle(10, 12, this.LOG_WIDTH, this.LOG_HEIGHT, sceneTheme.colors.shadow, 0.24);
+        this.background = scene.add.rectangle(0, 0, this.LOG_WIDTH, this.LOG_HEIGHT, sceneTheme.colors.panel, 0.96);
+        this.background.setStrokeStyle(3, sceneTheme.colors.gold, 0.72);
         this.background.setInteractive();
-        this.container.add(this.background);
+        const inner = scene.add.rectangle(
+            0,
+            0,
+            this.LOG_WIDTH - 22,
+            this.LOG_HEIGHT - 22,
+            blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jade, 0.08),
+            0.94,
+        );
+        inner.setStrokeStyle(1, sceneTheme.colors.jadeBright, 0.22);
+        const banner = scene.add.rectangle(
+            0,
+            -this.LOG_HEIGHT / 2 + 34,
+            this.LOG_WIDTH - 34,
+            42,
+            blendBattleColor(sceneTheme.colors.banner, sceneTheme.colors.gold, 0.14),
+            0.9,
+        );
+        banner.setStrokeStyle(1, sceneTheme.colors.goldSoft, 0.22);
+        this.container.add([shadow, this.background, inner, banner]);
 
         // 标题
         const title = scene.add.text(0, -this.LOG_HEIGHT / 2 + 20, '战斗日志', {
-            fontSize: Math.floor(scene.scale.height * 0.02) + 'px',
-            color: '#f39c12',
-            fontStyle: 'bold'
+            fontFamily: sceneTheme.fonts.display,
+            fontSize: Math.max(28, Math.floor(scene.scale.height * 0.026)) + 'px',
+            color: battleTheme.colors.textPrimary,
         }).setOrigin(0.5);
         this.container.add(title);
 
@@ -69,17 +89,19 @@ export class BattleLog {
 
         // 滚动提示（左侧）
         const scrollHint = scene.add.text(-this.LOG_WIDTH / 2 + 80, this.LOG_HEIGHT / 2 - 15, '[ 滚轮滚动 ]', {
-            fontSize: Math.floor(scene.scale.height * 0.012) + 'px',
-            color: '#95a5a6',
-            fontStyle: 'italic'
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: Math.max(18, Math.floor(scene.scale.height * 0.017)) + 'px',
+            color: battleTheme.colors.textSupport,
+            fontStyle: 'italic',
         }).setOrigin(0.5);
         this.container.add(scrollHint);
 
         // 位置提示（右侧）
         this.bottomHint = scene.add.text(this.LOG_WIDTH / 2 - 80, this.LOG_HEIGHT / 2 - 15, '✓ 已到最新', {
-            fontSize: Math.floor(scene.scale.height * 0.012) + 'px',
-            color: '#2ecc71',
-            fontStyle: 'bold'
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: Math.max(18, Math.floor(scene.scale.height * 0.017)) + 'px',
+            color: battleTheme.colors.textPositive,
+            fontStyle: 'bold',
         }).setOrigin(0.5);
         this.bottomHint.setVisible(true);
         this.container.add(this.bottomHint);
@@ -100,25 +122,32 @@ export class BattleLog {
     private createToggleButton() {
         const { width, height } = this.scene.scale;
         
-        this.toggleButton = this.scene.add.container(
-            width - width * 0.02 - 25,
-            height * 0.5 - this.LOG_HEIGHT / 2 - 40
-        );
+        this.toggleButton = this.scene.add.container(width - width * 0.02 - 56, height * 0.5 - this.LOG_HEIGHT / 2 - 40);
         this.toggleButton.setDepth(1501);
 
-        const btnBg = this.scene.add.rectangle(0, 0, 50, 30, 0xf39c12);
+        const buttonShadow = this.scene.add.rectangle(4, 6, 100, 48, sceneTheme.colors.shadow, 0.22);
+        const btnBg = this.scene.add.rectangle(
+            0,
+            0,
+            100,
+            48,
+            blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.gold, 0.18),
+            0.96,
+        );
+        btnBg.setStrokeStyle(2, sceneTheme.colors.goldSoft, 0.56);
         btnBg.setInteractive({ useHandCursor: true });
-        this.toggleButton.add(btnBg);
+        this.toggleButton.add([buttonShadow, btnBg]);
 
         const btnText = this.scene.add.text(0, 0, '日志', {
-            fontSize: '14px',
-            color: '#ffffff',
-            fontStyle: 'bold'
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: '18px',
+            color: battleTheme.colors.textPrimary,
+            fontStyle: 'bold',
         }).setOrigin(0.5);
         this.toggleButton.add(btnText);
 
-        btnBg.on('pointerover', () => btnBg.setFillStyle(0xffd700));
-        btnBg.on('pointerout', () => btnBg.setFillStyle(0xf39c12));
+        btnBg.on('pointerover', () => btnBg.setFillStyle(blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.gold, 0.28), 1));
+        btnBg.on('pointerout', () => btnBg.setFillStyle(blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.gold, 0.18), 0.96));
         btnBg.on('pointerdown', () => this.toggle());
     }
 
@@ -142,12 +171,27 @@ export class BattleLog {
         const barY = 0;
 
         // 滚动条背景
-        this.scrollBar = this.scene.add.rectangle(barX, barY, barWidth, barHeight, 0x34495e, 0.5);
+        this.scrollBar = this.scene.add.rectangle(
+            barX,
+            barY,
+            barWidth,
+            barHeight,
+            blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jade, 0.14),
+            0.56,
+        );
         this.container.add(this.scrollBar);
 
         // 滚动条滑块
         const thumbHeight = 50;
-        this.scrollThumb = this.scene.add.rectangle(barX, barY - barHeight / 2 + thumbHeight / 2, barWidth, thumbHeight, 0xf39c12, 0.8);
+        this.scrollThumb = this.scene.add.rectangle(
+            barX,
+            barY - barHeight / 2 + thumbHeight / 2,
+            barWidth,
+            thumbHeight,
+            sceneTheme.colors.goldSoft,
+            0.88,
+        );
+        this.scrollThumb.setStrokeStyle(1, sceneTheme.colors.gold, 0.48);
         this.scrollThumb.setInteractive({ useHandCursor: true, draggable: true });
         this.container.add(this.scrollThumb);
 
@@ -236,10 +280,10 @@ export class BattleLog {
         // 更新提示文字
         if (isAtTop && this.maxScrollOffset > 0) {
             this.bottomHint.setText('✓ 已到最早');
-            this.bottomHint.setColor('#95a5a6');
+            this.bottomHint.setColor(battleTheme.colors.textSupport);
         } else if (isAtBottom) {
             this.bottomHint.setText('✓ 已到最新');
-            this.bottomHint.setColor('#2ecc71');
+            this.bottomHint.setColor(battleTheme.colors.textPositive);
         }
     }
 
@@ -301,10 +345,10 @@ export class BattleLog {
         this.logTexts = [];
 
         const { height } = this.scene.scale;
-        const fontSize = Math.floor(height * 0.014) + 'px';
-        const lineHeight = height * 0.025;
-        const startY = -this.LOG_HEIGHT / 2 + 50;
-        const maxWidth = this.LOG_WIDTH - 30;
+        const fontSize = Math.max(18, Math.floor(height * 0.017)) + 'px';
+        const lineGap = Math.max(12, Math.floor(height * 0.012));
+        const startY = -this.LOG_HEIGHT / 2 + 60;
+        const maxWidth = this.LOG_WIDTH - 46;
 
         // 从最旧到最新顺序显示（所有记录，不限制数量）
         let currentY = startY;
@@ -342,12 +386,12 @@ export class BattleLog {
             );
 
             // 使用实际高度而不是估算
-            currentY += actualHeight + lineHeight;
+            currentY += actualHeight + lineGap;
         }
 
         // 计算最大滚动距离（加一些缓冲）
         const visibleHeight = this.LOG_HEIGHT - 130;
-        const totalContentHeight = currentY - startY + lineHeight * 2; // 额外缓冲
+        const totalContentHeight = currentY - startY + lineGap * 2;
         this.maxScrollOffset = Math.max(0, totalContentHeight - visibleHeight);
         
         // 自动滚动到底部（最新消息）
@@ -457,13 +501,15 @@ export class BattleLog {
         let maxHeight = 0;
         
         parts.forEach(part => {
-            const textColor = part.isCard || part.isGongfa ? '#f39c12' : '#ecf0f1';
+            const textColor = part.isCard || part.isGongfa ? battleTheme.colors.textPrimary : battleTheme.colors.textBody;
             const textStyle = part.isCard || part.isGongfa ? 'bold' : 'normal';
             
             const textObj = this.scene.add.text(currentX, currentLineY, part.text, {
+                fontFamily: part.isCard || part.isGongfa ? sceneTheme.fonts.ui : sceneTheme.fonts.body,
                 fontSize: fontSize,
                 color: textColor,
                 fontStyle: textStyle,
+                lineSpacing: 4,
                 wordWrap: { width: maxWidth - lineWidth }
             });
             textObj.setOrigin(0, 0);
@@ -477,10 +523,10 @@ export class BattleLog {
             if (part.isCard && part.cardRef) {
                 const hitArea = this.scene.add.rectangle(
                     currentX + textObj.width / 2,
-                    currentLineY + 8,
+                    currentLineY + textObj.height / 2,
                     textObj.width,
-                    16,
-                    0xffd700,
+                    Math.max(20, textObj.height),
+                    sceneTheme.colors.goldSoft,
                     0
                 );
                 hitArea.setInteractive({ useHandCursor: true });
@@ -490,10 +536,10 @@ export class BattleLog {
                 // 下划线
                 const underline = this.scene.add.rectangle(
                     hitArea.x,
-                    hitArea.y + 8,
+                    hitArea.y + textObj.height / 2 - 1,
                     textObj.width,
                     2,
-                    0xffd700,
+                    sceneTheme.colors.goldSoft,
                     0
                 );
                 this.logContainer.add(underline);
@@ -538,10 +584,10 @@ export class BattleLog {
             if (part.isGongfa && part.gongfaInfo) {
                 const hitArea = this.scene.add.rectangle(
                     currentX + textObj.width / 2,
-                    currentLineY + 8,
+                    currentLineY + textObj.height / 2,
                     textObj.width,
-                    16,
-                    0xffd700,
+                    Math.max(20, textObj.height),
+                    sceneTheme.colors.goldSoft,
                     0
                 );
                 hitArea.setInteractive({ useHandCursor: true });
@@ -551,10 +597,10 @@ export class BattleLog {
                 // 下划线
                 const underline = this.scene.add.rectangle(
                     hitArea.x,
-                    hitArea.y + 8,
+                    hitArea.y + textObj.height / 2 - 1,
                     textObj.width,
                     2,
-                    0xffd700,
+                    sceneTheme.colors.goldSoft,
                     0
                 );
                 this.logContainer.add(underline);

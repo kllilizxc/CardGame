@@ -1,13 +1,23 @@
 ---
 id: W-battle-theme
 title: Apply the shared theme to battle and battle-adjacent UI
-kind: engineering
-stage: generate
 notBefore: null
-dependsOn: [W-theme-shell]
+dependsOn:
+  - W-theme-shell
 contractRevision: 1
-evidenceRefs: []
-attempts: 0
+evidenceRefs:
+  - E-R-f70cfaa2-2a13-49d4-8a37-98058974a83d
+  - E-R-c812a6a2-cfd3-4e9b-8159-74808d37896b
+  - E-R-6fc84e9e-b0e6-4ae7-8b34-026f13407969
+  - E-R-069d6377-35ee-4b63-ab9c-61d8f61aa6b8
+  - E-R-95652e52-757c-4ede-b951-3e7486868b47
+  - E-R-65c057f8-8329-4a10-b7ad-c8d317fecb14
+  - E-R-67aefdd6-7a76-4fbb-84a8-c320823d446b
+  - E-R-8e12428c-517c-4b06-8b66-a0513153169c
+  - E-R-f2c87adb-57a0-4478-8eba-f5e2be83121f
+attempts: 2
+kind: engineering
+stage: done
 ---
 ## Objective
 

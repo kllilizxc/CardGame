@@ -76,10 +76,10 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
     return {
         // 卡牌预览面板 - 左上角
         cardPreview: {
-            x: width * 0.1,
+            x: width * 0.14,
             y: height * 0.5,
-            width: width * 0.2,
-            height: height * 0.5
+            width: width * 0.24,
+            height: height * 0.56
         },
         
         // 战斗日志 - 右侧
@@ -126,16 +126,16 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
         deckButton: {
             x: width * 0.08,
             y: height - height * 0.08,
-            width: 120,
-            height: 100
+            width: 148,
+            height: 108
         },
         
         // 弃牌堆按钮 - 右下角
         discardPileButton: {
             x: width - width * 0.08,
             y: height - height * 0.08,
-            width: 120,
-            height: 100
+            width: 148,
+            height: 108
         },
         
         // 丹药槽位 - 左下角，卡组按钮上方

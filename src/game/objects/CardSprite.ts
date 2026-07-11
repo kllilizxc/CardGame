@@ -3,18 +3,27 @@ import type { UnitCard } from '@data/types/cards/unit';
 import type { Gongfa } from '@data/types/gongfa';
 import type { StatusInstance } from '@data/types/status';
 import { BaseCardSprite } from './BaseCardSprite';
+import {
+    battleColorToHex,
+    battleTheme,
+    blendBattleColor,
+    getBattleCardPalette,
+    getBattleCardTextStyle,
+} from '../ui/battle/battleTheme';
+import { sceneTheme } from '../scenes/shared/sceneTheme';
 import { GongfaTooltip } from '../ui/common/GongfaTooltip';
 import { describeGongfa } from '../utils/GongfaDescriptionBuilder';
 import { getUnitStar, getRealmConfig } from '../utils/RealmHelper';
 import { getStatusDisplayText, getStatusCategoryColor, getStatusFullDescription } from '../utils/StatusHelper';
 
 export class CardSprite extends BaseCardSprite {
+    private readonly palette = getBattleCardPalette('unit');
     private cardData: UnitCard;
-    private starsText: GameObjects.Text;
-    private realmText: GameObjects.Text;
     private attackText: GameObjects.Text;
     private healthText: GameObjects.Text;
     private descriptionText: GameObjects.Text;
+    private raceBox: GameObjects.Rectangle;
+    private raceText: GameObjects.Text;
     private gongfaContainer: GameObjects.Container;
     private gongfaTexts: GameObjects.Text[] = [];
     private gongfaTooltip: GongfaTooltip;
@@ -27,66 +36,76 @@ export class CardSprite extends BaseCardSprite {
         this.cardData = cardData;
 
         // 创建背景
-        this.createBackground(0x2d2d2d, 0xf39c12);
+        this.createBackground(this.palette.shell, this.palette.border);
 
         // 创建名称
-        this.createNameText(cardData.name);
+        this.createNameText(cardData.name, -104);
 
         // 星级
         const star = getUnitStar(cardData);
         const stars = '★'.repeat(star);
-        this.starsText = scene.add.text(0, -85, stars, {
-            fontSize: '14px',
-            color: '#f1c40f'
-        }).setOrigin(0.5);
-        this.add(this.starsText);
+        this.createCardText(0, -82, stars, 'accent', {
+            fontSize: '18px',
+            color: battleColorToHex(sceneTheme.colors.goldSoft),
+        });
 
         // 境界
         const realmConfig = getRealmConfig(cardData.realmId);
         const realmInfo = realmConfig ? `${realmConfig.stage} ${realmConfig.phase}`.trim() : '';
-        this.realmText = scene.add.text(0, -60, realmInfo, {
-            fontSize: '12px',
-            color: '#9b59b6'
-        }).setOrigin(0.5);
-        this.add(this.realmText);
+        this.createCardText(0, -60, realmInfo, 'meta', {
+            fontSize: '18px',
+            color: battleColorToHex(this.palette.accentSoft),
+        });
 
-        // 种族占位符
-        const raceBox = scene.add.rectangle(0, 0, 150, 80, 0x34495e);
-        this.add(raceBox);
-        const raceText = scene.add.text(0, 0, cardData.race, {
-            fontSize: '14px',
-            color: '#95a5a6'
-        }).setOrigin(0.5);
-        this.add(raceText);
+        // 种族牌面
+        this.raceBox = scene.add.rectangle(0, -2, 140, 76, this.palette.iconFill, 0.92);
+        this.raceBox.setStrokeStyle(1, this.palette.accent, 0.26);
+        this.add(this.raceBox);
+        this.raceText = this.scene.add.text(0, -6, cardData.race, getBattleCardTextStyle('body', {
+            fontSize: '18px',
+            color: this.palette.bodyText,
+            wordWrap: { width: 126 },
+        })).setOrigin(0.5);
+        this.add(this.raceText);
 
         // 描述（默认隐藏，只在预览时显示）
-        this.descriptionText = scene.add.text(0, 60, cardData.description, {
-            fontSize: '11px',
-            color: '#bdc3c7',
-            wordWrap: { width: 160 }
-        }).setOrigin(0.5);
+        this.descriptionText = this.scene.add.text(0, 54, cardData.description, getBattleCardTextStyle('support', {
+            fontSize: '18px',
+            color: this.palette.supportText,
+            wordWrap: { width: 146 },
+        })).setOrigin(0.5);
         this.descriptionText.setVisible(false); // 默认隐藏
         this.add(this.descriptionText);
 
         // 攻击力
-        const attackBg = scene.add.rectangle(-50, 100, 60, 30, 0x4d1a1a);
-        this.add(attackBg);
-        this.attackText = scene.add.text(-50, 100, `⚔${cardData.attack}`, {
-            fontSize: '14px',
-            color: '#e74c3c',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        this.add(this.attackText);
+        this.attackText = this.createChip(
+            -48,
+            104,
+            72,
+            34,
+            blendBattleColor(sceneTheme.colors.ink, battleTheme.colors.danger, 0.58),
+            battleTheme.colors.dangerSoft,
+            `攻 ${cardData.attack}`,
+            getBattleCardTextStyle('stat', {
+                fontSize: '18px',
+                color: battleTheme.colors.textDanger,
+            }),
+        ).text;
 
         // 生命值
-        const healthBg = scene.add.rectangle(50, 100, 60, 30, 0x1a4d2e);
-        this.add(healthBg);
-        this.healthText = scene.add.text(50, 100, `❤${cardData.health}`, {
-            fontSize: '14px',
-            color: '#2ecc71',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        this.add(this.healthText);
+        this.healthText = this.createChip(
+            48,
+            104,
+            72,
+            34,
+            blendBattleColor(sceneTheme.colors.ink, this.palette.accent, 0.42),
+            this.palette.accentSoft,
+            `命 ${cardData.health}`,
+            getBattleCardTextStyle('stat', {
+                fontSize: '18px',
+                color: battleTheme.colors.textPositive,
+            }),
+        ).text;
 
         // 初始化功法提示框
         this.gongfaTooltip = new GongfaTooltip(scene);
@@ -144,18 +163,18 @@ export class CardSprite extends BaseCardSprite {
         }
         
         // 更新攻击力
-        this.attackText.setText(`⚔${this.cardData.attack}`);
+        this.attackText.setText(`攻 ${this.cardData.attack}`);
         
         // 更新生命值
-        this.healthText.setText(`❤${this.cardData.health}`);
+        this.healthText.setText(`命 ${this.cardData.health}`);
         
         // 如果生命值过低，改变颜色提示
         if (this.cardData.health <= 0) {
-            this.healthText.setColor('#666666');
+            this.healthText.setColor(battleTheme.colors.textMuted);
         } else if (this.cardData.health <= this.getOriginalHealth() * 0.3) {
-            this.healthText.setColor('#e74c3c'); // 低血量红色
+            this.healthText.setColor(battleTheme.colors.textDanger); // 低血量红色
         } else {
-            this.healthText.setColor('#2ecc71'); // 正常绿色
+            this.healthText.setColor(battleTheme.colors.textPositive); // 正常绿色
         }
     }
 
@@ -168,17 +187,16 @@ export class CardSprite extends BaseCardSprite {
 
     // 重写：获取默认边框颜色
     protected getDefaultStrokeColor(): number {
-        return 0xf39c12;
+        return this.palette.border;
     }
 
     // 重写：更新显示模式
     protected updateDisplayMode(): void {
-        // 只有在hover模式下才显示描述
-        const shouldShowDescription = this.currentDisplayMode === 'hover';
-        this.descriptionText.setVisible(shouldShowDescription);
-        
-        // 功法列表始终显示（如果有的话）
-        this.gongfaContainer.setVisible(true);
+        const showExpandedDescription = this.currentDisplayMode === 'hover';
+        this.descriptionText.setVisible(showExpandedDescription);
+        this.gongfaContainer.setVisible(!showExpandedDescription);
+        this.raceBox.setVisible(!showExpandedDescription);
+        this.raceText.setVisible(!showExpandedDescription);
     }
 
     /**
@@ -212,8 +230,8 @@ export class CardSprite extends BaseCardSprite {
         this.gongfaTexts.forEach(text => text.destroy());
         this.gongfaTexts = [];
 
-        const startY = 30; // 功法列表起始 Y 坐标
-        const lineHeight = 16; // 每行高度
+        const startY = 30;
+        const lineHeight = 20;
 
         gongfaIds.forEach((gongfaId, index) => {
             const gongfa = this.gongfaData.get(gongfaId);
@@ -225,9 +243,11 @@ export class CardSprite extends BaseCardSprite {
             
             // 创建功法名文本
             const gongfaText = this.scene.add.text(0, y, `【${gongfa.name}】`, {
-                fontSize: '10px',
-                color: '#f39c12',
-                fontStyle: 'bold'
+                ...getBattleCardTextStyle('tiny', {
+                    fontSize: '18px',
+                    color: battleColorToHex(sceneTheme.colors.goldSoft),
+                    fontStyle: 'bold',
+                }),
             }).setOrigin(0.5);
             
             this.gongfaContainer.add(gongfaText);
@@ -239,7 +259,7 @@ export class CardSprite extends BaseCardSprite {
                 y,
                 gongfaText.width + 10,
                 lineHeight,
-                0xffd700,
+                sceneTheme.colors.goldSoft,
                 0
             );
             hitArea.setInteractive({ useHandCursor: true });
@@ -252,7 +272,7 @@ export class CardSprite extends BaseCardSprite {
                 y + 6,
                 gongfaText.width,
                 1,
-                0xffd700,
+                sceneTheme.colors.goldSoft,
                 0
             );
             this.gongfaContainer.add(underline);
@@ -306,17 +326,18 @@ export class CardSprite extends BaseCardSprite {
             const displayText = getStatusDisplayText(status);
             const categoryColor = getStatusCategoryColor(status.statusId);
             
-            const yPos = index * 22;
+            const yPos = index * 28;
             
             // 创建状态背景
-            const bg = this.scene.add.rectangle(0, yPos, 50, 18, categoryColor, 0.8);
-            bg.setStrokeStyle(1, categoryColor);
+            const bg = this.scene.add.rectangle(0, yPos, 64, 24, categoryColor, 0.8);
+            bg.setStrokeStyle(1, blendBattleColor(categoryColor, sceneTheme.colors.parchment, 0.2));
             this.statusContainer!.add(bg);
             
             // 创建状态文本
             const text = this.scene.add.text(0, yPos, displayText, {
-                fontSize: '12px',
-                color: '#ffffff',
+                fontFamily: sceneTheme.fonts.ui,
+                fontSize: '18px',
+                color: battleTheme.colors.textPrimary,
                 fontStyle: 'bold'
             }).setOrigin(0.5);
             this.statusContainer!.add(text);
@@ -343,18 +364,19 @@ export class CardSprite extends BaseCardSprite {
         
         // 先创建临时文本来测量实际大小
         const padding = 12;
-        const maxWidth = 300; // 最大宽度
+        const maxWidth = 320;
         
         const tempText = this.scene.add.text(0, 0, fullDesc, {
-            fontSize: '16px',
-            fontStyle: 'bold',
+            fontFamily: sceneTheme.fonts.body,
+            fontSize: '18px',
             lineSpacing: 4,
+            color: battleTheme.colors.textBody,
             wordWrap: { width: maxWidth - padding * 2 }
         });
         
         // 获取文本的实际尺寸
         const textBounds = tempText.getBounds();
-        const width = Math.max(textBounds.width + padding * 2, 200); // 最小宽度200
+        const width = Math.max(textBounds.width + padding * 2, 220);
         const height = textBounds.height + padding * 2;
         
         // 销毁临时文本
@@ -373,15 +395,22 @@ export class CardSprite extends BaseCardSprite {
         this.statusTooltip.setDepth(99999);
         
         // 背景（根据文本实际大小调整）
-        const tooltipBg = this.scene.add.rectangle(0, 0, width, height, 0x2c3e50, 0.98);
-        tooltipBg.setStrokeStyle(3, 0xf39c12);
+        const tooltipBg = this.scene.add.rectangle(
+            0,
+            0,
+            width,
+            height,
+            blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jade, 0.08),
+            0.98,
+        );
+        tooltipBg.setStrokeStyle(2, sceneTheme.colors.goldSoft, 0.78);
         this.statusTooltip.add(tooltipBg);
         
         // 文本（增大字体）
         const tooltipText = this.scene.add.text(-width/2 + padding, -height/2 + padding, fullDesc, {
-            fontSize: '16px',
-            color: '#ecf0f1',
-            fontStyle: 'bold',
+            fontFamily: sceneTheme.fonts.body,
+            fontSize: '18px',
+            color: battleTheme.colors.textBody,
             lineSpacing: 4,
             wordWrap: { width: maxWidth - padding * 2 }
         }).setOrigin(0, 0);

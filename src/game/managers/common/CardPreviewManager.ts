@@ -1,9 +1,8 @@
 import type { Scene } from 'phaser';
 import { CardSpriteFactory } from '../../factories/CardSpriteFactory';
-import type { CardSprite } from '../../objects/CardSprite';
-import type { ArtifactSprite } from '../../objects/ArtifactSprite';
-import type { TalismanSprite } from '../../objects/TalismanSprite';
-import type { FieldSprite } from '../../objects/FieldSprite';
+import type { BaseCardSprite } from '../../objects/BaseCardSprite';
+import { battleTheme, blendBattleColor } from '../../ui/battle/battleTheme';
+import { getSceneTextStyle, sceneTheme } from '../../scenes/shared/sceneTheme';
 
 /**
  * 卡牌预览管理器
@@ -20,7 +19,7 @@ export class CardPreviewManager {
     /**
      * 显示卡牌预览
      */
-    public showFromSprite(card: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite): void {
+    public showFromSprite(card: BaseCardSprite): void {
         const cardData = card.getCardData();
         this.showFromData(cardData);
     }
@@ -38,7 +37,9 @@ export class CardPreviewManager {
         // 使用布局配置的位置，如果没有则使用默认值
         const previewX = layout?.cardPreview?.x ?? this.scene.scale.width * 0.15;
         const previewY = layout?.cardPreview?.y ?? this.scene.scale.height * 0.5;
-        const previewScale = 1.8;
+        const previewWidth = Math.min(layout?.cardPreview?.width ?? 372, 392);
+        const previewHeight = Math.min(layout?.cardPreview?.height ?? 500, 520);
+        const previewScale = 1.32;
 
         // 使用工厂创建预览卡片
         const previewCard = CardSpriteFactory.createSprite(this.scene, cardData, 0, 0, 1);
@@ -48,6 +49,9 @@ export class CardPreviewManager {
 
         // 设置为 hover 模式，显示完整信息包括描述
         previewCard.setDisplayMode('hover');
+        previewCard.disableDragging();
+        previewCard.disableInteractive();
+        previewCard.setScale(previewScale);
 
         // 创建预览容器
         this.cardPreview = this.scene.add.container(previewX, previewY);
@@ -55,15 +59,41 @@ export class CardPreviewManager {
         const depth = layout?.depth?.cardPreview ?? 6000;
         this.cardPreview.setDepth(depth);
 
-        // 添加背景遮罩
-        const bgMask = this.scene.add.rectangle(0, 0, 220, 300, 0x000000, 0.8);
-        bgMask.setStrokeStyle(4, 0xffd700);
-        this.cardPreview.add(bgMask);
+        const shadow = this.scene.add.rectangle(8, 10, previewWidth, previewHeight, sceneTheme.colors.shadow, 0.24);
+        const outer = this.scene.add.rectangle(0, 0, previewWidth, previewHeight, sceneTheme.colors.panel, 0.96);
+        outer.setStrokeStyle(3, sceneTheme.colors.gold, 0.68);
+        const inner = this.scene.add.rectangle(
+            0,
+            14,
+            previewWidth - 24,
+            previewHeight - 38,
+            blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jade, 0.08),
+            0.96,
+        );
+        inner.setStrokeStyle(1, sceneTheme.colors.jadeBright, 0.22);
+        const banner = this.scene.add.rectangle(
+            0,
+            -previewHeight / 2 + 38,
+            previewWidth - 32,
+            48,
+            blendBattleColor(sceneTheme.colors.banner, sceneTheme.colors.gold, 0.14),
+            0.9,
+        );
+        banner.setStrokeStyle(1, sceneTheme.colors.goldSoft, 0.26);
+        const title = this.scene.add.text(
+            0,
+            -previewHeight / 2 + 38,
+            '卡牌预览',
+            getSceneTextStyle('panelTitle', {
+                fontSize: '28px',
+                color: battleTheme.colors.textPrimary,
+            }),
+        ).setOrigin(0.5);
+
+        this.cardPreview.add([shadow, outer, inner, banner, title]);
 
         // 添加克隆的卡片
         this.cardPreview.add(previewCard);
-
-        this.cardPreview.setScale(previewScale);
         this.cardPreview.setAlpha(0);
         this.scene.tweens.add({
             targets: this.cardPreview,
