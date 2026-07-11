@@ -1,10 +1,10 @@
 ---
 id: G-41b9a706-2538-49fd-b935-1321668a7fce
 title: 验证 Bun 项目指导已就绪
-lifecycle: active
+lifecycle: done
 priority: 0
 contractRevision: 1
-completionAttentionId: null
+completionAttentionId: completion-bun-guidance-ready-fa64079e-be03-43c3-a9b1-add25de3bbc9
 ---
 ## Objective
 

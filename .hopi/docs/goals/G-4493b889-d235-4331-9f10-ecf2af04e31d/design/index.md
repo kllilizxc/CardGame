@@ -32,6 +32,12 @@
 - At the 1920x1080 baseline, expedition breadcrumb cues and the deck-management header/action row must render in separate, non-overlapping vertical bands during live preview.
 - Reviewer evidence `E-R-82da978a-c65c-4076-a2fa-3d30e4844c4d` already showed that the shell envelope and deck-management panel can diverge in runtime layout, so this guardrail must be checked on the rendered deck-management surface rather than inferred from size math alone.
 
+### Preparation Return Confirmation Reliability
+
+- Accepted Inbox turn `EV-234a80b9-a4be-47cc-b714-35ab26e815f9` reports that the exact operator path `进入秘境 -> 管理卡组 -> 返回 -> 确认带入秘境` throws, so the reopened scope stays inside the expedition entry shell and does not require a Goal contract change.
+- Treat this as a handoff-integrity requirement between `DeckManagementPanel`, `PreparationPanel`, and `ExpeditionScene`: after leaving deck management, the rebuilt preparation surface must hold current stash and selected-deck state before any confirm action can create a run.
+- Proof must exercise the exact return-to-confirm path after a deck-management visit, not only isolated loadout-validation helpers or handoff-summary builders, because existing reviewer evidence confirmed preparation/deck-management transitions without explicitly confirming the final confirm step after return.
+
 ### Information Density And Scope
 
 - Simplify each major panel to one primary action group, one current-status line, and one supporting description block instead of stacked explanatory paragraphs and competing emphasis.
@@ -43,5 +49,6 @@
 - `W-theme-shell` establishes the shared theme and updates the route shell surfaces that set the overall first impression.
 - `W-startup-stability` removes the reported launch-time zoom regression from the themed entry flow and depends only on `W-theme-shell`.
 - `W-expedition-theme` applies the same theme to expedition preparation, deck management, route cues, and run HUD flows, and remains the owner for the breadcrumb/header separation requirement because it already covers both `ExpeditionScene` and `DeckManagementPanel`.
+- `W-expedition-return-confirm` repairs the reopened expedition entry defect where a player returns from deck management and immediately confirms the loadout, keeping the fix and proof inside the same expedition entry shell.
 - `W-battle-theme` applies the same theme to battle HUD, overlays, selection modals, previews, and card presentation.
 - `W-expedition-theme` and `W-battle-theme` both depend on `W-theme-shell` so shared theme helpers are defined once before downstream scene work.

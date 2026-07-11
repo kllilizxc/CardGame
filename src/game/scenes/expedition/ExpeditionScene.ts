@@ -56,7 +56,11 @@ import {
     type RunSummaryMode,
 } from './entryFlowModel';
 import { createBattleSceneStartPayload } from './battleLaunchFlow';
-import { confirmExpeditionLoadout, getInitialExpeditionEntryView } from './expeditionEntryFlow';
+import {
+    confirmExpeditionLoadout,
+    getInitialExpeditionEntryView,
+    validateExpeditionLoadout,
+} from './expeditionEntryFlow';
 import {
     createExpeditionTargetConfig,
     normalizeExpeditionSceneLaunchData,
@@ -560,6 +564,10 @@ export class ExpeditionScene extends Scene {
         }
     }
 
+    private isEntryTransitionActive(): boolean {
+        return this.entryTransitionBlocker?.visible ?? false;
+    }
+
     private destroyDepartureHandoffOverlay(): void {
         if (this.departureHandoffKeydownHandler) {
             this.input.keyboard?.off('keydown', this.departureHandoffKeydownHandler);
@@ -979,6 +987,14 @@ export class ExpeditionScene extends Scene {
     }
 
     private confirmLoadout(): void {
+        if (this.isEntryTransitionActive()) {
+            return;
+        }
+
+        if (!validateExpeditionLoadout(this.expeditionState.persistentStash).valid) {
+            return;
+        }
+
         const confirmedView = confirmExpeditionLoadout(this.expeditionState, {
             expeditionId: this.launchData.expeditionId,
             mapId: this.launchData.mapId,
