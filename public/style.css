@@ -1,48 +1,133 @@
+:root {
+    color-scheme: dark;
+    --hopi-ink: #0d1320;
+    --hopi-ink-soft: #172133;
+    --hopi-panel: #22180f;
+    --hopi-panel-soft: #493824;
+    --hopi-jade: #4f7a62;
+    --hopi-gold: #d3b27b;
+    --hopi-gold-soft: #e8d5ab;
+    --hopi-paper: #f3ead3;
+    --hopi-paper-soft: #d9c6a2;
+    --hopi-font-ui: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --hopi-font-body: "Noto Serif SC", "Songti SC", "STSong", serif;
+    --hopi-font-display: "Noto Serif SC", "STKaiti", "KaiTi", serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+    min-height: 100%;
+}
+
 body {
     margin: 0;
     padding: 0;
-    color: rgba(255, 255, 255, 0.87);
-    background-color: #000000; 
-    font-family: Arial, Helvetica, sans-serif;
+    color: var(--hopi-paper);
+    background:
+        radial-gradient(circle at 18% 20%, rgba(79, 122, 98, 0.28), transparent 26%),
+        radial-gradient(circle at 84% 16%, rgba(232, 213, 171, 0.18), transparent 18%),
+        linear-gradient(180deg, #0d1320 0%, #101827 45%, #0a0f18 100%);
+    font-family: var(--hopi-font-body);
+    overflow: hidden;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        repeating-linear-gradient(
+            0deg,
+            rgba(232, 213, 171, 0.02) 0,
+            rgba(232, 213, 171, 0.02) 1px,
+            transparent 1px,
+            transparent 26px
+        ),
+        linear-gradient(90deg, rgba(79, 122, 98, 0.08), transparent 24%, transparent 76%, rgba(211, 178, 123, 0.08));
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    inset: 30px;
+    pointer-events: none;
+    border: 1px solid rgba(211, 178, 123, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(79, 122, 98, 0.08);
+}
+
+#root {
+    min-height: 100vh;
 }
 
 #app {
     width: 100%;
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
+    padding: 32px;
     display: flex;
     justify-content: center;
     align-items: center;
+    gap: 24px;
 }
 
 .spritePosition {
     margin: 10px 0 0 10px;
-    font-size: 0.8em;
+    font-family: var(--hopi-font-ui);
+    font-size: 0.88rem;
+    color: var(--hopi-paper-soft);
 }
 
 .button {
-    width: 140px;
+    width: 160px;
     margin: 10px;
-    padding: 10px;
-    background-color: #000000;
-    color: rgba(255, 255, 255, 0.87);
-    border: 1px solid rgba(255, 255, 255, 0.87);
+    padding: 12px 18px;
+    background: linear-gradient(180deg, rgba(143, 80, 55, 0.98), rgba(98, 54, 34, 0.98));
+    color: var(--hopi-paper);
+    border: 1px solid rgba(232, 213, 171, 0.72);
+    border-radius: 999px;
+    font-family: var(--hopi-font-ui);
+    font-size: 0.95rem;
     cursor: pointer;
-    transition: all 0.3s;
+    transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        background 160ms ease;
+    box-shadow:
+        0 12px 28px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
 
-    &:hover {
-        border: 1px solid #0ec3c9;
-        color: #0ec3c9;
+.button:hover {
+    background: linear-gradient(180deg, rgba(179, 108, 70, 1), rgba(143, 80, 55, 1));
+    box-shadow:
+        0 14px 30px rgba(0, 0, 0, 0.32),
+        0 0 0 1px rgba(232, 213, 171, 0.14);
+    transform: translateY(-1px);
+}
+
+.button:active {
+    transform: translateY(1px);
+}
+
+.button:disabled {
+    cursor: not-allowed;
+    color: rgba(243, 234, 211, 0.4);
+    border-color: rgba(232, 213, 171, 0.24);
+    background: linear-gradient(180deg, rgba(82, 74, 63, 0.94), rgba(58, 51, 43, 0.94));
+    box-shadow: none;
+}
+
+@media (max-width: 1100px) {
+    body::after {
+        inset: 14px;
     }
 
-    &:active {
-        background-color: #0ec3c9;
-    }
-
-    /* Disabled styles */
-    &:disabled {
-        cursor: not-allowed;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        color: rgba(255, 255, 255, 0.3);
+    #app {
+        padding: 16px;
     }
 }
