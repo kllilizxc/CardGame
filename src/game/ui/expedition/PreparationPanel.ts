@@ -26,6 +26,7 @@ import type {
     PersistentStash,
     SavedDeck,
 } from '../../types/expedition';
+import type { EntryPanelFrame, EntryPanelFrameProvider } from './EntryPanelFrame';
 import {
     calculateDeckSwitcherHeight,
     calculateDeckCardHeight,
@@ -37,6 +38,7 @@ import {
     getAdjacentPreparationDeckId,
     getPreparationKeyboardShortcut,
 } from './preparationPanelKeyboard';
+import { expeditionUiTheme } from '../common/expeditionUiTheme';
 
 export interface PreparationPanelConfig {
     stash: PersistentStash;
@@ -206,15 +208,25 @@ interface LoadoutSupportStripMetrics {
     height: number;
 }
 
-const DECK_CARD_WIDTH = 184;
-const DECK_CARD_GAP = 8;
-const PANEL_MIN_HEIGHT = 500;
-const PANEL_MAX_HEIGHT = 900;
-const PANEL_MAX_HEIGHT_RATIO = 0.95;
-const ACTION_BUTTON_COLUMN_WIDTH = 216;
+const DECK_CARD_WIDTH = 224;
+const DECK_CARD_GAP = 12;
+const PANEL_MIN_HEIGHT = 640;
+const PANEL_MAX_HEIGHT = 980;
+const PANEL_MAX_HEIGHT_RATIO = 0.96;
+const ACTION_BUTTON_COLUMN_WIDTH = 248;
 const ACTION_BUTTON_PRIMARY_HEIGHT = 56;
-const ACTION_BUTTON_SECONDARY_HEIGHT = 40;
+const ACTION_BUTTON_SECONDARY_HEIGHT = 44;
 const ACTION_BUTTON_GAP = 8;
+const READY_SELECTED_FILL = 0x163028;
+const READY_SELECTED_HOVER_FILL = 0x1e4033;
+const READY_DETAIL_FILL = 0x11241d;
+const READY_ACTION_FILL = 0x183026;
+const READY_BADGE_BACKGROUND = '#365b47';
+const NEUTRAL_BADGE_BACKGROUND = '#4c4436';
+
+function clampNumber(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
+}
 
 function validateDeckForDisplay(
     deck: SavedDeck,
@@ -228,30 +240,6 @@ function validateDeckForDisplay(
         sizeIssue,
         availabilityIssues,
     };
-}
-
-function formatPreviewList(lines: string[], maxLines: number): string {
-    if (lines.length === 0) {
-        return '无';
-    }
-
-    if (lines.length <= maxLines) {
-        return lines.join('\n');
-    }
-
-    return [...lines.slice(0, maxLines), `……另 ${lines.length - maxLines} 项`].join('\n');
-}
-
-function formatPreviewBulletList(lines: string[], maxLines: number): string {
-    if (lines.length === 0) {
-        return '• 无';
-    }
-
-    if (lines.length === 1 && lines[0] === '无') {
-        return '• 无';
-    }
-
-    return formatPreviewList(lines.map((line) => `• ${line}`), maxLines);
 }
 
 function formatInlinePreviewText(lines: string[], maxEntries: number): string {
@@ -307,8 +295,8 @@ function getDeckCardHeight(scene: Scene, decks: readonly SavedDeck[]): number {
     const maxDeckNameHeight = decks.reduce((maxHeight, deck) => Math.max(
         maxHeight,
         measureTextHeight(scene, deck.name, {
-            fontFamily: 'Arial',
-            fontSize: '14px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             fontStyle: 'bold',
             wordWrap: { width: DECK_CARD_WIDTH - 28 },
         }),
@@ -340,28 +328,28 @@ function createManifestPanel(
         0.92,
     );
     background.setStrokeStyle(1, colors.borderColor, 0.5);
-    const titleText = scene.add.text(left + 12, top + 10, title, {
-        fontFamily: 'Arial',
-        fontSize: '12px',
+    const titleText = scene.add.text(left + 16, top + 14, title, {
+        fontFamily: expeditionUiTheme.fonts.ui,
+        fontSize: '18px',
         color: colors.titleColor,
         fontStyle: 'bold',
     });
     const badge = options.badgeText
-        ? scene.add.text(left + width - 12, top + 10, options.badgeText, {
-            fontFamily: 'Arial',
-            fontSize: '10px',
+        ? scene.add.text(left + width - 16, top + 14, options.badgeText, {
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '14px',
             color: colors.badgeColor ?? colors.bodyColor,
             fontStyle: 'bold',
             backgroundColor: colors.badgeBackgroundColor,
-            padding: { left: 8, right: 8, top: 4, bottom: 4 },
+            padding: { left: 10, right: 10, top: 5, bottom: 5 },
         }).setOrigin(1, 0)
         : null;
-    const bodyText = scene.add.text(left + 12, titleText.y + titleText.height + 4, body, {
-        fontFamily: options.monospacedBody ? 'Courier New' : 'Arial',
-        fontSize: '12px',
+    const bodyText = scene.add.text(left + 16, titleText.y + titleText.height + 8, body, {
+        fontFamily: options.monospacedBody ? expeditionUiTheme.fonts.mono : expeditionUiTheme.fonts.ui,
+        fontSize: '18px',
         color: colors.bodyColor,
-        lineSpacing: 3,
-        wordWrap: { width: width - 24 },
+        lineSpacing: 6,
+        wordWrap: { width: width - 32 },
     });
 
     return [background, titleText, bodyText, badge].filter(Boolean) as Phaser.GameObjects.GameObject[];
@@ -377,12 +365,12 @@ function measureManifestPanelHeight(
     } = {},
 ): number {
     return Math.max(
-        options.minHeight ?? 76,
-        40 + measureTextHeight(scene, body, {
-            fontFamily: options.monospacedBody ? 'Courier New' : 'Arial',
-            fontSize: '12px',
-            lineSpacing: 3,
-            wordWrap: { width: width - 24 },
+        options.minHeight ?? 112,
+        58 + measureTextHeight(scene, body, {
+            fontFamily: options.monospacedBody ? expeditionUiTheme.fonts.mono : expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            lineSpacing: 6,
+            wordWrap: { width: width - 32 },
         }),
     );
 }
@@ -402,42 +390,42 @@ function getReadinessHeroMetrics(
     const textWidth = contentWidth - buttonColumnWidth - 44;
     const validationPanelWidth = textWidth;
     const deckNameHeight = measureTextHeight(scene, deckName, {
-        fontFamily: 'Arial',
-        fontSize: '24px',
+        fontFamily: expeditionUiTheme.fonts.ui,
+        fontSize: '32px',
         fontStyle: 'bold',
         wordWrap: { width: textWidth },
     });
     const headlineHeight = measureTextHeight(scene, headline, {
-        fontFamily: 'Arial',
-        fontSize: '18px',
+        fontFamily: expeditionUiTheme.fonts.ui,
+        fontSize: '22px',
         fontStyle: 'bold',
         wordWrap: { width: textWidth },
     });
     const detailHeight = measureTextHeight(scene, detail, {
-        fontFamily: 'Arial',
-        fontSize: '13px',
-        lineSpacing: 3,
+        fontFamily: expeditionUiTheme.fonts.ui,
+        fontSize: '18px',
+        lineSpacing: 6,
         wordWrap: { width: textWidth },
     });
     const sectionHeight = measureManifestPanelHeight(
         scene,
         readinessBody,
         validationPanelWidth,
-        { minHeight: 80 },
+        { minHeight: 124 },
     );
     const actionBodyHeight = measureTextHeight(scene, actionBody, {
-        fontFamily: 'Arial',
-        fontSize: '12px',
-        lineSpacing: 3,
+        fontFamily: expeditionUiTheme.fonts.ui,
+        fontSize: '18px',
+        lineSpacing: 6,
         wordWrap: { width: buttonColumnWidth - 24 },
     });
     const shortcutHintHeight = measureTextHeight(scene, shortcutHint, {
-        fontFamily: 'Arial',
-        fontSize: '11px',
-        lineSpacing: 3,
+        fontFamily: expeditionUiTheme.fonts.ui,
+        fontSize: '18px',
+        lineSpacing: 6,
         wordWrap: { width: buttonColumnWidth - 24 },
     });
-    const headerHeight = 54
+    const headerHeight = 74
         + extraHeaderHeight
         + deckNameHeight
         + detailHeight
@@ -472,15 +460,15 @@ function getLoadoutSupportStripMetrics(
     footer: string,
 ): LoadoutSupportStripMetrics {
     const bodyHeight = measureTextHeight(scene, body, {
-        fontFamily: 'Arial',
-        fontSize: '12px',
-        lineSpacing: 3,
+        fontFamily: expeditionUiTheme.fonts.ui,
+        fontSize: '18px',
+        lineSpacing: 6,
         wordWrap: { width: contentWidth - 36 },
     });
     const footerHeight = measureTextHeight(scene, footer, {
-        fontFamily: 'Arial',
-        fontSize: '11px',
-        lineSpacing: 3,
+        fontFamily: expeditionUiTheme.fonts.ui,
+        fontSize: '18px',
+        lineSpacing: 6,
         wordWrap: { width: contentWidth - 36 },
     });
 
@@ -500,8 +488,8 @@ function createDeckDisplayState(
     const validation = validateDeckForDisplay(deck, stashCards);
     const preview = createPreparationDeckCardPreview(deck, stashCards, metadata);
     const selectionLabel = isSelected ? '当前带入' : '候选卡组';
-    const selectionBadgeColor = isSelected ? '#dbeafe' : '#e2e8f0';
-    const selectionBadgeBackgroundColor = isSelected ? '#1d4ed8' : '#334155';
+    const selectionBadgeColor = isSelected ? '#f3ead3' : '#f3ead3';
+    const selectionBadgeBackgroundColor = isSelected ? READY_BADGE_BACKGROUND : NEUTRAL_BADGE_BACKGROUND;
     const missingCopies = validation.availabilityIssues.reduce(
         (sum, issue) => sum + (issue.kind === 'insufficient-copies' ? Math.max(0, issue.required - issue.available) : 0),
         0,
@@ -528,25 +516,25 @@ function createDeckDisplayState(
             focusChip: preview.focusChip,
             focusSummaryLine: preview.focusSummaryLine,
             footerText: '当前将按此出发。',
-            fillColor: 0x14264a,
-            hoverFillColor: 0x1a3571,
-            borderColor: 0x93c5fd,
-            accentColor: 0x38bdf8,
+            fillColor: READY_SELECTED_FILL,
+            hoverFillColor: READY_SELECTED_HOVER_FILL,
+            borderColor: expeditionUiTheme.colors.goldSoft,
+            accentColor: expeditionUiTheme.colors.jadeBright,
             selectionBadgeColor,
             selectionBadgeBackgroundColor,
-            statusBadgeColor: '#dbeafe',
+            statusBadgeColor: '#f3ead3',
             statusBadgeBackgroundColor: '#166534',
-            countColor: '#bfdbfe',
-            previewLabelColor: '#93c5fd',
+            countColor: '#d9c6a2',
+            previewLabelColor: '#e8d5ab',
             previewTextColor: '#eff6ff',
-            previewFillColor: 0x0f1d38,
-            previewBorderColor: 0x1d4ed8,
-            chipFillColor: 0x0f1d38,
-            chipBorderColor: 0x3b82f6,
-            chipTextColor: '#dbeafe',
-            footerFillColor: 0x0f1d38,
-            footerTextColor: '#dbeafe',
-            shadowColor: 0x1d4ed8,
+            previewFillColor: READY_DETAIL_FILL,
+            previewBorderColor: expeditionUiTheme.colors.jade,
+            chipFillColor: READY_DETAIL_FILL,
+            chipBorderColor: expeditionUiTheme.colors.jadeBright,
+            chipTextColor: '#f3ead3',
+            footerFillColor: READY_DETAIL_FILL,
+            footerTextColor: '#f3ead3',
+            shadowColor: expeditionUiTheme.colors.jade,
             shadowAlpha: 0.24,
         };
     }
@@ -566,22 +554,22 @@ function createDeckDisplayState(
             fillColor: 0x12201d,
             hoverFillColor: 0x163123,
             borderColor: 0x365314,
-            accentColor: 0x22c55e,
+            accentColor: expeditionUiTheme.colors.jade,
             selectionBadgeColor,
             selectionBadgeBackgroundColor,
             statusBadgeColor: '#dcfce7',
             statusBadgeBackgroundColor: '#166534',
-            countColor: '#bbf7d0',
-            previewLabelColor: '#86efac',
+            countColor: '#e6f3ea',
+            previewLabelColor: '#e6f3ea',
             previewTextColor: '#f0fdf4',
             previewFillColor: 0x0e1c17,
             previewBorderColor: 0x166534,
             chipFillColor: 0x0e1c17,
-            chipBorderColor: 0x22c55e,
+            chipBorderColor: expeditionUiTheme.colors.jade,
             chipTextColor: '#dcfce7',
             footerFillColor: 0x0e1c17,
             footerTextColor: '#dcfce7',
-            shadowColor: 0x020617,
+            shadowColor: expeditionUiTheme.colors.overlay,
             shadowAlpha: 0.18,
         };
     }
@@ -600,23 +588,23 @@ function createDeckDisplayState(
             footerText: '点按切换后补足牌数。',
             fillColor: isSelected ? 0x372215 : 0x2f1d12,
             hoverFillColor: isSelected ? 0x46301e : 0x3b2416,
-            borderColor: isSelected ? 0x93c5fd : 0xf59e0b,
-            accentColor: 0xf59e0b,
+            borderColor: isSelected ? expeditionUiTheme.colors.goldSoft : expeditionUiTheme.colors.gold,
+            accentColor: expeditionUiTheme.colors.gold,
             selectionBadgeColor,
             selectionBadgeBackgroundColor,
             statusBadgeColor: '#fef3c7',
             statusBadgeBackgroundColor: '#92400e',
-            countColor: '#fde68a',
+            countColor: '#f6e2b1',
             previewLabelColor: '#fcd34d',
-            previewTextColor: '#fffbeb',
+            previewTextColor: '#f3ead3',
             previewFillColor: 0x291d0e,
             previewBorderColor: 0xb45309,
             chipFillColor: 0x291d0e,
-            chipBorderColor: 0xf59e0b,
+            chipBorderColor: expeditionUiTheme.colors.gold,
             chipTextColor: '#fef3c7',
             footerFillColor: 0x291d0e,
-            footerTextColor: '#fde68a',
-            shadowColor: isSelected ? 0x1d4ed8 : 0x020617,
+            footerTextColor: '#f6e2b1',
+            shadowColor: isSelected ? expeditionUiTheme.colors.jade : expeditionUiTheme.colors.overlay,
             shadowAlpha: isSelected ? 0.22 : 0.18,
         };
     }
@@ -635,23 +623,23 @@ function createDeckDisplayState(
             footerText: '点按切换后精简卡组。',
             fillColor: isSelected ? 0x3f1d2e : 0x2f1721,
             hoverFillColor: isSelected ? 0x4c1d30 : 0x3a1822,
-            borderColor: isSelected ? 0x93c5fd : 0xf87171,
-            accentColor: 0xef4444,
+            borderColor: isSelected ? expeditionUiTheme.colors.goldSoft : 0xf87171,
+            accentColor: expeditionUiTheme.colors.emberBright,
             selectionBadgeColor,
             selectionBadgeBackgroundColor,
-            statusBadgeColor: '#fee2e2',
+            statusBadgeColor: '#f3d0c3',
             statusBadgeBackgroundColor: '#b91c1c',
-            countColor: '#fecaca',
-            previewLabelColor: '#fda4af',
+            countColor: '#f3d0c3',
+            previewLabelColor: '#f3d0c3',
             previewTextColor: '#fff1f2',
             previewFillColor: 0x29131b,
             previewBorderColor: 0x9f1239,
             chipFillColor: 0x29131b,
-            chipBorderColor: 0xef4444,
-            chipTextColor: '#fee2e2',
+            chipBorderColor: expeditionUiTheme.colors.emberBright,
+            chipTextColor: '#f3d0c3',
             footerFillColor: 0x29131b,
-            footerTextColor: '#fecaca',
-            shadowColor: isSelected ? 0x1d4ed8 : 0x020617,
+            footerTextColor: '#f3d0c3',
+            shadowColor: isSelected ? expeditionUiTheme.colors.jade : expeditionUiTheme.colors.overlay,
             shadowAlpha: isSelected ? 0.22 : 0.18,
         };
     }
@@ -671,23 +659,23 @@ function createDeckDisplayState(
         footerText: '点按切换后补齐缺牌。',
         fillColor: isSelected ? 0x3f1d2e : 0x2f1721,
         hoverFillColor: isSelected ? 0x4c1d30 : 0x3f1d2e,
-        borderColor: isSelected ? 0x93c5fd : 0xf87171,
-        accentColor: 0xef4444,
+        borderColor: isSelected ? expeditionUiTheme.colors.goldSoft : 0xf87171,
+        accentColor: expeditionUiTheme.colors.emberBright,
         selectionBadgeColor,
         selectionBadgeBackgroundColor,
-        statusBadgeColor: '#fee2e2',
+        statusBadgeColor: '#f3d0c3',
         statusBadgeBackgroundColor: '#b91c1c',
-        countColor: '#fecaca',
-        previewLabelColor: '#fda4af',
+        countColor: '#f3d0c3',
+        previewLabelColor: '#f3d0c3',
         previewTextColor: '#fff1f2',
         previewFillColor: 0x29131b,
         previewBorderColor: 0x9f1239,
         chipFillColor: 0x29131b,
-        chipBorderColor: 0xef4444,
-        chipTextColor: '#fee2e2',
+        chipBorderColor: expeditionUiTheme.colors.emberBright,
+        chipTextColor: '#f3d0c3',
         footerFillColor: 0x29131b,
-        footerTextColor: '#fecaca',
-        shadowColor: isSelected ? 0x1d4ed8 : 0x020617,
+        footerTextColor: '#f3d0c3',
+        shadowColor: isSelected ? expeditionUiTheme.colors.jade : expeditionUiTheme.colors.overlay,
         shadowAlpha: isSelected ? 0.22 : 0.18,
     };
 }
@@ -698,48 +686,48 @@ function getSelectedLoadoutColors(
     switch (summary.readiness) {
         case 'ready':
             return {
-                fillColor: 0x132949,
-                borderColor: 0x60a5fa,
-                accentColor: 0x38bdf8,
-                badgeColor: '#dbeafe',
-                badgeBackgroundColor: '#1d4ed8',
-                headlineColor: '#eff6ff',
-                detailColor: '#bfdbfe',
-                mutedColor: '#93c5fd',
+                fillColor: READY_SELECTED_FILL,
+                borderColor: expeditionUiTheme.colors.goldSoft,
+                accentColor: expeditionUiTheme.colors.jadeBright,
+                badgeColor: '#f3ead3',
+                badgeBackgroundColor: READY_BADGE_BACKGROUND,
+                headlineColor: '#f3ead3',
+                detailColor: '#d9c6a2',
+                mutedColor: '#e8d5ab',
             };
         case 'too-few-cards':
             return {
                 fillColor: 0x31210f,
-                borderColor: 0xf59e0b,
-                accentColor: 0xf59e0b,
+                borderColor: expeditionUiTheme.colors.gold,
+                accentColor: expeditionUiTheme.colors.gold,
                 badgeColor: '#fef3c7',
                 badgeBackgroundColor: '#92400e',
-                headlineColor: '#fffbeb',
-                detailColor: '#fde68a',
+                headlineColor: '#f3ead3',
+                detailColor: '#f6e2b1',
                 mutedColor: '#fcd34d',
             };
         case 'too-many-cards':
         case 'insufficient-copies':
             return {
                 fillColor: 0x311725,
-                borderColor: 0xef4444,
-                accentColor: 0xf97316,
-                badgeColor: '#fee2e2',
+                borderColor: expeditionUiTheme.colors.emberBright,
+                accentColor: expeditionUiTheme.colors.ember,
+                badgeColor: '#f3d0c3',
                 badgeBackgroundColor: '#b91c1c',
                 headlineColor: '#fff1f2',
-                detailColor: '#fecaca',
-                mutedColor: '#fda4af',
+                detailColor: '#f3d0c3',
+                mutedColor: '#f3d0c3',
             };
         case 'none':
             return {
-                fillColor: 0x111827,
+                fillColor: expeditionUiTheme.colors.panelInner,
                 borderColor: 0x64748b,
                 accentColor: 0x94a3b8,
-                badgeColor: '#e2e8f0',
-                badgeBackgroundColor: '#334155',
-                headlineColor: '#f8fafc',
-                detailColor: '#cbd5e1',
-                mutedColor: '#94a3b8',
+                badgeColor: '#f3ead3',
+                badgeBackgroundColor: NEUTRAL_BADGE_BACKGROUND,
+                headlineColor: '#f3ead3',
+                detailColor: '#d9c6a2',
+                mutedColor: '#bca785',
             };
     }
 }
@@ -752,38 +740,38 @@ function getActionHierarchyColors(
     switch (summary.readiness) {
         case 'ready':
             return {
-                barFillColor: 0x0f2142,
-                barBorderColor: 0x60a5fa,
-                barAccentColor: 0x38bdf8,
+                barFillColor: READY_ACTION_FILL,
+                barBorderColor: expeditionUiTheme.colors.goldSoft,
+                barAccentColor: expeditionUiTheme.colors.jadeBright,
                 railLabel: '主操作',
-                titleColor: '#eff6ff',
-                summaryColor: '#bfdbfe',
-                supportColor: '#93c5fd',
+                titleColor: '#f3ead3',
+                summaryColor: '#d9c6a2',
+                supportColor: '#e8d5ab',
                 headline: `当前带入「${summary.selectedDeckName}」已通过出发校验`,
                 detail: inventoryDetail,
                 nextStepLabel: '现在可以直接确认带入并进入秘境。',
                 shortcutHint: '快捷键：Enter 主操作 · M 管理卡组',
                 stateBadgeLabel: '可出发',
-                stateBadgeColor: '#dbeafe',
-                stateBadgeBackgroundColor: '#1d4ed8',
+                stateBadgeColor: '#f3ead3',
+                stateBadgeBackgroundColor: READY_BADGE_BACKGROUND,
                 primaryAction: 'confirm',
                 confirmButtonLabel: '确认带入并出发',
                 manageButtonLabel: '继续管理卡组',
                 confirmButtonColors: {
-                    fill: 0x2563eb,
-                    hover: 0x3b82f6,
-                    stroke: 0xbfdbfe,
-                    text: '#f8fafc',
+                    fill: expeditionUiTheme.colors.jade,
+                    hover: expeditionUiTheme.colors.jadeBright,
+                    stroke: expeditionUiTheme.colors.goldSoft,
+                    text: '#f3ead3',
                 },
                 manageButtonColors: {
-                    fill: 0x18263b,
-                    hover: 0x25364e,
-                    stroke: 0x64748b,
-                    text: '#e2e8f0',
+                    fill: expeditionUiTheme.colors.panel,
+                    hover: expeditionUiTheme.colors.panelInner,
+                    stroke: expeditionUiTheme.colors.parchmentSoft,
+                    text: '#f3ead3',
                 },
-                confirmGlowColor: 0x38bdf8,
+                confirmGlowColor: expeditionUiTheme.colors.jadeBright,
                 confirmGlowAlpha: 0.18,
-                actionGlowColor: 0x2563eb,
+                actionGlowColor: expeditionUiTheme.colors.jade,
                 actionGlowAlpha: 0.08,
             };
         case 'too-few-cards': {
@@ -791,11 +779,11 @@ function getActionHierarchyColors(
 
             return {
                 barFillColor: 0x23180d,
-                barBorderColor: 0xf59e0b,
-                barAccentColor: 0xf59e0b,
+                barBorderColor: expeditionUiTheme.colors.gold,
+                barAccentColor: expeditionUiTheme.colors.gold,
                 railLabel: '主操作',
-                titleColor: '#fffbeb',
-                summaryColor: '#fde68a',
+                titleColor: '#f3ead3',
+                summaryColor: '#f6e2b1',
                 supportColor: '#fcd34d',
                 headline: `当前带入「${summary.selectedDeckName}」还差 ${missingCards} 张才能出发`,
                 detail: inventoryDetail,
@@ -811,17 +799,17 @@ function getActionHierarchyColors(
                     fill: 0x3f3321,
                     hover: 0x3f3321,
                     stroke: 0x7c5b1f,
-                    text: '#f8fafc',
+                    text: '#f3ead3',
                 },
                 manageButtonColors: {
                     fill: 0xb45309,
                     hover: 0xd97706,
                     stroke: 0xfef3c7,
-                    text: '#fffbeb',
+                    text: '#f3ead3',
                 },
-                confirmGlowColor: 0xf59e0b,
+                confirmGlowColor: expeditionUiTheme.colors.gold,
                 confirmGlowAlpha: 0,
-                actionGlowColor: 0xf59e0b,
+                actionGlowColor: expeditionUiTheme.colors.gold,
                 actionGlowAlpha: 0.1,
             };
         }
@@ -830,18 +818,18 @@ function getActionHierarchyColors(
 
             return {
                 barFillColor: 0x261320,
-                barBorderColor: 0xef4444,
-                barAccentColor: 0xf97316,
+                barBorderColor: expeditionUiTheme.colors.emberBright,
+                barAccentColor: expeditionUiTheme.colors.ember,
                 railLabel: '主操作',
                 titleColor: '#fff1f2',
-                summaryColor: '#fecaca',
-                supportColor: '#fda4af',
+                summaryColor: '#f3d0c3',
+                supportColor: '#f3d0c3',
                 headline: `当前带入「${summary.selectedDeckName}」超出上限 ${extraCards} 张`,
                 detail: inventoryDetail,
                 nextStepLabel: `先把卡组精简到 ${DECK_CARD_MAX} 张内，再回来确认。`,
                 shortcutHint: '快捷键：Enter 主操作 · M 管理卡组',
                 stateBadgeLabel: `超 ${extraCards} 张`,
-                stateBadgeColor: '#fee2e2',
+                stateBadgeColor: '#f3d0c3',
                 stateBadgeBackgroundColor: '#b91c1c',
                 primaryAction: 'manage',
                 confirmButtonLabel: '暂不可确认带入',
@@ -850,7 +838,7 @@ function getActionHierarchyColors(
                     fill: 0x312330,
                     hover: 0x312330,
                     stroke: 0x7f1d1d,
-                    text: '#f8fafc',
+                    text: '#f3ead3',
                 },
                 manageButtonColors: {
                     fill: 0xbe123c,
@@ -858,27 +846,27 @@ function getActionHierarchyColors(
                     stroke: 0xfecdd3,
                     text: '#fff1f2',
                 },
-                confirmGlowColor: 0xef4444,
+                confirmGlowColor: expeditionUiTheme.colors.emberBright,
                 confirmGlowAlpha: 0,
-                actionGlowColor: 0xf97316,
+                actionGlowColor: expeditionUiTheme.colors.ember,
                 actionGlowAlpha: 0.1,
             };
         }
         case 'insufficient-copies':
             return {
                 barFillColor: 0x261320,
-                barBorderColor: 0xef4444,
-                barAccentColor: 0xf97316,
+                barBorderColor: expeditionUiTheme.colors.emberBright,
+                barAccentColor: expeditionUiTheme.colors.ember,
                 railLabel: '主操作',
                 titleColor: '#fff1f2',
-                summaryColor: '#fecaca',
-                supportColor: '#fda4af',
+                summaryColor: '#f3d0c3',
+                supportColor: '#f3d0c3',
                 headline: `当前带入「${summary.selectedDeckName}」仍缺 ${Math.max(1, summary.shortageCardCopies)} 张库存卡`,
                 detail: inventoryDetail,
                 nextStepLabel: '先补齐缺牌库存，再回来确认。',
                 shortcutHint: '快捷键：Enter 主操作 · M 管理卡组',
                 stateBadgeLabel: `缺 ${Math.max(1, summary.shortageCardCopies)} 张`,
-                stateBadgeColor: '#fee2e2',
+                stateBadgeColor: '#f3d0c3',
                 stateBadgeBackgroundColor: '#b91c1c',
                 primaryAction: 'manage',
                 confirmButtonLabel: '暂不可确认带入',
@@ -887,7 +875,7 @@ function getActionHierarchyColors(
                     fill: 0x312330,
                     hover: 0x312330,
                     stroke: 0x7f1d1d,
-                    text: '#f8fafc',
+                    text: '#f3ead3',
                 },
                 manageButtonColors: {
                     fill: 0xbe123c,
@@ -895,41 +883,41 @@ function getActionHierarchyColors(
                     stroke: 0xfecdd3,
                     text: '#fff1f2',
                 },
-                confirmGlowColor: 0xef4444,
+                confirmGlowColor: expeditionUiTheme.colors.emberBright,
                 confirmGlowAlpha: 0,
-                actionGlowColor: 0xf97316,
+                actionGlowColor: expeditionUiTheme.colors.ember,
                 actionGlowAlpha: 0.1,
             };
         case 'none':
             return {
-                barFillColor: 0x111827,
-                barBorderColor: 0x475569,
+                barFillColor: expeditionUiTheme.colors.panelInner,
+                barBorderColor: expeditionUiTheme.colors.slate,
                 barAccentColor: 0x64748b,
                 railLabel: '主操作',
-                titleColor: '#f8fafc',
-                summaryColor: '#cbd5e1',
-                supportColor: '#94a3b8',
+                titleColor: '#f3ead3',
+                summaryColor: '#d9c6a2',
+                supportColor: '#bca785',
                 headline: '尚未选定本次带入卡组',
                 detail: `当前随行物资：${summary.itemCount} 件道具 · ${summary.spiritStones} 枚灵石。`,
                 nextStepLabel: '先去管理卡组创建或选定一套带入。',
                 shortcutHint: '快捷键：Enter 主操作 · M 管理卡组',
                 stateBadgeLabel: '待选卡组',
-                stateBadgeColor: '#e2e8f0',
-                stateBadgeBackgroundColor: '#334155',
+                stateBadgeColor: '#f3ead3',
+                stateBadgeBackgroundColor: NEUTRAL_BADGE_BACKGROUND,
                 primaryAction: 'manage',
                 confirmButtonLabel: '暂不可确认带入',
                 manageButtonLabel: '去管理卡组选择',
                 confirmButtonColors: {
-                    fill: 0x374151,
-                    hover: 0x374151,
-                    stroke: 0x6b7280,
-                    text: '#f8fafc',
+                    fill: expeditionUiTheme.colors.slate,
+                    hover: expeditionUiTheme.colors.slate,
+                    stroke: expeditionUiTheme.colors.parchmentSoft,
+                    text: '#f3ead3',
                 },
                 manageButtonColors: {
-                    fill: 0x1e293b,
-                    hover: 0x334155,
-                    stroke: 0x94a3b8,
-                    text: '#f8fafc',
+                    fill: expeditionUiTheme.colors.panelInner,
+                    hover: expeditionUiTheme.colors.slate,
+                    stroke: expeditionUiTheme.colors.parchmentSoft,
+                    text: '#f3ead3',
                 },
                 confirmGlowColor: 0x64748b,
                 confirmGlowAlpha: 0,
@@ -963,7 +951,7 @@ function createActionButton(
     }
 
     const text = scene.add.text(0, 0, label, {
-        fontFamily: 'Arial',
+        fontFamily: expeditionUiTheme.fonts.ui,
         fontSize: height >= 56 ? '20px' : '18px',
         color: colors.text,
         fontStyle: 'bold',
@@ -985,37 +973,38 @@ function getDeckHandoffBannerColors(
         case 'positive':
             return {
                 fillColor: 0x10261d,
-                borderColor: 0x22c55e,
+                borderColor: expeditionUiTheme.colors.jade,
                 badgeColor: '#dcfce7',
                 badgeBackgroundColor: '#166534',
-                detailColor: '#bbf7d0',
+                detailColor: '#e6f3ea',
             };
         case 'warning':
             return {
                 fillColor: 0x2a1420,
-                borderColor: 0xf59e0b,
+                borderColor: expeditionUiTheme.colors.gold,
                 badgeColor: '#fef3c7',
                 badgeBackgroundColor: '#92400e',
-                detailColor: '#fde68a',
+                detailColor: '#f6e2b1',
             };
         case 'neutral':
             return {
-                fillColor: 0x111827,
+                fillColor: expeditionUiTheme.colors.panelInner,
                 borderColor: 0x64748b,
-                badgeColor: '#e2e8f0',
-                badgeBackgroundColor: '#334155',
-                detailColor: '#cbd5e1',
+                badgeColor: '#f3ead3',
+                badgeBackgroundColor: NEUTRAL_BADGE_BACKGROUND,
+                detailColor: '#d9c6a2',
             };
     }
 }
 
-export class PreparationPanel extends GameObjects.Container {
+export class PreparationPanel extends GameObjects.Container implements EntryPanelFrameProvider {
     private stash: PersistentStash;
     private readonly metadata?: CardMetadataMap;
     private readonly onConfirm: () => void;
     private readonly onDeckSelect: (deckId: string) => void;
     private readonly onOpenDeckManager?: () => void;
     private deckHandoffSummary?: PreparationDeckHandoffSummary | null;
+    private panelFrame: EntryPanelFrame | null = null;
 
     private scrollX = 0;
     private maxScrollX = 0;
@@ -1070,6 +1059,10 @@ export class PreparationPanel extends GameObjects.Container {
         });
     }
 
+    public getEntryPanelFrame(): EntryPanelFrame | null {
+        return this.panelFrame;
+    }
+
     private renderPanel(options: DeckSwitchRenderOptions = {}): void {
         this.teardownScrollInteraction();
         this.scene.tweens.killTweensOf(this.scrollTweenState);
@@ -1083,7 +1076,7 @@ export class PreparationPanel extends GameObjects.Container {
         this.pendingDeckClick = null;
 
         const { width, height } = this.scene.scale;
-        const panelWidth = Math.min(980, width * 0.82);
+        const panelWidth = Math.min(1040, width * 0.86);
         const panelX = width / 2;
         const selectedLoadoutSummary = createPreparationSelectedLoadoutSummary(this.stash, this.metadata);
         const deckCarouselSummary = createPreparationDeckCarouselSummary(this.stash);
@@ -1096,7 +1089,7 @@ export class PreparationPanel extends GameObjects.Container {
         const contentWidth = panelWidth - 96;
         const buttonColumnWidth = Math.min(
             ACTION_BUTTON_COLUMN_WIDTH,
-            Math.max(198, Math.floor(contentWidth * 0.28)),
+            Math.max(232, Math.floor(contentWidth * 0.3)),
         );
         const selectorInnerWidth = contentWidth - 36;
         const preparationTitle = '出发前确认';
@@ -1131,21 +1124,21 @@ export class PreparationPanel extends GameObjects.Container {
             this.scene,
             preparationSubtitle,
             {
-                fontFamily: 'Arial',
-                fontSize: '12px',
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '18px',
                 wordWrap: { width: contentWidth - buttonColumnWidth - 48 },
             },
         );
         const handoffDetailHeight = this.deckHandoffSummary
             ? measureTextHeight(this.scene, this.deckHandoffSummary.detail, {
-                fontFamily: 'Arial',
-                fontSize: '12px',
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '18px',
                 wordWrap: { width: contentWidth - buttonColumnWidth - 72 },
-                lineSpacing: 3,
+                lineSpacing: 6,
             })
             : 0;
         const handoffBannerHeight = this.deckHandoffSummary
-            ? Math.max(42, 22 + handoffDetailHeight + 8)
+            ? Math.max(76, 28 + handoffDetailHeight + 16)
             : 0;
         const heroLeadHeight = subtitleHeight + 8 + (handoffBannerHeight > 0 ? handoffBannerHeight + 8 : 0);
         const heroMetrics = getReadinessHeroMetrics(
@@ -1172,50 +1165,56 @@ export class PreparationPanel extends GameObjects.Container {
         );
         const deckCardHeight = getDeckCardHeight(this.scene, this.stash.savedDecks);
         const selectorHeadingHeight = measureTextHeight(this.scene, '改用其他卡组', {
-            fontFamily: 'Arial',
-            fontSize: '11px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             fontStyle: 'bold',
         });
         const selectorSupportHeight = measureTextHeight(this.scene, selectorSupportText, {
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            lineSpacing: 3,
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            lineSpacing: 6,
             wordWrap: { width: selectorInnerWidth },
         });
         const selectorProgressHeight = measureTextHeight(this.scene, carouselProgressMeasurementText, {
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            lineSpacing: 3,
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            lineSpacing: 6,
             wordWrap: { width: selectorInnerWidth },
         });
-        const deckSwitcherSectionHeaderHeight = Math.max(selectorHeadingHeight, 18)
-            + 4
+        const deckSwitcherSectionHeaderHeight = Math.max(selectorHeadingHeight, 24)
+            + 8
             + selectorSupportHeight
-            + 4
+            + 8
             + selectorProgressHeight
-            + 6;
+            + 10;
         const deckSwitcherSectionHeight = calculateDeckSwitcherHeight(
             deckSwitcherSectionHeaderHeight,
             deckCardHeight,
         );
-        const preflightTopOffset = 24;
+        const preflightTopOffset = 30;
         const panelHeight = Math.min(
             Math.max(PANEL_MIN_HEIGHT, preflightTopOffset + decisionCardHeight + 10 + deckSwitcherSectionHeight + 24),
             Math.min(PANEL_MAX_HEIGHT, Math.floor(height * PANEL_MAX_HEIGHT_RATIO)),
         );
-        const panelY = height / 2 + (panelHeight > 720 ? 8 : 14);
+        const panelY = height / 2 + (panelHeight > 760 ? 6 : 12);
         const panelLeft = panelX - panelWidth / 2;
         const panelTop = panelY - panelHeight / 2;
         const contentLeft = panelLeft + 48;
         const readinessHeroTop = panelTop + preflightTopOffset;
         const loadoutStripTop = readinessHeroTop + decisionCardHeight - loadoutStripMetrics.height - 10;
         const deckSwitcherTop = readinessHeroTop + decisionCardHeight + 10;
+        this.panelFrame = {
+            panelX,
+            panelY,
+            panelWidth,
+            panelHeight,
+        };
 
         const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x030712, 0.8);
-        const shadow = this.scene.add.rectangle(panelX, panelY + 12, panelWidth + 16, panelHeight + 16, 0x020617, 0.42);
-        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x0f172a, 0.98);
-        panel.setStrokeStyle(3, 0x60a5fa, 0.82);
-        const panelAccent = this.scene.add.rectangle(panelX, panelTop + 6, panelWidth - 36, 6, 0x7c3aed, 0.96).setOrigin(0.5, 0);
+        const shadow = this.scene.add.rectangle(panelX, panelY + 12, panelWidth + 16, panelHeight + 16, expeditionUiTheme.colors.overlay, 0.42);
+        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, expeditionUiTheme.colors.panel, 0.98);
+        panel.setStrokeStyle(3, expeditionUiTheme.colors.goldSoft, 0.82);
+        const panelAccent = this.scene.add.rectangle(panelX, panelTop + 6, panelWidth - 36, 6, expeditionUiTheme.colors.gold, 0.96).setOrigin(0.5, 0);
         const handoffSummary = this.deckHandoffSummary;
 
         const heroInnerLeft = contentLeft + 18;
@@ -1246,8 +1245,8 @@ export class PreparationPanel extends GameObjects.Container {
             1,
         ).setOrigin(0.5, 0);
         const heroRailLabel = this.scene.add.text(heroInnerLeft, readinessHeroTop + 16, preparationTitle, {
-            fontFamily: 'Arial',
-            fontSize: '12px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             color: actionColors.supportColor,
             fontStyle: 'bold',
         });
@@ -1256,18 +1255,18 @@ export class PreparationPanel extends GameObjects.Container {
             readinessHeroTop + 12,
             actionColors.stateBadgeLabel,
             {
-                fontFamily: 'Arial',
-                fontSize: '12px',
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '18px',
                 color: actionColors.stateBadgeColor,
                 fontStyle: 'bold',
                 backgroundColor: actionColors.stateBadgeBackgroundColor,
-                padding: { left: 10, right: 10, top: 5, bottom: 5 },
+                padding: { left: 12, right: 12, top: 6, bottom: 6 },
             },
         ).setOrigin(1, 0);
         const heroIntro = this.scene.add.text(heroInnerLeft, heroRailLabel.y + heroRailLabel.height + 4, preparationSubtitle, {
-            fontFamily: 'Arial',
-            fontSize: '12px',
-            color: '#cbd5e1',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            color: '#d9c6a2',
             wordWrap: { width: heroMetrics.textWidth },
         });
         const heroHandoffElements: Phaser.GameObjects.GameObject[] = [];
@@ -1285,19 +1284,19 @@ export class PreparationPanel extends GameObjects.Container {
             ).setOrigin(0.5, 0.5);
             compactBanner.setStrokeStyle(1, bannerColors.borderColor, 0.54);
             const compactBannerTitle = this.scene.add.text(heroInnerLeft + 12, heroBodyTop + 8, handoffSummary.title, {
-                fontFamily: 'Arial',
-                fontSize: '10px',
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '14px',
                 color: bannerColors.badgeColor,
                 fontStyle: 'bold',
                 backgroundColor: bannerColors.badgeBackgroundColor,
-                padding: { left: 8, right: 8, top: 3, bottom: 3 },
+                padding: { left: 10, right: 10, top: 4, bottom: 4 },
             });
             const compactBannerDetail = this.scene.add.text(heroInnerLeft + 12, compactBannerTitle.y + compactBannerTitle.height + 4, handoffSummary.detail, {
-                fontFamily: 'Arial',
-                fontSize: '12px',
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '18px',
                 color: bannerColors.detailColor,
                 wordWrap: { width: heroMetrics.textWidth - 24 },
-                lineSpacing: 3,
+                lineSpacing: 6,
             });
 
             heroBodyTop += handoffBannerHeight + 10;
@@ -1305,30 +1304,30 @@ export class PreparationPanel extends GameObjects.Container {
         }
 
         const heroDeckLabel = this.scene.add.text(heroInnerLeft, heroBodyTop, '当前带入', {
-            fontFamily: 'Arial',
-            fontSize: '12px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             color: selectedLoadoutColors.mutedColor,
             fontStyle: 'bold',
         });
-        const heroDeckName = this.scene.add.text(heroInnerLeft, heroDeckLabel.y + 18, selectedLoadoutSummary.selectedDeckName, {
-            fontFamily: 'Arial',
-            fontSize: '24px',
+        const heroDeckName = this.scene.add.text(heroInnerLeft, heroDeckLabel.y + heroDeckLabel.height + 8, selectedLoadoutSummary.selectedDeckName, {
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '32px',
             color: selectedLoadoutColors.headlineColor,
             fontStyle: 'bold',
             wordWrap: { width: heroMetrics.textWidth },
         });
         const heroHeadline = this.scene.add.text(heroInnerLeft, heroDeckName.y + heroDeckName.height + 8, selectedLoadoutSummary.headline, {
-            fontFamily: 'Arial',
-            fontSize: '17px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '22px',
             color: actionColors.titleColor,
             fontStyle: 'bold',
             wordWrap: { width: heroMetrics.textWidth },
         });
         const heroDetail = this.scene.add.text(heroInnerLeft, heroHeadline.y + heroHeadline.height + 6, heroDetailText, {
-            fontFamily: 'Arial',
-            fontSize: '13px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             color: actionColors.summaryColor,
-            lineSpacing: 3,
+            lineSpacing: 6,
             wordWrap: { width: heroMetrics.textWidth },
         });
         const readinessPanelTop = heroDetail.y + heroDetail.height + 12;
@@ -1341,8 +1340,8 @@ export class PreparationPanel extends GameObjects.Container {
             selectedLoadoutSummary.issuePreviewLines.length > 0 ? '当前阻塞' : '已核对',
             validationChecklistBody,
             {
-                fillColor: selectedLoadoutSummary.readiness === 'ready' ? 0x0f1d38 : 0x29131b,
-                borderColor: selectedLoadoutSummary.readiness === 'ready' ? 0x3b82f6 : selectedLoadoutColors.borderColor,
+                fillColor: selectedLoadoutSummary.readiness === 'ready' ? READY_DETAIL_FILL : 0x29131b,
+                borderColor: selectedLoadoutSummary.readiness === 'ready' ? expeditionUiTheme.colors.jadeBright : selectedLoadoutColors.borderColor,
                 titleColor: selectedLoadoutColors.mutedColor,
                 bodyColor: selectedLoadoutColors.headlineColor,
                 badgeColor: selectedLoadoutColors.badgeColor,
@@ -1390,29 +1389,29 @@ export class PreparationPanel extends GameObjects.Container {
             0.36,
         ).setOrigin(0.5, 0.5);
         const actionSlotLabel = this.scene.add.text(heroButtonLeft, readinessHeroTop + 18, actionColors.railLabel, {
-            fontFamily: 'Arial',
-            fontSize: '12px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             color: actionColors.supportColor,
             fontStyle: 'bold',
         });
-        const actionSummaryHeading = this.scene.add.text(heroButtonLeft, actionSlotLabel.y + 22, actionSummaryLabel, {
-            fontFamily: 'Arial',
-            fontSize: '12px',
-            color: selectedLoadoutSummary.readiness === 'ready' ? '#cbd5e1' : '#fcd34d',
+        const actionSummaryHeading = this.scene.add.text(heroButtonLeft, actionSlotLabel.y + actionSlotLabel.height + 8, actionSummaryLabel, {
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            color: selectedLoadoutSummary.readiness === 'ready' ? '#d9c6a2' : '#fcd34d',
             fontStyle: 'bold',
         });
-        const actionSummary = this.scene.add.text(heroButtonLeft, actionSummaryHeading.y + 18, actionSummaryText, {
-            fontFamily: 'Arial',
-            fontSize: '12px',
+        const actionSummary = this.scene.add.text(heroButtonLeft, actionSummaryHeading.y + actionSummaryHeading.height + 8, actionSummaryText, {
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             color: actionColors.summaryColor,
-            lineSpacing: 3,
+            lineSpacing: 6,
             wordWrap: { width: buttonColumnWidth - 24 },
         });
         const actionShortcutHint = this.scene.add.text(heroButtonLeft, actionSummary.y + actionSummary.height + 8, actionColors.shortcutHint, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             color: actionColors.supportColor,
-            lineSpacing: 3,
+            lineSpacing: 6,
             wordWrap: { width: buttonColumnWidth - 24 },
         });
         const buttonStackHeight = ACTION_BUTTON_PRIMARY_HEIGHT + ACTION_BUTTON_GAP + ACTION_BUTTON_SECONDARY_HEIGHT;
@@ -1495,13 +1494,13 @@ export class PreparationPanel extends GameObjects.Container {
             loadoutStripTop + loadoutStripMetrics.height / 2,
             contentWidth - 20,
             loadoutStripMetrics.height,
-            0x09111d,
+            expeditionUiTheme.colors.ink,
             0.5,
         );
         loadoutSummaryCard.setStrokeStyle(1, selectedLoadoutColors.borderColor, 0.1);
         const loadoutSummaryHeading = this.scene.add.text(contentLeft + 18, loadoutStripTop + 10, '带入清单', {
-            fontFamily: 'Arial',
-            fontSize: '11px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             color: selectedLoadoutColors.mutedColor,
             fontStyle: 'bold',
         });
@@ -1510,8 +1509,8 @@ export class PreparationPanel extends GameObjects.Container {
             loadoutStripTop + 10,
             `物资：${selectedLoadoutSummary.itemCount} 件道具 · 灵石 ${selectedLoadoutSummary.spiritStones} 枚`,
             {
-                fontFamily: 'Arial',
-                fontSize: '10px',
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '16px',
                 color: selectedLoadoutColors.mutedColor,
             },
         ).setOrigin(1, 0);
@@ -1524,10 +1523,10 @@ export class PreparationPanel extends GameObjects.Container {
             loadoutSummaryBodyTop,
             loadoutSupportBody,
             {
-                fontFamily: 'Arial',
-                fontSize: '11px',
-                color: '#e2e8f0',
-                lineSpacing: 3,
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '18px',
+                color: '#f3ead3',
+                lineSpacing: 6,
                 wordWrap: { width: contentWidth - 36 },
             },
         );
@@ -1536,10 +1535,10 @@ export class PreparationPanel extends GameObjects.Container {
             loadoutStripTop + loadoutStripMetrics.height - 10,
             loadoutSupportFooter,
             {
-                fontFamily: 'Arial',
-                fontSize: '10px',
-                color: '#94a3b8',
-                lineSpacing: 3,
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '18px',
+                color: '#bca785',
+                lineSpacing: 6,
                 wordWrap: { width: contentWidth - 36 },
             },
         ).setOrigin(0, 1);
@@ -1558,7 +1557,7 @@ export class PreparationPanel extends GameObjects.Container {
             deckSwitcherTop + deckSwitcherSectionHeight / 2,
             contentWidth - 28,
             deckSwitcherSectionHeight,
-            0x050b14,
+            expeditionUiTheme.colors.ink,
             0.44,
         );
         switcherPanel.setStrokeStyle(1, selectedLoadoutColors.borderColor, 0.1);
@@ -1571,9 +1570,9 @@ export class PreparationPanel extends GameObjects.Container {
             0.6,
         ).setOrigin(0.5, 0);
         const selectorHeading = this.scene.add.text(selectorInnerLeft, deckSwitcherTop + 10, '改用其他卡组', {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#94a3b8',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            color: '#bca785',
             fontStyle: 'bold',
         });
         const selectorPositionBadge = this.scene.add.text(
@@ -1581,12 +1580,12 @@ export class PreparationPanel extends GameObjects.Container {
             deckSwitcherTop + 6,
             deckCarouselSummary.positionLabel,
             {
-                fontFamily: 'Arial',
-                fontSize: '10px',
-                color: '#e2e8f0',
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '16px',
+                color: '#f3ead3',
                 fontStyle: 'bold',
                 backgroundColor: '#0f172a',
-                padding: { left: 9, right: 9, top: 4, bottom: 4 },
+                padding: { left: 10, right: 10, top: 5, bottom: 5 },
             },
         ).setOrigin(1, 0);
         const selectorSupportSummary = this.scene.add.text(
@@ -1594,10 +1593,10 @@ export class PreparationPanel extends GameObjects.Container {
             selectorHeading.y + selectorHeading.height + 4,
             selectorSupportText,
             {
-                fontFamily: 'Arial',
-                fontSize: '10px',
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '18px',
                 color: '#64748b',
-                lineSpacing: 3,
+                lineSpacing: 6,
                 wordWrap: { width: selectorInnerWidth },
             },
         );
@@ -1606,10 +1605,10 @@ export class PreparationPanel extends GameObjects.Container {
             selectorSupportSummary.y + selectorSupportSummary.height + 4,
             '',
             {
-                fontFamily: 'Arial',
-                fontSize: '10px',
-                color: this.maxScrollX > 0 ? '#c4b5fd' : '#94a3b8',
-                lineSpacing: 3,
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '18px',
+                color: this.maxScrollX > 0 ? '#d3b27b' : '#bca785',
+                lineSpacing: 6,
                 wordWrap: { width: selectorInnerWidth },
             },
         );
@@ -1617,15 +1616,15 @@ export class PreparationPanel extends GameObjects.Container {
             selectorInnerLeft,
             carouselProgressText.y + carouselProgressText.height + 4,
             selectorInnerWidth,
-            4,
-            0x1e293b,
+            6,
+            expeditionUiTheme.colors.panelInner,
             0.72,
         ).setOrigin(0, 0.5);
         const carouselProgressFill = this.scene.add.rectangle(
             selectorInnerLeft,
             carouselProgressTrack.y,
             selectorInnerWidth,
-            4,
+            6,
             selectedLoadoutColors.accentColor,
             0.92,
         ).setOrigin(0, 0.5);
@@ -1720,18 +1719,18 @@ export class PreparationPanel extends GameObjects.Container {
             this.maxScrollX = 0;
             this.scrollX = 0;
 
-            const emptyState = this.scene.add.rectangle(startX + maxWidth / 2, y + cardHeight / 2, maxWidth, cardHeight, 0x111827, 0.94);
-            emptyState.setStrokeStyle(2, 0x475569, 0.82);
+            const emptyState = this.scene.add.rectangle(startX + maxWidth / 2, y + cardHeight / 2, maxWidth, cardHeight, expeditionUiTheme.colors.panelInner, 0.94);
+            emptyState.setStrokeStyle(2, expeditionUiTheme.colors.slate, 0.82);
             const emptyTitle = this.scene.add.text(startX + 20, y + 20, '暂无可带入卡组', {
-                fontFamily: 'Arial',
-                fontSize: '18px',
-                color: '#e2e8f0',
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '24px',
+                color: '#f3ead3',
                 fontStyle: 'bold',
             });
             const emptyBody = this.scene.add.text(startX + 20, emptyTitle.y + 38, '请先点击“管理卡组”整理一套满足要求的卡组，再开始秘境探索。', {
-                fontFamily: 'Arial',
-                fontSize: '14px',
-                color: '#94a3b8',
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '18px',
+                color: '#bca785',
                 wordWrap: { width: maxWidth - 40 },
             });
             elements.push(emptyState, emptyTitle, emptyBody);
@@ -1744,7 +1743,7 @@ export class PreparationPanel extends GameObjects.Container {
         const totalContentWidth = decks.length * cardWidth + Math.max(0, decks.length - 1) * cardGap;
         const needsScroll = totalContentWidth > maxWidth;
         const selectedDeckIndex = Math.max(0, decks.findIndex((deck) => deck.id === selectedDeckId));
-        const targetScrollX = Math.max(0, Phaser.Math.Clamp(
+        const targetScrollX = Math.max(0, clampNumber(
             selectedDeckIndex * (cardWidth + cardGap) - (maxWidth - cardWidth) / 2,
             0,
             Math.max(0, totalContentWidth - maxWidth),
@@ -1752,7 +1751,7 @@ export class PreparationPanel extends GameObjects.Container {
 
         this.maxScrollX = Math.max(0, totalContentWidth - maxWidth);
         this.scrollX = this.maxScrollX > 0
-            ? Phaser.Math.Clamp(initialScrollX ?? targetScrollX, 0, this.maxScrollX)
+            ? clampNumber(initialScrollX ?? targetScrollX, 0, this.maxScrollX)
             : 0;
         this.scrollTweenState.value = this.scrollX;
 
@@ -1789,45 +1788,45 @@ export class PreparationPanel extends GameObjects.Container {
 
             const accent = this.scene.add.rectangle(0, -cardHeight / 2 + 5, cardWidth - 12, 6, displayState.accentColor, 1).setOrigin(0.5, 0);
             const selection = this.scene.add.text(-cardWidth / 2 + 16, -cardHeight / 2 + 14, displayState.selectionLabel, {
-                fontFamily: 'Arial',
-                fontSize: '9px',
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '14px',
                 color: displayState.selectionBadgeColor,
                 fontStyle: 'bold',
                 backgroundColor: displayState.selectionBadgeBackgroundColor,
-                padding: { left: 6, right: 6, top: 3, bottom: 3 },
+                padding: { left: 8, right: 8, top: 4, bottom: 4 },
             });
             const status = this.scene.add.text(cardWidth / 2 - 16, -cardHeight / 2 + 14, displayState.statusLabel, {
-                fontFamily: 'Arial',
-                fontSize: '9px',
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '14px',
                 color: displayState.statusBadgeColor,
                 fontStyle: 'bold',
                 backgroundColor: displayState.statusBadgeBackgroundColor,
-                padding: { left: 6, right: 6, top: 3, bottom: 3 },
+                padding: { left: 8, right: 8, top: 4, bottom: 4 },
             }).setOrigin(1, 0);
-            const deckName = this.scene.add.text(-cardWidth / 2 + 16, selection.y + 24, deck.name, {
-                fontFamily: 'Arial',
-                fontSize: '13px',
-                color: '#f8fafc',
+            const deckName = this.scene.add.text(-cardWidth / 2 + 16, selection.y + selection.height + 10, deck.name, {
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '18px',
+                color: '#f3ead3',
                 fontStyle: 'bold',
                 wordWrap: { width: cardWidth - 32 },
             });
             const countText = this.scene.add.text(
                 -cardWidth / 2 + 16,
-                deckName.y + deckName.height + 4,
+                deckName.y + deckName.height + 8,
                 `${cardCount} 张 · ${displayState.uniqueCardCount} 种卡`,
                 {
-                    fontFamily: 'Arial',
-                    fontSize: '10px',
+                    fontFamily: expeditionUiTheme.fonts.ui,
+                    fontSize: '16px',
                     color: displayState.countColor,
                 },
             );
             const statusNote = this.scene.add.text(
                 -cardWidth / 2 + 16,
-                countText.y + 16,
+                countText.y + countText.height + 6,
                 truncateSingleLine(displayState.comparisonLines[0] ?? displayState.focusSummaryLine, 17),
                 {
-                    fontFamily: 'Arial',
-                    fontSize: '9px',
+                    fontFamily: expeditionUiTheme.fonts.ui,
+                    fontSize: '16px',
                     color: displayState.previewTextColor,
                     wordWrap: { width: cardWidth - 32, useAdvancedWrap: true },
                 },
@@ -1872,18 +1871,18 @@ export class PreparationPanel extends GameObjects.Container {
 
         if (needsScroll) {
             this.leftIndicator = this.scene.add.text(startX + 10, y + cardHeight / 2, '◀', {
-                fontFamily: 'Arial',
+                fontFamily: expeditionUiTheme.fonts.ui,
                 fontSize: '20px',
-                color: '#c4b5fd',
+                color: '#d3b27b',
                 backgroundColor: '#111827',
                 padding: { left: 8, right: 8, top: 8, bottom: 8 },
             }).setOrigin(0.5).setInteractive({ useHandCursor: true });
             this.leftIndicator.on('pointerdown', () => this.applyScroll(this.scrollX - (cardWidth + cardGap)));
 
             this.rightIndicator = this.scene.add.text(startX + maxWidth - 10, y + cardHeight / 2, '▶', {
-                fontFamily: 'Arial',
+                fontFamily: expeditionUiTheme.fonts.ui,
                 fontSize: '20px',
-                color: '#c4b5fd',
+                color: '#d3b27b',
                 backgroundColor: '#111827',
                 padding: { left: 8, right: 8, top: 8, bottom: 8 },
             }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -2051,7 +2050,7 @@ export class PreparationPanel extends GameObjects.Container {
     }
 
     private animateScrollTo(targetScrollX: number, duration: number): void {
-        const clampedTarget = Phaser.Math.Clamp(targetScrollX, 0, this.maxScrollX);
+        const clampedTarget = clampNumber(targetScrollX, 0, this.maxScrollX);
 
         if (!this.scrollContainer || Math.abs(clampedTarget - this.scrollX) <= 0.5) {
             this.applyScroll(clampedTarget, true);
@@ -2138,7 +2137,7 @@ export class PreparationPanel extends GameObjects.Container {
             this.scene.tweens.killTweensOf(this.scrollTweenState);
         }
 
-        this.scrollX = Phaser.Math.Clamp(desired, 0, this.maxScrollX);
+        this.scrollX = clampNumber(desired, 0, this.maxScrollX);
         this.scrollTweenState.value = this.scrollX;
 
         if (this.scrollContainer) {
@@ -2170,9 +2169,9 @@ export class PreparationPanel extends GameObjects.Container {
             const totalContentWidth = deckCount > 0
                 ? deckCount * slotWidth - DECK_CARD_GAP
                 : 0;
-            const progressRatio = this.maxScrollX <= 1 ? 0 : Phaser.Math.Clamp(this.scrollX / this.maxScrollX, 0, 1);
+            const progressRatio = this.maxScrollX <= 1 ? 0 : clampNumber(this.scrollX / this.maxScrollX, 0, 1);
             const thumbRatio = totalContentWidth > 0
-                ? Phaser.Math.Clamp(viewportWidth / totalContentWidth, 0.14, 1)
+                ? clampNumber(viewportWidth / totalContentWidth, 0.14, 1)
                 : 0;
             const thumbWidth = progressTrackWidth * thumbRatio;
             const thumbTravel = Math.max(0, progressTrackWidth - thumbWidth);
@@ -2185,7 +2184,7 @@ export class PreparationPanel extends GameObjects.Container {
 
             progressFill.setScale(deckCount === 0 ? 0 : thumbRatio, 1);
             progressFill.setX(progressTrackX + thumbTravel * progressRatio);
-            progressText.setColor(this.maxScrollX > 0 ? '#c4b5fd' : '#94a3b8');
+            progressText.setColor(this.maxScrollX > 0 ? '#d3b27b' : '#bca785');
             progressText.setText(deckCount === 0
                 ? '浏览进度 0% · 暂无卡组 · 请先去管理卡组整理一套。'
                 : this.maxScrollX > 0

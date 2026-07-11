@@ -31,7 +31,14 @@ import type {
 import { MapNodeView } from '../../ui/expedition/MapNodeView';
 import { DeckManagementPanel } from '../../ui/deckbuilder/DeckManagementPanel';
 import { PreparationPanel } from '../../ui/expedition/PreparationPanel';
+import {
+    getEntryPanelTop,
+    getEntryShellCenterY,
+    type EntryPanelFrame,
+    type EntryPanelFrameProvider,
+} from '../../ui/expedition/EntryPanelFrame';
 import { RunHud } from '../../ui/expedition/RunHud';
+import { expeditionUiTheme } from '../../ui/common/expeditionUiTheme';
 import { createWorldMapReturnIntent } from '../worldmap/worldMap';
 import {
     createExpeditionArrivalCueSummary,
@@ -77,7 +84,7 @@ import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 type StarterDeckCacheEntry = ExpeditionBootstrapSources['starterDeck'];
 
 type NonCombatMapNode = EventMapNode | ShopMapNode | ExtractMapNode;
-type EntryPanel = PreparationPanel | DeckManagementPanel;
+type EntryPanel = (PreparationPanel | DeckManagementPanel) & EntryPanelFrameProvider;
 type EntryShellMode = 'preparation' | 'deckManager';
 
 interface EntryShellVisuals {
@@ -193,13 +200,13 @@ export class ExpeditionScene extends Scene {
         this.runHud.setVisible(false);
         const statusPlateWidth = Math.max(360, Math.min(width - 360, 720));
         const statusTextWidth = Math.max(280, statusPlateWidth - 52);
-        this.statusPlate = this.add.rectangle(width / 2, height - 54, statusPlateWidth, 56, 0x020617, 0.44);
-        this.statusPlate.setStrokeStyle(1, 0x334155, 0.4);
+        this.statusPlate = this.add.rectangle(width / 2, height - 58, statusPlateWidth, 64, expeditionUiTheme.colors.overlay, 0.44);
+        this.statusPlate.setStrokeStyle(1, expeditionUiTheme.colors.slate, 0.4);
         this.statusPlate.setDepth(60);
-        this.statusText = this.add.text(width / 2, height - 54, '', {
-            fontFamily: 'Arial',
-            fontSize: '16px',
-            color: '#94a3b8',
+        this.statusText = this.add.text(width / 2, height - 58, '', {
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '20px',
+            color: '#bca785',
             align: 'center',
             wordWrap: { width: statusTextWidth },
         }).setOrigin(0.5);
@@ -239,24 +246,24 @@ export class ExpeditionScene extends Scene {
         this.cameras.main.setBackgroundColor(0x050b16);
 
         const base = this.add.rectangle(width / 2, height / 2, width, height, 0x0b1220, 1);
-        const topGlow = this.add.ellipse(width / 2, 0, width * 1.2, height * 0.78, 0x12315b, 0.34).setOrigin(0.5, 0);
-        const leftGlow = this.add.circle(width * 0.18, height * 0.34, 260, 0x2563eb, 0.16);
-        const rightGlow = this.add.circle(width * 0.82, height * 0.28, 230, 0x7c3aed, 0.14);
-        const floorGlow = this.add.ellipse(width / 2, height * 0.88, width * 0.94, height * 0.28, 0x0f766e, 0.1);
+        const topGlow = this.add.ellipse(width / 2, 0, width * 1.2, height * 0.78, expeditionUiTheme.colors.jade, 0.26).setOrigin(0.5, 0);
+        const leftGlow = this.add.circle(width * 0.18, height * 0.34, 260, expeditionUiTheme.colors.jadeBright, 0.16);
+        const rightGlow = this.add.circle(width * 0.82, height * 0.28, 230, expeditionUiTheme.colors.gold, 0.14);
+        const floorGlow = this.add.ellipse(width / 2, height * 0.88, width * 0.94, height * 0.28, expeditionUiTheme.colors.jade, 0.1);
         const vignetteFrame = this.add.rectangle(width / 2, height / 2, width - 54, height - 54, 0x000000, 0);
-        vignetteFrame.setStrokeStyle(2, 0x334155, 0.44);
+        vignetteFrame.setStrokeStyle(2, expeditionUiTheme.colors.slate, 0.44);
         const innerFrame = this.add.rectangle(width / 2, height / 2 + 8, width - 134, height - 142, 0x000000, 0);
-        innerFrame.setStrokeStyle(1, 0x60a5fa, 0.16);
+        innerFrame.setStrokeStyle(1, expeditionUiTheme.colors.goldSoft, 0.16);
 
         const pathLines = this.add.graphics();
-        pathLines.lineStyle(2, 0x38bdf8, 0.11);
+        pathLines.lineStyle(2, expeditionUiTheme.colors.jadeBright, 0.11);
         pathLines.beginPath();
         pathLines.moveTo(120, height * 0.22);
         pathLines.lineTo(width * 0.36, height * 0.22);
         pathLines.lineTo(width * 0.5, height * 0.12);
         pathLines.lineTo(width - 180, height * 0.12);
         pathLines.strokePath();
-        pathLines.lineStyle(2, 0xa855f7, 0.09);
+        pathLines.lineStyle(2, expeditionUiTheme.colors.goldSoft, 0.09);
         pathLines.beginPath();
         pathLines.moveTo(160, height - 170);
         pathLines.lineTo(width * 0.28, height - 170);
@@ -307,14 +314,14 @@ export class ExpeditionScene extends Scene {
     private createEntryShell(): void {
         const container = this.add.container(0, 0);
         const routeBriefing = this.getEntryRouteBriefing('preparation');
-        const plate = this.add.rectangle(0, 0, 320, 24, 0x08101b, 0.42);
-        plate.setStrokeStyle(1, 0x334155, 0.32);
+        const plate = this.add.rectangle(0, 0, 540, 48, 0x08101b, 0.42);
+        plate.setStrokeStyle(1, expeditionUiTheme.colors.slate, 0.32);
         plate.setInteractive({ useHandCursor: true });
-        const accent = this.add.rectangle(0, 0, 2, 12, 0x60a5fa, 0.62);
+        const accent = this.add.rectangle(0, 0, 4, 26, expeditionUiTheme.colors.goldSoft, 0.62);
         const supportText = this.add.text(0, 0, routeBriefing.shellSupportLabel, {
-            fontFamily: 'Arial',
-            fontSize: '10px',
-            color: '#cbd5e1',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            color: '#d9c6a2',
         }).setOrigin(0, 0.5);
         plate.on('pointerover', () => this.setEntryShellHoverState(true));
         plate.on('pointerout', () => this.setEntryShellHoverState(false));
@@ -355,11 +362,11 @@ export class ExpeditionScene extends Scene {
                 plateFillColor: 0x08101b,
                 plateFillAlpha: 0.4,
                 plateHoverFillAlpha: 0.58,
-                plateBorderColor: 0x334155,
+                plateBorderColor: expeditionUiTheme.colors.slate,
                 plateBorderAlpha: 0.34,
-                accentColor: 0x60a5fa,
-                textColor: '#cbd5e1',
-                hoverTextColor: '#f8fafc',
+                accentColor: expeditionUiTheme.colors.goldSoft,
+                textColor: '#d9c6a2',
+                hoverTextColor: '#f3ead3',
             };
         }
 
@@ -367,11 +374,11 @@ export class ExpeditionScene extends Scene {
             plateFillColor: 0x08101b,
             plateFillAlpha: 0.38,
             plateHoverFillAlpha: 0.56,
-            plateBorderColor: 0x334155,
+            plateBorderColor: expeditionUiTheme.colors.slate,
             plateBorderAlpha: 0.32,
-            accentColor: 0x60a5fa,
-            textColor: '#cbd5e1',
-            hoverTextColor: '#f8fafc',
+            accentColor: expeditionUiTheme.colors.goldSoft,
+            textColor: '#d9c6a2',
+            hoverTextColor: '#f3ead3',
         };
     }
 
@@ -400,33 +407,53 @@ export class ExpeditionScene extends Scene {
         const routeBriefing = this.getEntryRouteBriefing(mode);
         this.entryShell.supportText.setText(routeBriefing.shellSupportLabel);
         this.entryShell.supportText.setStyle({
-            fontFamily: 'Arial',
-            fontSize: '10px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             wordWrap: { width: 520 },
         });
         this.setEntryShellHoverState(false);
     }
 
-    private updateEntryShellLayout(mode: EntryShellMode, animate: boolean): void {
+    private getFallbackEntryPanelFrame(mode: EntryShellMode): EntryPanelFrame {
+        const { width, height } = this.scale;
+
+        if (mode === 'deckManager') {
+            return {
+                panelX: width / 2,
+                panelY: height / 2 + 12,
+                panelWidth: Math.min(1460, width * 0.984),
+                panelHeight: Math.min(920, height * 0.96),
+            };
+        }
+
+        return {
+            panelX: width / 2,
+            panelY: height / 2 + 24,
+            panelWidth: Math.min(980, width * 0.82),
+            panelHeight: Math.min(820, height * 0.88),
+        };
+    }
+
+    private updateEntryShellLayout(
+        mode: EntryShellMode,
+        animate: boolean,
+        panelFrame: EntryPanelFrame | null = this.getCurrentEntryPanel()?.getEntryPanelFrame() ?? null,
+    ): void {
         if (!this.entryShell) {
             return;
         }
 
-        const { width, height } = this.scale;
-        const panelWidth = mode === 'deckManager'
-            ? Math.min(1120, width * 0.9)
-            : Math.min(980, width * 0.82);
-        const panelHeight = mode === 'deckManager'
-            ? Math.min(760, height * 0.86)
-            : Math.min(820, height * 0.88);
-        const panelX = width / 2;
-        const panelY = mode === 'deckManager' ? (height / 2 + 18) : (height / 2 + 24);
-        const breadcrumbWidth = Math.max(360, Math.min(640, panelWidth - (mode === 'deckManager' ? 84 : 72)));
-        const breadcrumbX = panelX;
-        const breadcrumbY = Math.max(48, panelY - panelHeight / 2 - 8);
+        const resolvedFrame = panelFrame ?? this.getFallbackEntryPanelFrame(mode);
+        const panelTop = getEntryPanelTop(resolvedFrame);
+        const horizontalInset = mode === 'deckManager' ? 72 : 36;
+        const breadcrumbWidth = Math.max(
+            360,
+            Math.min(mode === 'deckManager' ? 720 : 640, resolvedFrame.panelWidth - horizontalInset),
+        );
+        const breadcrumbX = resolvedFrame.panelX;
         const supportPaddingX = 16;
-        const supportPaddingY = 6;
-        const accentWidth = 2;
+        const supportPaddingY = 10;
+        const accentWidth = 3;
         const accentGap = 8;
         const supportWrapWidth = Math.max(220, breadcrumbWidth - supportPaddingX * 2 - accentWidth - accentGap);
 
@@ -436,7 +463,11 @@ export class ExpeditionScene extends Scene {
             breadcrumbWidth,
             Math.max(320, this.entryShell.supportText.width + supportPaddingX * 2 + accentWidth + accentGap),
         );
-        const plateHeight = Math.max(24, this.entryShell.supportText.height + supportPaddingY * 2);
+        const plateHeight = Math.max(46, this.entryShell.supportText.height + supportPaddingY * 2);
+        const breadcrumbY = getEntryShellCenterY(resolvedFrame, plateHeight, {
+            gap: mode === 'deckManager' ? 18 : 12,
+            minTopMargin: mode === 'deckManager' ? 10 : 32,
+        });
         const breadcrumbLeft = breadcrumbX - plateWidth / 2;
         const accentX = breadcrumbLeft + supportPaddingX;
         const supportTextX = accentX + accentWidth + accentGap;
@@ -571,24 +602,24 @@ export class ExpeditionScene extends Scene {
         const headlineLine = `${summary.badgeLabel} · ${summary.headline}`;
         const supportLine = this.createDepartureHandoffSupportLine(summary);
         const headlineHeight = this.measureSceneTextHeight(headlineLine, {
-            fontFamily: 'Arial',
-            fontSize: '16px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '22px',
             fontStyle: 'bold',
             wordWrap: { width: contentWidth },
         });
         const supportHeight = this.measureSceneTextHeight(supportLine, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             wordWrap: { width: contentWidth },
         });
         const loadoutHeight = this.measureSceneTextHeight(summary.loadoutLine, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             wordWrap: { width: contentWidth },
         });
         const footerHeight = this.measureSceneTextHeight(footerCopy, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             wordWrap: { width: contentWidth },
         });
         const panelHeight = Math.max(
@@ -601,52 +632,52 @@ export class ExpeditionScene extends Scene {
             + 4
             + loadoutHeight
             + 14
-            + 32
+            + 56
             + 10
             + footerHeight
             + 16,
         );
         const panelTop = panelY - panelHeight / 2;
         const container = this.add.container(0, 0);
-        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.48);
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, expeditionUiTheme.colors.overlay, 0.48);
         overlay.setInteractive({ useHandCursor: true });
         const shadow = this.add.rectangle(panelX, panelY + 4, panelWidth, panelHeight, 0x01040a, 0.1);
         const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.88);
-        panel.setStrokeStyle(1, 0x334155, 0.42);
-        const accent = this.add.rectangle(panelX - panelWidth / 2 + 3, panelY, 3, panelHeight - 16, 0x38bdf8, 0.28);
+        panel.setStrokeStyle(1, expeditionUiTheme.colors.slate, 0.42);
+        const accent = this.add.rectangle(panelX - panelWidth / 2 + 3, panelY, 3, panelHeight - 16, expeditionUiTheme.colors.jadeBright, 0.28);
         const headline = this.add.text(panelLeft, panelTop + 18, headlineLine, {
-            fontFamily: 'Arial',
-            fontSize: '16px',
-            color: '#f8fafc',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '22px',
+            color: '#f3ead3',
             fontStyle: 'bold',
             wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
         const supportText = this.add.text(panelLeft, headline.y + headline.height + 8, supportLine, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#94a3b8',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            color: '#bca785',
             wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
         const loadoutText = this.add.text(panelLeft, supportText.y + supportText.height + 4, summary.loadoutLine, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#bbf7d0',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            color: '#e6f3ea',
             wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
         let acknowledge: () => void = () => undefined;
         const continueButton = this.createButton({
             x: panelX,
-            y: loadoutText.y + loadoutText.height + 16,
-            width: 152,
-            height: 32,
+            y: loadoutText.y + loadoutText.height + 28,
+            width: 192,
+            height: 56,
             label: '进入秘境',
-            fillColor: 0x1d4ed8,
+            fillColor: expeditionUiTheme.colors.jade,
             onClick: () => acknowledge(),
         });
         const footer = this.add.text(panelX, continueButton[0].y + 30, footerCopy, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#cbd5e1',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            color: '#d9c6a2',
             align: 'center',
             wordWrap: { width: contentWidth },
         }).setOrigin(0.5);
@@ -750,7 +781,7 @@ export class ExpeditionScene extends Scene {
                 : { enterY: 14, exitY: -10 };
 
         this.updateEntryShellMode(mode);
-        this.updateEntryShellLayout(mode, animate);
+        this.updateEntryShellLayout(mode, animate, nextPanel.getEntryPanelFrame());
         this.setEntryShellVisible(true, animate);
         this.tweens.killTweensOf(nextPanel);
 
@@ -907,6 +938,7 @@ export class ExpeditionScene extends Scene {
                 before: beforeContext,
                 after: afterContext,
             });
+            this.updateEntryShellLayout('preparation', false, this.preparationPanel.getEntryPanelFrame());
             return;
         }
 
@@ -1047,7 +1079,7 @@ export class ExpeditionScene extends Scene {
                 }
 
                 const isReachableEdge = isReachableNode(this.mapDefinition, activeRun, outgoingNodeId);
-                const lineColor = isReachableEdge ? 0xfacc15 : targetNode.visibility === 'cleared' ? 0x38bdf8 : 0x475569;
+                const lineColor = isReachableEdge ? 0xfacc15 : targetNode.visibility === 'cleared' ? expeditionUiTheme.colors.jadeBright : expeditionUiTheme.colors.slate;
                 const lineAlpha = isReachableEdge ? 0.95 : targetNode.visibility === 'silhouette' ? 0.3 : 0.72;
 
                 this.mapGraphics.lineStyle(isReachableEdge ? 4 : 3, lineColor, lineAlpha);
@@ -1166,23 +1198,24 @@ export class ExpeditionScene extends Scene {
         const { width } = this.scale;
         const menu = this.add.container(0, 0);
         const panelX = width / 2;
-        const panelY = 238;
+        const panelY = 246;
         const panelWidth = Math.min(1080, width - 240);
-        const panelHeight = 156;
-        const background = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x020617, 0.82);
-        background.setStrokeStyle(2, 0x38bdf8, 0.72);
+        const panelHeight = 178;
+        const background = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, expeditionUiTheme.colors.panelInner, 0.94);
+        background.setStrokeStyle(2, expeditionUiTheme.colors.goldSoft, 0.72);
 
         const title = this.add.text(panelX - panelWidth / 2 + 32, panelY - 54, '秘境非战斗节点', {
-            fontFamily: 'Arial',
-            fontSize: '24px',
-            color: '#e0f2fe',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '28px',
+            color: '#e8d5ab',
             fontStyle: 'bold',
         });
 
-        const subtitle = this.add.text(panelX - panelWidth / 2 + 32, panelY - 20, '事件、商店、撤离均在 ExpeditionScene 内处理；战斗和 BOSS 节点会切换到 BattleScene。', {
-            fontFamily: 'Arial',
-            fontSize: '17px',
-            color: '#cbd5e1',
+        const subtitle = this.add.text(panelX - panelWidth / 2 + 32, panelY - 16, '事件、商店、撤离均在 ExpeditionScene 内处理；战斗和 BOSS 节点会切换到 BattleScene。', {
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            color: '#d9c6a2',
+            wordWrap: { width: panelWidth - 64 },
         });
 
         menu.add([background, title, subtitle]);
@@ -1199,17 +1232,17 @@ export class ExpeditionScene extends Scene {
                         : '可进入';
             const button = this.createButton({
                 x,
-                y: panelY + 42,
+                y: panelY + 50,
                 width: 250,
-                height: 54,
+                height: 56,
                 label: `${this.getNodeTypeLabel(node)} · ${node.label}`,
                 fillColor: this.getNodeColor(node),
                 onClick: () => this.handleNonCombatNodeSelected(node),
             });
-            const stateLabel = this.add.text(x, panelY + 78, stateText, {
-                fontFamily: 'Arial',
-                fontSize: '15px',
-                color: '#fde68a',
+            const stateLabel = this.add.text(x, panelY + 90, stateText, {
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '18px',
+                color: '#f6e2b1',
             }).setOrigin(0.5);
 
             menu.add([...button, stateLabel]);
@@ -1301,32 +1334,32 @@ export class ExpeditionScene extends Scene {
         const view = createEventNodeView(eventDefinition, activeRun, () => 0);
         const { container, contentX, panelY, panelHeight } = this.createModalPanel(view.title, eventDefinition.nodeId);
         const description = this.add.text(contentX, panelY - panelHeight / 2 + 120, view.description, {
-            fontFamily: 'Arial',
+            fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '20px',
-            color: '#cbd5e1',
+            color: '#d9c6a2',
             wordWrap: { width: 860 },
         });
         const outcomeLabel = this.add.text(contentX, description.y + 84, view.outcome.label, {
-            fontFamily: 'Arial',
-            fontSize: '26px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '28px',
             color: '#e9d5ff',
             fontStyle: 'bold',
         });
         const outcomeDescription = this.add.text(contentX, outcomeLabel.y + 42, view.outcome.description, {
-            fontFamily: 'Arial',
+            fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '20px',
-            color: '#f8fafc',
+            color: '#f3ead3',
             wordWrap: { width: 860 },
         });
         const rewardText = this.add.text(contentX, outcomeDescription.y + 76, `奖励：${view.rewardSummary}`, {
-            fontFamily: 'Courier New',
+            fontFamily: expeditionUiTheme.fonts.mono,
             fontSize: '20px',
-            color: '#fde68a',
+            color: '#f6e2b1',
         });
         const messageText = this.add.text(contentX, rewardText.y + 44, message ?? (view.claimed ? '该事件奖励已经领取，无法重复获得。' : '领取后会立即写入 active run。'), {
-            fontFamily: 'Arial',
+            fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '18px',
-            color: view.claimed ? '#fca5a5' : '#93c5fd',
+            color: view.claimed ? '#fca5a5' : '#e8d5ab',
         });
         const claimButton = this.createButton({
             x: this.scale.width / 2,
@@ -1334,7 +1367,7 @@ export class ExpeditionScene extends Scene {
             width: 260,
             height: 56,
             label: view.claimed ? '已领取' : '领取事件奖励',
-            fillColor: view.claimed ? 0x475569 : 0x7c3aed,
+            fillColor: view.claimed ? expeditionUiTheme.colors.slate : expeditionUiTheme.colors.gold,
             disabled: view.claimed,
             onClick: () => {
                 const result = this.expeditionState.claimEventNodeReward(eventDefinition.nodeId, view.outcome.rewards);
@@ -1366,35 +1399,35 @@ export class ExpeditionScene extends Scene {
         const view = createShopNodeView(shopDefinition, activeRun);
         const { container, contentX, panelY, panelHeight } = this.createModalPanel(view.title, shopDefinition.nodeId);
         const description = this.add.text(contentX, panelY - panelHeight / 2 + 116, `${view.description}\n当前 run spiritStones：${view.spiritStones}`, {
-            fontFamily: 'Arial',
+            fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '20px',
-            color: '#cbd5e1',
+            color: '#d9c6a2',
             wordWrap: { width: 860 },
             lineSpacing: 8,
         });
         const messageText = this.add.text(contentX, description.y + 78, message ?? '选择一个可支付的商品；每个 offer 只能购买一次。', {
-            fontFamily: 'Arial',
+            fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '18px',
-            color: message ? '#fde68a' : '#93c5fd',
+            color: message ? '#f6e2b1' : '#e8d5ab',
         });
 
         container.add([description, messageText]);
         view.offers.forEach((offerView, index) => {
-            const offerY = messageText.y + 64 + index * 118;
+            const offerY = messageText.y + 64 + index * 124;
             const offerText = this.add.text(contentX, offerY, this.formatShopOfferLine(offerView), {
-                fontFamily: 'Arial',
+                fontFamily: expeditionUiTheme.fonts.ui,
                 fontSize: '19px',
-                color: offerView.state === 'available' ? '#f8fafc' : '#94a3b8',
+                color: offerView.state === 'available' ? '#f3ead3' : '#bca785',
                 wordWrap: { width: 660 },
                 lineSpacing: 5,
             });
             const button = this.createButton({
                 x: contentX + 760,
-                y: offerY + 26,
-                width: 190,
-                height: 48,
+                y: offerY + 28,
+                width: 204,
+                height: 56,
                 label: this.getShopOfferButtonLabel(offerView),
-                fillColor: offerView.state === 'available' ? 0xd97706 : 0x475569,
+                fillColor: offerView.state === 'available' ? expeditionUiTheme.colors.ember : expeditionUiTheme.colors.slate,
                 disabled: offerView.state !== 'available',
                 onClick: () => {
                     const result = this.expeditionState.purchaseShopOffer(
@@ -1436,16 +1469,16 @@ export class ExpeditionScene extends Scene {
         const view = createExtractNodeView(node.id, activeRun);
         const { container, contentX, panelY, panelHeight } = this.createModalPanel(node.label, node.id);
         const description = this.add.text(contentX, panelY - panelHeight / 2 + 126, '确认后会立刻结束本次秘境探索，并将当前携带的卡牌、道具与 spiritStones 存入永久仓库。', {
-            fontFamily: 'Arial',
+            fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '21px',
-            color: '#cbd5e1',
+            color: '#d9c6a2',
             wordWrap: { width: 860 },
             lineSpacing: 8,
         });
         const messageText = this.add.text(contentX, description.y + 108, message ?? (view.recorded ? '撤离已在本次探索中登记。' : '是否确认从该撤离点离开？'), {
-            fontFamily: 'Arial',
+            fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '20px',
-            color: view.recorded ? '#86efac' : '#fde68a',
+            color: view.recorded ? '#e6f3ea' : '#f6e2b1',
         });
         const confirmButton = this.createButton({
             x: this.scale.width / 2,
@@ -1453,7 +1486,7 @@ export class ExpeditionScene extends Scene {
             width: 280,
             height: 56,
             label: '确认撤离并结算',
-            fillColor: 0x16a34a,
+            fillColor: expeditionUiTheme.colors.jade,
             onClick: () => {
                 const summary = resolveExtract({ finalNodeId: node.id, run: activeRun });
                 this.showTerminalSummary(summary);
@@ -1549,28 +1582,28 @@ export class ExpeditionScene extends Scene {
         const panelX = width / 2;
         const panelY = height / 2 + 68;
         const contentX = panelX - panelWidth / 2 + 56;
-        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.5);
-        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x111827, 0.98);
-        panel.setStrokeStyle(3, 0x38bdf8, 0.9);
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, expeditionUiTheme.colors.overlay, 0.5);
+        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, expeditionUiTheme.colors.panelInner, 0.98);
+        panel.setStrokeStyle(3, expeditionUiTheme.colors.jadeBright, 0.9);
 
         const title = this.add.text(contentX, panelY - panelHeight / 2 + 42, titleText, {
-            fontFamily: 'Arial',
+            fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '34px',
-            color: '#f8fafc',
+            color: '#f3ead3',
             fontStyle: 'bold',
         });
         const subtitle = this.add.text(contentX, title.y + 44, subtitleText, {
-            fontFamily: 'Arial',
+            fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '18px',
-            color: '#93c5fd',
+            color: '#e8d5ab',
         });
         const closeButton = this.createButton({
             x: panelX + panelWidth / 2 - 52,
             y: panelY - panelHeight / 2 + 48,
             width: 64,
-            height: 42,
+            height: 44,
             label: '×',
-            fillColor: 0x334155,
+            fillColor: expeditionUiTheme.colors.slate,
             onClick: () => this.destroyActiveNodePanel(),
         });
 
@@ -1591,7 +1624,7 @@ export class ExpeditionScene extends Scene {
         disabled?: boolean;
     }): [Phaser.GameObjects.Rectangle, Phaser.GameObjects.Text] {
         const button = this.add.rectangle(config.x, config.y, config.width, config.height, config.fillColor, 1);
-        button.setStrokeStyle(2, 0xffffff, config.disabled ? 0.35 : 0.86);
+        button.setStrokeStyle(2, expeditionUiTheme.colors.goldSoft, config.disabled ? 0.35 : 0.86);
 
         if (!config.disabled) {
             button.setInteractive({ useHandCursor: true });
@@ -1603,9 +1636,9 @@ export class ExpeditionScene extends Scene {
         }
 
         const label = this.add.text(config.x, config.y, config.label, {
-            fontFamily: 'Arial',
-            fontSize: '18px',
-            color: '#f8fafc',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: config.height >= 56 ? '20px' : '18px',
+            color: '#f3ead3',
             fontStyle: 'bold',
         }).setOrigin(0.5);
 
@@ -1649,11 +1682,11 @@ export class ExpeditionScene extends Scene {
     private getNodeColor(node: NonCombatMapNode): number {
         switch (node.type) {
             case 'event':
-                return 0x7c3aed;
+                return expeditionUiTheme.colors.gold;
             case 'shop':
-                return 0xd97706;
+                return expeditionUiTheme.colors.ember;
             case 'extract':
-                return 0x16a34a;
+                return expeditionUiTheme.colors.jade;
         }
     }
 

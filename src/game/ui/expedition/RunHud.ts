@@ -6,6 +6,7 @@ import {
     createRunSummary,
 } from '../../scenes/expedition/entryFlowModel';
 import type { RunResolutionSummary, RunSnapshot } from '../../types/expedition';
+import { expeditionUiTheme } from '../common/expeditionUiTheme';
 
 export class RunHud extends GameObjects.Container {
     private currentNodeValue!: GameObjects.Text;
@@ -24,8 +25,8 @@ export class RunHud extends GameObjects.Container {
 
     private createHud(): void {
         const { width } = this.scene.scale;
-        const background = this.scene.add.rectangle(width / 2, 56, width - 96, 84, 0x020617, 0.9);
-        background.setStrokeStyle(2, 0x38bdf8, 0.85);
+        const background = this.scene.add.rectangle(width / 2, 60, width - 96, 92, expeditionUiTheme.colors.overlay, 0.9);
+        background.setStrokeStyle(2, expeditionUiTheme.colors.jadeBright, 0.85);
 
         this.currentNodeValue = this.createValueText(150, '当前节点：-');
         this.carriedDeckValue = this.createValueText(560, '携带卡牌：0');
@@ -44,10 +45,10 @@ export class RunHud extends GameObjects.Container {
     }
 
     private createValueText(x: number, initialText: string): GameObjects.Text {
-        return this.scene.add.text(x, 56, initialText, {
-            fontFamily: 'Arial',
-            fontSize: '24px',
-            color: '#e2e8f0',
+        return this.scene.add.text(x, 60, initialText, {
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '26px',
+            color: '#f3ead3',
             fontStyle: 'bold',
         }).setOrigin(0, 0.5);
     }
@@ -105,23 +106,23 @@ export class RunHud extends GameObjects.Container {
         const headlineLine = `${summary.badgeLabel} · ${summary.headline}`;
         const supportLine = this.createArrivalSupportLine(summary);
         const headlineHeight = this.measureTextHeight(headlineLine, {
-            fontFamily: 'Arial',
-            fontSize: '13px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             fontStyle: 'bold',
             wordWrap: { width: contentWidth },
         });
         const supportHeight = this.measureTextHeight(supportLine, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             wordWrap: { width: contentWidth },
         });
         const loadoutHeight = this.measureTextHeight(summary.loadoutLine, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
             wordWrap: { width: contentWidth },
         });
         const panelHeight = Math.max(
-            68,
+            86,
             12
             + headlineHeight
             + 4
@@ -133,25 +134,25 @@ export class RunHud extends GameObjects.Container {
         const panelTop = panelY - panelHeight / 2;
         const overlay = this.scene.add.container(0, 0);
         const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.74);
-        panel.setStrokeStyle(1, 0x334155, 0.42);
-        const accent = this.scene.add.rectangle(panelX - panelWidth / 2 + 3, panelY, 3, panelHeight - 18, 0x38bdf8, 0.28);
+        panel.setStrokeStyle(1, expeditionUiTheme.colors.slate, 0.42);
+        const accent = this.scene.add.rectangle(panelX - panelWidth / 2 + 3, panelY, 3, panelHeight - 18, expeditionUiTheme.colors.jadeBright, 0.28);
         const headline = this.scene.add.text(panelLeft, panelTop + 12, headlineLine, {
-            fontFamily: 'Arial',
-            fontSize: '13px',
-            color: '#dbeafe',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            color: '#f3ead3',
             fontStyle: 'bold',
             wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
         const supportText = this.scene.add.text(panelLeft, headline.y + headline.height + 4, supportLine, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#94a3b8',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            color: '#bca785',
             wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
         const loadoutLine = this.scene.add.text(panelLeft, supportText.y + supportText.height + 4, summary.loadoutLine, {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#bbf7d0',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            color: '#e6f3ea',
             wordWrap: { width: contentWidth },
         }).setOrigin(0, 0);
 
@@ -202,7 +203,7 @@ export class RunHud extends GameObjects.Container {
         const { width, height } = this.scene.scale;
         const view = createRunResolutionSummaryView(summary);
         const overlay = this.scene.add.container(0, 0);
-        const background = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.86);
+        const background = this.scene.add.rectangle(width / 2, height / 2, width, height, expeditionUiTheme.colors.overlay, 0.86);
         const panelWidth = Math.min(980, width * 0.78);
         const panelHeight = Math.min(760, height * 0.78);
         const panelX = width / 2;
@@ -214,33 +215,33 @@ export class RunHud extends GameObjects.Container {
         const lostCards = view.lostCards.join('\n');
         const lostItems = view.lostItems.join('\n');
 
-        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x111827, 0.98);
-        panel.setStrokeStyle(3, view.outcome === 'defeat' ? 0xef4444 : 0x22c55e, 0.95);
+        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, expeditionUiTheme.colors.panelInner, 0.98);
+        panel.setStrokeStyle(3, view.outcome === 'defeat' ? expeditionUiTheme.colors.emberBright : expeditionUiTheme.colors.jade, 0.95);
 
         const title = this.scene.add.text(leftX, panelY - panelHeight / 2 + 42, view.title, {
-            fontFamily: 'Arial',
-            fontSize: '38px',
-            color: view.outcome === 'defeat' ? '#fecaca' : '#bbf7d0',
+            fontFamily: expeditionUiTheme.fonts.display,
+            fontSize: '40px',
+            color: view.outcome === 'defeat' ? '#f3d0c3' : '#e6f3ea',
             fontStyle: 'bold',
         });
 
         const subtitle = this.scene.add.text(leftX, title.y + 52, view.subtitle, {
-            fontFamily: 'Arial',
+            fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '22px',
-            color: '#e2e8f0',
+            color: '#f3ead3',
             wordWrap: { width: panelWidth - 112 },
         });
 
         const nodeText = this.scene.add.text(leftX, subtitle.y + 44, `终点节点：${view.finalNodeId}`, {
-            fontFamily: 'Arial',
+            fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '18px',
-            color: '#93c5fd',
+            color: '#e8d5ab',
         });
 
         const keptHeading = this.scene.add.text(leftX, nodeText.y + 58, '保留 / 存入永久仓库', {
-            fontFamily: 'Arial',
-            fontSize: '24px',
-            color: '#86efac',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '28px',
+            color: '#e6f3ea',
             fontStyle: 'bold',
         });
 
@@ -249,16 +250,16 @@ export class RunHud extends GameObjects.Container {
             keptHeading.y + 40,
             `Cards\n${keptCards}\n\nItems\n${keptItems}\n\nspiritStones\n${view.keptSpiritStones}`,
             {
-                fontFamily: 'Courier New',
+                fontFamily: expeditionUiTheme.fonts.mono,
                 fontSize: '18px',
-                color: '#e2e8f0',
+                color: '#f3ead3',
                 lineSpacing: 6,
             },
         );
 
         const lostHeading = this.scene.add.text(rightX, keptHeading.y, '遗失 / 从本次探索中失去', {
-            fontFamily: 'Arial',
-            fontSize: '24px',
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '28px',
             color: '#fca5a5',
             fontStyle: 'bold',
         });
@@ -268,24 +269,24 @@ export class RunHud extends GameObjects.Container {
             lostHeading.y + 40,
             `Cards\n${lostCards}\n\nItems\n${lostItems}\n\nspiritStones\n${view.lostSpiritStones}`,
             {
-                fontFamily: 'Courier New',
+                fontFamily: expeditionUiTheme.fonts.mono,
                 fontSize: '18px',
-                color: '#e2e8f0',
+                color: '#f3ead3',
                 lineSpacing: 6,
             },
         );
 
-        const acknowledgeButton = this.scene.add.rectangle(panelX, panelY + panelHeight / 2 - 64, 320, 56, 0x2563eb, 1);
-        acknowledgeButton.setStrokeStyle(2, 0xffffff, 0.9);
+        const acknowledgeButton = this.scene.add.rectangle(panelX, panelY + panelHeight / 2 - 64, 320, 56, expeditionUiTheme.colors.jade, 1);
+        acknowledgeButton.setStrokeStyle(2, expeditionUiTheme.colors.goldSoft, 0.9);
         acknowledgeButton.setInteractive({ useHandCursor: true });
-        acknowledgeButton.on('pointerover', () => acknowledgeButton.setFillStyle(0x3b82f6));
-        acknowledgeButton.on('pointerout', () => acknowledgeButton.setFillStyle(0x2563eb));
+        acknowledgeButton.on('pointerover', () => acknowledgeButton.setFillStyle(expeditionUiTheme.colors.jadeBright));
+        acknowledgeButton.on('pointerout', () => acknowledgeButton.setFillStyle(expeditionUiTheme.colors.jade));
         acknowledgeButton.on('pointerdown', onAcknowledge);
 
         const acknowledgeLabel = this.scene.add.text(acknowledgeButton.x, acknowledgeButton.y, '确认并返回入口', {
-            fontFamily: 'Arial',
+            fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '22px',
-            color: '#f8fafc',
+            color: '#f3ead3',
             fontStyle: 'bold',
         }).setOrigin(0.5);
 
