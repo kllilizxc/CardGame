@@ -9,6 +9,12 @@ evidenceRefs:
   - E-R-53cde021-a2d7-4e7f-9907-e106afd99563
   - E-R-7a70acb0-92b8-477a-ad92-1b78ddb93bb4
   - E-R-ab1c2d00-1951-4c33-80c9-f56655a3c1a2
+  - E-R-b9ca1cfd-920c-4e4c-83eb-56f05e70dc53
+  - E-R-ceaf2206-6d71-44a0-b5bf-05657e1c5680
+  - E-R-e9fdc8d8-90ec-4357-b617-1d96263656f3
+  - E-R-0e837a3d-8ef6-4284-94dd-25f8a27d08f6
+  - E-R-fcdebca0-65db-4c0b-9302-f9500e375788
+  - E-R-e63a1463-888b-4fe7-ad02-daa374b83fe8
 attempts: 0
 kind: engineering
 stage: generate

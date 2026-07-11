@@ -1,0 +1,48 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(
+    CDPATH= cd -- "$(dirname -- "$0")" && pwd -P
+)
+default_project_root=$(
+    CDPATH= cd -- "$script_dir/../.." && pwd -P
+)
+project_root_input=${HOPI_PROJECT_ROOT:-$default_project_root}
+project_root=$(
+    CDPATH= cd -- "$project_root_input" && pwd -P
+)
+
+if [ ! -f "$project_root/package.json" ]; then
+    echo "HOPI preview adapter error: package.json not found under $project_root" >&2
+    exit 1
+fi
+
+if ! command -v bun >/dev/null 2>&1; then
+    echo "HOPI preview adapter error: bun is required but was not found in PATH" >&2
+    exit 127
+fi
+
+local_bin_dir=$project_root/node_modules/.bin
+if [ -d "$local_bin_dir" ]; then
+    export PATH=$local_bin_dir:$PATH
+fi
+
+if ! command -v vite >/dev/null 2>&1; then
+    echo "HOPI preview adapter error: vite is required but was not found; install project dependencies under $project_root before launching Preview" >&2
+    exit 127
+fi
+
+if [ -n "${HOPI_PREVIEW_RUNTIME_DIR:-}" ]; then
+    mkdir -p -- "$HOPI_PREVIEW_RUNTIME_DIR"
+    export TMPDIR=$HOPI_PREVIEW_RUNTIME_DIR
+fi
+
+preview_url=http://127.0.0.1:8080
+
+export HOPI_PROJECT_ROOT=$project_root
+export HOPI_PREVIEW_URL=$preview_url
+
+printf 'HOPI_PREVIEW_URL=%s\n' "$preview_url"
+
+cd -- "$project_root"
+exec bun run dev-nolog -- --host 127.0.0.1 --port 8080 --strictPort
