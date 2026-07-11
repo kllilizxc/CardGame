@@ -8,3 +8,12 @@
 - Browser shell styling lives in `index.html`, `public/style.css`, and `src/GameApp.css`.
 - Content and player-facing copy are data-driven from `public/data/**`; UI planning should avoid changing gameplay data unless the Goal explicitly asks for it.
 - Tests exist as `*.test.ts` beside source files. Prefer `bun test`; local smoke checks can use the existing package scripts through `bun run dev-nolog` and `bun run build-nolog`.
+
+# Bun Workflow
+
+- Use Bun as the default toolchain for routine local work. Do not default to `node`, `npm`, `npx`, `yarn`, or `pnpm` command paths unless a task explicitly requires an exception.
+- Use `bun install` for dependency installation and lockfile updates.
+- Use `bun <file>` to execute repo-local JavaScript or TypeScript files directly instead of `node <file>`.
+- Use `bun run <script>` for package scripts, including `bun run dev-nolog` and `bun run build-nolog` for local smoke checks.
+- Use `bun test` for the colocated `*.test.ts` suites.
+- Use `bunx <cli>` for package-exposed CLIs instead of `npx <cli>` or global installs.
