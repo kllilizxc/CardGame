@@ -550,8 +550,26 @@ export class ExpeditionScene extends Scene {
         });
     }
 
+    private isSceneGameObjectAlive(gameObject?: Phaser.GameObjects.GameObject): boolean {
+        if (!gameObject) {
+            return false;
+        }
+
+        const sceneBoundObject = gameObject as Phaser.GameObjects.GameObject & { scene?: Phaser.Scene };
+        if ('scene' in sceneBoundObject) {
+            return !!sceneBoundObject.scene?.sys;
+        }
+
+        return true;
+    }
+
     private setEntryTransitionBlocker(active: boolean): void {
         if (!this.entryTransitionBlocker) {
+            return;
+        }
+
+        if (!this.isSceneGameObjectAlive(this.entryTransitionBlocker)) {
+            this.entryTransitionBlocker = undefined;
             return;
         }
 
@@ -568,18 +586,30 @@ export class ExpeditionScene extends Scene {
         return this.entryTransitionBlocker?.visible ?? false;
     }
 
+    private destroyTrackedDepartureHandoffOverlay(
+        overlay: Phaser.GameObjects.Container | undefined = this.departureHandoffOverlay,
+    ): void {
+        if (!overlay) {
+            return;
+        }
+
+        if (this.isSceneGameObjectAlive(overlay)) {
+            this.tweens.killTweensOf(overlay);
+            overlay.destroy();
+        }
+
+        if (this.departureHandoffOverlay === overlay) {
+            this.departureHandoffOverlay = undefined;
+        }
+    }
+
     private destroyDepartureHandoffOverlay(): void {
         if (this.departureHandoffKeydownHandler) {
             this.input.keyboard?.off('keydown', this.departureHandoffKeydownHandler);
             this.departureHandoffKeydownHandler = undefined;
         }
 
-        if (this.departureHandoffOverlay) {
-            this.tweens.killTweensOf(this.departureHandoffOverlay);
-            this.departureHandoffOverlay.destroy();
-            this.departureHandoffOverlay = undefined;
-        }
-
+        this.destroyTrackedDepartureHandoffOverlay();
         this.setEntryTransitionBlocker(false);
     }
 
@@ -714,8 +744,7 @@ export class ExpeditionScene extends Scene {
                 ease: 'Cubic.easeIn',
                 onComplete: () => {
                     if (this.departureHandoffOverlay === container) {
-                        this.departureHandoffOverlay.destroy();
-                        this.departureHandoffOverlay = undefined;
+                        this.destroyTrackedDepartureHandoffOverlay(container);
                     }
 
                     this.setEntryTransitionBlocker(false);

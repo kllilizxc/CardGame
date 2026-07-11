@@ -17,6 +17,7 @@ class FakeContainer {
     public alpha = 1;
     public y = 0;
     public destroyed = false;
+    public scene: { sys: object } | undefined = { sys: {} };
 
     constructor(_scene?: unknown) {}
 
@@ -25,7 +26,15 @@ class FakeContainer {
     }
 
     destroy(): void {
+        if (!this.scene?.sys) {
+            throw new TypeError("Cannot read properties of undefined (reading 'sys')");
+        }
+
         this.destroyed = true;
+    }
+
+    detachFromScene(): void {
+        this.scene = undefined;
     }
 
     setDepth(): this {
@@ -46,6 +55,7 @@ class FakeContainer {
 class FakeRectangle {
     public visible = false;
     public input?: { enabled: boolean };
+    public scene: { sys: object } | undefined = { sys: {} };
 
     setVisible(visible: boolean): this {
         this.visible = visible;
@@ -53,13 +63,25 @@ class FakeRectangle {
     }
 
     setInteractive(): this {
+        if (!this.scene?.sys) {
+            throw new TypeError("Cannot read properties of undefined (reading 'sys')");
+        }
+
         this.input = { enabled: true };
         return this;
     }
 
     disableInteractive(): this {
+        if (!this.scene?.sys) {
+            throw new TypeError("Cannot read properties of undefined (reading 'sys')");
+        }
+
         this.input = { enabled: false };
         return this;
+    }
+
+    detachFromScene(): void {
+        this.scene = undefined;
     }
 }
 
@@ -237,7 +259,12 @@ function createSceneHarness() {
             return config;
         },
     };
-    scene.destroyDepartureHandoffOverlay = () => {};
+    scene.input = {
+        keyboard: {
+            on() {},
+            off() {},
+        },
+    };
     scene.setStatusPlateVisible = () => {};
     scene.clearMapViews = () => {};
     scene.destroyNodeMenu = () => {};
@@ -359,5 +386,38 @@ describe('expedition entry shell', () => {
         scene.setEntryTransitionBlocker(false);
         expect(() => returnedPreparationPanel.triggerConfirm()).not.toThrow();
         expect(scene.expeditionState.activeRun).toBeNull();
+    });
+
+    it('survives post-confirm init cleanup after the handoff overlay and blocker were already detached', () => {
+        const scene = createSceneHarness();
+        const staleOverlay = new FakeContainer();
+        const staleBlocker = new FakeRectangle();
+
+        scene.playDepartureHandoff = (_summary: unknown, onComplete: () => void) => {
+            scene.departureHandoffOverlay = staleOverlay;
+            scene.entryTransitionBlocker = staleBlocker;
+            scene.departureHandoffKeydownHandler = () => {};
+            scene.setEntryTransitionBlocker(true);
+            onComplete();
+        };
+
+        scene.showPreparationPanel();
+        (scene.preparationPanel as MockPreparationPanel).triggerOpenDeckManager();
+        scene.setEntryTransitionBlocker(false);
+
+        (scene.deckManagementPanel as MockDeckManagementPanel).triggerClose();
+        scene.setEntryTransitionBlocker(false);
+
+        const returnedPreparationPanel = scene.preparationPanel as MockPreparationPanel;
+        expect(() => returnedPreparationPanel.triggerConfirm()).not.toThrow();
+        expect(scene.expeditionState.activeRun).not.toBeNull();
+
+        staleOverlay.detachFromScene();
+        staleBlocker.detachFromScene();
+
+        expect(() => scene.init(scene.launchData)).not.toThrow();
+        expect(scene.departureHandoffOverlay).toBeUndefined();
+        expect(scene.entryTransitionBlocker).toBeUndefined();
+        expect(() => scene.init(scene.launchData)).not.toThrow();
     });
 });

@@ -38,6 +38,12 @@
 - Treat this as a handoff-integrity requirement between `DeckManagementPanel`, `PreparationPanel`, and `ExpeditionScene`: after leaving deck management, the rebuilt preparation surface must hold current stash and selected-deck state before any confirm action can create a run.
 - Proof must exercise the exact return-to-confirm path after a deck-management visit, not only isolated loadout-validation helpers or handoff-summary builders, because existing reviewer evidence confirmed preparation/deck-management transitions without explicitly confirming the final confirm step after return.
 
+### Expedition Handoff Lifecycle Safety
+
+- Accepted Inbox turn `EV-f9235410-4a0b-452a-afd8-e26d7f5fe617` shows that the previous return-confirm repair still leaves a crash during `ExpeditionScene.init`, where `destroyDepartureHandoffOverlay` re-enters `setEntryTransitionBlocker` and reaches `Rectangle.disableInteractive` after Phaser has already detached the display object's `sys`.
+- Keep this requirement inside the same expedition entry shell: departure handoff overlay cleanup, entry-transition blocker teardown, and any handoff state restored during scene start must be safe to run more than once across the `进入秘境 -> 管理卡组 -> 返回 -> 确认带入秘境` path.
+- Proof must cover the exact operator path through post-confirm scene boot, not only pre-confirm validation, because reviewer evidence for `W-expedition-return-confirm` validated shell-level confirm gating without proving the subsequent `ExpeditionScene.init` teardown path.
+
 ### Information Density And Scope
 
 - Simplify each major panel to one primary action group, one current-status line, and one supporting description block instead of stacked explanatory paragraphs and competing emphasis.
@@ -49,6 +55,7 @@
 - `W-theme-shell` establishes the shared theme and updates the route shell surfaces that set the overall first impression.
 - `W-startup-stability` removes the reported launch-time zoom regression from the themed entry flow and depends only on `W-theme-shell`.
 - `W-expedition-theme` applies the same theme to expedition preparation, deck management, route cues, and run HUD flows, and remains the owner for the breadcrumb/header separation requirement because it already covers both `ExpeditionScene` and `DeckManagementPanel`.
-- `W-expedition-return-confirm` repairs the reopened expedition entry defect where a player returns from deck management and immediately confirms the loadout, keeping the fix and proof inside the same expedition entry shell.
+- `W-expedition-return-confirm` repaired pre-confirm loadout preservation and invalid-loadout handling for the return-confirm path after a deck-management visit.
+- `W-expedition-handoff-lifecycle` closes the remaining runtime crash in that same operator path by making departure handoff overlay cleanup and blocker teardown safe during `ExpeditionScene.init` and scene start.
 - `W-battle-theme` applies the same theme to battle HUD, overlays, selection modals, previews, and card presentation.
 - `W-expedition-theme` and `W-battle-theme` both depend on `W-theme-shell` so shared theme helpers are defined once before downstream scene work.
