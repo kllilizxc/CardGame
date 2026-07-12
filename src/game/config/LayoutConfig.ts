@@ -158,7 +158,7 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
             uiButtons: 100,            // UI 按钮
             uiText: 200,               // 统计信息文本
             cardToDiscardAnimation: 2000,  // 卡牌飞向弃牌堆动画
-            cardPreview: 6000,         // 卡牌预览
+            cardPreview: 6100,         // 卡牌预览
             pillTooltip: 7000          // 丹药提示框
         }
     };

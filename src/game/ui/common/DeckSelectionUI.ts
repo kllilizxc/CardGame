@@ -21,6 +21,8 @@ type AnyCardSprite = CardSprite | ArtifactSprite | TalismanSprite | FieldSprite 
  * 用于从卡组中选择一张卡（技能"注定一抽"等）
  */
 export class DeckSelectionUI extends GameObjects.Container {
+    private readonly previewContextId = 'deck-selection';
+
     private cards: AnyCard[];
     private background!: GameObjects.Rectangle;
     private countText!: GameObjects.Text;
@@ -50,6 +52,7 @@ export class DeckSelectionUI extends GameObjects.Container {
     private pointerMoveHandler?: (pointer: Phaser.Input.Pointer) => void;
     private pointerUpHandler?: () => void;
     private escHandler?: () => void;
+    private previewSourceLabel = '选卡弹层';
 
     constructor(scene: Scene) {
         super(scene, 0, 0);
@@ -82,6 +85,7 @@ export class DeckSelectionUI extends GameObjects.Container {
         this.selectedCards.clear();
         this.scrollY = 0;
         this.maxScrollY = 0;
+        this.previewSourceLabel = this.isMultiSelect ? '多选弹层' : '选卡弹层';
 
         if (this.isMultiSelect) {
             this.onCardsSelected = onSelected as (cards: AnyCard[]) => void;
@@ -247,6 +251,10 @@ export class DeckSelectionUI extends GameObjects.Container {
 
             sprite.disableDragging();
             sprite.setDisplayMode('deck');
+            sprite.setPreviewMetadata({
+                contextId: this.previewContextId,
+                sourceLabel: this.previewSourceLabel,
+            });
 
             sprite.setInteractive({ useHandCursor: true });
             sprite.on('pointerdown', () => {
@@ -363,6 +371,8 @@ export class DeckSelectionUI extends GameObjects.Container {
      * @param cancelled 是否是取消操作（未选择卡片）
      */
     public hide(cancelled: boolean = false): void {
+        this.scene.events.emit('clearCardPreviewContext', this.previewContextId);
+
         if (cancelled && this.onCancel) {
             this.onCancel();
         }

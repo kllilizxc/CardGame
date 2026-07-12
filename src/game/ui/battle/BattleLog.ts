@@ -4,6 +4,7 @@ import { GongfaTooltip } from '../common/GongfaTooltip';
 import type { PanelConfig } from '../../config/LayoutConfig';
 import { battleTheme, blendBattleColor } from './battleTheme';
 import { sceneTheme } from '../../scenes/shared/sceneTheme';
+import type { CardPreviewMetadata } from '../../managers/common/cardPreviewProtocol';
 
 interface LogEntry {
     text: string;
@@ -17,7 +18,7 @@ export class BattleLog {
     private container: Phaser.GameObjects.Container;
     private background: Phaser.GameObjects.Rectangle;
     private logEntries: LogEntry[] = [];
-    private logTexts: Phaser.GameObjects.Text[] = [];
+    private logObjects: Phaser.GameObjects.GameObject[] = [];
     private scrollOffset: number = 0;
     private maxScrollOffset: number = 0;
     private isVisible: boolean = true;
@@ -28,6 +29,10 @@ export class BattleLog {
     private bottomHint: Phaser.GameObjects.Text;
     private isScrolling: boolean = false;
     private gongfaTooltip: GongfaTooltip;
+    private readonly previewMetadata: CardPreviewMetadata = {
+        contextId: 'battle-log',
+        sourceLabel: '战斗日志',
+    };
 
     private readonly MAX_ENTRIES = 50;
     private readonly LOG_WIDTH: number;
@@ -340,9 +345,8 @@ export class BattleLog {
     }
 
     private refreshLog() {
-        // 清除旧的文本
-        this.logTexts.forEach(text => text.destroy());
-        this.logTexts = [];
+        this.logObjects.forEach((object) => object.destroy());
+        this.logObjects = [];
 
         const { height } = this.scene.scale;
         const fontSize = Math.max(18, Math.floor(height * 0.017)) + 'px';
@@ -514,7 +518,7 @@ export class BattleLog {
             });
             textObj.setOrigin(0, 0);
             this.logContainer.add(textObj);
-            this.logTexts.push(textObj);
+            this.logObjects.push(textObj);
             
             // 记录最大高度
             maxHeight = Math.max(maxHeight, textObj.height);
@@ -532,6 +536,7 @@ export class BattleLog {
                 hitArea.setInteractive({ useHandCursor: true });
                 hitArea.setOrigin(0.5, 0.5);
                 this.logContainer.add(hitArea);
+                this.logObjects.push(hitArea);
                 
                 // 下划线
                 const underline = this.scene.add.rectangle(
@@ -543,6 +548,7 @@ export class BattleLog {
                     0
                 );
                 this.logContainer.add(underline);
+                this.logObjects.push(underline);
                 
                 const cardRef = part.cardRef;
                 hitArea.on('pointerover', () => {
@@ -550,22 +556,18 @@ export class BattleLog {
                     // 安全检查：如果精灵还活着且场景存在，使用精灵；否则使用卡片数据
                     try {
                         if (cardRef.card && cardRef.card.active && cardRef.card.scene) {
-                            // 精灵存在、激活且有场景，可以安全使用
-                            this.scene.events.emit('showCardPreview', cardRef.card);
+                            this.scene.events.emit('showCardPreview', cardRef.card, this.previewMetadata);
                         } else {
-                            // 精灵已销毁或不可用，使用卡片数据显示预览
-                            this.scene.events.emit('showCardPreviewFromData', cardRef.cardData);
+                            this.scene.events.emit('showCardPreviewFromData', cardRef.cardData, this.previewMetadata);
                         }
                     } catch (e) {
-                        // 如果访问精灵出错，直接使用数据
                         console.warn('Error accessing card sprite, using card data instead:', e);
-                        this.scene.events.emit('showCardPreviewFromData', cardRef.cardData);
+                        this.scene.events.emit('showCardPreviewFromData', cardRef.cardData, this.previewMetadata);
                     }
                 });
                 
                 hitArea.on('pointerout', () => {
                     underline.setAlpha(0);
-                    this.scene.events.emit('hideCardPreview');
                 });
                 
                 // 让滚轮事件穿透到背景
@@ -593,6 +595,7 @@ export class BattleLog {
                 hitArea.setInteractive({ useHandCursor: true });
                 hitArea.setOrigin(0.5, 0.5);
                 this.logContainer.add(hitArea);
+                this.logObjects.push(hitArea);
                 
                 // 下划线
                 const underline = this.scene.add.rectangle(
@@ -604,6 +607,7 @@ export class BattleLog {
                     0
                 );
                 this.logContainer.add(underline);
+                this.logObjects.push(underline);
                 
                 const gongfaInfo = part.gongfaInfo;
                 hitArea.on('pointerover', () => {
@@ -642,6 +646,9 @@ export class BattleLog {
 
     public toggle() {
         this.isVisible = !this.isVisible;
+        if (!this.isVisible) {
+            this.scene.events.emit('clearCardPreviewContext', this.previewMetadata.contextId);
+        }
         this.container.setVisible(this.isVisible);
     }
 
@@ -652,10 +659,12 @@ export class BattleLog {
 
     public hide() {
         this.isVisible = false;
+        this.scene.events.emit('clearCardPreviewContext', this.previewMetadata.contextId);
         this.container.setVisible(false);
     }
 
     public destroy() {
+        this.scene.events.emit('clearCardPreviewContext', this.previewMetadata.contextId);
         this.gongfaTooltip.destroy();
         this.container.destroy();
         this.toggleButton.destroy();

@@ -37,6 +37,7 @@ import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import { BattleState } from '../../state/BattleState';
 import { BattleUIManager } from '../../ui/battle/BattleUIManager';
 import { CardPreviewManager } from '../../managers/common/CardPreviewManager';
+import type { CardPreviewMetadata, PreviewCardData } from '../../managers/common/cardPreviewProtocol';
 import { PillTooltipUI } from '../../ui/common/PillTooltipUI';
 import type { BattleLaunchPayload } from '../../types/expedition';
 import type { StoryBattleSceneLaunchPayload } from '../../types/story';
@@ -377,7 +378,7 @@ export class BattleScene extends Scene {
             onEndTurn: () => this.endTurn(),
             onToggleSpeed: () => this.toggleGameSpeed(),
             onShowDeck: () => new CardListView(this, '卡组', [...this.deck]),
-            onShowDiscardPile: () => new CardListView(this, '弃牌堆', [...this.discardPile])
+            onShowDiscardPile: () => new CardListView(this, '弃牌堆', [...this.discardPile]),
         });
         this.uiManager.createAll();
 
@@ -606,18 +607,20 @@ export class BattleScene extends Scene {
     }
 
     private setupCardPreview() {
-        // 使用新的 CardPreviewManager
-        this.events.on('showCardPreview', (card: BaseCardSprite) => {
-            this.cardPreviewManager.showFromSprite(card);
+        this.events.on('showCardPreview', (card: BaseCardSprite, metadata?: CardPreviewMetadata) => {
+            this.cardPreviewManager.showFromSprite(card, metadata);
         });
 
-        this.events.on('showCardPreviewFromData', (cardData: any) => {
-            this.cardPreviewManager.showFromData(cardData);
+        this.events.on('showCardPreviewFromData', (cardData: PreviewCardData, metadata?: CardPreviewMetadata) => {
+            this.cardPreviewManager.showFromData(cardData, metadata);
         });
 
         this.events.on('hideCardPreview', () => {
-            // 不再自动隐藏，保持显示直到下一张卡片
-            // this.cardPreviewManager.hide();
+            this.cardPreviewManager.clear();
+        });
+
+        this.events.on('clearCardPreviewContext', (contextId: string) => {
+            this.cardPreviewManager.clearContext(contextId);
         });
 
         // 使用新的 PillTooltipUI

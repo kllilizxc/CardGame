@@ -1,0 +1,52 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(
+    CDPATH= cd -- "$(dirname -- "$0")" && pwd -P
+)
+default_project_root=$(
+    CDPATH= cd -- "$script_dir/../.." && pwd -P
+)
+project_root_input=${HOPI_PROJECT_ROOT:-$default_project_root}
+project_root=$(
+    CDPATH= cd -- "$project_root_input" && pwd -P
+)
+
+if [ ! -f "$project_root/package.json" ]; then
+    echo "HOPI prepare error: package.json not found under $project_root" >&2
+    exit 1
+fi
+
+if ! command -v bun >/dev/null 2>&1; then
+    echo "HOPI prepare error: bun is required but was not found in PATH" >&2
+    exit 127
+fi
+
+tmp_dir=
+bun_cache_dir=
+if [ -n "${HOPI_RUN_SCRATCH:-}" ]; then
+    tmp_dir=$HOPI_RUN_SCRATCH/tmp
+    bun_cache_dir=$HOPI_RUN_SCRATCH/bun-install-cache
+    mkdir -p -- "$tmp_dir" "$bun_cache_dir"
+    export TMPDIR=$tmp_dir
+    export BUN_TMPDIR=$tmp_dir
+fi
+
+local_vite=$project_root/node_modules/.bin/vite
+if [ -x "$local_vite" ]; then
+    echo "HOPI prepare: existing Bun dependencies are ready." >&2
+    exit 0
+fi
+
+echo "HOPI prepare: installing project dependencies with bun install --frozen-lockfile" >&2
+cd -- "$project_root"
+if [ -n "$bun_cache_dir" ]; then
+    bun install --frozen-lockfile --cache-dir "$bun_cache_dir"
+else
+    bun install --frozen-lockfile
+fi
+
+if [ ! -x "$local_vite" ]; then
+    echo "HOPI prepare error: vite was not installed under $project_root/node_modules/.bin" >&2
+    exit 127
+fi

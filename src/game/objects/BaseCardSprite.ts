@@ -1,5 +1,6 @@
 import { GameObjects } from 'phaser';
 
+import type { CardPreviewMetadata } from '../managers/common/cardPreviewProtocol';
 import { sceneTheme } from '../scenes/shared/sceneTheme';
 import { blendBattleColor, getBattleCardTextStyle } from '../ui/battle/battleTheme';
 
@@ -20,6 +21,7 @@ export abstract class BaseCardSprite extends GameObjects.Container {
     protected originalY: number = 0;
     protected currentDisplayMode: CardDisplayMode = 'field';
     protected isDraggingDisabled: boolean = false;
+    private previewMetadata: CardPreviewMetadata = {};
 
     // 卡牌标准尺寸
     protected readonly CARD_WIDTH = 180;
@@ -193,8 +195,7 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      */
     protected onPointerOver(): void {
         this.background.setStrokeStyle(4, sceneTheme.colors.goldSoft, 0.92);
-        // 只发送预览事件，不改变原卡片的显示模式
-        this.scene.events.emit('showCardPreview', this);
+        this.scene.events.emit('showCardPreview', this, this.getPreviewMetadata());
     }
 
     /**
@@ -261,6 +262,14 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      */
     public getCardBaseScale(): number {
         return this.cardScale;
+    }
+
+    public setPreviewMetadata(metadata: CardPreviewMetadata): void {
+        this.previewMetadata = { ...metadata };
+    }
+
+    public getPreviewMetadata(): CardPreviewMetadata {
+        return { ...this.previewMetadata };
     }
 
     /**

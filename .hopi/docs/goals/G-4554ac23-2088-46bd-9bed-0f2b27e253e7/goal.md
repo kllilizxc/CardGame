@@ -1,10 +1,10 @@
 ---
 id: G-4554ac23-2088-46bd-9bed-0f2b27e253e7
 title: 尽量还原参考图的卡组管理界面
-lifecycle: active
+lifecycle: done
 priority: 0
 contractRevision: 1
-completionAttentionId: null
+completionAttentionId: A-G-4554ac23-2088-46bd-9bed-0f2b27e253e7-completion
 ---
 ## Objective
 

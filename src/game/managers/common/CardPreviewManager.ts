@@ -1,137 +1,316 @@
 import type { Scene } from 'phaser';
-import { CardSpriteFactory } from '../../factories/CardSpriteFactory';
+
 import type { BaseCardSprite } from '../../objects/BaseCardSprite';
+import { CardSpriteFactory } from '../../factories/CardSpriteFactory';
 import { battleTheme, blendBattleColor } from '../../ui/battle/battleTheme';
 import { getSceneTextStyle, sceneTheme } from '../../scenes/shared/sceneTheme';
+import {
+    CardPreviewSession,
+    DEFAULT_CARD_PREVIEW_TITLE,
+    type ActiveCardPreview,
+    type CardPreviewMetadata,
+    type PreviewCardData,
+} from './cardPreviewProtocol';
 
-/**
- * 卡牌预览管理器
- * 负责显示卡牌的放大预览
- */
+interface CardPreviewDisplayRequest extends CardPreviewMetadata {
+    card?: BaseCardSprite;
+    cardData?: PreviewCardData;
+}
+
 export class CardPreviewManager {
-    private scene: Scene;
-    private cardPreview: Phaser.GameObjects.Container | null = null;
+    private readonly scene: Scene;
+    private readonly session = new CardPreviewSession();
+    private host!: Phaser.GameObjects.Container;
+    private cardLayer!: Phaser.GameObjects.Container;
+    private titleText!: Phaser.GameObjects.Text;
+    private sourceText!: Phaser.GameObjects.Text;
+    private previewCard: BaseCardSprite | null = null;
+    private previewWidth = 0;
+    private previewHeight = 0;
+    private escHandler?: () => void;
+    private isDestroyed = false;
 
     constructor(scene: Scene) {
         this.scene = scene;
+        this.createHost();
+        this.registerCloseBehavior();
+        this.scene.events.once('shutdown', () => this.destroy());
+        this.scene.events.once('destroy', () => this.destroy());
     }
 
-    /**
-     * 显示卡牌预览
-     */
-    public showFromSprite(card: BaseCardSprite): void {
-        const cardData = card.getCardData();
-        this.showFromData(cardData);
+    public showFromSprite(card: BaseCardSprite, metadata: CardPreviewMetadata = {}): void {
+        this.show({
+            card,
+            ...metadata,
+        });
     }
 
-    /**
-     * 从卡牌数据显示预览
-     */
-    public showFromData(cardData: any): void {
-        // 先隐藏旧的预览
-        this.hide();
+    public showFromData(cardData: PreviewCardData, metadata: CardPreviewMetadata = {}): void {
+        this.show({
+            cardData,
+            ...metadata,
+        });
+    }
 
-        const battleScene = this.scene as any;
-        const layout = battleScene.layout;
-        
-        // 使用布局配置的位置，如果没有则使用默认值
-        const previewX = layout?.cardPreview?.x ?? this.scene.scale.width * 0.15;
-        const previewY = layout?.cardPreview?.y ?? this.scene.scale.height * 0.5;
-        const previewWidth = Math.min(layout?.cardPreview?.width ?? 372, 392);
-        const previewHeight = Math.min(layout?.cardPreview?.height ?? 500, 520);
-        const previewScale = 1.32;
-
-        // 使用工厂创建预览卡片
-        const previewCard = CardSpriteFactory.createSprite(this.scene, cardData, 0, 0, 1);
-        if (!previewCard) {
-            return; // 不支持的卡牌类型
+    public clear(): void {
+        if (!this.session.clear()) {
+            return;
         }
 
-        // 设置为 hover 模式，显示完整信息包括描述
+        this.hide();
+    }
+
+    public clearContext(contextId: string): void {
+        if (!this.session.clearContext(contextId)) {
+            return;
+        }
+
+        this.hide();
+    }
+
+    public destroy(): void {
+        if (this.isDestroyed) {
+            return;
+        }
+
+        this.isDestroyed = true;
+        this.scene.tweens.killTweensOf(this.host);
+        this.scene.tweens.killTweensOf(this.cardLayer);
+        this.session.clear();
+
+        if (this.escHandler) {
+            this.scene.input.keyboard?.off('keydown-ESC', this.escHandler);
+            this.escHandler = undefined;
+        }
+
+        this.destroyPreviewCard();
+        this.host.destroy();
+    }
+
+    private show(request: CardPreviewDisplayRequest): void {
+        if (this.isDestroyed) {
+            return;
+        }
+
+        const cardData = request.cardData ?? (request.card?.getCardData() as PreviewCardData | undefined);
+        if (!cardData) {
+            return;
+        }
+
+        const activePreview = this.session.open({
+            cardData,
+            contextId: request.contextId,
+            sourceLabel: request.sourceLabel,
+            title: request.title,
+        });
+
+        this.render(activePreview);
+    }
+
+    private render(activePreview: ActiveCardPreview): void {
+        this.scene.tweens.killTweensOf(this.host);
+        this.scene.tweens.killTweensOf(this.cardLayer);
+
+        this.titleText.setText(activePreview.title);
+        this.sourceText.setText(`来源：${activePreview.sourceLabel}`);
+
+        if (!this.replacePreviewCard(activePreview.cardData)) {
+            this.session.clear();
+            this.hide(true);
+            return;
+        }
+
+        this.host.setVisible(true);
+        this.cardLayer.setAlpha(0);
+        this.scene.tweens.add({
+            targets: this.cardLayer,
+            alpha: 1,
+            duration: 120,
+            ease: 'Power2',
+        });
+
+        if (this.host.alpha < 1) {
+            this.host.setAlpha(0);
+            this.scene.tweens.add({
+                targets: this.host,
+                alpha: 1,
+                duration: 150,
+                ease: 'Power2',
+            });
+        } else {
+            this.host.setAlpha(1);
+        }
+    }
+
+    private hide(immediate: boolean = false): void {
+        if (immediate || !this.host.visible) {
+            this.scene.tweens.killTweensOf(this.host);
+            this.scene.tweens.killTweensOf(this.cardLayer);
+            this.host.setAlpha(0);
+            this.host.setVisible(false);
+            this.destroyPreviewCard();
+            return;
+        }
+
+        this.scene.tweens.killTweensOf(this.host);
+        this.scene.tweens.add({
+            targets: this.host,
+            alpha: 0,
+            duration: 100,
+            ease: 'Power2',
+            onComplete: () => {
+                if (this.session.getActive()) {
+                    return;
+                }
+
+                this.host.setVisible(false);
+                this.destroyPreviewCard();
+            },
+        });
+    }
+
+    private replacePreviewCard(cardData: PreviewCardData): boolean {
+        this.destroyPreviewCard();
+
+        const previewCard = CardSpriteFactory.createSprite(this.scene, cardData, 0, 26, 1);
+        if (!previewCard) {
+            return false;
+        }
+
+        const availableHeight = this.previewHeight - 192;
+        const previewScale = Math.min(1.32, Math.max(1, availableHeight / 260));
+
         previewCard.setDisplayMode('hover');
         previewCard.disableDragging();
         previewCard.disableInteractive();
         previewCard.setScale(previewScale);
 
-        // 创建预览容器
-        this.cardPreview = this.scene.add.container(previewX, previewY);
-        // 使用布局配置的深度
-        const depth = layout?.depth?.cardPreview ?? 6000;
-        this.cardPreview.setDepth(depth);
+        this.cardLayer.add(previewCard);
+        this.previewCard = previewCard;
 
-        const shadow = this.scene.add.rectangle(8, 10, previewWidth, previewHeight, sceneTheme.colors.shadow, 0.24);
-        const outer = this.scene.add.rectangle(0, 0, previewWidth, previewHeight, sceneTheme.colors.panel, 0.96);
+        return true;
+    }
+
+    private destroyPreviewCard(): void {
+        if (!this.previewCard) {
+            return;
+        }
+
+        this.previewCard.destroy();
+        this.previewCard = null;
+    }
+
+    private createHost(): void {
+        const battleScene = this.scene as Scene & {
+            layout?: {
+                cardPreview?: { x?: number; y?: number; width?: number; height?: number };
+                depth?: { cardPreview?: number };
+            };
+        };
+        const layout = battleScene.layout;
+        const previewX = layout?.cardPreview?.x ?? this.scene.scale.width * 0.15;
+        const previewY = layout?.cardPreview?.y ?? this.scene.scale.height * 0.5;
+
+        this.previewWidth = Math.min(layout?.cardPreview?.width ?? 392, 420);
+        this.previewHeight = Math.min(layout?.cardPreview?.height ?? 520, 560);
+
+        this.host = this.scene.add.container(previewX, previewY);
+        this.host.setDepth((layout?.depth?.cardPreview ?? 6100));
+        this.host.setVisible(false);
+        this.host.setAlpha(0);
+
+        const shadow = this.scene.add.rectangle(8, 10, this.previewWidth, this.previewHeight, sceneTheme.colors.shadow, 0.24);
+        const outer = this.scene.add.rectangle(0, 0, this.previewWidth, this.previewHeight, sceneTheme.colors.panel, 0.96);
         outer.setStrokeStyle(3, sceneTheme.colors.gold, 0.68);
         const inner = this.scene.add.rectangle(
             0,
-            14,
-            previewWidth - 24,
-            previewHeight - 38,
+            22,
+            this.previewWidth - 24,
+            this.previewHeight - 54,
             blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jade, 0.08),
             0.96,
         );
         inner.setStrokeStyle(1, sceneTheme.colors.jadeBright, 0.22);
         const banner = this.scene.add.rectangle(
             0,
-            -previewHeight / 2 + 38,
-            previewWidth - 32,
-            48,
+            -this.previewHeight / 2 + 54,
+            this.previewWidth - 32,
+            88,
             blendBattleColor(sceneTheme.colors.banner, sceneTheme.colors.gold, 0.14),
             0.9,
         );
         banner.setStrokeStyle(1, sceneTheme.colors.goldSoft, 0.26);
-        const title = this.scene.add.text(
-            0,
-            -previewHeight / 2 + 38,
-            '卡牌预览',
+
+        this.titleText = this.scene.add.text(
+            -this.previewWidth / 2 + 22,
+            -this.previewHeight / 2 + 36,
+            DEFAULT_CARD_PREVIEW_TITLE,
             getSceneTextStyle('panelTitle', {
-                fontSize: '28px',
+                fontSize: '26px',
+                color: battleTheme.colors.textPrimary,
+            }),
+        ).setOrigin(0, 0.5);
+
+        this.sourceText = this.scene.add.text(
+            -this.previewWidth / 2 + 22,
+            -this.previewHeight / 2 + 72,
+            '来源：战场卡牌',
+            getSceneTextStyle('support', {
+                fontSize: '17px',
+                color: battleTheme.colors.textSupport,
+            }),
+        ).setOrigin(0, 0.5);
+
+        const closeButton = this.scene.add.rectangle(
+            this.previewWidth / 2 - 58,
+            -this.previewHeight / 2 + 38,
+            88,
+            34,
+            blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.gold, 0.18),
+            0.96,
+        );
+        closeButton.setStrokeStyle(1, sceneTheme.colors.goldSoft, 0.42);
+        closeButton.setInteractive({ useHandCursor: true });
+        closeButton.on('pointerover', () => {
+            closeButton.setFillStyle(blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.gold, 0.28), 1);
+        });
+        closeButton.on('pointerout', () => {
+            closeButton.setFillStyle(blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.gold, 0.18), 0.96);
+        });
+        closeButton.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            pointer.event?.stopPropagation();
+            this.clear();
+        });
+
+        const closeLabel = this.scene.add.text(
+            closeButton.x,
+            closeButton.y,
+            '收起',
+            getSceneTextStyle('support', {
+                fontSize: '16px',
                 color: battleTheme.colors.textPrimary,
             }),
         ).setOrigin(0.5);
 
-        this.cardPreview.add([shadow, outer, inner, banner, title]);
+        this.cardLayer = this.scene.add.container(0, 34);
 
-        // 添加克隆的卡片
-        this.cardPreview.add(previewCard);
-        this.cardPreview.setAlpha(0);
-        this.scene.tweens.add({
-            targets: this.cardPreview,
-            alpha: 1,
-            duration: 150,
-            ease: 'Power2'
-        });
+        this.host.add([
+            shadow,
+            outer,
+            inner,
+            banner,
+            this.titleText,
+            this.sourceText,
+            closeButton,
+            closeLabel,
+            this.cardLayer,
+        ]);
     }
 
-    /**
-     * 隐藏卡牌预览
-     */
-    public hide(): void {
-        if (this.cardPreview) {
-            // 保存当前预览的引用
-            const previewToHide = this.cardPreview;
-            // 立即清空引用，避免竞态条件
-            this.cardPreview = null;
-            
-            // 停止该容器上的所有动画
-            this.scene.tweens.killTweensOf(previewToHide);
-            
-            // 淡出并销毁
-            this.scene.tweens.add({
-                targets: previewToHide,
-                alpha: 0,
-                duration: 100,
-                onComplete: () => {
-                    previewToHide.destroy();
-                }
-            });
-        }
-    }
-
-    /**
-     * 销毁
-     */
-    public destroy(): void {
-        this.hide();
+    private registerCloseBehavior(): void {
+        this.escHandler = () => {
+            this.clear();
+        };
+        this.scene.input.keyboard?.on('keydown-ESC', this.escHandler);
     }
 }

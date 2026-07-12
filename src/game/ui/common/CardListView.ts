@@ -21,6 +21,8 @@ type ListCardSprite = CardSprite | ArtifactSprite | TalismanSprite | FieldSprite
  * 用于展示卡组、弃牌堆等卡片列表
  */
 export class CardListView extends GameObjects.Container {
+    private static nextPreviewContextId = 1;
+
     private title: string;
     private cards: ListCard[];
     private background!: GameObjects.Rectangle;
@@ -44,12 +46,17 @@ export class CardListView extends GameObjects.Container {
     private pointerMoveHandler?: (pointer: Phaser.Input.Pointer) => void;
     private pointerUpHandler?: () => void;
     private escHandler?: () => void;
+    private readonly previewContextId: string;
+    private readonly previewSourceLabel: string;
+    private isClosed = false;
 
     constructor(scene: Scene, title: string, cards: ListCard[]) {
         super(scene, 0, 0);
 
         this.title = title;
         this.cards = cards;
+        this.previewContextId = `card-list-${CardListView.nextPreviewContextId++}`;
+        this.previewSourceLabel = title === '弃牌堆' ? '弃牌堆浏览' : '卡组浏览';
 
         this.createView();
         this.setupInteraction();
@@ -183,6 +190,10 @@ export class CardListView extends GameObjects.Container {
 
             sprite.disableDragging();
             sprite.setDisplayMode('deck');
+            sprite.setPreviewMetadata({
+                contextId: this.previewContextId,
+                sourceLabel: this.previewSourceLabel,
+            });
 
             this.scrollContainer.add(sprite);
             this.cardSprites.push(sprite);
@@ -229,6 +240,13 @@ export class CardListView extends GameObjects.Container {
     }
 
     private close(): void {
+        if (this.isClosed) {
+            return;
+        }
+
+        this.isClosed = true;
+        this.scene.events.emit('clearCardPreviewContext', this.previewContextId);
+
         if (this.wheelHandler) {
             this.scene.input.off('wheel', this.wheelHandler);
             this.wheelHandler = undefined;
