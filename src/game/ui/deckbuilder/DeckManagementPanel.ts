@@ -33,6 +33,14 @@ import {
 } from '../common/NativeTextEntryOverlay';
 import { expeditionUiTheme } from '../common/expeditionUiTheme';
 import type { EntryPanelFrame, EntryPanelFrameProvider } from '../expedition/EntryPanelFrame';
+import {
+    computeDeckManagementPanelLayout,
+    createDeckManagementPanelFrame,
+} from './DeckManagementLayout';
+import {
+    buildDeckManagementPresentationViewModel,
+    getDeckManagementSection,
+} from './DeckManagementPresentation';
 
 export interface DeckManagementPanelConfig {
     stash: PersistentStash;
@@ -2760,16 +2768,12 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
 
     private createPanel(): void {
         const { width, height } = this.scene.scale;
-        const panelWidth = Math.min(1460, width * 0.984);
-        const panelHeight = Math.min(920, height * 0.96);
-        const panelX = width / 2;
-        const panelY = height / 2 + 12;
-        this.panelFrame = {
-            panelX,
-            panelY,
-            panelWidth,
-            panelHeight,
-        };
+        this.panelFrame = createDeckManagementPanelFrame(width, height);
+        const layout = computeDeckManagementPanelLayout(this.panelFrame);
+        const panelWidth = this.panelFrame.panelWidth;
+        const panelHeight = this.panelFrame.panelHeight;
+        const panelX = this.panelFrame.panelX;
+        const panelY = this.panelFrame.panelY;
 
         const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, expeditionUiTheme.colors.overlay, 0.82);
         overlay.setInteractive();
@@ -2777,14 +2781,11 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, PANEL_FILL, 0.98);
         panel.setStrokeStyle(2, PANEL_ACCENT, 0.82);
 
-        const panelLeft = panelX - panelWidth / 2;
-        const panelRight = panelX + panelWidth / 2;
-        const panelTop = panelY - panelHeight / 2;
-        const panelBottom = panelY + panelHeight / 2;
-        const keyboardGuideWidth = Math.min(428, Math.max(336, panelWidth * 0.28));
-        const keyboardGuideHeight = FOOTER_GUIDE_HEIGHT;
-        const footerY = panelBottom - 20;
-        const keyboardGuideLeft = panelRight - 22 - keyboardGuideWidth;
+        const panelRight = layout.panelBounds.right;
+        const keyboardGuideWidth = layout.keyboardGuide.width;
+        const keyboardGuideHeight = layout.keyboardGuide.height;
+        const footerY = layout.keyboardGuide.centerY;
+        const keyboardGuideLeft = layout.keyboardGuide.left;
         this.keyboardGuideBg = this.scene.add.rectangle(
             keyboardGuideLeft + keyboardGuideWidth / 2,
             footerY,
@@ -2829,37 +2830,31 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         this.keyboardGuidePillBg = keyboardGuidePillBg;
         this.keyboardGuidePillText = keyboardGuidePillText;
 
-        const contentY = panelTop + 16;
-        const contentBottom = footerY - keyboardGuideHeight / 2 - 10;
-        const contentH = contentBottom - contentY;
-
-        const columnGap = 8;
-        const leftColX = panelLeft + 18;
-        const contentWidth = panelWidth - 36;
-        const rightColW = Math.max(320, Math.min(360, Math.floor(contentWidth * 0.24)));
-        const leftWorkspaceW = contentWidth - rightColW - columnGap;
-        const rightColX = leftColX + leftWorkspaceW + columnGap;
-        const leftWorkspaceInnerX = leftColX + 10;
-        const leftWorkspaceInnerY = contentY + 8;
-        const leftWorkspaceInnerW = leftWorkspaceW - 20;
-        const leftWorkspaceInnerH = contentH - 14;
-        const editorW = leftWorkspaceInnerW;
-        const editorX = leftWorkspaceInnerX;
-
         this.add([
             overlay,
             panel,
         ]);
 
         this.add(this.createWorkspaceShell(
-            leftColX,
-            contentY,
-            leftWorkspaceW,
-            contentH,
+            layout.leftWorkspace.x,
+            layout.leftWorkspace.y,
+            layout.leftWorkspace.width,
+            layout.leftWorkspace.height,
             PANEL_ACCENT,
         ));
-        this.createEditorColumn(editorX, leftWorkspaceInnerY, editorW, leftWorkspaceInnerH, { embedded: true });
-        this.createBrowserColumn(rightColX, contentY, rightColW, contentH);
+        this.createEditorColumn(
+            layout.editor.x,
+            layout.editor.y,
+            layout.editor.width,
+            layout.editor.height,
+            { embedded: true },
+        );
+        this.createBrowserColumn(
+            layout.browser.x,
+            layout.browser.y,
+            layout.browser.width,
+            layout.browser.height,
+        );
         this.add([
             this.keyboardGuideBg,
             this.keyboardGuideAccent,
@@ -3574,6 +3569,18 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         const decks = this.stash.savedDecks;
         const selectedDeckIndex = Math.max(0, decks.findIndex((candidate) => candidate.id === deck.id));
         const summarySnapshot = buildDeckRosterSnapshot(deck, summary, this.config.metadata);
+        const deckPresentation = buildDeckManagementPresentationViewModel(
+            deck,
+            this.stash.cards,
+            this.config.metadata,
+        );
+        const mainSection = getDeckManagementSection(deckPresentation, 'main');
+        const extraSection = getDeckManagementSection(deckPresentation, 'extra');
+        const sectionSummaryLabel = joinPreviewFacts([
+            `${mainSection.label} ${mainSection.count} 张`,
+            `${extraSection.label} ${extraSection.count} 张`,
+            `${deckPresentation.totalEntryCount} 个条目`,
+        ], 56) ?? `${mainSection.label} ${mainSection.count} 张`;
         const capacity = summarizeDeckCapacity(deck.cards);
         const capacityAccentColor = getDeckCapacityAccentColor(capacity);
         const capacityTextColor = getDeckCapacityTextColor(capacity);
@@ -4345,7 +4352,7 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
 
         let cardListTitle: GameObjects.Text | null = null;
         if (compactSummaryMetrics) {
-            cardListTitle = this.scene.add.text(localX + 2, listTop - 11, `当前卡牌（在这里移除） · ${deck.cards.length} 个条目`, {
+            cardListTitle = this.scene.add.text(localX + 2, listTop - 11, `当前卡牌（在这里移除） · ${sectionSummaryLabel}`, {
                 fontFamily: expeditionUiTheme.fonts.ui,
                 fontSize: '9px',
                 color: '#bca785',
@@ -4355,7 +4362,7 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
             this.editorContainer.add(cardListTitle);
         } else {
             const listHeaderDivider = this.scene.add.rectangle(summaryW / 2, listHeaderY + 12, summaryW - 4, 1, summary.accentColor, 0.1);
-            cardListTitle = this.scene.add.text(localX, listHeaderY - 1, `当前卡牌（在这里移除） · ${deck.cards.length} 个条目`, {
+            cardListTitle = this.scene.add.text(localX, listHeaderY - 1, `当前卡牌（在这里移除） · ${sectionSummaryLabel}`, {
                 fontFamily: expeditionUiTheme.fonts.ui,
                 fontSize: '18px',
                 color: '#bca785',
