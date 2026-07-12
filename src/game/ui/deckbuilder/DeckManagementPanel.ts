@@ -743,7 +743,7 @@ function createKeyboardGuideCopy(
                 fillColor: 0x1f1732,
                 accentColor: PANEL_ACCENT,
                 headline: `键盘焦点：${getKeyboardZoneLabel(zone)}`,
-                detail: '↑↓ 浏览卡牌 · ←→ 切换焦点 · Enter 移除 1 · X 清空整格 · I 检视当前焦点',
+                detail: '↑↓ 按行切换 · ←→ 切换焦点 · Enter 移除 1 · X 清空整格 · I 检视当前焦点',
                 headlineColor: '#ede9fe',
                 detailColor: '#ddd6fe',
             };
@@ -752,7 +752,7 @@ function createKeyboardGuideCopy(
                 fillColor: 0x10251a,
                 accentColor: VALID_ACCENT,
                 headline: `键盘焦点：${getKeyboardZoneLabel(zone)}`,
-                detail: '↑↓ 浏览条目 · Enter 加入 1 · F 一键加满 · / 搜索 · K/H/S/D 调整 · I 检视',
+                detail: '↑↓ 按行浏览 · ←→ 换列 · Enter 加入 1 · F 一键加满 · / 搜索 · K/H/S/D 调整 · I 检视',
                 headlineColor: '#dcfce7',
                 detailColor: '#e6f3ea',
             };
@@ -1166,7 +1166,7 @@ function createReturnCtaState(summary: DeckStatusSummary): ReturnCtaState {
         buttonHoverFillColor: BUTTON_NEUTRAL_HOVER_FILL,
         buttonStrokeColor: 0x86efac,
         buttonTextColor: '#dcfce7',
-        buttonStatusLabel: '当前卡组已就绪',
+        buttonStatusLabel: '已可直接返回',
         summaryLabel: `当前卡组：${summary.count} 张 · 已满足 20-40 张`,
     };
 }
@@ -1186,6 +1186,7 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     private editorVisibleRows = 1;
     private browserVisibleRows = 1;
     private editorGridColumns = 1;
+    private browserGridColumns = 1;
 
     private filterQuery = '';
     private filterHideZero = true;
@@ -1200,7 +1201,7 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     private namingInputText?: GameObjects.Text;
 
     private searchFocus = false;
-    private detailPaneExpanded = true;
+    private detailPaneExpanded = false;
     private keyboardZone: DeckbuilderKeyboardZone = 'decks';
 
     private browserStateText?: GameObjects.Text;
@@ -1543,30 +1544,57 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         return previousOffset !== this.deckListScrollOffset;
     }
 
+    private buildEditorPresentation(deck: SavedDeck): ReturnType<typeof buildDeckManagementPresentationViewModel> {
+        return buildDeckManagementPresentationViewModel(
+            deck,
+            this.stash.cards,
+            this.config.metadata,
+        );
+    }
+
+    private getEditorDisplayCardIds(deck: SavedDeck | null = this.getSelectedDeck()): string[] {
+        if (!deck) {
+            return [];
+        }
+
+        const presentation = this.buildEditorPresentation(deck);
+        const ids: string[] = [];
+
+        presentation.sections.forEach((section) => {
+            section.tiles.forEach((tile) => {
+                ids.push(tile.id);
+            });
+        });
+
+        return ids;
+    }
+
     private getFocusedEditorIndex(deck: SavedDeck | null = this.getSelectedDeck()): number {
-        if (!deck || deck.cards.length === 0) {
+        const visibleCardIds = this.getEditorDisplayCardIds(deck);
+        if (visibleCardIds.length === 0) {
             return -1;
         }
 
-        const focusedIndex = deck.cards.findIndex((stack) => stack.id === this.detailCardId);
+        const focusedIndex = visibleCardIds.findIndex((cardId) => cardId === this.detailCardId);
         return focusedIndex >= 0 ? focusedIndex : 0;
     }
 
     private focusEditorIndex(index: number, animate = true): void {
         const deck = this.getSelectedDeck();
-        if (!deck || deck.cards.length === 0) {
+        const visibleCardIds = this.getEditorDisplayCardIds(deck);
+        if (!deck || visibleCardIds.length === 0) {
             return;
         }
 
-        const clampedIndex = clampNumber(index, 0, deck.cards.length - 1);
-        const nextCardId = deck.cards[clampedIndex]?.id;
+        const clampedIndex = clampNumber(index, 0, visibleCardIds.length - 1);
+        const nextCardId = visibleCardIds[clampedIndex];
         if (!nextCardId) {
             return;
         }
 
         const gridColumns = Math.max(1, this.editorGridColumns);
         const focusedRow = Math.floor(clampedIndex / gridColumns);
-        const maxOffset = Math.max(0, Math.ceil(deck.cards.length / gridColumns) - this.editorVisibleRows);
+        const maxOffset = Math.max(0, Math.ceil(visibleCardIds.length / gridColumns) - this.editorVisibleRows);
         const previousOffset = this.editorScrollOffset;
 
         if (focusedRow < this.editorScrollOffset) {
@@ -1647,13 +1675,15 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
             return;
         }
 
-        const maxOffset = Math.max(0, browserRows.length - this.browserVisibleRows);
+        const gridColumns = Math.max(1, this.browserGridColumns);
+        const focusedRow = Math.floor(clampedIndex / gridColumns);
+        const maxOffset = Math.max(0, Math.ceil(browserRows.length / gridColumns) - this.browserVisibleRows);
         const previousOffset = this.browserScrollOffset;
 
-        if (clampedIndex < this.browserScrollOffset) {
-            this.browserScrollOffset = clampedIndex;
-        } else if (clampedIndex >= this.browserScrollOffset + this.browserVisibleRows) {
-            this.browserScrollOffset = clampedIndex - this.browserVisibleRows + 1;
+        if (focusedRow < this.browserScrollOffset) {
+            this.browserScrollOffset = focusedRow;
+        } else if (focusedRow >= this.browserScrollOffset + this.browserVisibleRows) {
+            this.browserScrollOffset = focusedRow - this.browserVisibleRows + 1;
         }
 
         this.browserScrollOffset = clampNumber(this.browserScrollOffset, 0, maxOffset);
@@ -2285,10 +2315,17 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
             }
             case 'browser': {
                 const { rows } = this.buildBrowserCollections();
+                const browserStep = Math.max(1, this.browserGridColumns);
                 if (event.key === 'ArrowUp') {
                     event.preventDefault();
-                    this.focusBrowserIndex(this.getFocusedBrowserIndex(rows) - 1, rows);
+                    this.focusBrowserIndex(this.getFocusedBrowserIndex(rows) - browserStep, rows);
                 } else if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    this.focusBrowserIndex(this.getFocusedBrowserIndex(rows) + browserStep, rows);
+                } else if (event.key === 'ArrowLeft') {
+                    event.preventDefault();
+                    this.focusBrowserIndex(this.getFocusedBrowserIndex(rows) - 1, rows);
+                } else if (event.key === 'ArrowRight') {
                     event.preventDefault();
                     this.focusBrowserIndex(this.getFocusedBrowserIndex(rows) + 1, rows);
                 } else if (event.key === 'Home') {
@@ -2573,7 +2610,8 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
 
     private removeFocusedEditorCard(removeAll = false): void {
         const deck = this.getSelectedDeck();
-        if (!deck || deck.cards.length === 0) {
+        const visibleCardIds = this.getEditorDisplayCardIds(deck);
+        if (!deck || visibleCardIds.length === 0) {
             return;
         }
 
@@ -2582,7 +2620,8 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
             return;
         }
 
-        const stack = deck.cards[focusedIndex];
+        const focusedCardId = visibleCardIds[focusedIndex];
+        const stack = deck.cards.find((candidate) => candidate.id === focusedCardId);
         if (!stack) {
             return;
         }
@@ -3477,219 +3516,147 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         this.namingInputBg = undefined;
         this.namingInputText = undefined;
         this.editorSpotlightRows.clear();
-
         const localX = 0;
-        const summaryW = this.editorContentWidth;
+        const contentW = this.editorContentWidth;
         const contentH = this.editorContentHeight;
         const deck = this.getSelectedDeck();
+        const decks = this.stash.savedDecks;
         const namingActive = this.isDeckNamingActive(deck);
-        const detailExpanded = !namingActive && this.detailPaneExpanded;
-        const compactSummaryMetrics = !namingActive && !detailExpanded && summaryW < COMPACT_EDITOR_BREAKPOINT;
-        const sheetMode = compactSummaryMetrics;
-        const targetSummaryH = namingActive
-            ? 284
-            : detailExpanded
-                ? 360
-                : compactSummaryMetrics
-                    ? 188
-                    : 276;
-        const minSummaryH = namingActive
-            ? 196
-            : detailExpanded
-                ? 320
-                : compactSummaryMetrics
-                    ? 140
-                    : 240;
-        const summaryReserveSpace = namingActive
-            ? 118
-            : detailExpanded
-                ? 180
-                : compactSummaryMetrics
-                    ? 136
-                    : 220;
-        const summaryH = Math.min(targetSummaryH, Math.max(minSummaryH, contentH - summaryReserveSpace));
-        const listHeaderY = sheetMode ? summaryH + 6 : summaryH + 20;
-        const scrollBtnY = contentH - 24;
-        const listTop = sheetMode ? summaryH + 24 : listHeaderY + 34;
-        const listBottom = scrollBtnY - 22;
-        const listH = Math.max(sheetMode ? 160 : 120, listBottom - listTop);
-        const editorRowHeight = sheetMode
-            ? 112
-            : detailExpanded
-                ? EDITOR_ROW_HEIGHT + 4
-                : EDITOR_ROW_HEIGHT;
-        const editorRowGap = sheetMode ? EDITOR_TILE_GAP : detailExpanded ? 8 : 8;
-        const editorRowStride = editorRowHeight + editorRowGap;
-        this.editorGridColumns = sheetMode
-            ? Math.min(
-                2,
-                Math.max(
-                    1,
-                    Math.floor(
-                        (Math.max(summaryW - 8, EDITOR_TILE_MIN_WIDTH) + EDITOR_TILE_GAP)
-                        / (EDITOR_TILE_MIN_WIDTH + EDITOR_TILE_GAP),
-                    ),
-                ),
-            )
-            : 1;
-
-        this.editorArea = {
-            x: this.editorContainer.x,
-            y: this.editorContainer.y + listTop,
-            w: summaryW,
-            h: listH,
-        };
-        this.editorVisibleRows = Math.max(1, Math.floor((listH + editorRowGap) / editorRowStride));
-        this.ensureDetailCardSelection();
         this.deleteDeckBtn = undefined;
         this.deleteDeckLabel = undefined;
+        this.editorScrollOffset = 0;
+        this.editorArea = {
+            x: this.editorContainer.x,
+            y: this.editorContainer.y,
+            w: contentW,
+            h: contentH,
+        };
+        this.editorVisibleRows = 1;
+        this.editorGridColumns = 1;
+
+        const shellBg = this.scene.add.rectangle(localX + contentW / 2, contentH / 2, contentW, contentH, PANEL_DEEP_FILL, 0.98);
+        shellBg.setStrokeStyle(1, blendColor(PANEL_ACCENT, SECTION_BORDER, 0.22), 0.6);
+        this.editorContainer.add(shellBg);
 
         if (!deck) {
-            this.lastEditorFeedback = undefined;
-            const emptyCard = this.scene.add.rectangle(localX + summaryW / 2, 84, summaryW, 168, expeditionUiTheme.colors.panel, 0.98);
-            emptyCard.setStrokeStyle(1, SECTION_BORDER, 0.9);
-            const emptyTitle = this.scene.add.text(localX + summaryW / 2, 62, '先选择一个卡组', {
+            const title = this.scene.add.text(localX + 18, 18, '当前带入卡组', {
                 fontFamily: expeditionUiTheme.fonts.ui,
                 fontSize: '28px',
                 color: '#f3ead3',
                 fontStyle: 'bold',
+            });
+            const subtitle = this.scene.add.text(localX + 18, 52, '先切换卡组，再从右侧加入或在中间移除。当前没有选中的卡组时，可先新建一套。', {
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '18px',
+                color: '#d9c6a2',
+                wordWrap: { width: contentW - 320 },
+            });
+            const createDeckButton = this.createButton(
+                contentW - 148,
+                34,
+                132,
+                SECONDARY_BUTTON_HEIGHT,
+                '新建卡组',
+                BUTTON_PRIMARY_FILL,
+                () => this.createDeck(),
+                false,
+                {
+                    hoverFillColor: BUTTON_PRIMARY_HOVER_FILL,
+                    strokeColor: expeditionUiTheme.colors.goldSoft,
+                    fontSize: '18px',
+                },
+            );
+            const returnButton = this.createButton(
+                contentW - 332,
+                34,
+                176,
+                SECONDARY_BUTTON_HEIGHT,
+                '返回远征准备',
+                BUTTON_ACCENT_FILL,
+                () => {
+                    this.setKeyboardZone('return');
+                    this.config.onClose();
+                },
+                false,
+                {
+                    hoverFillColor: BUTTON_ACCENT_HOVER_FILL,
+                    strokeColor: expeditionUiTheme.colors.goldSoft,
+                    fontSize: '18px',
+                },
+            );
+            const emptyCard = this.scene.add.rectangle(localX + contentW / 2, 236, contentW - 36, 180, expeditionUiTheme.colors.panel, 0.98);
+            emptyCard.setStrokeStyle(1, SECTION_BORDER, 0.92);
+            const emptyTitle = this.scene.add.text(localX + contentW / 2, 210, '还没有保存的卡组', {
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '26px',
+                color: '#f3ead3',
+                fontStyle: 'bold',
             }).setOrigin(0.5);
-            const emptyBody = this.scene.add.text(localX + summaryW / 2, 102, '先切换卡组，再从右侧加入或在中间移除。左侧可以选择已有卡组，或新建一套用于本次远征的配置。', {
+            const emptyBody = this.scene.add.text(localX + contentW / 2, 254, '点上方“新建卡组”，然后在右侧卡池里搜索、筛选并加入卡牌。', {
                 fontFamily: expeditionUiTheme.fonts.ui,
                 fontSize: '18px',
                 color: '#bca785',
                 align: 'center',
-                wordWrap: { width: summaryW - 40 },
+                wordWrap: { width: contentW - 96 },
             }).setOrigin(0.5);
-            this.editorContainer.add([emptyCard, emptyTitle, emptyBody]);
+
+            this.editorContainer.add([
+                title,
+                subtitle,
+                ...returnButton,
+                ...createDeckButton,
+                emptyCard,
+                emptyTitle,
+                emptyBody,
+            ]);
+            this.lastEditorFeedback = undefined;
             return;
         }
 
         const summary = this.getSelectedDeckStatus() ?? summarizeDeckStatus(deck, this.stash.cards);
-        const decks = this.stash.savedDecks;
-        const selectedDeckIndex = Math.max(0, decks.findIndex((candidate) => candidate.id === deck.id));
         const summarySnapshot = buildDeckRosterSnapshot(deck, summary, this.config.metadata);
-        const deckPresentation = buildDeckManagementPresentationViewModel(
-            deck,
-            this.stash.cards,
-            this.config.metadata,
-        );
-        const mainSection = getDeckManagementSection(deckPresentation, 'main');
-        const extraSection = getDeckManagementSection(deckPresentation, 'extra');
-        const sectionSummaryLabel = joinPreviewFacts([
-            `${mainSection.label} ${mainSection.count} 张`,
-            `${extraSection.label} ${extraSection.count} 张`,
-            `${deckPresentation.totalEntryCount} 个条目`,
-        ], 56) ?? `${mainSection.label} ${mainSection.count} 张`;
+        const presentation = this.buildEditorPresentation(deck);
+        const mainSection = getDeckManagementSection(presentation, 'main');
+        const extraSection = getDeckManagementSection(presentation, 'extra');
         const capacity = summarizeDeckCapacity(deck.cards);
         const capacityAccentColor = getDeckCapacityAccentColor(capacity);
         const capacityTextColor = getDeckCapacityTextColor(capacity);
+        const returnCta = createReturnCtaState(summary);
         const readinessTier = getDeckReadinessTier(summary);
-        const previousFeedback = this.lastEditorFeedback;
-        const deckSelectionChanged = this.pendingSelectedDeckMotionId === deck.id;
-        const countChanged = previousFeedback?.deckId === deck.id && previousFeedback.count !== summary.count;
-        const readinessChanged = previousFeedback?.deckId === deck.id && previousFeedback.readinessTier !== readinessTier;
-        const summaryGlow = this.scene.add.rectangle(
-            localX + summaryW / 2,
-            contentH / 2 + 2,
-            summaryW + 4,
-            contentH + 4,
-            summary.accentColor,
-            compactSummaryMetrics ? 0.05 : 0.08,
-        );
-        const summaryCard = this.scene.add.rectangle(
-            localX + summaryW / 2,
-            contentH / 2,
-            summaryW,
-            contentH,
-            PANEL_DEEP_FILL,
-            0.98,
-        );
-        summaryCard.setStrokeStyle(1, blendColor(summary.accentColor, SECTION_BORDER, 0.18), compactSummaryMetrics ? 0.76 : 0.92);
-        const headerSurface = this.scene.add.rectangle(
-            localX + summaryW / 2,
-            summaryH / 2,
-            summaryW - 4,
-            summaryH - 4,
-            compactSummaryMetrics ? expeditionUiTheme.colors.panel : PANEL_DEEPER_FILL,
-            compactSummaryMetrics ? 0.92 : 0.95,
-        );
-        headerSurface.setStrokeStyle(1, blendColor(summary.accentColor, SECTION_BORDER, 0.22), 0.38);
-        const headerSurfaceAccent = this.scene.add.rectangle(
-            localX + 18,
-            18,
-            Math.min(94, summaryW - 40),
-            3,
-            summary.accentColor,
-            0.72,
-        ).setOrigin(0, 0.5);
-        this.editorContainer.add([summaryGlow, summaryCard, headerSurface, headerSurfaceAccent]);
-
-        const detailSurfaceWidth = namingActive
-            ? 0
-            : detailExpanded
-                ? clampNumber(Math.floor(summaryW * 0.3), 288, 320)
-                : 0;
-        const detailPaneX = detailSurfaceWidth > 0
-            ? localX + summaryW - detailSurfaceWidth - 16
-            : localX + summaryW;
-        const detailPaneY = namingActive ? 44 : 28;
-        const leftSummaryW = detailSurfaceWidth > 0
-            ? detailPaneX - (localX + 20) - 14
-            : summaryW - (namingActive ? 32 : 28);
-        const detailSurfacePulseTargets: (TweenableMotionTarget | null | undefined)[] = [];
-
-        const eyebrow = this.scene.add.text(localX + 16, namingActive ? 16 : 74, namingActive
-            ? (this.namingMode === 'create' ? '新卡组命名' : '重命名流程')
-            : '主编辑区', {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: namingActive ? '18px' : '16px',
-            color: '#e8d5ab',
-            fontStyle: 'bold',
-        });
-        this.editorContainer.add(eyebrow);
-
-        let ctaButton: GameObjects.Rectangle | null = null;
-        let ctaLabel: GameObjects.Text | null = null;
-        let returnHintText: GameObjects.Text | null = null;
-        let headerMetaText: GameObjects.Text | null = null;
-        let compactHeaderTextWidth = leftSummaryW;
+        const selectedDeckIndex = Math.max(0, decks.findIndex((candidate) => candidate.id === deck.id));
 
         if (namingActive) {
-            const namingTitle = this.scene.add.text(localX + 16, 38, this.namingMode === 'create' ? '给新卡组起个名字' : '修改卡组名称', {
+            const namingCard = this.scene.add.rectangle(localX + contentW / 2, 170, contentW - 36, 250, expeditionUiTheme.colors.panel, 0.98);
+            namingCard.setStrokeStyle(1, PANEL_ACCENT, 0.9);
+            const title = this.scene.add.text(localX + 18, 20, this.namingMode === 'create' ? '给新卡组起个名字' : '修改卡组名称', {
                 fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '32px',
+                fontSize: '30px',
                 color: '#f3ead3',
                 fontStyle: 'bold',
             });
-            const namingBody = this.scene.add.text(
-                localX + 16,
-                66,
+            const body = this.scene.add.text(
+                localX + 18,
+                58,
                 this.namingMode === 'create'
-                    ? '新卡组已经建好；现在确认一个玩家可见名称，之后随时还能再改。'
-                    : '这里只会修改玩家可见名称，内部保存编号会继续保持稳定。',
+                    ? '新卡组已经创建；输入一个玩家可见名称后会继续留在当前编辑视图。'
+                    : '这里只修改玩家可见名称；内部保存编号保持不变。',
                 {
                     fontFamily: expeditionUiTheme.fonts.ui,
                     fontSize: '18px',
                     color: '#d9c6a2',
-                    wordWrap: { width: summaryW - 32 },
+                    wordWrap: { width: contentW - 48 },
                 },
             );
-            const renameHint = this.scene.add.text(localX + summaryW - 16, 18, '键盘输入 · Enter 确认 · Esc 取消 · 支持输入法 / 粘贴', {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                color: '#f6e2b1',
-            }).setOrigin(1, 0);
+            const inputY = 134;
             const confirmButtonWidth = 148;
             const cancelButtonWidth = this.namingMode === 'create' ? 132 : 112;
-            const namingButtonGap = 12;
-            const inputY = Math.max(122, namingBody.y + namingBody.height + 26);
-            const cancelButtonCenterX = localX + summaryW - 16 - cancelButtonWidth / 2;
-            const confirmButtonCenterX = cancelButtonCenterX - cancelButtonWidth / 2 - namingButtonGap - confirmButtonWidth / 2;
-            const inputWidth = Math.max(220, confirmButtonCenterX - confirmButtonWidth / 2 - (localX + 24));
-            const inputBg = this.scene.add.rectangle(localX + 16 + inputWidth / 2, inputY, inputWidth, 48, expeditionUiTheme.colors.panelInner, 1);
+            const buttonGap = 12;
+            const cancelButtonCenterX = localX + contentW - 24 - cancelButtonWidth / 2;
+            const confirmButtonCenterX = cancelButtonCenterX - cancelButtonWidth / 2 - buttonGap - confirmButtonWidth / 2;
+            const inputWidth = Math.max(280, confirmButtonCenterX - confirmButtonWidth / 2 - (localX + 28));
+            const inputBg = this.scene.add.rectangle(localX + 18 + inputWidth / 2, inputY, inputWidth, 50, expeditionUiTheme.colors.panelInner, 1);
             inputBg.setStrokeStyle(1, PANEL_ACCENT, 0.95);
-            const inputText = this.scene.add.text(localX + 18, inputY, '', {
+            const inputText = this.scene.add.text(localX + 20, inputY, '', {
                 fontFamily: expeditionUiTheme.fonts.mono,
                 fontSize: '20px',
                 color: '#f3ead3',
@@ -3698,17 +3665,16 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
             this.namingInputBg = inputBg;
             this.namingInputText = inputText;
             this.updateNamingTextDisplay();
-            const namingWarning = this.scene.add.text(
-                localX + 16,
-                inputY + 42,
+            const warning = this.scene.add.text(
+                localX + 18,
+                inputY + 44,
                 this.renameBuffer.trim().length > 0
-                    ? (this.namingMode === 'create' ? '确认后会保留这套新卡组，并继续在左侧列表中选中它。' : '确认后会立刻更新左侧列表和远征带入名称。')
+                    ? 'Enter 确认 · Esc 取消；支持输入法与粘贴。'
                     : '请输入至少 1 个字符，或按 Esc 退出本次命名。',
                 {
                     fontFamily: expeditionUiTheme.fonts.ui,
                     fontSize: '18px',
                     color: this.renameBuffer.trim().length > 0 ? '#e8d5ab' : '#fca5a5',
-                    wordWrap: { width: summaryW - 32 },
                 },
             );
             const confirmButton = this.createButton(
@@ -3737,1025 +3703,667 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
                 false,
                 {
                     hoverFillColor: expeditionUiTheme.colors.slate,
-                    strokeColor: 0x94a3b8,
+                    strokeColor: expeditionUiTheme.colors.slate,
                     fontSize: '18px',
                 },
             );
+
             this.editorContainer.add([
-                namingTitle,
-                namingBody,
-                renameHint,
+                namingCard,
+                title,
+                body,
                 inputBg,
                 inputText,
-                namingWarning,
+                warning,
                 ...confirmButton,
                 ...cancelButton,
             ]);
             this.syncNamingTextEntry();
-        } else {
-            this.nativeTextEntry.deactivate(DECK_NAMING_TEXT_ENTRY_SESSION_ID);
-            eyebrow.setText('当前带入卡组');
-            eyebrow.setPosition(localX + 20, compactSummaryMetrics ? 12 : 14);
-            const titleBarAccent = this.scene.add.rectangle(localX + 14, 14, 4, 12, summary.accentColor, 0.9).setOrigin(0, 0.5);
-            const titleDivider = this.scene.add.rectangle(
-                localX + summaryW / 2,
-                compactSummaryMetrics ? 26 : 28,
-                summaryW - 16,
-                1,
-                blendColor(summary.accentColor, SECTION_BORDER, 0.22),
-                compactSummaryMetrics ? 0.26 : 0.34,
-            );
-            const returnCta = createReturnCtaState(summary);
-            const actionButtonGap = 10;
-            const actionButtonY = 34;
-            const returnButtonWidth = compactSummaryMetrics ? 0 : 196;
-            const inspectButtonWidth = compactSummaryMetrics ? 132 : 0;
-            const deleteButtonWidth = 144;
-            const renameButtonWidth = 92;
-            const newDeckButtonWidth = 108;
-            const deckStepButtonWidth = compactSummaryMetrics && decks.length > 1 ? SECONDARY_BUTTON_HEIGHT : 0;
-            let actionCursorRight = localX + summaryW - 16;
-            const placeActionButton = (width: number): number => {
-                const centerX = actionCursorRight - width / 2;
-                actionCursorRight = centerX - width / 2 - actionButtonGap;
-                return centerX;
-            };
-
-            const returnButtonCenterX = returnButtonWidth > 0 ? placeActionButton(returnButtonWidth) : null;
-            const inspectButtonCenterX = compactSummaryMetrics ? placeActionButton(inspectButtonWidth) : null;
-            const deleteButtonCenterX = placeActionButton(deleteButtonWidth);
-            const renameButtonCenterX = placeActionButton(renameButtonWidth);
-            const newDeckButtonCenterX = placeActionButton(newDeckButtonWidth);
-            const nextDeckButtonCenterX = deckStepButtonWidth > 0 ? placeActionButton(deckStepButtonWidth) : null;
-            const prevDeckButtonCenterX = deckStepButtonWidth > 0 ? placeActionButton(deckStepButtonWidth) : null;
-            compactHeaderTextWidth = compactSummaryMetrics
-                ? Math.max(240, actionCursorRight - (localX + 20))
-                : leftSummaryW;
-            const newDeckButton = this.createButton(
-                newDeckButtonCenterX,
-                actionButtonY,
-                newDeckButtonWidth,
-                SECONDARY_BUTTON_HEIGHT,
-                '新建卡组',
-                BUTTON_PRIMARY_FILL,
-                () => this.createDeck(),
-                false,
-                {
-                    hoverFillColor: BUTTON_PRIMARY_HOVER_FILL,
-                    strokeColor: expeditionUiTheme.colors.goldSoft,
-                    fontSize: '18px',
-                },
-            );
-            const renameButton = this.createButton(
-                renameButtonCenterX,
-                actionButtonY,
-                renameButtonWidth,
-                SECONDARY_BUTTON_HEIGHT,
-                '重命名',
-                expeditionUiTheme.colors.panel,
-                () => this.beginRenameSelectedDeck(),
-                false,
-                {
-                    hoverFillColor: expeditionUiTheme.colors.panelInner,
-                    strokeColor: 0xe2e8f0,
-                    fontSize: '18px',
-                },
-            );
-            const [deleteDeckButton, deleteDeckLabel] = this.createButton(
-                deleteButtonCenterX,
-                actionButtonY,
-                deleteButtonWidth,
-                SECONDARY_BUTTON_HEIGHT,
-                '删除卡组',
-                0xb91c1c,
-                () => this.showDeleteConfirmation(),
-                false,
-                {
-                    hoverFillColor: 0xdc2626,
-                    strokeColor: 0xfca5a5,
-                    fontSize: '18px',
-                },
-            );
-            this.deleteDeckBtn = deleteDeckButton;
-            this.deleteDeckLabel = deleteDeckLabel;
-            const prevDeckButton = deckStepButtonWidth > 0 && prevDeckButtonCenterX !== null
-                ? this.createButton(
-                    prevDeckButtonCenterX,
-                    actionButtonY,
-                    deckStepButtonWidth,
-                    SECONDARY_BUTTON_HEIGHT,
-                    '‹',
-                    BUTTON_NEUTRAL_FILL,
-                    () => this.focusNextDeck(-1),
-                    selectedDeckIndex <= 0,
-                    {
-                        hoverFillColor: BUTTON_NEUTRAL_HOVER_FILL,
-                        strokeColor: expeditionUiTheme.colors.slate,
-                        fontSize: '18px',
-                    },
-                )
-                : null;
-            const nextDeckButton = deckStepButtonWidth > 0 && nextDeckButtonCenterX !== null
-                ? this.createButton(
-                    nextDeckButtonCenterX,
-                    actionButtonY,
-                    deckStepButtonWidth,
-                    SECONDARY_BUTTON_HEIGHT,
-                    '›',
-                    BUTTON_NEUTRAL_FILL,
-                    () => this.focusNextDeck(1),
-                    selectedDeckIndex >= decks.length - 1,
-                    {
-                        hoverFillColor: BUTTON_NEUTRAL_HOVER_FILL,
-                        strokeColor: expeditionUiTheme.colors.slate,
-                        fontSize: '18px',
-                    },
-                )
-                : null;
-            const inspectFocusAction = compactSummaryMetrics && inspectButtonCenterX !== null
-                ? this.createButton(
-                    inspectButtonCenterX,
-                    actionButtonY,
-                    inspectButtonWidth,
-                    SECONDARY_BUTTON_HEIGHT,
-                    '查看当前焦点',
-                    expeditionUiTheme.colors.panel,
-                    () => {
-                        this.setKeyboardZone('editor');
-                        this.toggleDetailPane(true);
-                    },
-                    false,
-                    {
-                        hoverFillColor: BUTTON_NEUTRAL_HOVER_FILL,
-                        strokeColor: expeditionUiTheme.colors.slate,
-                        fontSize: '18px',
-                    },
-                )
-                : null;
-            let compactReturnSummaryText: GameObjects.Text | null = null;
-            let compactReturnButton: [GameObjects.Rectangle, GameObjects.Text] | null = null;
-            if (!compactSummaryMetrics && returnButtonCenterX !== null) {
-                ctaButton = this.scene.add.rectangle(
-                    returnButtonCenterX,
-                    actionButtonY,
-                    returnButtonWidth,
-                    PRIMARY_BUTTON_HEIGHT,
-                    returnCta.buttonFillColor,
-                    1,
-                );
-                ctaButton.setStrokeStyle(this.keyboardZone === 'return' ? 2 : 1, returnCta.buttonStrokeColor, 0.95);
-                ctaButton.setInteractive({ useHandCursor: true });
-                ctaButton.on('pointerover', () => ctaButton?.setFillStyle(returnCta.buttonHoverFillColor, 1));
-                ctaButton.on('pointerout', () => ctaButton?.setFillStyle(returnCta.buttonFillColor, 1));
-                ctaButton.on('pointerdown', () => {
-                    this.setKeyboardZone('return');
-                    this.config.onClose();
-                });
-                ctaLabel = this.scene.add.text(returnButtonCenterX, actionButtonY, '返回远征准备', {
-                    fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '20px',
-                    color: returnCta.buttonTextColor,
-                    fontStyle: 'bold',
-                }).setOrigin(0.5);
-                const returnHintLabel = summary.availabilityIssues.length > 0
-                    ? '返回前先补库存'
-                    : summary.sizeIssue?.kind === 'too-few-cards'
-                        ? `还差 ${summary.sizeIssue.min - summary.sizeIssue.count} 张`
-                    : summary.sizeIssue?.kind === 'too-many-cards'
-                            ? `超出 ${summary.sizeIssue.count - summary.sizeIssue.max} 张`
-                            : '已可直接返回';
-                returnHintText = this.scene.add.text(localX + summaryW - 16, 74, returnHintLabel, {
-                    fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '18px',
-                    color: returnCta.buttonTextColor,
-                    fontStyle: 'bold',
-                }).setOrigin(1, 0);
-            }
-            const nameText = this.scene.add.text(
-                localX + 20,
-                compactSummaryMetrics ? 24 : 40,
-                truncateLabel(deck.name, detailExpanded ? 15 : compactSummaryMetrics ? 18 : 20),
-                {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: compactSummaryMetrics ? '22px' : '30px',
-                color: '#f3ead3',
-                fontStyle: 'bold',
-                wordWrap: { width: Math.max(144, compactSummaryMetrics ? compactHeaderTextWidth : leftSummaryW - 128) },
-            });
-            nameText.setInteractive({ useHandCursor: true });
-            nameText.on('pointerdown', () => {
-                this.setKeyboardZone('decks');
-                this.beginRenameSelectedDeck();
-            });
-            headerMetaText = this.scene.add.text(
-                localX + 20,
-                compactSummaryMetrics ? 48 : 84,
-                truncateLabel(
-                    compactSummaryMetrics
-                        ? (joinPreviewFacts(
-                            summary.isValid
-                                ? [`第 ${selectedDeckIndex + 1}/${Math.max(decks.length, 1)} 套`, `${summarySnapshot.uniqueCardCount} 种卡`, summarySnapshot.pressureLabel]
-                                : [`第 ${selectedDeckIndex + 1}/${Math.max(decks.length, 1)} 套`, summary.detailLabel, `${summarySnapshot.uniqueCardCount} 种卡`],
-                            56,
-                        ) ?? summary.detailLabel)
-                        : joinPreviewFacts([
-                            `第 ${selectedDeckIndex + 1}/${Math.max(decks.length, 1)} 套`,
-                            summarySnapshot.metaLabel,
-                        ], 52) ?? summarySnapshot.metaLabel,
-                    detailExpanded ? 32 : compactSummaryMetrics ? 56 : 52,
-                ),
-                {
-                    fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: compactSummaryMetrics ? '14px' : '18px',
-                    color: '#d9c6a2',
-                    fontStyle: compactSummaryMetrics ? 'normal' : 'bold',
-                    wordWrap: { width: Math.max(132, compactSummaryMetrics ? compactHeaderTextWidth : leftSummaryW - 8) },
-                },
-            );
-            if (compactSummaryMetrics) {
-                const compactReturnButtonWidth = 220;
-                const compactReturnButtonCenterX = localX + summaryW - 20 - compactReturnButtonWidth / 2;
-                compactReturnSummaryText = this.scene.add.text(localX + 20, 118, returnCta.summaryLabel, {
-                    fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '16px',
-                    color: returnCta.stripTextColor,
-                    fontStyle: 'bold',
-                    wordWrap: { width: Math.max(220, summaryW - compactReturnButtonWidth - 64) },
-                });
-                compactReturnButton = this.createButton(
-                    compactReturnButtonCenterX,
-                    150,
-                    compactReturnButtonWidth,
-                    SECONDARY_BUTTON_HEIGHT,
-                    '返回远征准备',
-                    returnCta.buttonFillColor,
-                    () => {
-                        this.setKeyboardZone('return');
-                        this.config.onClose();
-                    },
-                    false,
-                    {
-                        hoverFillColor: returnCta.buttonHoverFillColor,
-                        strokeColor: returnCta.buttonStrokeColor,
-                        textColor: returnCta.buttonTextColor,
-                        fontSize: '18px',
-                    },
-                );
-                compactReturnButton[0].setStrokeStyle(this.keyboardZone === 'return' ? 2 : 1, returnCta.buttonStrokeColor, 0.95);
-            }
-            this.editorContainer.add([
-                titleBarAccent,
-                titleDivider,
-                nameText,
-                headerMetaText,
-                ...(prevDeckButton ? prevDeckButton : []),
-                ...(nextDeckButton ? nextDeckButton : []),
-                ...newDeckButton,
-                ...renameButton,
-                deleteDeckButton,
-                deleteDeckLabel,
-                ...(inspectFocusAction ? inspectFocusAction : []),
-                ...(compactReturnSummaryText ? [compactReturnSummaryText] : []),
-                ...(compactReturnButton ? compactReturnButton : []),
-                ...(ctaButton ? [ctaButton] : []),
-                ...(ctaLabel ? [ctaLabel] : []),
-                ...(returnHintText ? [returnHintText] : []),
-            ]);
-            this.updateDeleteButton();
+            return;
         }
 
-        let countText: GameObjects.Text | null = null;
-        let detailText: GameObjects.Text | null = null;
-        let statusPillBg: GameObjects.Rectangle | null = null;
-        let statusPillText: GameObjects.Text | null = null;
-        let capacitySummaryText: GameObjects.Text | null = null;
-        let capacityFill: GameObjects.Rectangle | undefined;
-        let capacityFillWidth = 0;
-        let previousCapacityFillWidth = 0;
+        this.nativeTextEntry.deactivate(DECK_NAMING_TEXT_ENTRY_SESSION_ID);
 
-        if (compactSummaryMetrics) {
-            countText = this.scene.add.text(localX + 16 + leftSummaryW, 43, `${summary.count} / ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '10px',
-                color: summary.isValid ? '#e6f3ea' : summary.pillTextColor,
-                fontStyle: 'bold',
-            }).setOrigin(1, 0);
-            [statusPillBg, statusPillText] = this.createRightAlignedPill(
-                localX + 16 + leftSummaryW,
-                28,
-                summary.statusLabel,
-                summary.pillFillColor,
-                summary.pillTextColor,
-            );
-            detailText = this.scene.add.text(
-                localX + 20,
-                60,
-                truncateLabel(
-                    joinPreviewFacts([
-                        getDeckCapacityProgressLabel(capacity),
-                        getDeckCapacityHeadroomLabel(capacity),
-                    ], 72) ?? getDeckCapacityProgressLabel(capacity),
-                    72,
-                ),
-                {
-                    fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '9px',
-                    color: capacityTextColor,
-                    fontStyle: 'bold',
-                    wordWrap: { width: Math.max(180, compactHeaderTextWidth) },
-                },
-            );
-            capacitySummaryText = detailText;
-            this.editorContainer.add([countText, statusPillBg, statusPillText, detailText]);
+        const headerHeight = 84;
+        const switcherHeight = 40;
+        const switcherTop = headerHeight + 8;
+        const sectionsTop = switcherTop + switcherHeight + 10;
+        const gridGap = 8;
+        const computedColumns = Math.floor((contentW + gridGap) / (86 + gridGap));
+        this.editorGridColumns = Math.max(8, Math.min(10, computedColumns));
+        const tileWidth = Math.floor((contentW - Math.max(this.editorGridColumns - 1, 0) * gridGap) / this.editorGridColumns);
+        const tileHeight = clampNumber(Math.floor(tileWidth * 1.18), 102, 116);
+        const mainRows = Math.max(1, Math.ceil(Math.max(mainSection.tiles.length, 1) / this.editorGridColumns));
+        const extraRows = Math.max(1, Math.ceil(Math.max(extraSection.tiles.length, 1) / this.editorGridColumns));
+        const sectionChromeHeight = 78;
+        const emptySectionBodyHeight = 80;
+        const mainGridHeight = mainSection.tiles.length > 0
+            ? mainRows * tileHeight + Math.max(mainRows - 1, 0) * gridGap
+            : emptySectionBodyHeight;
+        const extraGridHeight = extraSection.tiles.length > 0
+            ? extraRows * tileHeight + Math.max(extraRows - 1, 0) * gridGap
+            : emptySectionBodyHeight;
+        const mainSectionHeight = sectionChromeHeight + mainGridHeight + 16;
+        const extraSectionHeight = sectionChromeHeight + extraGridHeight + 16;
+        this.editorVisibleRows = Math.max(1, mainRows + extraRows);
+        this.editorArea = {
+            x: this.editorContainer.x,
+            y: this.editorContainer.y + sectionsTop,
+            w: contentW,
+            h: contentH - sectionsTop,
+        };
 
-            const capacityTrackX = localX + 20;
-            const capacityTrackW = Math.max(88, leftSummaryW - 8);
-            const capacityTrackY = 75;
-            const capacityTrackH = 8;
-            capacityFillWidth = capacityTrackW * clampNumber(capacity.count / DECK_CARD_MAX, 0, 1);
-            previousCapacityFillWidth = previousFeedback?.deckId === deck.id
-                ? capacityTrackW * clampNumber(previousFeedback.count / DECK_CARD_MAX, 0, 1)
-                : 0;
-            const capacityTrackBg = this.scene.add.rectangle(
-                capacityTrackX + capacityTrackW / 2,
-                capacityTrackY,
-                capacityTrackW,
-                capacityTrackH,
-                BUTTON_NEUTRAL_FILL,
-                1,
-            );
-            capacityTrackBg.setStrokeStyle(1, SECTION_BORDER, 0.82);
-            this.editorContainer.add(capacityTrackBg);
-
-            if (capacityFillWidth > 0) {
-                capacityFill = this.scene.add.rectangle(
-                    capacityTrackX,
-                    capacityTrackY,
-                    capacityFillWidth,
-                    capacityTrackH - 2,
-                    capacityAccentColor,
-                    1,
-                ).setOrigin(0, 0.5);
-                this.editorContainer.add(capacityFill);
-            }
-
-            const capacityMinimumMarker = this.scene.add.rectangle(
-                capacityTrackX + capacityTrackW * (DECK_CARD_MIN / DECK_CARD_MAX),
-                capacityTrackY,
-                3,
-                capacityTrackH + 4,
-                0xe2e8f0,
-                0.86,
-            );
-            this.editorContainer.add(capacityMinimumMarker);
-        } else {
-            const detailY = namingActive ? 132 : 118;
-            countText = this.scene.add.text(localX + 20, detailY, `${summary.count} / ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: namingActive ? '19px' : '22px',
-                color: summary.isValid ? '#e6f3ea' : summary.pillTextColor,
-                fontStyle: 'bold',
-                wordWrap: { width: leftSummaryW },
-            });
-            const statusPillRightX = localX + 16 + leftSummaryW;
-            [statusPillBg, statusPillText] = this.createRightAlignedPill(
-                statusPillRightX,
-                detailY + (namingActive ? 30 : 14),
-                summary.statusLabel,
-                summary.pillFillColor,
-                summary.pillTextColor,
-            );
-            detailText = this.scene.add.text(localX + 20, detailY + (namingActive ? 50 : 22), namingActive
-                ? summary.detailLabel
-                : truncateLabel(
-                    joinPreviewFacts(
-                        summary.isValid
-                            ? [summarySnapshot.detailLabel]
-                            : [summary.detailLabel, summarySnapshot.detailLabel],
-                        detailExpanded ? 46 : 68,
-                    ) ?? summary.detailLabel,
-                    detailExpanded ? 46 : 68,
-                ), {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: namingActive ? '16px' : '18px',
-                color: summary.isValid ? '#e8d5ab' : summary.pillTextColor,
-                wordWrap: { width: leftSummaryW },
-            });
-            this.editorContainer.add([countText, statusPillBg, statusPillText, detailText]);
-
-            const capacitySummaryY = detailY + (namingActive ? 68 : 52);
-            const capacityTrackY = detailY + (namingActive ? 88 : 84);
-            const showCapacityRangeLabel = namingActive || detailExpanded;
-            capacitySummaryText = this.scene.add.text(localX + 20, capacitySummaryY, joinPreviewFacts([
-                getDeckCapacityProgressLabel(capacity),
-                getDeckCapacityHeadroomLabel(capacity),
-            ], detailExpanded ? 50 : 62) ?? getDeckCapacityProgressLabel(capacity), {
+        const headerBg = this.scene.add.rectangle(localX + contentW / 2, headerHeight / 2, contentW - 8, headerHeight, PANEL_DEEPER_FILL, 0.96);
+        headerBg.setStrokeStyle(1, blendColor(summary.accentColor, SECTION_BORDER, 0.2), 0.44);
+        const headerAccent = this.scene.add.rectangle(localX + 18, 14, 112, 3, summary.accentColor, 0.8).setOrigin(0, 0.5);
+        const headerTitle = this.scene.add.text(localX + 18, 18, truncateLabel(deck.name, 24), {
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '34px',
+            color: '#f3ead3',
+            fontStyle: 'bold',
+            wordWrap: { width: contentW - 520 },
+        });
+        headerTitle.setInteractive({ useHandCursor: true });
+        headerTitle.on('pointerdown', () => {
+            this.setKeyboardZone('decks');
+            this.beginRenameSelectedDeck();
+        });
+        const headerMeta = this.scene.add.text(
+            localX + 18,
+            54,
+            truncateLabel(
+                joinPreviewFacts([
+                    `第 ${selectedDeckIndex + 1}/${Math.max(decks.length, 1)} 套`,
+                    `${summary.count} 张`,
+                    `${summarySnapshot.uniqueCardCount} 种卡`,
+                    summary.detailLabel,
+                ], 78) ?? summary.detailLabel,
+                78,
+            ),
+            {
                 fontFamily: expeditionUiTheme.fonts.ui,
                 fontSize: '18px',
+                color: '#d9c6a2',
+                wordWrap: { width: contentW - 520 },
+            },
+        );
+        const [statusPillBg, statusPillText] = this.createRightAlignedPill(
+            contentW - 18,
+            66,
+            summary.statusLabel,
+            summary.pillFillColor,
+            summary.pillTextColor,
+            {
+                fontSize: '16px',
+                height: 32,
+                horizontalPadding: 24,
+                minWidth: 96,
+            },
+        );
+
+        const actionButtonGap = 8;
+        const returnButtonWidth = 176;
+        const deleteButtonWidth = 108;
+        const renameButtonWidth = 92;
+        const createButtonWidth = 100;
+        let actionRight = localX + contentW - 18;
+        const placeHeaderButton = (width: number) => {
+            const centerX = actionRight - width / 2;
+            actionRight = centerX - width / 2 - actionButtonGap;
+            return centerX;
+        };
+        const returnButtonCenterX = placeHeaderButton(returnButtonWidth);
+        const deleteButtonCenterX = placeHeaderButton(deleteButtonWidth);
+        const renameButtonCenterX = placeHeaderButton(renameButtonWidth);
+        const createButtonCenterX = placeHeaderButton(createButtonWidth);
+        const createDeckButton = this.createButton(
+            createButtonCenterX,
+            26,
+            createButtonWidth,
+            SECONDARY_BUTTON_HEIGHT,
+            '新建',
+            BUTTON_PRIMARY_FILL,
+            () => this.createDeck(),
+            false,
+            {
+                hoverFillColor: BUTTON_PRIMARY_HOVER_FILL,
+                strokeColor: expeditionUiTheme.colors.goldSoft,
+                fontSize: '18px',
+            },
+        );
+        const renameButton = this.createButton(
+            renameButtonCenterX,
+            26,
+            renameButtonWidth,
+            SECONDARY_BUTTON_HEIGHT,
+            '重命名',
+            BUTTON_NEUTRAL_FILL,
+            () => this.beginRenameSelectedDeck(),
+            false,
+            {
+                hoverFillColor: BUTTON_NEUTRAL_HOVER_FILL,
+                strokeColor: expeditionUiTheme.colors.slate,
+                fontSize: '18px',
+            },
+        );
+        const [deleteDeckButton, deleteDeckLabel] = this.createButton(
+            deleteButtonCenterX,
+            26,
+            deleteButtonWidth,
+            SECONDARY_BUTTON_HEIGHT,
+            '删除',
+            0xb91c1c,
+            () => this.showDeleteConfirmation(),
+            false,
+            {
+                hoverFillColor: 0xdc2626,
+                strokeColor: 0xfca5a5,
+                fontSize: '18px',
+            },
+        );
+        this.deleteDeckBtn = deleteDeckButton;
+        this.deleteDeckLabel = deleteDeckLabel;
+        const returnButton = this.createButton(
+            returnButtonCenterX,
+            26,
+            returnButtonWidth,
+            SECONDARY_BUTTON_HEIGHT,
+            '返回远征准备',
+            returnCta.buttonFillColor,
+            () => {
+                this.setKeyboardZone('return');
+                this.config.onClose();
+            },
+            false,
+            {
+                hoverFillColor: returnCta.buttonHoverFillColor,
+                strokeColor: returnCta.buttonStrokeColor,
+                textColor: returnCta.buttonTextColor,
+                fontSize: '18px',
+            },
+        );
+        if (this.keyboardZone === 'return') {
+            returnButton[0].setStrokeStyle(2, returnCta.buttonStrokeColor, 0.95);
+        }
+
+        const capacityTrackWidth = Math.max(180, contentW - 520);
+        const capacityTrackX = localX + 18;
+        const capacityTrackY = 78;
+        const capacityFillWidth = capacityTrackWidth * clampNumber(capacity.count / DECK_CARD_MAX, 0, 1);
+        const capacityTrackBg = this.scene.add.rectangle(
+            capacityTrackX + capacityTrackWidth / 2,
+            capacityTrackY,
+            capacityTrackWidth,
+            8,
+            BUTTON_NEUTRAL_FILL,
+            1,
+        );
+        capacityTrackBg.setStrokeStyle(1, SECTION_BORDER, 0.72);
+        const capacityFill = this.scene.add.rectangle(
+            capacityTrackX,
+            capacityTrackY,
+            Math.max(0, capacityFillWidth),
+            6,
+            capacityAccentColor,
+            1,
+        ).setOrigin(0, 0.5);
+        const capacityMarker = this.scene.add.rectangle(
+            capacityTrackX + capacityTrackWidth * (DECK_CARD_MIN / DECK_CARD_MAX),
+            capacityTrackY,
+            3,
+            12,
+            0xe2e8f0,
+            0.82,
+        );
+        const capacityLabel = this.scene.add.text(
+            capacityTrackX,
+            capacityTrackY + 10,
+            truncateLabel(
+                joinPreviewFacts([
+                    getDeckCapacityProgressLabel(capacity),
+                    getDeckCapacityHeadroomLabel(capacity),
+                    `查看当前焦点`,
+                ], 72) ?? getDeckCapacityProgressLabel(capacity),
+                72,
+            ),
+            {
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '16px',
                 color: capacityTextColor,
                 fontStyle: 'bold',
-                wordWrap: { width: leftSummaryW },
-            });
-            this.editorContainer.add(capacitySummaryText);
+            },
+        );
+        capacityLabel.setInteractive({ useHandCursor: true });
+        capacityLabel.on('pointerdown', () => {
+            this.setKeyboardZone('editor');
+            this.toggleDetailPane(true);
+        });
 
-            const capacityTrackX = localX + 20;
-            const capacityTrackW = Math.max(88, leftSummaryW - 10);
-            const capacityTrackH = 11;
-            capacityFillWidth = capacityTrackW * clampNumber(capacity.count / DECK_CARD_MAX, 0, 1);
-            previousCapacityFillWidth = previousFeedback?.deckId === deck.id
-                ? capacityTrackW * clampNumber(previousFeedback.count / DECK_CARD_MAX, 0, 1)
-                : 0;
-            const capacityTrackBg = this.scene.add.rectangle(
-                capacityTrackX + capacityTrackW / 2,
-                capacityTrackY,
-                capacityTrackW,
-                capacityTrackH,
-                BUTTON_NEUTRAL_FILL,
-                1,
-            );
-            capacityTrackBg.setStrokeStyle(1, SECTION_BORDER, 0.9);
-            this.editorContainer.add(capacityTrackBg);
-
-            if (capacityFillWidth > 0) {
-                capacityFill = this.scene.add.rectangle(
-                    capacityTrackX,
-                    capacityTrackY,
-                    capacityFillWidth,
-                    capacityTrackH - 4,
-                    capacityAccentColor,
-                    1,
-                ).setOrigin(0, 0.5);
-                this.editorContainer.add(capacityFill);
-            }
-
-            const capacityMinimumMarker = this.scene.add.rectangle(
-                capacityTrackX + capacityTrackW * (DECK_CARD_MIN / DECK_CARD_MAX),
-                capacityTrackY,
-                3,
-                capacityTrackH + 6,
-                0xe2e8f0,
-                0.9,
-            );
-            const capacityRangeLabel = this.scene.add.text(capacityTrackX, capacityTrackY + 12, namingActive
-                ? `${DECK_CARD_MIN} 张出征线 · ${DECK_CARD_MAX} 张上限`
-                : truncateLabel(
-                    joinPreviewFacts(
-                        [`${DECK_CARD_MIN} 张出征线`, `${DECK_CARD_MAX} 张上限`, summarySnapshot.detailLabel],
-                        detailExpanded ? 52 : 72,
-                    ) ?? `${DECK_CARD_MIN} 张出征线 · ${DECK_CARD_MAX} 张上限`,
-                    detailExpanded ? 52 : 72,
-                ), {
-                fontFamily: expeditionUiTheme.fonts.ui,
+        const switcherBg = this.scene.add.rectangle(localX + contentW / 2, switcherTop + switcherHeight / 2, contentW - 8, switcherHeight, expeditionUiTheme.colors.panel, 0.92);
+        switcherBg.setStrokeStyle(
+            this.keyboardZone === 'decks' ? 2 : 1,
+            this.keyboardZone === 'decks' ? SELECTED_ACCENT : SECTION_BORDER,
+            this.keyboardZone === 'decks' ? 0.86 : 0.44,
+        );
+        const switcherLabel = this.scene.add.text(localX + 16, switcherTop + 8, '卡组切换', {
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '16px',
+            color: '#d9c6a2',
+            fontStyle: 'bold',
+        });
+        const prevDeckButton = this.createButton(
+            localX + 78,
+            switcherTop + switcherHeight / 2,
+            44,
+            32,
+            '‹',
+            BUTTON_NEUTRAL_FILL,
+            () => this.focusNextDeck(-1),
+            selectedDeckIndex <= 0,
+            {
+                hoverFillColor: BUTTON_NEUTRAL_HOVER_FILL,
+                strokeColor: expeditionUiTheme.colors.slate,
                 fontSize: '18px',
-                color: '#bca785',
-                fontStyle: 'bold',
-                wordWrap: { width: leftSummaryW },
-            });
-            this.editorContainer.add(showCapacityRangeLabel
-                ? [capacityMinimumMarker, capacityRangeLabel]
-                : [capacityMinimumMarker]);
-        }
-
-        if (!namingActive && !compactSummaryMetrics) {
-            const maxVisibleDeckChips = 4;
-            const visibleStart = clampNumber(
-                selectedDeckIndex - Math.floor((maxVisibleDeckChips - 1) / 2),
-                0,
-                Math.max(0, decks.length - maxVisibleDeckChips),
-            );
-            const visibleDecks = decks.slice(visibleStart, visibleStart + maxVisibleDeckChips);
-            const deckChipY = summaryH - 26;
-            const deckChipH = SECONDARY_BUTTON_HEIGHT;
-            const deckChipGap = 8;
-            const deckChipAreaW = Math.max(220, leftSummaryW);
-            const deckChipW = Math.min(
-                176,
-                Math.max(
-                    112,
-                    Math.floor((deckChipAreaW - deckChipGap * Math.max(visibleDecks.length - 1, 0)) / Math.max(visibleDecks.length, 1)),
-                ),
-            );
-            const deckChipLeft = localX + 20;
-
-            visibleDecks.forEach((candidate, visibleIndex) => {
-                const candidateSummary = summarizeDeckStatus(candidate, this.stash.cards);
-                const candidateX = deckChipLeft + deckChipW / 2 + visibleIndex * (deckChipW + deckChipGap);
-                const isSelected = candidate.id === deck.id;
-                const chipFillColor = isSelected ? PANEL_SELECTED_FILL : expeditionUiTheme.colors.panel;
-                const chipHoverFillColor = isSelected ? PANEL_SELECTED_HOVER_FILL : BUTTON_NEUTRAL_FILL;
-                const chipBorderColor = isSelected
-                    ? blendColor(SELECTED_ACCENT, candidateSummary.accentColor, candidateSummary.isValid ? 0.18 : 0.55)
-                    : blendColor(SECTION_BORDER, candidateSummary.accentColor, 0.32);
-                const chipTextColor = isSelected ? '#f3ead3' : '#f3ead3';
-                const chipDetailColor = candidateSummary.isValid ? '#e8d5ab' : candidateSummary.pillTextColor;
-
-                const chipBg = this.scene.add.rectangle(
-                    candidateX,
-                    deckChipY,
-                    deckChipW,
-                    deckChipH,
-                    chipFillColor,
-                    0.98,
-                );
-                chipBg.setStrokeStyle(isSelected ? 2 : 1, chipBorderColor, isSelected ? 0.95 : 0.72);
-                chipBg.setInteractive({ useHandCursor: true });
-                chipBg.on('pointerover', () => chipBg.setFillStyle(chipHoverFillColor, 1));
-                chipBg.on('pointerout', () => chipBg.setFillStyle(chipFillColor, 1));
-                chipBg.on('pointerdown', () => {
-                    this.setKeyboardZone('decks');
-                    this.applyStashChange(selectDeckInStash(this.stash, candidate.id));
-                    this.refreshDeckViews();
-                });
-
-                const accent = this.scene.add.rectangle(
-                    candidateX - deckChipW / 2 + 6,
-                    deckChipY,
-                    4,
-                    deckChipH - 6,
-                    candidateSummary.accentColor,
-                    0.96,
-                ).setOrigin(0, 0.5);
-                const name = this.scene.add.text(candidateX - deckChipW / 2 + 14, deckChipY - 1, truncateLabel(candidate.name, 10), {
-                    fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '18px',
-                    color: chipTextColor,
-                    fontStyle: 'bold',
-                }).setOrigin(0, 0.5);
-                const count = this.scene.add.text(candidateX + deckChipW / 2 - 8, deckChipY - 1, `${countDeckCards(candidate.cards)} 张`, {
-                    fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '16px',
-                    color: chipDetailColor,
-                    fontStyle: 'bold',
-                }).setOrigin(1, 0.5);
-
-                this.editorContainer.add([chipBg, accent, name, count]);
-            });
-
-            if (visibleStart > 0) {
-                const moreLeft = this.scene.add.text(deckChipLeft - 10, deckChipY, '‹', {
-                    fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '18px',
-                    color: '#64748b',
-                    fontStyle: 'bold',
-                }).setOrigin(0.5);
-                this.editorContainer.add(moreLeft);
-            }
-
-            if (visibleStart + visibleDecks.length < decks.length) {
-                const moreRight = this.scene.add.text(
-                    deckChipLeft + visibleDecks.length * deckChipW + Math.max(0, visibleDecks.length - 1) * deckChipGap + 10,
-                    deckChipY,
-                    '›',
-                    {
-                        fontFamily: expeditionUiTheme.fonts.ui,
-                        fontSize: '18px',
-                        color: '#64748b',
-                        fontStyle: 'bold',
-                    },
-                ).setOrigin(0.5);
-                this.editorContainer.add(moreRight);
-            }
-        }
-
-        let inspectFocusButton: [GameObjects.Rectangle, GameObjects.Text] | null = null;
-        if (!namingActive) {
-            if (detailExpanded) {
-                const detailPaneBottom = summaryH - 12;
-                const detailPaneH = Math.max(96, detailPaneBottom - detailPaneY);
-                this.detailPaneContainer = this.scene.add.container(detailPaneX, detailPaneY);
-                this.detailPaneWidth = detailSurfaceWidth;
-                this.detailPaneHeight = detailPaneH;
-                this.editorContainer.add(this.detailPaneContainer);
-                this.refreshDetailPane(deckSelectionChanged);
-                detailSurfacePulseTargets.push(this.detailPaneContainer);
-            } else if (!compactSummaryMetrics) {
-                inspectFocusButton = this.createButton(
-                    summaryW - 56,
-                    listHeaderY + 12,
-                    132,
-                    SECONDARY_BUTTON_HEIGHT,
-                    '查看当前焦点',
-                    expeditionUiTheme.colors.panel,
-                    () => {
-                        this.setKeyboardZone('editor');
-                        this.toggleDetailPane(true);
-                    },
-                    false,
-                    {
-                        hoverFillColor: BUTTON_NEUTRAL_HOVER_FILL,
-                        strokeColor: expeditionUiTheme.colors.slate,
-                        fontSize: '18px',
-                    },
-                );
-            }
-        }
-
-        let cardListTitle: GameObjects.Text | null = null;
-        if (compactSummaryMetrics) {
-            cardListTitle = this.scene.add.text(localX + 2, listTop - 11, `当前卡牌（在这里移除） · ${sectionSummaryLabel}`, {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '9px',
-                color: '#bca785',
-                fontStyle: 'bold',
-                wordWrap: { width: summaryW - 12 },
-            });
-            this.editorContainer.add(cardListTitle);
-        } else {
-            const listHeaderDivider = this.scene.add.rectangle(summaryW / 2, listHeaderY + 12, summaryW - 4, 1, summary.accentColor, 0.1);
-            cardListTitle = this.scene.add.text(localX, listHeaderY - 1, `当前卡牌（在这里移除） · ${sectionSummaryLabel}`, {
-                fontFamily: expeditionUiTheme.fonts.ui,
+            },
+        );
+        const nextDeckButton = this.createButton(
+            contentW - 42,
+            switcherTop + switcherHeight / 2,
+            44,
+            32,
+            '›',
+            BUTTON_NEUTRAL_FILL,
+            () => this.focusNextDeck(1),
+            selectedDeckIndex >= decks.length - 1,
+            {
+                hoverFillColor: BUTTON_NEUTRAL_HOVER_FILL,
+                strokeColor: expeditionUiTheme.colors.slate,
                 fontSize: '18px',
-                color: '#bca785',
-                fontStyle: 'bold',
-                wordWrap: { width: inspectFocusButton ? summaryW - 138 : summaryW - 12 },
+            },
+        );
+        const chipAreaLeft = 108;
+        const chipAreaRight = contentW - 76;
+        const maxVisibleDeckChips = 5;
+        const visibleStart = clampNumber(
+            selectedDeckIndex - Math.floor((maxVisibleDeckChips - 1) / 2),
+            0,
+            Math.max(0, decks.length - maxVisibleDeckChips),
+        );
+        const visibleDecks = decks.slice(visibleStart, visibleStart + maxVisibleDeckChips);
+        const chipGap = 8;
+        const chipWidth = Math.max(
+            120,
+            Math.floor((chipAreaRight - chipAreaLeft - chipGap * Math.max(visibleDecks.length - 1, 0)) / Math.max(visibleDecks.length, 1)),
+        );
+
+        const pulseTargets: TweenableMotionTarget[] = [
+            headerBg,
+            headerTitle,
+            headerMeta,
+            statusPillBg,
+            statusPillText,
+            switcherBg,
+            capacityTrackBg,
+            capacityLabel,
+        ];
+
+        visibleDecks.forEach((candidate, visibleIndex) => {
+            const candidateSummary = summarizeDeckStatus(candidate, this.stash.cards);
+            const candidateX = chipAreaLeft + chipWidth / 2 + visibleIndex * (chipWidth + chipGap);
+            const isSelected = candidate.id === deck.id;
+            const chipFill = isSelected ? PANEL_SELECTED_FILL : expeditionUiTheme.colors.panelInner;
+            const chipHoverFill = isSelected ? PANEL_SELECTED_HOVER_FILL : BUTTON_NEUTRAL_HOVER_FILL;
+            const chipBorder = isSelected
+                ? blendColor(SELECTED_ACCENT, candidateSummary.accentColor, candidateSummary.isValid ? 0.18 : 0.55)
+                : blendColor(SECTION_BORDER, candidateSummary.accentColor, 0.3);
+            const chipBg = this.scene.add.rectangle(candidateX, switcherTop + switcherHeight / 2, chipWidth, 30, chipFill, 0.98);
+            chipBg.setStrokeStyle(isSelected ? 2 : 1, chipBorder, isSelected ? 0.95 : 0.68);
+            chipBg.setInteractive({ useHandCursor: true });
+            chipBg.on('pointerover', () => chipBg.setFillStyle(chipHoverFill, 1));
+            chipBg.on('pointerout', () => chipBg.setFillStyle(chipFill, 0.98));
+            chipBg.on('pointerdown', () => {
+                this.setKeyboardZone('decks');
+                this.applyStashChange(selectDeckInStash(this.stash, candidate.id));
+                this.refreshDeckViews();
             });
-            this.editorContainer.add([
-                listHeaderDivider,
-                cardListTitle,
-                ...(inspectFocusButton ? inspectFocusButton : []),
-            ]);
-        }
-
-        const listSurface = this.scene.add.rectangle(summaryW / 2, listTop + listH / 2, summaryW - 6, listH, PANEL_DEEP_FILL, 0.34);
-        listSurface.setStrokeStyle(1, blendColor(summary.accentColor, SECTION_BORDER, 0.18), 0.18);
-        const listSurfaceAccent = this.scene.add.rectangle(summaryW / 2, listTop + 1, summaryW - 18, 2, summary.accentColor, 0.12);
-        this.editorContainer.add([listSurface, listSurfaceAccent]);
-
-        const maskGraphics = this.scene.make.graphics({});
-        maskGraphics.fillStyle(0xffffff);
-        maskGraphics.fillRect(this.editorContainer.x, this.editorContainer.y + listTop, summaryW, listH);
-        maskGraphics.setVisible(false);
-        const cardsOuter = this.scene.add.container(localX, listTop);
-        cardsOuter.setMask(maskGraphics.createGeometryMask());
-        const cardsInner = this.scene.add.container(0, 0);
-        cardsOuter.add(cardsInner);
-        this.editorContainer.add([maskGraphics, cardsOuter]);
-
-        const visibleCardCount = Math.max(1, this.editorVisibleRows * this.editorGridColumns);
-        const maxOffset = sheetMode
-            ? Math.max(0, Math.ceil(deck.cards.length / this.editorGridColumns) - this.editorVisibleRows)
-            : Math.max(0, deck.cards.length - visibleCardCount);
-        this.editorScrollOffset = clampNumber(this.editorScrollOffset, 0, maxOffset);
-
-        if (deck.cards.length === 0) {
-            const emptyCard = this.scene.add.rectangle(summaryW / 2, listH / 2, Math.max(220, summaryW - 24), 132, expeditionUiTheme.colors.panelInner, 0.98);
-            emptyCard.setStrokeStyle(1, SECTION_BORDER, 0.9);
-            const emptyTitle = this.scene.add.text(summaryW / 2, listH / 2 - 22, '卡组还是空的', {
+            const chipAccent = this.scene.add.rectangle(
+                candidateX - chipWidth / 2 + 6,
+                switcherTop + switcherHeight / 2,
+                4,
+                22,
+                candidateSummary.accentColor,
+                0.92,
+            ).setOrigin(0, 0.5);
+            const chipName = this.scene.add.text(candidateX - chipWidth / 2 + 14, switcherTop + switcherHeight / 2 - 1, truncateLabel(candidate.name, 11), {
                 fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
+                fontSize: '16px',
                 color: '#f3ead3',
                 fontStyle: 'bold',
-            }).setOrigin(0.5);
-            const emptyBody = this.scene.add.text(summaryW / 2, listH / 2 + 14, '从右侧储物袋挑选卡牌加入这里，合法性会实时更新。', {
+            }).setOrigin(0, 0.5);
+            const chipCount = this.scene.add.text(candidateX + chipWidth / 2 - 10, switcherTop + switcherHeight / 2 - 1, `${countDeckCards(candidate.cards)} 张`, {
                 fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                color: '#bca785',
-                align: 'center',
-                wordWrap: { width: Math.max(220, summaryW - 48) },
-            }).setOrigin(0.5);
-            cardsInner.add([emptyCard, emptyTitle, emptyBody]);
-        } else {
-            const startIndex = sheetMode
-                ? this.editorScrollOffset * this.editorGridColumns
-                : this.editorScrollOffset;
-            const end = Math.min(startIndex + visibleCardCount, deck.cards.length);
-            const tileGap = sheetMode ? editorRowGap : 0;
-            const tileW = sheetMode
-                ? Math.max(
-                    EDITOR_TILE_MIN_WIDTH,
-                    Math.floor((summaryW - 8 - (this.editorGridColumns - 1) * tileGap) / this.editorGridColumns),
-                )
-                : summaryW - 8;
-
-            for (let index = startIndex; index < end; index += 1) {
-                const stack = deck.cards[index];
-                const relativeIndex = index - startIndex;
-                const gridRow = sheetMode ? Math.floor(relativeIndex / this.editorGridColumns) : relativeIndex;
-                const gridCol = sheetMode ? relativeIndex % this.editorGridColumns : 0;
-                const rowY = gridRow * editorRowStride;
-                const tileX = sheetMode ? gridCol * (tileW + tileGap) : 0;
-                const rowCenterY = rowY + editorRowHeight / 2;
-                const rowCenterX = sheetMode ? tileX + tileW / 2 : summaryW / 2;
-                const displayName = getCardDisplayName(stack.id, this.config.metadata);
-                const metaLabel = getCardMetaLabel(stack.id, this.config.metadata);
-                const metadataEntry = this.config.metadata?.[stack.id];
-                const ownedCount = getStackCount(this.stash.cards, stack.id);
-                const shortageCount = Math.max(stack.count - ownedCount, 0);
-                const remainingCount = Math.max(ownedCount - stack.count, 0);
-                const rowAccentColor = shortageCount > 0
-                    ? INVALID_ACCENT
-                    : remainingCount === 0
-                        ? WARNING_ACCENT
-                        : VALID_ACCENT;
-                const rowBorderColor = sheetMode
-                    ? blendColor(
-                        SECTION_BORDER,
-                        rowAccentColor,
-                        shortageCount > 0 ? 0.66 : remainingCount === 0 ? 0.42 : 0.24,
-                    )
-                    : shortageCount > 0
-                        ? INVALID_ACCENT
-                        : remainingCount === 0
-                            ? WARNING_ACCENT
-                            : SECTION_BORDER;
-                const rowFillColor = sheetMode
-                    ? expeditionUiTheme.colors.panel
-                    : shortageCount > 0
-                        ? 0x1b1320
-                        : remainingCount === 0
-                            ? 0x1c180f
-                            : PANEL_DEEPER_FILL;
-                const detailColor = shortageCount > 0
-                    ? '#f3d0c3'
-                    : remainingCount === 0
-                        ? '#f6e2b1'
-                        : '#e8d5ab';
-                const availabilityLabel = shortageCount > 0
-                    ? `袋中${ownedCount} · 待补${shortageCount}张`
-                    : remainingCount === 0
-                        ? `袋中${ownedCount} · 已全部带入`
-                        : `袋中${ownedCount} · 还可补${remainingCount}张`;
-                const spotlightTheme = getPreviewTheme(this.config.metadata?.[stack.id]?.kind);
-                const hoverFillColor = sheetMode
-                    ? blendColor(
-                        rowFillColor,
-                        spotlightTheme.headerFillColor,
-                        shortageCount > 0 ? 0.18 : remainingCount === 0 ? 0.14 : 0.2,
-                    )
-                    : shortageCount > 0
-                        ? 0x261626
-                        : remainingCount === 0
-                            ? 0x272016
-                            : 0x162136;
-                const activeFillColor = blendColor(rowFillColor, spotlightTheme.headerFillColor, sheetMode ? 0.34 : 0.52);
-                const tileStatusLabel = shortageCount > 0
-                    ? `缺 ${shortageCount}`
-                    : remainingCount === 0
-                        ? '已耗尽'
-                        : `剩 ${remainingCount}`;
-
-                const rowBg = this.scene.add.rectangle(
-                    rowCenterX,
-                    rowCenterY,
-                    sheetMode ? tileW : summaryW - 8,
-                    editorRowHeight,
-                    rowFillColor,
-                    0.98,
-                );
-                rowBg.setStrokeStyle(1, rowBorderColor, sheetMode ? 0.74 : shortageCount > 0 ? 0.95 : 0.82);
-                const spotlightRow: SpotlightRowHandle = {
-                    cardId: stack.id,
-                    bg: rowBg,
-                    baseFillColor: rowFillColor,
-                    hoverFillColor,
-                    activeFillColor,
-                    baseBorderColor: rowBorderColor,
-                    activeBorderColor: spotlightTheme.borderColor,
-                    baseBorderAlpha: sheetMode ? 0.74 : shortageCount > 0 ? 0.95 : 0.82,
-                };
-                rowBg.setInteractive({ useHandCursor: true });
-                rowBg.on('pointerover', () => {
-                    rowBg.setFillStyle(spotlightRow.hoverFillColor, 1);
-                    this.setDetailCardId(stack.id);
-                });
-                rowBg.on('pointerout', () => this.applySpotlightRowState(spotlightRow, this.detailCardId === stack.id));
-                rowBg.on('pointerdown', () => {
-                    this.setKeyboardZone('editor');
-                    this.setDetailCardId(stack.id);
-                });
-                this.registerSpotlightRow(this.editorSpotlightRows, spotlightRow);
-                const accent = this.scene.add.rectangle(tileX + 8, rowCenterY, 5, editorRowHeight - 18, rowAccentColor, 0.96)
-                    .setOrigin(0, 0.5);
-                const cardGlyph = this.createCompactCardGlyphBadge(
-                    tileX + 16,
-                    rowY + 12,
-                    metadataEntry?.kind,
-                    metadataEntry?.rarity,
-                );
-
-                const [statusPillBgLocal, statusPillTextLocal] = this.createRightAlignedPill(
-                    tileX + tileW - 12,
-                    rowY + 16,
-                    tileStatusLabel,
-                    shortageCount > 0 ? 0x5b1520 : remainingCount === 0 ? 0x4d3709 : PANEL_SELECTED_FILL,
-                    shortageCount > 0 ? '#f3d0c3' : remainingCount === 0 ? '#f6e2b1' : '#d9c6a2',
-                );
-                const textColumnWidth = Math.max(144, sheetMode ? tileW - 236 : summaryW - 296);
-                const nameText = this.scene.add.text(tileX + 56, rowY + 12, displayName, {
-                    fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '20px',
-                    color: '#f3ead3',
-                    fontStyle: 'bold',
-                    wordWrap: { width: textColumnWidth },
-                });
-                const metaText = this.scene.add.text(tileX + 56, rowY + 38, truncateLabel(metaLabel, detailExpanded ? 28 : sheetMode ? 28 : 36), {
-                    fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '16px',
-                    color: '#d9c6a2',
-                    wordWrap: { width: textColumnWidth },
-                });
-                const availabilityText = this.scene.add.text(tileX + 16, rowY + 62, availabilityLabel, {
-                    fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '16px',
-                    color: detailColor,
-                    wordWrap: { width: Math.max(140, sheetMode ? tileW - 220 : summaryW - 296) },
-                });
-                const footerDivider = this.scene.add.rectangle(
-                    tileX + tileW / 2,
-                    rowY + editorRowHeight - 46,
-                    sheetMode ? tileW - 18 : summaryW - 22,
-                    1,
-                    rowAccentColor,
-                    sheetMode ? 0.12 : 0.16,
-                );
-                const actionY = rowY + editorRowHeight - 26;
-                const countBadgeBg = this.scene.add.rectangle(tileX + tileW - 190, actionY, 80, 30, expeditionUiTheme.colors.panel, 0.96);
-                countBadgeBg.setStrokeStyle(1, rowBorderColor, 0.52);
-                const countBadgeText = this.scene.add.text(tileX + tileW - 190, actionY, `×${stack.count}`, {
-                    fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '16px',
-                    color: '#f3ead3',
-                    fontStyle: 'bold',
-                }).setOrigin(0.5);
-                const removeButton = this.createButton(
-                    tileX + tileW - 104,
-                    actionY,
-                    56,
-                    SECONDARY_BUTTON_HEIGHT,
-                    '-1',
-                    0x3f1d24,
-                    () => {
-                        this.setKeyboardZone('editor');
-                        this.setDetailCardId(stack.id);
-                        this.updateDeckCards(deck.id, adjustDeckCardCount(deck.cards, stack.id, -1));
-                    },
-                    false,
-                    {
-                        hoverFillColor: 0x5a2430,
-                        strokeColor: 0xfca5a5,
-                        fontSize: '18px',
-                    },
-                );
-                const clearButton = this.createButton(
-                    tileX + tileW - 36,
-                    actionY,
-                    64,
-                    SECONDARY_BUTTON_HEIGHT,
-                    '清空',
-                    0x51202a,
-                    () => {
-                        this.setKeyboardZone('editor');
-                        this.setDetailCardId(stack.id);
-                        this.updateDeckCards(deck.id, adjustDeckCardCount(deck.cards, stack.id, -stack.count));
-                    },
-                    false,
-                    {
-                        hoverFillColor: 0x6f2430,
-                        strokeColor: 0xfca5a5,
-                        fontSize: '18px',
-                    },
-                );
-
-                cardsInner.add([
-                    rowBg,
-                    accent,
-                    ...cardGlyph,
-                    statusPillBgLocal,
-                    statusPillTextLocal,
-                    nameText,
-                    metaText,
-                    availabilityText,
-                    footerDivider,
-                    countBadgeBg,
-                    countBadgeText,
-                    ...removeButton,
-                    ...clearButton,
-                ]);
+                fontSize: '14px',
+                color: candidateSummary.isValid ? '#e8d5ab' : candidateSummary.pillTextColor,
+            }).setOrigin(1, 0.5);
+            this.editorContainer.add([chipBg, chipAccent, chipName, chipCount]);
+            if (isSelected) {
+                pulseTargets.push(chipBg, chipAccent, chipName, chipCount);
             }
-        }
+        });
 
-        const total = deck.cards.length;
-        const start = total === 0
-            ? 0
-            : (sheetMode ? this.editorScrollOffset * this.editorGridColumns : this.editorScrollOffset) + 1;
-        const end = total === 0
-            ? 0
-            : Math.min(
-                (sheetMode ? this.editorScrollOffset * this.editorGridColumns : this.editorScrollOffset) + visibleCardCount,
-                total,
-            );
-        const posText = this.scene.add.text(localX, scrollBtnY, `显示 ${start}-${end} / ${total}`, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: '#bca785',
-        }).setOrigin(0, 0.5);
-
-        const scrollUpButton = this.createButton(
-            summaryW - 86,
-            scrollBtnY,
-            56,
-            SCROLL_BUTTON_HEIGHT,
-            '▲',
-            BUTTON_NEUTRAL_FILL,
-            () => {
-                this.editorScrollOffset = Math.max(0, this.editorScrollOffset - 1);
-                this.refreshEditor();
-            },
-            this.editorScrollOffset <= 0,
-            { hoverFillColor: BUTTON_NEUTRAL_HOVER_FILL, strokeColor: expeditionUiTheme.colors.slate, fontSize: '18px' },
-        );
-        const scrollDownButton = this.createButton(
-            summaryW - 22,
-            scrollBtnY,
-            56,
-            SCROLL_BUTTON_HEIGHT,
-            '▼',
-            BUTTON_NEUTRAL_FILL,
-            () => {
-                this.editorScrollOffset += 1;
-                this.refreshEditor();
-            },
-            this.editorScrollOffset >= maxOffset,
-            { hoverFillColor: BUTTON_NEUTRAL_HOVER_FILL, strokeColor: expeditionUiTheme.colors.slate, fontSize: '18px' },
-        );
-
-        this.editorContainer.add([posText, ...scrollUpButton, ...scrollDownButton]);
-
-        if (capacityFill && (deckSelectionChanged || countChanged)) {
-            const startingScaleX = deckSelectionChanged
-                ? 0
-                : capacityFillWidth > 0
-                    ? clampNumber(previousCapacityFillWidth / capacityFillWidth, 0, 1.35)
-                    : 0;
-            capacityFill.setScale(startingScaleX, 1);
-            this.scene.tweens.add({
-                targets: capacityFill,
-                scaleX: 1,
-                duration: deckSelectionChanged ? 210 : 170,
-                ease: 'Cubic.easeOut',
+        const createEditorSection = (
+            section: typeof mainSection,
+            y: number,
+            height: number,
+            accentColor: number,
+            inactiveCopy: string,
+        ) => {
+            const sectionBg = this.scene.add.rectangle(localX + contentW / 2, y + height / 2, contentW, height, expeditionUiTheme.colors.panel, 0.96);
+            sectionBg.setStrokeStyle(1, blendColor(accentColor, SECTION_BORDER, 0.24), 0.78);
+            const accent = this.scene.add.rectangle(localX + 14, y + 24, 6, 26, accentColor, 0.98).setOrigin(0, 0.5);
+            const label = this.scene.add.text(localX + 30, y + 12, section.label, {
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '24px',
+                color: '#f3ead3',
+                fontStyle: 'bold',
             });
-        }
-
-        if (deckSelectionChanged) {
-            this.playMotionPulse(
-                [
-                    summaryCard,
-                    headerMetaText,
-                    countText,
-                    statusPillBg,
-                    statusPillText,
-                    detailText,
-                    returnHintText,
-                    ctaButton,
-                    ctaLabel,
-                    ...detailSurfacePulseTargets,
-                    cardListTitle,
-                    cardsOuter,
-                ],
+            const countLabel = this.scene.add.text(contentW - 18, y + 12, `${section.count}`, {
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '28px',
+                color: '#f3ead3',
+                fontStyle: 'bold',
+            }).setOrigin(1, 0);
+            const subLabel = this.scene.add.text(localX + 30, y + 42, section.key === 'main' ? '当前卡牌（在这里移除）' : '次级分区；当前规则下可为空', {
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: '16px',
+                color: '#bca785',
+            });
+            const actionBg = this.scene.add.rectangle(localX + contentW / 2, y + 70, contentW - 20, 30, PANEL_DEEP_FILL, 0.9);
+            actionBg.setStrokeStyle(1, blendColor(accentColor, SECTION_BORDER, 0.16), 0.3);
+            const focusedTile = section.tiles.find((tile) => tile.id === this.detailCardId) ?? null;
+            const actionLabel = this.scene.add.text(
+                localX + 18,
+                y + 70,
+                truncateLabel(
+                    focusedTile
+                        ? `${focusedTile.displayName} ×${focusedTile.count} · 袋中 ${focusedTile.ownedCount} · ${focusedTile.shortageCount > 0 ? `待补 ${focusedTile.shortageCount}` : focusedTile.remainingCount > 0 ? `剩余 ${focusedTile.remainingCount}` : '已全部带入'}`
+                        : section.tiles.length > 0
+                            ? inactiveCopy
+                            : `当前没有 ${section.label} 条目`,
+                    76,
+                ),
                 {
-                    alphaFrom: 0.58,
-                    scaleXFrom: 0.976,
-                    scaleYFrom: 0.94,
-                    duration: 210,
+                    fontFamily: expeditionUiTheme.fonts.ui,
+                    fontSize: '16px',
+                    color: focusedTile ? '#e8d5ab' : '#bca785',
+                    fontStyle: focusedTile ? 'bold' : 'normal',
+                },
+            ).setOrigin(0, 0.5);
+
+            const clearButton = this.createButton(
+                contentW - 46,
+                y + 70,
+                64,
+                30,
+                '清空',
+                0x51202a,
+                () => {
+                    if (!focusedTile) {
+                        return;
+                    }
+
+                    this.setKeyboardZone('editor');
+                    this.setDetailCardId(focusedTile.id);
+                    this.updateDeckCards(deck.id, adjustDeckCardCount(deck.cards, focusedTile.id, -focusedTile.count));
+                },
+                !focusedTile,
+                {
+                    hoverFillColor: 0x6f2430,
+                    strokeColor: 0xfca5a5,
+                    fontSize: '16px',
                 },
             );
-        } else {
-            if (countChanged) {
-                this.playMotionPulse(
-                    [
-                        headerMetaText,
-                        countText,
-                        detailText,
-                        capacitySummaryText,
-                        returnHintText,
-                    ],
-                    {
-                        alphaFrom: 0.52,
-                        scaleXFrom: 0.99,
-                        scaleYFrom: 0.99,
-                        duration: 160,
-                    },
-                );
+            const minusButton = this.createButton(
+                contentW - 118,
+                y + 70,
+                56,
+                30,
+                '-1',
+                0x3f1d24,
+                () => {
+                    if (!focusedTile) {
+                        return;
+                    }
+
+                    this.setKeyboardZone('editor');
+                    this.setDetailCardId(focusedTile.id);
+                    this.updateDeckCards(deck.id, adjustDeckCardCount(deck.cards, focusedTile.id, -1));
+                },
+                !focusedTile,
+                {
+                    hoverFillColor: 0x5a2430,
+                    strokeColor: 0xfca5a5,
+                    fontSize: '16px',
+                },
+            );
+            const inspectButton = this.createButton(
+                contentW - 248,
+                y + 70,
+                116,
+                30,
+                '查看当前焦点',
+                BUTTON_NEUTRAL_FILL,
+                () => {
+                    this.setKeyboardZone('editor');
+                    this.toggleDetailPane(true);
+                },
+                false,
+                {
+                    hoverFillColor: BUTTON_NEUTRAL_HOVER_FILL,
+                    strokeColor: expeditionUiTheme.colors.slate,
+                    fontSize: '16px',
+                },
+            );
+
+            this.editorContainer.add([
+                sectionBg,
+                accent,
+                label,
+                countLabel,
+                subLabel,
+                actionBg,
+                actionLabel,
+                ...inspectButton,
+                ...minusButton,
+                ...clearButton,
+            ]);
+
+            const gridTop = y + sectionChromeHeight;
+            if (section.tiles.length === 0) {
+                const emptyBody = this.scene.add.rectangle(localX + contentW / 2, gridTop + emptySectionBodyHeight / 2, contentW - 24, emptySectionBodyHeight, expeditionUiTheme.colors.panelInner, 0.98);
+                emptyBody.setStrokeStyle(1, blendColor(accentColor, SECTION_BORDER, 0.18), 0.58);
+                const emptyText = this.scene.add.text(localX + contentW / 2, gridTop + emptySectionBodyHeight / 2, `当前暂无 ${section.label} 条目`, {
+                    fontFamily: expeditionUiTheme.fonts.ui,
+                    fontSize: '18px',
+                    color: '#bca785',
+                    fontStyle: 'bold',
+                }).setOrigin(0.5);
+                this.editorContainer.add([emptyBody, emptyText]);
+                return;
             }
 
-            if (readinessChanged) {
-                this.playMotionPulse(
-                    [
-                        summaryCard,
-                        statusPillBg,
-                        statusPillText,
-                        returnHintText,
-                        ctaButton,
-                        ctaLabel,
-                    ],
+            section.tiles.forEach((tile, index) => {
+                const row = Math.floor(index / this.editorGridColumns);
+                const col = index % this.editorGridColumns;
+                const tileLeft = localX + col * (tileWidth + gridGap);
+                const tileTop = gridTop + row * (tileHeight + gridGap);
+                const tileCenterX = tileLeft + tileWidth / 2;
+                const tileCenterY = tileTop + tileHeight / 2;
+                const theme = getPreviewTheme(tile.kind);
+                const accentColorLocal = tile.shortageCount > 0
+                    ? INVALID_ACCENT
+                    : tile.remainingCount === 0
+                        ? WARNING_ACCENT
+                        : theme.accentColor;
+                const baseFill = tile.shortageCount > 0
+                    ? 0x24151d
+                    : tile.remainingCount === 0
+                        ? 0x231c11
+                        : blendColor(expeditionUiTheme.colors.panel, theme.heroFillColor, 0.62);
+                const hoverFill = blendColor(baseFill, theme.headerFillColor, 0.3);
+                const activeFill = blendColor(baseFill, theme.headerFillColor, 0.5);
+                const tileBg = this.scene.add.rectangle(tileCenterX, tileCenterY, tileWidth, tileHeight, baseFill, 0.99);
+                tileBg.setStrokeStyle(1, blendColor(theme.borderColor, accentColorLocal, 0.4), 0.8);
+                const spotlightRow: SpotlightRowHandle = {
+                    cardId: tile.id,
+                    bg: tileBg,
+                    baseFillColor: baseFill,
+                    hoverFillColor: hoverFill,
+                    activeFillColor: activeFill,
+                    baseBorderColor: blendColor(theme.borderColor, accentColorLocal, 0.4),
+                    activeBorderColor: theme.borderColor,
+                    baseBorderAlpha: 0.8,
+                };
+                tileBg.setInteractive({ useHandCursor: true });
+                tileBg.on('pointerover', () => {
+                    tileBg.setFillStyle(spotlightRow.hoverFillColor, 1);
+                    this.setDetailCardId(tile.id);
+                });
+                tileBg.on('pointerout', () => this.applySpotlightRowState(spotlightRow, this.detailCardId === tile.id));
+                tileBg.on('pointerdown', () => {
+                    this.setKeyboardZone('editor');
+                    this.setDetailCardId(tile.id);
+                });
+                this.registerSpotlightRow(this.editorSpotlightRows, spotlightRow);
+
+                const headerBar = this.scene.add.rectangle(tileCenterX, tileTop + 12, tileWidth - 10, 18, theme.headerFillColor, 0.96);
+                headerBar.setStrokeStyle(1, theme.borderColor, 0.32);
+                const countBadge = this.scene.add.text(tileLeft + tileWidth - 8, tileTop + 12, `×${tile.count}`, {
+                    fontFamily: expeditionUiTheme.fonts.ui,
+                    fontSize: '14px',
+                    color: '#f3ead3',
+                    fontStyle: 'bold',
+                }).setOrigin(1, 0.5);
+                const rarityBadge = this.scene.add.rectangle(tileLeft + 12, tileTop + 12, 16, 16, getRarityAccentColor(tile.rarity), 0.95);
+                const glyph = this.scene.add.text(tileCenterX, tileTop + 44, getCardKindGlyph(tile.kind), {
+                    fontFamily: expeditionUiTheme.fonts.ui,
+                    fontSize: '34px',
+                    color: '#ffffff',
+                    fontStyle: 'bold',
+                }).setOrigin(0.5).setAlpha(0.18);
+                const nameText = this.scene.add.text(tileLeft + 8, tileTop + 26, truncateLabel(tile.displayName, 10), {
+                    fontFamily: expeditionUiTheme.fonts.ui,
+                    fontSize: '14px',
+                    color: '#f3ead3',
+                    fontStyle: 'bold',
+                    wordWrap: { width: tileWidth - 16 },
+                    maxLines: 2,
+                });
+                const metaText = this.scene.add.text(tileLeft + 8, tileTop + tileHeight - 28, truncateLabel(tile.subtitle || '无副标题', 12), {
+                    fontFamily: expeditionUiTheme.fonts.ui,
+                    fontSize: '12px',
+                    color: '#d9c6a2',
+                    wordWrap: { width: tileWidth - 16 },
+                });
+                const stateText = this.scene.add.text(
+                    tileLeft + 8,
+                    tileTop + tileHeight - 12,
+                    tile.shortageCount > 0
+                        ? `待补 ${tile.shortageCount}`
+                        : tile.remainingCount > 0
+                            ? `剩余 ${tile.remainingCount}`
+                            : '已全部带入',
                     {
-                        alphaFrom: 0.48,
-                        scaleXFrom: 0.975,
-                        scaleYFrom: 0.92,
-                        duration: 210,
+                        fontFamily: expeditionUiTheme.fonts.ui,
+                        fontSize: '12px',
+                        color: tile.shortageCount > 0 ? '#f3d0c3' : tile.remainingCount > 0 ? '#ccfbf1' : '#f6e2b1',
+                        fontStyle: 'bold',
                     },
-                );
-            }
+                ).setOrigin(0, 1);
+                const footerAccent = this.scene.add.rectangle(tileCenterX, tileTop + tileHeight - 2, tileWidth - 12, 2, accentColorLocal, 0.82);
+
+                this.editorContainer.add([
+                    tileBg,
+                    headerBar,
+                    rarityBadge,
+                    glyph,
+                    nameText,
+                    metaText,
+                    stateText,
+                    countBadge,
+                    footerAccent,
+                ]);
+            });
+        };
+
+        const mainSectionY = sectionsTop;
+        const extraSectionY = mainSectionY + mainSectionHeight + 12;
+
+        this.editorContainer.add([
+            headerBg,
+            headerAccent,
+            headerTitle,
+            headerMeta,
+            statusPillBg,
+            statusPillText,
+            ...createDeckButton,
+            ...renameButton,
+            deleteDeckButton,
+            deleteDeckLabel,
+            ...returnButton,
+            capacityTrackBg,
+            capacityFill,
+            capacityMarker,
+            capacityLabel,
+            switcherBg,
+            switcherLabel,
+            ...prevDeckButton,
+            ...nextDeckButton,
+        ]);
+        this.updateDeleteButton();
+
+        createEditorSection(
+            mainSection,
+            mainSectionY,
+            mainSectionHeight,
+            PANEL_ACCENT,
+            'Main Deck 已就绪；按方向键或点击卡牌切换焦点，然后移除。',
+        );
+        createEditorSection(
+            extraSection,
+            extraSectionY,
+            extraSectionHeight,
+            SELECTED_ACCENT,
+            'Extra Deck 焦点支持同样的移除与检视操作。',
+        );
+
+        if (this.detailPaneExpanded) {
+            this.detailPaneWidth = 320;
+            this.detailPaneHeight = Math.max(320, contentH - sectionsTop - 20);
+            this.detailPaneContainer = this.scene.add.container(contentW - this.detailPaneWidth - 12, sectionsTop + 4);
+            const detailBackdrop = this.scene.add.rectangle(
+                this.detailPaneWidth / 2,
+                this.detailPaneHeight / 2,
+                this.detailPaneWidth + 10,
+                this.detailPaneHeight + 10,
+                0x000000,
+                0.18,
+            );
+            detailBackdrop.setStrokeStyle(1, PANEL_ACCENT, 0.16);
+            this.detailPaneContainer.add(detailBackdrop);
+            this.editorContainer.add(this.detailPaneContainer);
+            this.refreshDetailPane(this.pendingSelectedDeckMotionId === deck.id);
+            pulseTargets.push(this.detailPaneContainer);
+        }
+
+        this.refreshSpotlightRowStates(this.pendingSelectedDeckMotionId === deck.id);
+        if (this.pendingSelectedDeckMotionId === deck.id) {
+            this.playMotionPulse(pulseTargets, {
+                alphaFrom: 0.58,
+                scaleXFrom: 0.98,
+                scaleYFrom: 0.94,
+                duration: 210,
+            });
         }
 
         this.lastEditorFeedback = {
@@ -4768,14 +4376,14 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     private createBrowserColumn(x: number, y: number, colW: number, colH: number): void {
         const shellBg = this.scene.add.rectangle(x + colW / 2, y + colH / 2, colW, colH, SECTION_FILL, 0.94);
         shellBg.setStrokeStyle(1, blendColor(SECTION_BORDER, VALID_ACCENT, 0.16), 0.68);
-        const shellAccent = this.scene.add.rectangle(x + 16, y + 13, 42, 3, VALID_ACCENT, 0.76).setOrigin(0, 0.5);
-        const title = this.scene.add.text(x + 16, y + 7, '从储物袋加入', {
+        const shellAccent = this.scene.add.rectangle(x + 16, y + 13, 84, 3, VALID_ACCENT, 0.76).setOrigin(0, 0.5);
+        const title = this.scene.add.text(x + 16, y + 8, '卡牌列表', {
             fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '28px',
             color: '#f3ead3',
             fontStyle: 'bold',
         });
-        const subtitle = this.scene.add.text(x + 16, y + 38, '搜索 / 筛选 / 排序都收在这里；结果直接接在下方。', {
+        const subtitle = this.scene.add.text(x + 16, y + 38, '从储物袋加入：搜索、筛选、排序后直接加入当前卡组。', {
             fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '18px',
             color: '#bca785',
@@ -4784,23 +4392,27 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
 
         const innerX = x + 16;
         const innerW = colW - 32;
+        const tileGap = 10;
+        this.browserGridColumns = Math.max(5, Math.min(6, Math.floor((innerW + tileGap) / (92 + tileGap))));
+        const previewTileWidth = Math.floor((innerW - Math.max(this.browserGridColumns - 1, 0) * tileGap) / this.browserGridColumns);
+        const previewTileHeight = clampNumber(Math.floor(previewTileWidth * 1.24), 108, 132);
         const controlCardY = y + 68;
-        const controlCardH = 188;
+        const controlCardH = 154;
         const controlsCard = this.scene.add.rectangle(innerX + innerW / 2, controlCardY + controlCardH / 2, innerW, controlCardH, PANEL_DEEP_FILL, 0.92);
         controlsCard.setStrokeStyle(1, blendColor(VALID_ACCENT, SECTION_BORDER, 0.3), 0.32);
         const controlsDivider = this.scene.add.rectangle(innerX + innerW / 2, controlCardY + 28, innerW - 20, 1, VALID_ACCENT, 0.12);
         const controlLabelY = controlCardY + 14;
         const searchY = controlCardY + 58;
-        const controlsY = controlCardY + 116;
-        const summaryHeight = 40;
+        const controlsY = controlCardY + 108;
+        const summaryHeight = 44;
         const summaryY = controlCardY + controlCardH - 24;
         const scrollBtnY = y + colH - 28;
-        const listTop = controlCardY + controlCardH + 8;
+        const listTop = controlCardY + controlCardH + 10;
         const listBottom = scrollBtnY - 24;
         const listH = Math.max(120, listBottom - listTop);
 
         this.browserArea = { x: innerX, y: listTop, w: innerW, h: listH };
-        this.browserVisibleRows = Math.max(1, Math.floor(listH / BROWSER_ROW_HEIGHT));
+        this.browserVisibleRows = Math.max(1, Math.floor((listH + tileGap) / (previewTileHeight + tileGap)));
         this.browserSummaryArea = { x: innerX, y: summaryY, w: innerW, h: summaryHeight };
 
         const controlLabel = this.scene.add.text(innerX, controlLabelY, '浏览控制', {
@@ -4852,10 +4464,10 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         this.queryClearBtn.setVisible(this.filterQuery.length > 0);
 
         const buttonGap = 6;
-        const kindButtonWidth = 78;
-        const hideZeroButtonWidth = 56;
-        const sortFieldButtonWidth = 78;
-        const sortDirButtonWidth = 56;
+        const kindButtonWidth = 88;
+        const hideZeroButtonWidth = 64;
+        const sortFieldButtonWidth = 88;
+        const sortDirButtonWidth = 64;
         const sortDirButtonX = innerX + innerW - sortDirButtonWidth / 2;
         const sortFieldButtonX = sortDirButtonX - sortDirButtonWidth / 2 - buttonGap - sortFieldButtonWidth / 2;
         const hideZeroButtonX = sortFieldButtonX - sortFieldButtonWidth / 2 - buttonGap - hideZeroButtonWidth / 2;
@@ -5072,8 +4684,12 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         this.browserInner.removeAll(true);
 
         const { rows, matchedRows, totalRows } = this.buildBrowserCollections();
-
-        const maxOffset = Math.max(0, rows.length - this.browserVisibleRows);
+        const tileGap = 10;
+        this.browserGridColumns = Math.max(5, Math.min(6, Math.floor((this.browserArea.w + tileGap) / (92 + tileGap))));
+        const tileWidth = Math.floor((this.browserArea.w - Math.max(this.browserGridColumns - 1, 0) * tileGap) / this.browserGridColumns);
+        const tileHeight = clampNumber(Math.floor(tileWidth * 1.24), 108, 132);
+        this.browserVisibleRows = Math.max(1, Math.floor((this.browserArea.h + tileGap) / (tileHeight + tileGap)));
+        const maxOffset = Math.max(0, Math.ceil(rows.length / this.browserGridColumns) - this.browserVisibleRows);
         this.browserScrollOffset = clampNumber(this.browserScrollOffset, 0, maxOffset);
 
         const selectedDeck = this.getSelectedDeck();
@@ -5145,12 +4761,19 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
             }).setOrigin(0.5);
             this.browserInner.add([emptyCard, title, body]);
         } else {
-            const start = this.browserScrollOffset;
-            const end = Math.min(start + this.browserVisibleRows, rows.length);
+            const startRow = this.browserScrollOffset;
+            const startIndex = startRow * this.browserGridColumns;
+            const end = Math.min(startIndex + this.browserVisibleRows * this.browserGridColumns, rows.length);
 
-            for (let index = start; index < end; index += 1) {
+            for (let index = startIndex; index < end; index += 1) {
                 const row = rows[index];
-                const rowY = (index - start) * BROWSER_ROW_HEIGHT;
+                const relativeIndex = index - startIndex;
+                const gridRow = Math.floor(relativeIndex / this.browserGridColumns);
+                const gridCol = relativeIndex % this.browserGridColumns;
+                const tileLeft = gridCol * (tileWidth + tileGap);
+                const tileTop = gridRow * (tileHeight + tileGap);
+                const tileCenterX = tileLeft + tileWidth / 2;
+                const tileCenterY = tileTop + tileHeight / 2;
                 const inDeck = deckCards.find((stack) => stack.id === row.id)?.count ?? 0;
                 const available = computeAvailable(this.stash.cards, deckCards, row.id);
                 const hasDeck = selectedDeck !== null;
@@ -5206,7 +4829,7 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
                 const activeFillColor = blendColor(fillColor, spotlightTheme.headerFillColor, 0.54);
                 secondaryParts.push(stateLabel);
 
-                const rowBg = this.scene.add.rectangle(this.browserArea.w / 2, rowY + BROWSER_ROW_HEIGHT / 2, this.browserArea.w, BROWSER_ROW_HEIGHT - 6, fillColor, 0.98);
+                const rowBg = this.scene.add.rectangle(tileCenterX, tileCenterY, tileWidth, tileHeight, fillColor, 0.99);
                 rowBg.setStrokeStyle(1, borderColor, canAdd ? 0.9 : 0.65);
                 const spotlightRow: SpotlightRowHandle = {
                     cardId: row.id,
@@ -5229,34 +4852,48 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
                     this.setDetailCardId(row.id);
                 });
                 this.registerSpotlightRow(this.browserSpotlightRows, spotlightRow);
-                const accent = this.scene.add.rectangle(5, rowY + BROWSER_ROW_HEIGHT / 2, 6, BROWSER_ROW_HEIGHT - 14, borderColor, 1)
+                const accent = this.scene.add.rectangle(tileLeft + 4, tileCenterY, 4, tileHeight - 12, borderColor, 0.96)
                     .setOrigin(0, 0.5);
-                const browserGlyph = this.createCompactCardGlyphBadge(
-                    14,
-                    rowY + 10,
-                    row.kind,
-                    this.config.metadata?.[row.id]?.rarity,
-                );
-
-                const nameText = this.scene.add.text(50, rowY + 10, displayName, {
+                const headerBar = this.scene.add.rectangle(tileCenterX, tileTop + 10, tileWidth - 8, 16, spotlightTheme.headerFillColor, 0.96);
+                headerBar.setStrokeStyle(1, spotlightTheme.borderColor, 0.28);
+                const rarityPip = this.scene.add.rectangle(tileLeft + tileWidth - 12, tileTop + 10, 14, 14, getRarityAccentColor(this.config.metadata?.[row.id]?.rarity), 0.95);
+                const browserGlyph = this.scene.add.text(tileCenterX, tileTop + 38, getCardKindGlyph(row.kind), {
                     fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '20px',
+                    fontSize: '34px',
+                    color: '#ffffff',
+                    fontStyle: 'bold',
+                }).setOrigin(0.5).setAlpha(0.18);
+
+                const nameText = this.scene.add.text(tileLeft + 8, tileTop + 24, truncateLabel(displayName, 10), {
+                    fontFamily: expeditionUiTheme.fonts.ui,
+                    fontSize: '14px',
                     color: nameColor,
                     fontStyle: 'bold',
-                    wordWrap: { width: Math.max(110, this.browserArea.w - 168) },
+                    wordWrap: { width: tileWidth - 16 },
                 });
-                const detailText = this.scene.add.text(50, rowY + 40, secondaryParts.join(' · '), {
+                const detailText = this.scene.add.text(tileLeft + 8, tileTop + tileHeight - 44, truncateLabel(secondaryParts.join(' · '), 18), {
                     fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '16px',
+                    fontSize: '12px',
                     color: detailColor,
-                    wordWrap: { width: Math.max(110, this.browserArea.w - 168) },
+                    wordWrap: { width: tileWidth - 16 },
+                });
+                const availabilityText = this.scene.add.text(tileLeft + 8, tileTop + tileHeight - 58, `库存 ${row.count} · 卡组 ${inDeck}`, {
+                    fontFamily: expeditionUiTheme.fonts.ui,
+                    fontSize: '12px',
+                    color: '#d9c6a2',
+                    wordWrap: { width: tileWidth - 16 },
                 });
 
+                const buttonY = tileTop + tileHeight - 14;
+                const buttonGap = 4;
+                const addButtonWidth = Math.max(36, Math.floor((tileWidth - 20 - buttonGap) * 0.38));
+                const quickAddButtonWidth = Math.max(48, tileWidth - 16 - addButtonWidth - buttonGap);
+
                 const addButton = this.createButton(
-                    this.browserArea.w - 96,
-                    rowY + 86,
-                    56,
-                    SECONDARY_BUTTON_HEIGHT,
+                    tileLeft + 8 + addButtonWidth / 2,
+                    buttonY,
+                    addButtonWidth,
+                    28,
                     '+1',
                     0x14532d,
                     () => {
@@ -5273,14 +4910,14 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
                         disabledFillColor,
                         disabledStrokeColor,
                         disabledTextColor,
-                        fontSize: '18px',
+                        fontSize: '14px',
                     },
                 );
                 const quickAddButton = this.createButton(
-                    this.browserArea.w - 34,
-                    rowY + 86,
-                    64,
-                    SECONDARY_BUTTON_HEIGHT,
+                    tileLeft + tileWidth - 8 - quickAddButtonWidth / 2,
+                    buttonY,
+                    quickAddButtonWidth,
+                    28,
                     '加满',
                     0x166534,
                     () => {
@@ -5297,11 +4934,22 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
                         disabledFillColor,
                         disabledStrokeColor,
                         disabledTextColor,
-                        fontSize: '18px',
+                        fontSize: '14px',
                     },
                 );
 
-                this.browserInner.add([rowBg, accent, ...browserGlyph, nameText, detailText, ...addButton, ...quickAddButton]);
+                this.browserInner.add([
+                    rowBg,
+                    accent,
+                    headerBar,
+                    rarityPip,
+                    browserGlyph,
+                    nameText,
+                    availabilityText,
+                    detailText,
+                    ...addButton,
+                    ...quickAddButton,
+                ]);
             }
         }
 
@@ -5320,8 +4968,8 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
 
         if (this.browserPosText) {
             const total = rows.length;
-            const start = total === 0 ? 0 : this.browserScrollOffset + 1;
-            const end = total === 0 ? 0 : Math.min(this.browserScrollOffset + this.browserVisibleRows, total);
+            const start = total === 0 ? 0 : this.browserScrollOffset * this.browserGridColumns + 1;
+            const end = total === 0 ? 0 : Math.min(this.browserScrollOffset * this.browserGridColumns + this.browserVisibleRows * this.browserGridColumns, total);
             this.browserPosText.setText(total === 0 ? '当前无结果' : `显示 ${start}-${end} / ${total}`);
         }
     }

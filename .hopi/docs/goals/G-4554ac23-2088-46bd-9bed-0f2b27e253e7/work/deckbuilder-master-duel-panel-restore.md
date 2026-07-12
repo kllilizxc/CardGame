@@ -5,10 +5,12 @@ notBefore: null
 dependsOn:
   - deckbuilder-section-presentation
 contractRevision: 1
-evidenceRefs: []
+evidenceRefs:
+  - E-R-f037bde2-4fbb-4f8d-ba23-e38a4fd457f6
+  - E-R-09646126-4d8d-4a0b-ade2-d736ddfe0f9b
 attempts: 0
 kind: engineering
-stage: generate
+stage: done
 ---
 ## Objective
 
