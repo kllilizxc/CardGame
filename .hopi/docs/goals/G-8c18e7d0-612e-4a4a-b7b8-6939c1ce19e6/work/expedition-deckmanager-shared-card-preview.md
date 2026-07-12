@@ -5,10 +5,12 @@ notBefore: null
 dependsOn:
   - battle-shared-card-preview
 contractRevision: 1
-evidenceRefs: []
+evidenceRefs:
+  - E-R-0f1a1ff8-dabb-4518-a652-7ab6ff85e9b6
+  - E-R-e8ed59ba-9e06-4c5e-8363-e4d0e769f177
 attempts: 0
 kind: engineering
-stage: generate
+stage: done
 ---
 ## Objective
 

@@ -84,6 +84,12 @@ import {
     type DeckbuilderCardMetadataResources,
 } from './deckbuilderCardMetadata';
 import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
+import { CardPreviewManager } from '../../managers/common/CardPreviewManager';
+import {
+    buildDeckManagementCardPreviewResolver,
+    type DeckManagementCardPreviewResolver,
+} from '../../ui/deckbuilder/DeckManagementCardPreview';
+import type { CardPreviewMetadata, PreviewCardData } from '../../managers/common/cardPreviewProtocol';
 
 type StarterDeckCacheEntry = ExpeditionBootstrapSources['starterDeck'];
 
@@ -130,6 +136,8 @@ export class ExpeditionScene extends Scene {
     private pendingPreparationDeckHandoff?: PreparationDeckHandoffSummary;
     private deckbuilderCardMetadataResources?: DeckbuilderCardMetadataResources;
     private deckbuilderCardMetadata: CardMetadataMap = {};
+    private deckManagementCardPreviewResolver?: DeckManagementCardPreviewResolver;
+    private cardPreviewManager?: CardPreviewManager;
     private entryShell?: EntryShellVisuals;
     private currentEntryShellMode: EntryShellMode = 'preparation';
     private entryTransitionBlocker?: Phaser.GameObjects.Rectangle;
@@ -147,6 +155,8 @@ export class ExpeditionScene extends Scene {
         this.pendingBattleResult = this.launchData.battleResult ?? null;
         this.deckbuilderCardMetadataResources = undefined;
         this.deckbuilderCardMetadata = {};
+        this.deckManagementCardPreviewResolver = undefined;
+        this.cardPreviewManager = undefined;
     }
 
     preload(): void {
@@ -186,6 +196,10 @@ export class ExpeditionScene extends Scene {
                 ),
             },
         );
+        this.deckManagementCardPreviewResolver = buildDeckManagementCardPreviewResolver(
+            this.getDeckbuilderCardMetadataResources(),
+            (cacheKey) => this.cache.json.get(cacheKey),
+        );
         this.assertLaunchTargetMatchesMapDefinition();
         this.expeditionState = ExpeditionState.bootstrap({
             worldState,
@@ -199,6 +213,7 @@ export class ExpeditionScene extends Scene {
 
         this.createSceneBackdrop();
         this.createEntryShell();
+        this.setupCardPreview();
 
         this.runHud = new RunHud(this);
         this.runHud.setVisible(false);
@@ -989,6 +1004,7 @@ export class ExpeditionScene extends Scene {
         const nextPanel = new DeckManagementPanel(this, {
             stash: this.expeditionState.persistentStash,
             metadata: this.deckbuilderCardMetadata,
+            previewResolver: this.deckManagementCardPreviewResolver ?? (() => null),
             onStashChange: (newStash) => {
                 this.expeditionState.persistentStash = newStash;
                 this.expeditionState.persistCurrentStash();
@@ -1009,6 +1025,38 @@ export class ExpeditionScene extends Scene {
         this.preparationPanel = undefined;
         this.deckManagementPanel = nextPanel;
         this.swapEntryPanel(currentPanel, nextPanel, 'deckManager', 'forward');
+    }
+
+    private setupCardPreview(): void {
+        this.cardPreviewManager?.destroy();
+        this.events.removeAllListeners('showCardPreviewFromData');
+        this.events.removeAllListeners('showCardPreviewFallback');
+        this.events.removeAllListeners('hideCardPreview');
+        this.events.removeAllListeners('clearCardPreviewContext');
+
+        const previewX = Math.max(276, Math.min(this.scale.width - 276, this.scale.width * 0.18));
+        this.cardPreviewManager = new CardPreviewManager(this, {
+            layout: {
+                x: previewX,
+                y: this.scale.height * 0.5,
+                width: 412,
+                height: 648,
+                depth: 1400,
+            },
+        });
+
+        this.events.on('showCardPreviewFromData', (cardData: PreviewCardData, metadata?: CardPreviewMetadata) => {
+            this.cardPreviewManager?.showFromData(cardData, metadata);
+        });
+        this.events.on('showCardPreviewFallback', (metadata: CardPreviewMetadata) => {
+            this.cardPreviewManager?.showFallback(metadata);
+        });
+        this.events.on('hideCardPreview', () => {
+            this.cardPreviewManager?.clear();
+        });
+        this.events.on('clearCardPreviewContext', (contextId: string) => {
+            this.cardPreviewManager?.clearContext(contextId);
+        });
     }
 
     private startFreshRun(): void {

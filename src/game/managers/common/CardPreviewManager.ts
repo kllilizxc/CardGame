@@ -6,11 +6,26 @@ import { battleTheme, blendBattleColor } from '../../ui/battle/battleTheme';
 import { getSceneTextStyle, sceneTheme } from '../../scenes/shared/sceneTheme';
 import {
     CardPreviewSession,
+    type CardPreviewContextMetric,
+    type CardPreviewContextSection,
+    type CardPreviewFallback,
     DEFAULT_CARD_PREVIEW_TITLE,
     type ActiveCardPreview,
     type CardPreviewMetadata,
     type PreviewCardData,
 } from './cardPreviewProtocol';
+
+interface CardPreviewManagerLayout {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    depth?: number;
+}
+
+interface CardPreviewManagerConfig {
+    layout?: CardPreviewManagerLayout;
+}
 
 interface CardPreviewDisplayRequest extends CardPreviewMetadata {
     card?: BaseCardSprite;
@@ -20,8 +35,10 @@ interface CardPreviewDisplayRequest extends CardPreviewMetadata {
 export class CardPreviewManager {
     private readonly scene: Scene;
     private readonly session = new CardPreviewSession();
+    private readonly config: CardPreviewManagerConfig;
     private host!: Phaser.GameObjects.Container;
     private cardLayer!: Phaser.GameObjects.Container;
+    private contextLayer!: Phaser.GameObjects.Container;
     private titleText!: Phaser.GameObjects.Text;
     private sourceText!: Phaser.GameObjects.Text;
     private previewCard: BaseCardSprite | null = null;
@@ -30,8 +47,9 @@ export class CardPreviewManager {
     private escHandler?: () => void;
     private isDestroyed = false;
 
-    constructor(scene: Scene) {
+    constructor(scene: Scene, config: CardPreviewManagerConfig = {}) {
         this.scene = scene;
+        this.config = config;
         this.createHost();
         this.registerCloseBehavior();
         this.scene.events.once('shutdown', () => this.destroy());
@@ -48,6 +66,12 @@ export class CardPreviewManager {
     public showFromData(cardData: PreviewCardData, metadata: CardPreviewMetadata = {}): void {
         this.show({
             cardData,
+            ...metadata,
+        });
+    }
+
+    public showFallback(metadata: CardPreviewMetadata): void {
+        this.show({
             ...metadata,
         });
     }
@@ -83,7 +107,7 @@ export class CardPreviewManager {
             this.escHandler = undefined;
         }
 
-        this.destroyPreviewCard();
+        this.destroyPreviewContent();
         this.host.destroy();
     }
 
@@ -93,7 +117,7 @@ export class CardPreviewManager {
         }
 
         const cardData = request.cardData ?? (request.card?.getCardData() as PreviewCardData | undefined);
-        if (!cardData) {
+        if (!cardData && !request.fallback) {
             return;
         }
 
@@ -102,6 +126,8 @@ export class CardPreviewManager {
             contextId: request.contextId,
             sourceLabel: request.sourceLabel,
             title: request.title,
+            contextSection: request.contextSection,
+            fallback: request.fallback,
         });
 
         this.render(activePreview);
@@ -114,7 +140,8 @@ export class CardPreviewManager {
         this.titleText.setText(activePreview.title);
         this.sourceText.setText(`来源：${activePreview.sourceLabel}`);
 
-        if (!this.replacePreviewCard(activePreview.cardData)) {
+        const reservedContextHeight = this.renderContextSection(activePreview.contextSection);
+        if (!this.replacePreviewContent(activePreview, reservedContextHeight)) {
             this.session.clear();
             this.hide(true);
             return;
@@ -140,6 +167,8 @@ export class CardPreviewManager {
         } else {
             this.host.setAlpha(1);
         }
+
+        this.emitVisibilityChange(true, activePreview.contextId);
     }
 
     private hide(immediate: boolean = false): void {
@@ -148,7 +177,8 @@ export class CardPreviewManager {
             this.scene.tweens.killTweensOf(this.cardLayer);
             this.host.setAlpha(0);
             this.host.setVisible(false);
-            this.destroyPreviewCard();
+            this.destroyPreviewContent();
+            this.emitVisibilityChange(false);
             return;
         }
 
@@ -164,39 +194,98 @@ export class CardPreviewManager {
                 }
 
                 this.host.setVisible(false);
-                this.destroyPreviewCard();
+                this.destroyPreviewContent();
+                this.emitVisibilityChange(false);
             },
         });
     }
 
-    private replacePreviewCard(cardData: PreviewCardData): boolean {
-        this.destroyPreviewCard();
+    private replacePreviewContent(activePreview: ActiveCardPreview, reservedContextHeight: number): boolean {
+        this.destroyPreviewContent();
 
-        const previewCard = CardSpriteFactory.createSprite(this.scene, cardData, 0, 26, 1);
-        if (!previewCard) {
+        const cardAreaTop = -this.previewHeight / 2 + 124;
+        const cardAreaBottom = this.previewHeight / 2 - reservedContextHeight - 30;
+        const availableHeight = Math.max(196, cardAreaBottom - cardAreaTop);
+        const previewCenterY = Math.round((cardAreaTop + cardAreaBottom) / 2);
+        this.cardLayer.setPosition(0, previewCenterY);
+
+        if (activePreview.cardData) {
+            const previewCard = CardSpriteFactory.createSprite(this.scene, activePreview.cardData, 0, 0, 1);
+            if (previewCard) {
+                const previewScale = Math.min(1.32, Math.max(0.92, availableHeight / 260));
+
+                previewCard.setDisplayMode('hover');
+                previewCard.disableDragging();
+                previewCard.disableInteractive();
+                previewCard.setScale(previewScale);
+
+                this.cardLayer.add(previewCard);
+                this.previewCard = previewCard;
+                return true;
+            }
+        }
+
+        if (!activePreview.fallback) {
             return false;
         }
 
-        const availableHeight = this.previewHeight - 192;
-        const previewScale = Math.min(1.32, Math.max(1, availableHeight / 260));
-
-        previewCard.setDisplayMode('hover');
-        previewCard.disableDragging();
-        previewCard.disableInteractive();
-        previewCard.setScale(previewScale);
-
-        this.cardLayer.add(previewCard);
-        this.previewCard = previewCard;
-
+        this.renderFallbackPlaceholder(activePreview.fallback, availableHeight);
         return true;
     }
 
-    private destroyPreviewCard(): void {
-        if (!this.previewCard) {
-            return;
-        }
+    private renderFallbackPlaceholder(fallback: CardPreviewFallback, availableHeight: number): void {
+        const panelHeight = Math.min(Math.max(availableHeight, 220), 276);
+        const panelWidth = this.previewWidth - 34;
+        const placeholder = this.scene.add.rectangle(0, 0, panelWidth, panelHeight, 0x0b1220, 0.98);
+        placeholder.setStrokeStyle(2, sceneTheme.colors.goldSoft, 0.42);
+        const accent = this.scene.add.rectangle(-panelWidth / 2 + 8, 0, 6, panelHeight - 18, sceneTheme.colors.gold, 0.82)
+            .setOrigin(0, 0.5);
+        const glow = this.scene.add.rectangle(0, 0, panelWidth - 18, panelHeight - 18, sceneTheme.colors.jade, 0.04);
+        glow.setStrokeStyle(1, sceneTheme.colors.jadeBright, 0.12);
 
-        this.previewCard.destroy();
+        const tagLabel = this.scene.add.text(
+            -panelWidth / 2 + 20,
+            -panelHeight / 2 + 24,
+            fallback.tagLabel ?? '共享预览回退',
+            getSceneTextStyle('support', {
+                fontSize: '16px',
+                color: battleTheme.colors.textSupport,
+            }),
+        ).setOrigin(0, 0.5);
+        const title = this.scene.add.text(
+            -panelWidth / 2 + 20,
+            -panelHeight / 2 + 58,
+            fallback.title,
+            getSceneTextStyle('panelTitle', {
+                fontSize: '24px',
+                color: battleTheme.colors.textPrimary,
+            }),
+        ).setOrigin(0, 0.5);
+        const body = this.scene.add.text(
+            -panelWidth / 2 + 20,
+            -panelHeight / 2 + 94,
+            fallback.lines.slice(0, 3).join('\n'),
+            getSceneTextStyle('support', {
+                fontSize: '18px',
+                color: battleTheme.colors.textSupport,
+                wordWrap: { width: panelWidth - 42 },
+                lineSpacing: 6,
+            }),
+        ).setOrigin(0, 0);
+
+        this.cardLayer.add([
+            placeholder,
+            glow,
+            accent,
+            tagLabel,
+            title,
+            body,
+        ]);
+    }
+
+    private destroyPreviewContent(): void {
+        this.cardLayer.removeAll(true);
+        this.contextLayer.removeAll(true);
         this.previewCard = null;
     }
 
@@ -208,14 +297,15 @@ export class CardPreviewManager {
             };
         };
         const layout = battleScene.layout;
-        const previewX = layout?.cardPreview?.x ?? this.scene.scale.width * 0.15;
-        const previewY = layout?.cardPreview?.y ?? this.scene.scale.height * 0.5;
+        const previewLayout = this.config.layout;
+        const previewX = previewLayout?.x ?? layout?.cardPreview?.x ?? this.scene.scale.width * 0.15;
+        const previewY = previewLayout?.y ?? layout?.cardPreview?.y ?? this.scene.scale.height * 0.5;
 
-        this.previewWidth = Math.min(layout?.cardPreview?.width ?? 392, 420);
-        this.previewHeight = Math.min(layout?.cardPreview?.height ?? 520, 560);
+        this.previewWidth = Math.min(previewLayout?.width ?? layout?.cardPreview?.width ?? 392, 432);
+        this.previewHeight = Math.min(previewLayout?.height ?? layout?.cardPreview?.height ?? 520, 680);
 
         this.host = this.scene.add.container(previewX, previewY);
-        this.host.setDepth((layout?.depth?.cardPreview ?? 6100));
+        this.host.setDepth(previewLayout?.depth ?? layout?.depth?.cardPreview ?? 6100);
         this.host.setVisible(false);
         this.host.setAlpha(0);
 
@@ -293,6 +383,7 @@ export class CardPreviewManager {
         ).setOrigin(0.5);
 
         this.cardLayer = this.scene.add.container(0, 34);
+        this.contextLayer = this.scene.add.container(0, 0);
 
         this.host.add([
             shadow,
@@ -304,6 +395,7 @@ export class CardPreviewManager {
             closeButton,
             closeLabel,
             this.cardLayer,
+            this.contextLayer,
         ]);
     }
 
@@ -312,5 +404,138 @@ export class CardPreviewManager {
             this.clear();
         };
         this.scene.input.keyboard?.on('keydown-ESC', this.escHandler);
+    }
+
+    private renderContextSection(contextSection?: CardPreviewContextSection): number {
+        this.contextLayer.removeAll(true);
+
+        const metrics = contextSection?.metrics?.filter((metric) => metric.value.trim().length > 0) ?? [];
+        const lines = contextSection?.lines?.map((line) => line.trim()).filter((line) => line.length > 0) ?? [];
+        const headline = contextSection?.headline?.trim();
+
+        if (!headline && metrics.length === 0 && lines.length === 0) {
+            return 0;
+        }
+
+        const reservedHeight = metrics.length > 0 ? 144 : 108;
+        const panelY = this.previewHeight / 2 - reservedHeight / 2 - 18;
+        const panel = this.scene.add.rectangle(
+            0,
+            panelY,
+            this.previewWidth - 20,
+            reservedHeight,
+            blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jade, 0.06),
+            0.98,
+        );
+        panel.setStrokeStyle(1, sceneTheme.colors.jadeBright, 0.18);
+        this.contextLayer.add(panel);
+
+        let cursorY = panelY - reservedHeight / 2 + 18;
+        if (headline) {
+            const headlineText = this.scene.add.text(
+                -this.previewWidth / 2 + 18,
+                cursorY,
+                headline,
+                getSceneTextStyle('support', {
+                    fontSize: '17px',
+                    color: battleTheme.colors.textPrimary,
+                }),
+            ).setOrigin(0, 0);
+            this.contextLayer.add(headlineText);
+            cursorY += 28;
+        }
+
+        if (metrics.length > 0) {
+            const visibleMetrics = metrics.slice(0, 4);
+            const gap = 6;
+            const metricWidth = (this.previewWidth - 44 - gap * Math.max(visibleMetrics.length - 1, 0)) / visibleMetrics.length;
+            visibleMetrics.forEach((metric, index) => {
+                const left = -this.previewWidth / 2 + 18 + index * (metricWidth + gap);
+                const tone = metric.tone ?? 'neutral';
+                const metricPanel = this.scene.add.rectangle(
+                    left + metricWidth / 2,
+                    cursorY + 18,
+                    metricWidth,
+                    36,
+                    this.getMetricFillColor(tone),
+                    0.98,
+                );
+                metricPanel.setStrokeStyle(1, this.getMetricBorderColor(tone), 0.72);
+                const metricText = this.scene.add.text(
+                    left + metricWidth / 2,
+                    cursorY + 18,
+                    `${metric.label} ${metric.value}`,
+                    getSceneTextStyle('support', {
+                        fontSize: '16px',
+                        color: this.getMetricTextColor(tone),
+                    }),
+                ).setOrigin(0.5);
+                this.contextLayer.add([metricPanel, metricText]);
+            });
+            cursorY += 52;
+        }
+
+        if (lines.length > 0) {
+            const body = this.scene.add.text(
+                -this.previewWidth / 2 + 18,
+                cursorY,
+                lines.slice(0, 2).join('\n'),
+                getSceneTextStyle('support', {
+                    fontSize: '17px',
+                    color: battleTheme.colors.textSupport,
+                    wordWrap: { width: this.previewWidth - 40 },
+                    lineSpacing: 6,
+                }),
+            ).setOrigin(0, 0);
+            this.contextLayer.add(body);
+        }
+
+        return reservedHeight + 10;
+    }
+
+    private getMetricFillColor(tone: CardPreviewContextMetric['tone']): number {
+        switch (tone) {
+            case 'positive':
+                return 0x10251a;
+            case 'warning':
+                return 0x271b0b;
+            case 'danger':
+                return 0x2a1318;
+            default:
+                return blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.ink, 0.18);
+        }
+    }
+
+    private getMetricBorderColor(tone: CardPreviewContextMetric['tone']): number {
+        switch (tone) {
+            case 'positive':
+                return sceneTheme.colors.jadeBright;
+            case 'warning':
+                return sceneTheme.colors.gold;
+            case 'danger':
+                return sceneTheme.colors.emberBright;
+            default:
+                return sceneTheme.colors.slate;
+        }
+    }
+
+    private getMetricTextColor(tone: CardPreviewContextMetric['tone']): string {
+        switch (tone) {
+            case 'positive':
+                return '#dcfce7';
+            case 'warning':
+                return '#f6e2b1';
+            case 'danger':
+                return '#f3d0c3';
+            default:
+                return battleTheme.colors.textPrimary;
+        }
+    }
+
+    private emitVisibilityChange(visible: boolean, contextId: string | null = null): void {
+        this.scene.events.emit('cardPreviewVisibilityChanged', {
+            visible,
+            contextId,
+        });
     }
 }

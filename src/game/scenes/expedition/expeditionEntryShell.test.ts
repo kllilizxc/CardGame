@@ -152,12 +152,14 @@ class MockPreparationPanel extends FakeContainer {
 class MockDeckManagementPanel extends FakeContainer {
     public readonly config: {
         stash: PersistentStash;
+        previewResolver: (cardId: string) => unknown;
         onStashChange: (stash: PersistentStash) => void;
         onClose: () => void;
     };
 
     constructor(scene: unknown, config: {
         stash: PersistentStash;
+        previewResolver: (cardId: string) => unknown;
         onStashChange: (stash: PersistentStash) => void;
         onClose: () => void;
     }) {

@@ -24,6 +24,8 @@ describe('CardPreviewSession', () => {
             sourceLabel: DEFAULT_CARD_PREVIEW_SOURCE,
             title: DEFAULT_CARD_PREVIEW_TITLE,
             cardData: sampleCard,
+            contextSection: undefined,
+            fallback: undefined,
         });
         expect(session.getActive()).toEqual(preview);
     });
@@ -47,5 +49,22 @@ describe('CardPreviewSession', () => {
         expect(session.getActive()).toEqual(replacement);
         expect(session.clearContext('battle-log')).toEqual(replacement);
         expect(session.getActive()).toBeNull();
+    });
+
+    it('accepts fallback-only previews for unsupported or missing card content', () => {
+        const session = new CardPreviewSession();
+        const preview = session.open({
+            contextId: 'deck-management',
+            sourceLabel: '储物袋浏览',
+            fallback: {
+                tagLabel: '暂未支持牌面',
+                title: '技能卡',
+                lines: ['当前卡种暂未接入共享牌面渲染。'],
+            },
+        });
+
+        expect(preview.cardData).toBeUndefined();
+        expect(preview.fallback?.title).toBe('技能卡');
+        expect(session.getActive()).toEqual(preview);
     });
 });

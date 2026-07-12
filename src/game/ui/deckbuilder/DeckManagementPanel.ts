@@ -41,10 +41,20 @@ import {
     buildDeckManagementPresentationViewModel,
     getDeckManagementSection,
 } from './DeckManagementPresentation';
+import {
+    DECK_MANAGEMENT_CARD_PREVIEW_CONTEXT_ID,
+    type DeckManagementCardPreviewResolver,
+} from './DeckManagementCardPreview';
+import type {
+    CardPreviewContextMetric,
+    CardPreviewFallback,
+    CardPreviewMetadata,
+} from '../../managers/common/cardPreviewProtocol';
 
 export interface DeckManagementPanelConfig {
     stash: PersistentStash;
     metadata?: CardMetadataMap;
+    previewResolver: DeckManagementCardPreviewResolver;
     initialKeyboardZone?: 'decks' | 'editor' | 'browser' | 'return';
     onStashChange: (stash: PersistentStash) => void;
     onClose: () => void;
@@ -1235,12 +1245,12 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     private sortDirBtnText?: GameObjects.Text;
     private browserSummaryContainer?: GameObjects.Container;
     private browserPosText?: GameObjects.Text;
-    private detailPaneContainer?: GameObjects.Container;
-    private detailPaneContent?: GameObjects.Container;
     private readonly editorSpotlightRows = new Map<string, SpotlightRowHandle>();
     private readonly browserSpotlightRows = new Map<string, SpotlightRowHandle>();
     private pendingSelectedDeckMotionId: string | null = null;
     private lastEditorFeedback?: DeckFeedbackSnapshot;
+    private previewSourceLabel = '卡组管理';
+    private previewVisibilityChangeHandler?: (state: { visible: boolean; contextId: string | null }) => void;
 
     private keydownHandler?: (event: KeyboardEvent) => void;
     private wheelHandler?: (pointer: Phaser.Input.Pointer, _gameObjects: unknown[], deltaX: number, deltaY: number) => void;
@@ -1254,8 +1264,6 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     private deckListCompact = false;
     private editorContentWidth = 0;
     private editorContentHeight = 0;
-    private detailPaneWidth = 0;
-    private detailPaneHeight = 0;
 
     private dialogMode = false;
     private dialogObjects: GameObjects.GameObject[] = [];
@@ -1271,8 +1279,19 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         this.keyboardZone = config.initialKeyboardZone ?? this.keyboardZone;
 
         this.createPanel();
+        this.previewVisibilityChangeHandler = (state) => {
+            const nextVisible = state.visible && state.contextId === DECK_MANAGEMENT_CARD_PREVIEW_CONTEXT_ID;
+            if (this.detailPaneExpanded === nextVisible) {
+                return;
+            }
+
+            this.detailPaneExpanded = nextVisible;
+            this.refreshKeyboardGuide();
+        };
+        this.scene.events.on('cardPreviewVisibilityChanged', this.previewVisibilityChangeHandler);
         this.syncKeyboardZoneSelection();
         scene.add.existing(this);
+        this.refreshDetailPane();
 
         this.keydownHandler = this.handleKeyDown.bind(this);
         scene.input.keyboard?.on('keydown', this.keydownHandler);
@@ -1296,6 +1315,11 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
             this.scene.input.off('wheel', this.wheelHandler);
         }
 
+        if (this.previewVisibilityChangeHandler) {
+            this.scene.events.off('cardPreviewVisibilityChanged', this.previewVisibilityChangeHandler);
+        }
+
+        this.scene.events.emit('clearCardPreviewContext', DECK_MANAGEMENT_CARD_PREVIEW_CONTEXT_ID);
         this.nativeTextEntry.destroy();
         this.dialogObjects.forEach((obj) => obj.destroy());
         this.dialogObjects = [];
@@ -1319,7 +1343,7 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         this.namingMode = mode;
         this.namingDeckId = deckId;
         this.renameBuffer = initialName;
-        this.detailPaneExpanded = false;
+        this.setDetailPaneExpanded(false);
         this.refreshKeyboardGuide();
     }
 
@@ -1368,6 +1392,9 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
 
     private setDetailCardId(cardId: string): void {
         if (this.detailCardId === cardId) {
+            if (!this.detailPaneExpanded) {
+                this.refreshDetailPane(true);
+            }
             return;
         }
 
@@ -1382,7 +1409,11 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         }
 
         this.detailPaneExpanded = expanded;
-        this.refreshEditor();
+        if (expanded) {
+            this.refreshDetailPane();
+        } else {
+            this.scene.events.emit('clearCardPreviewContext', DECK_MANAGEMENT_CARD_PREVIEW_CONTEXT_ID);
+        }
         this.refreshKeyboardGuide();
     }
 
@@ -1392,7 +1423,23 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
 
     private setKeyboardZone(zone: DeckbuilderKeyboardZone): void {
         this.keyboardZone = zone;
+        this.previewSourceLabel = this.getPreviewSourceLabelForZone(zone);
         this.refreshKeyboardGuide();
+    }
+
+    private getPreviewSourceLabelForZone(zone: DeckbuilderKeyboardZone): string {
+        switch (zone) {
+            case 'editor':
+                return '当前卡组编辑';
+            case 'browser':
+                return '储物袋浏览';
+            case 'decks':
+                return '当前带入卡组';
+            case 'return':
+                return '返回摘要';
+            default:
+                return '卡组管理';
+        }
     }
 
     private cycleKeyboardZone(direction: -1 | 1): void {
@@ -1604,11 +1651,13 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         }
 
         this.editorScrollOffset = clampNumber(this.editorScrollOffset, 0, maxOffset);
+        this.previewSourceLabel = this.getPreviewSourceLabelForZone('editor');
         const detailChanged = this.detailCardId !== nextCardId;
         this.detailCardId = nextCardId;
 
         if (this.editorScrollOffset !== previousOffset) {
             this.refreshEditor();
+            this.refreshDetailPane(animate);
             return;
         }
 
@@ -1687,11 +1736,13 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         }
 
         this.browserScrollOffset = clampNumber(this.browserScrollOffset, 0, maxOffset);
+        this.previewSourceLabel = this.getPreviewSourceLabelForZone('browser');
         const detailChanged = this.detailCardId !== nextCardId;
         this.detailCardId = nextCardId;
 
         if (this.browserScrollOffset !== previousOffset) {
             this.refreshBrowser();
+            this.refreshDetailPane(animate);
             return;
         }
 
@@ -1799,17 +1850,11 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         this.browserSpotlightRows.forEach((row) => this.applySpotlightRowState(row, this.detailCardId === row.cardId, animate));
     }
 
-    private refreshDetailPane(animate = false): void {
-        if (!this.detailPaneContainer) {
+    private refreshDetailPane(_animate = false): void {
+        if (!this.detailCardId) {
+            this.scene.events.emit('clearCardPreviewContext', DECK_MANAGEMENT_CARD_PREVIEW_CONTEXT_ID);
             return;
         }
-
-        this.detailPaneContainer.list.slice().forEach((child: GameObjects.GameObject) => {
-            if (child !== this.detailPaneContent) {
-                this.scene.tweens.killTweensOf(child);
-                child.destroy();
-            }
-        });
 
         const detail = buildCardDetailViewModel(
             this.detailCardId,
@@ -1817,387 +1862,89 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
             this.getSelectedDeck()?.cards ?? [],
             this.config.metadata,
         );
-        const nextContent = this.scene.add.container(0, 0);
+        const cardData = this.config.previewResolver(this.detailCardId);
+        const previewMetadata = this.buildSharedPreviewMetadata(detail, cardData);
 
-        const previewWidth = this.detailPaneWidth;
-        const previewHeight = this.detailPaneHeight;
-        const previewTheme = detail.previewTheme;
-        const compactPreview = previewHeight < 260 || previewWidth < 280;
-        const innerWidth = previewWidth - 28;
-        const contentLeft = 14;
-        const verticalGap = compactPreview ? 8 : 10;
-        const headerHeight = compactPreview ? 44 : 48;
-        const footerHeight = compactPreview ? 28 : 32;
-        const workingHeight = Math.max(
-            compactPreview ? 180 : 208,
-            previewHeight - headerHeight - footerHeight - verticalGap * 2 - 10,
-        );
-        const heroHeight = clampNumber(
-            Math.floor(workingHeight * (compactPreview ? 0.36 : 0.4)),
-            compactPreview ? 78 : 84,
-            compactPreview ? 92 : 104,
-        );
-        const metricHeight = clampNumber(
-            Math.floor(workingHeight * (compactPreview ? 0.18 : 0.2)),
-            compactPreview ? 42 : 44,
-            compactPreview ? 46 : 50,
-        );
-        const copyHeight = Math.max(compactPreview ? 64 : 76, workingHeight - heroHeight - metricHeight);
-        const heroTop = headerHeight + verticalGap;
-        const metricsTop = heroTop + heroHeight + verticalGap;
-        const copyTop = metricsTop + metricHeight + verticalGap;
-        const availableCopyHeight = previewHeight - footerHeight - 10 - copyTop;
-        const showSecondaryCopy = Boolean(detail.secondaryCopyLabel) && availableCopyHeight >= 96;
-        const copyPanelHeight = Math.min(
-            availableCopyHeight,
-            Math.max(copyHeight, showSecondaryCopy ? 92 : 68),
-        );
-        const footerTop = previewHeight - footerHeight + 1;
-        const metricGap = 4;
-        const metricWidth = (innerWidth - metricGap * 3) / 4;
-        const showHeroSupport = heroHeight >= 80;
-        const primaryCopy = truncateLabel(
-            detail.primaryCopyLabel,
-            showSecondaryCopy ? 46 : copyPanelHeight >= 88 ? 70 : 54,
-        );
-        const secondaryCopy = showSecondaryCopy
-            ? truncateLabel(detail.secondaryCopyLabel ?? '', compactPreview ? 28 : 34)
-            : null;
-        const supportLine = truncateLabel(detail.contextLabel, compactPreview ? 18 : 24);
-        const footerCopy = truncateLabel(
-            joinPreviewFacts([detail.metaLabel, detail.rulesLabel ?? detail.footerLabel], 72) ?? detail.footerLabel,
-            compactPreview ? 30 : 36,
-        );
-
-        const createBadge = (
-            x: number,
-            y: number,
-            label: string,
-            fillColor: number,
-            textColor: string,
-            align: 'left' | 'right' = 'left',
-        ): [GameObjects.Rectangle, GameObjects.Text, number] => {
-            const text = this.scene.add.text(0, y, label, {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                color: textColor,
-                fontStyle: 'bold',
-            }).setOrigin(0, 0.5);
-            const width = Math.max(88, text.width + 24);
-            const left = align === 'left' ? x : x - width;
-            text.setX(left + 12);
-
-            const bg = this.scene.add.rectangle(left + width / 2, y, width, 30, fillColor, 1);
-            bg.setStrokeStyle(1, 0xffffff, 0.12);
-            return [bg, text, width];
-        };
-
-        const shadow = this.scene.add.rectangle(
-            previewWidth / 2,
-            previewHeight / 2 + 4,
-            previewWidth + 6,
-            previewHeight + 6,
-            previewTheme.heroGlowColor,
-            0.12,
-        );
-        shadow.setStrokeStyle(1, previewTheme.heroGlowColor, 0.12);
-
-        const outerCard = this.scene.add.rectangle(
-            previewWidth / 2,
-            previewHeight / 2,
-            previewWidth,
-            previewHeight,
-            detail.fillColor,
-            0.99,
-        );
-        outerCard.setStrokeStyle(2, detail.accentColor, 0.95);
-        const innerFrame = this.scene.add.rectangle(
-            previewWidth / 2,
-            previewHeight / 2,
-            previewWidth - 8,
-            previewHeight - 8,
-            0x000000,
-            0,
-        );
-        innerFrame.setStrokeStyle(1, previewTheme.borderColor, 0.28);
-
-        const header = this.scene.add.rectangle(
-            previewWidth / 2,
-            headerHeight / 2,
-            previewWidth - 2,
-            headerHeight,
-            previewTheme.headerFillColor,
-            1,
-        );
-        header.setStrokeStyle(1, previewTheme.borderColor, 0.5);
-        const headerGlow = this.scene.add.rectangle(
-            previewWidth / 2,
-            headerHeight,
-            previewWidth - 18,
-            8,
-            previewTheme.heroGlowColor,
-            0.12,
-        );
-
-        const hero = this.scene.add.rectangle(
-            previewWidth / 2,
-            heroTop + heroHeight / 2,
-            innerWidth,
-            heroHeight,
-            previewTheme.heroFillColor,
-            1,
-        );
-        hero.setStrokeStyle(1, previewTheme.heroGlowColor, 0.6);
-        const heroAccent = this.scene.add.rectangle(
-            contentLeft + 4,
-            heroTop + heroHeight / 2,
-            6,
-            heroHeight - 12,
-            previewTheme.accentColor,
-            0.9,
-        ).setOrigin(0, 0.5);
-
-        const heroGlow = this.scene.add.rectangle(
-            previewWidth - 40,
-            heroTop + heroHeight / 2,
-            56,
-            heroHeight - 8,
-            previewTheme.heroGlowColor,
-            0.18,
-        );
-
-        const headerTitle = this.scene.add.text(12, headerHeight / 2, '焦点牌面', {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: '#d9c6a2',
-            fontStyle: 'bold',
-        }).setOrigin(0, 0.5);
-        let collapseButtonBg: GameObjects.Rectangle | null = null;
-        let collapseButtonText: GameObjects.Text | null = null;
-        if (this.detailPaneExpanded) {
-            const collapseButtonWidth = 78;
-            const collapseButtonHeight = 44;
-            const collapseButtonX = previewWidth - 14 - collapseButtonWidth / 2;
-            collapseButtonBg = this.scene.add.rectangle(
-                collapseButtonX,
-                headerHeight / 2,
-                collapseButtonWidth,
-                collapseButtonHeight,
-                expeditionUiTheme.colors.panel,
-                0.96,
-            );
-            collapseButtonBg.setStrokeStyle(1, previewTheme.borderColor, 0.42);
-            collapseButtonBg.setInteractive({ useHandCursor: true });
-            collapseButtonBg.on('pointerover', () => collapseButtonBg?.setFillStyle(BUTTON_NEUTRAL_HOVER_FILL, 0.98));
-            collapseButtonBg.on('pointerout', () => collapseButtonBg?.setFillStyle(expeditionUiTheme.colors.panel, 0.96));
-            collapseButtonBg.on('pointerdown', () => this.toggleDetailPane(false));
-            collapseButtonText = this.scene.add.text(collapseButtonX, headerHeight / 2, '收起', {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                color: '#f3ead3',
-                fontStyle: 'bold',
-            }).setOrigin(0.5);
-        }
-        const [kindBadgeBg, kindBadgeText] = createBadge(
-            18,
-            heroTop + 16,
-            detail.kindLabel,
-            previewTheme.badgeFillColor,
-            previewTheme.badgeTextColor,
-        );
-        const [rarityBadgeBg, rarityBadgeText] = createBadge(
-            previewWidth - 18,
-            heroTop + 16,
-            detail.rarityLabel,
-            detail.rarityColor,
-            '#f3ead3',
-            'right',
-        );
-
-        const heroName = this.scene.add.text(18, heroTop + 54, truncateLabel(detail.displayName, compactPreview ? 16 : 18), {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: compactPreview ? '20px' : '22px',
-            color: '#f3ead3',
-            fontStyle: 'bold',
-        });
-        const heroSupport = this.scene.add.text(18, heroTop + heroHeight - 48, supportLine, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: '#d9c6a2',
-            fontStyle: 'bold',
-            wordWrap: { width: innerWidth - 88 },
-        }).setOrigin(0, 1).setVisible(showHeroSupport);
-
-        const heroGlyph = this.scene.add.text(previewWidth - 44, heroTop + heroHeight / 2 + 4, detail.kindGlyph, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: compactPreview ? '48px' : '56px',
-            color: '#ffffff',
-            fontStyle: 'bold',
-        }).setOrigin(0.5).setAlpha(0.2);
-
-        const statusRibbon = this.scene.add.rectangle(
-            previewWidth / 2,
-            heroTop + heroHeight - 16,
-            innerWidth - 18,
-            24,
-            blendColor(previewTheme.heroFillColor, detail.accentColor, 0.45),
-            0.68,
-        );
-        statusRibbon.setStrokeStyle(1, detail.accentColor, 0.55);
-        const statusText = this.scene.add.text(previewWidth / 2, heroTop + heroHeight - 16, truncateLabel(detail.statusLabel, compactPreview ? 16 : 20), {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: detail.statusColor,
-            fontStyle: 'bold',
-        }).setOrigin(0.5);
-
-        const metricBoxes: GameObjects.GameObject[] = [];
-        detail.ownershipStats.forEach((metric, index) => {
-            const metricLeft = contentLeft + index * (metricWidth + metricGap);
-            const metricBg = this.scene.add.rectangle(
-                metricLeft + metricWidth / 2,
-                metricsTop + metricHeight / 2,
-                metricWidth,
-                metricHeight,
-                metric.fillColor,
-                0.98,
-            );
-            metricBg.setStrokeStyle(1, metric.borderColor, 0.75);
-            const metricText = this.scene.add.text(metricLeft + metricWidth / 2, metricsTop + metricHeight / 2, `${metric.label} ${metric.value}`, {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                color: metric.valueColor,
-                fontStyle: 'bold',
-            }).setOrigin(0.5);
-            metricBoxes.push(metricBg, metricText);
-        });
-
-        const copyPanel = this.scene.add.rectangle(
-            previewWidth / 2,
-            copyTop + copyPanelHeight / 2,
-            innerWidth,
-            copyPanelHeight,
-            0x0b1220,
-            0.98,
-        );
-        copyPanel.setStrokeStyle(1, previewTheme.borderColor, 0.4);
-        const copyAccent = this.scene.add.rectangle(
-            contentLeft + 3,
-            copyTop + copyPanelHeight / 2,
-            4,
-            Math.max(22, copyPanelHeight - 10),
-            previewTheme.accentColor,
-            0.9,
-        ).setOrigin(0, 0.5);
-        const copyTitle = this.scene.add.text(contentLeft + 12, copyTop + 8, detail.primaryCopyTitle, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: '#d9c6a2',
-            fontStyle: 'bold',
-        });
-        const copyBody = this.scene.add.text(contentLeft + 12, copyTop + 34, primaryCopy, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: detail.bodyColor,
-            lineSpacing: 4,
-            wordWrap: { width: innerWidth - 28 },
-        });
-
-        const secondaryLine = this.scene.add.text(
-            contentLeft + 12,
-            copyTop + copyPanelHeight - 30,
-            secondaryCopy ? `${detail.secondaryCopyTitle}：${secondaryCopy}` : '',
-            {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                color: '#e8d5ab',
-                wordWrap: { width: innerWidth - 28 },
-            },
-        );
-        secondaryLine.setVisible(Boolean(secondaryCopy));
-
-        const footerSeparator = this.scene.add.rectangle(
-            previewWidth / 2,
-            footerTop - 14,
-            innerWidth,
-            1,
-            detail.accentColor,
-            0.45,
-        );
-        const footerText = this.scene.add.text(contentLeft, footerTop, footerCopy, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: '#bca785',
-            wordWrap: { width: innerWidth },
-        }).setOrigin(0, 1);
-
-        nextContent.add([
-            shadow,
-            outerCard,
-            innerFrame,
-            header,
-            headerGlow,
-            hero,
-            heroAccent,
-            heroGlow,
-            headerTitle,
-            ...(collapseButtonBg && collapseButtonText ? [collapseButtonBg, collapseButtonText] : []),
-            kindBadgeBg,
-            kindBadgeText,
-            rarityBadgeBg,
-            rarityBadgeText,
-            heroName,
-            heroSupport,
-            heroGlyph,
-            statusRibbon,
-            statusText,
-            ...metricBoxes,
-            copyPanel,
-            copyAccent,
-            copyTitle,
-            copyBody,
-            secondaryLine,
-            footerSeparator,
-            footerText,
-        ]);
-
-        const previousContent = this.detailPaneContent;
-        this.detailPaneContent = nextContent;
-
-        if (!animate || !previousContent) {
-            this.detailPaneContainer.removeAll(true);
-            this.detailPaneContainer.add(nextContent);
-            nextContent.setAlpha(1);
-            nextContent.setScale(1, 1);
+        if (cardData) {
+            this.scene.events.emit('showCardPreviewFromData', cardData, previewMetadata);
             return;
         }
 
-        this.detailPaneContainer.add(nextContent);
-        nextContent.setAlpha(0);
-        nextContent.setScale(0.975, 0.975);
-        previousContent.setAlpha(1);
-        previousContent.setScale(1, 1);
+        this.scene.events.emit('showCardPreviewFallback', previewMetadata);
+    }
 
-        this.scene.tweens.killTweensOf(previousContent);
-        this.scene.tweens.killTweensOf(nextContent);
+    private buildSharedPreviewMetadata(
+        detail: CardDetailViewModel,
+        cardData: ReturnType<DeckManagementCardPreviewResolver>,
+    ): CardPreviewMetadata {
+        return {
+            contextId: DECK_MANAGEMENT_CARD_PREVIEW_CONTEXT_ID,
+            sourceLabel: this.previewSourceLabel,
+            contextSection: {
+                headline: detail.statusLabel,
+                metrics: detail.ownershipStats.map((metric) => ({
+                    label: metric.label,
+                    value: metric.value,
+                    tone: this.getPreviewMetricTone(metric),
+                })),
+                lines: [
+                    detail.contextLabel,
+                    `${detail.primaryCopyTitle}：${truncateLabel(detail.primaryCopyLabel, 48)}`,
+                    detail.secondaryCopyLabel
+                        ? `${detail.secondaryCopyTitle}：${truncateLabel(detail.secondaryCopyLabel, 42)}`
+                        : detail.footerLabel,
+                ],
+            },
+            fallback: this.buildSharedPreviewFallback(detail, cardData),
+        };
+    }
 
-        this.scene.tweens.add({
-            targets: previousContent,
-            alpha: 0,
-            scaleX: 1.02,
-            scaleY: 1.02,
-            duration: 110,
-            ease: 'Cubic.easeIn',
-            onComplete: () => previousContent.destroy(),
-        });
-        this.scene.tweens.add({
-            targets: nextContent,
-            alpha: 1,
-            scaleX: 1,
-            scaleY: 1,
-            duration: 170,
-            ease: 'Cubic.easeOut',
-        });
+    private buildSharedPreviewFallback(
+        detail: CardDetailViewModel,
+        cardData: ReturnType<DeckManagementCardPreviewResolver>,
+    ): CardPreviewFallback {
+        const metadataKind = this.config.metadata?.[this.detailCardId ?? '']?.kind;
+        const isUnsupportedKind = metadataKind === 'skill';
+        const tagLabel = cardData
+            ? '共享预览回退'
+            : isUnsupportedKind
+                ? '暂未支持牌面'
+                : '缺少完整牌面';
+        const reasonLine = cardData
+            ? '当前牌面渲染暂不可用，已回退到文字说明。'
+            : isUnsupportedKind
+                ? '当前卡种暂未接入共享牌面渲染，保留 metadata 回退。'
+                : '当前缓存缺少完整卡牌数据，已回退到 metadata 说明。';
+
+        return {
+            tagLabel,
+            title: detail.displayName,
+            lines: [
+                detail.metaLabel,
+                reasonLine,
+                detail.secondaryCopyLabel
+                    ? `${detail.secondaryCopyTitle}：${truncateLabel(detail.secondaryCopyLabel, 34)}`
+                    : `${detail.primaryCopyTitle}：${truncateLabel(detail.primaryCopyLabel, 34)}`,
+            ],
+        };
+    }
+
+    private getPreviewMetricTone(metric: CardSpotlightMetric): CardPreviewContextMetric['tone'] {
+        const metricValue = Number(metric.value);
+
+        if (metric.label === '缺口' && metricValue > 0) {
+            return 'danger';
+        }
+
+        if (metric.label === '剩余' && metricValue > 0) {
+            return 'positive';
+        }
+
+        if ((metric.label === '剩余' || metric.label === '缺口') && metricValue === 0) {
+            return 'neutral';
+        }
+
+        return 'neutral';
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
@@ -2249,6 +1996,10 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
 
         if (event.key === 'Escape') {
             event.preventDefault();
+            if (this.detailPaneExpanded) {
+                this.setDetailPaneExpanded(false);
+                return;
+            }
             this.setKeyboardZone('return');
             this.config.onClose();
             return;
@@ -2774,7 +2525,6 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         const nextSelectedDeckId = newStash.selectedDeckId ?? newStash.savedDecks[0]?.id ?? null;
         if (this.selectedDeckId !== nextSelectedDeckId) {
             this.pendingSelectedDeckMotionId = nextSelectedDeckId;
-            this.detailPaneExpanded = false;
         }
 
         const shouldKeepDeckNaming = this.namingMode !== null
@@ -2795,6 +2545,7 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         this.refreshDeckList();
         this.refreshEditor();
         this.refreshBrowser();
+        this.refreshDetailPane();
         this.pendingSelectedDeckMotionId = null;
         this.refreshKeyboardGuide();
     }
@@ -3509,10 +3260,6 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     private refreshEditor(): void {
         if (!this.editorContainer) return;
         this.editorContainer.removeAll(true);
-        this.detailPaneContainer = undefined;
-        this.detailPaneContent = undefined;
-        this.detailPaneWidth = 0;
-        this.detailPaneHeight = 0;
         this.namingInputBg = undefined;
         this.namingInputText = undefined;
         this.editorSpotlightRows.clear();
@@ -4226,11 +3973,13 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
                 };
                 tileBg.setInteractive({ useHandCursor: true });
                 tileBg.on('pointerover', () => {
+                    this.previewSourceLabel = this.getPreviewSourceLabelForZone('editor');
                     tileBg.setFillStyle(spotlightRow.hoverFillColor, 1);
                     this.setDetailCardId(tile.id);
                 });
                 tileBg.on('pointerout', () => this.applySpotlightRowState(spotlightRow, this.detailCardId === tile.id));
                 tileBg.on('pointerdown', () => {
+                    this.previewSourceLabel = this.getPreviewSourceLabelForZone('editor');
                     this.setKeyboardZone('editor');
                     this.setDetailCardId(tile.id);
                 });
@@ -4336,25 +4085,6 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
             SELECTED_ACCENT,
             'Extra Deck 焦点支持同样的移除与检视操作。',
         );
-
-        if (this.detailPaneExpanded) {
-            this.detailPaneWidth = 320;
-            this.detailPaneHeight = Math.max(320, contentH - sectionsTop - 20);
-            this.detailPaneContainer = this.scene.add.container(contentW - this.detailPaneWidth - 12, sectionsTop + 4);
-            const detailBackdrop = this.scene.add.rectangle(
-                this.detailPaneWidth / 2,
-                this.detailPaneHeight / 2,
-                this.detailPaneWidth + 10,
-                this.detailPaneHeight + 10,
-                0x000000,
-                0.18,
-            );
-            detailBackdrop.setStrokeStyle(1, PANEL_ACCENT, 0.16);
-            this.detailPaneContainer.add(detailBackdrop);
-            this.editorContainer.add(this.detailPaneContainer);
-            this.refreshDetailPane(this.pendingSelectedDeckMotionId === deck.id);
-            pulseTargets.push(this.detailPaneContainer);
-        }
 
         this.refreshSpotlightRowStates(this.pendingSelectedDeckMotionId === deck.id);
         if (this.pendingSelectedDeckMotionId === deck.id) {
@@ -4843,11 +4573,13 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
                 };
                 rowBg.setInteractive({ useHandCursor: true });
                 rowBg.on('pointerover', () => {
+                    this.previewSourceLabel = this.getPreviewSourceLabelForZone('browser');
                     rowBg.setFillStyle(spotlightRow.hoverFillColor, 1);
                     this.setDetailCardId(row.id);
                 });
                 rowBg.on('pointerout', () => this.applySpotlightRowState(spotlightRow, this.detailCardId === row.id));
                 rowBg.on('pointerdown', () => {
+                    this.previewSourceLabel = this.getPreviewSourceLabelForZone('browser');
                     this.setKeyboardZone('browser');
                     this.setDetailCardId(row.id);
                 });
