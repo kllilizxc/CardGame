@@ -283,6 +283,7 @@ export class WorldMapScene extends Scene {
         const labelPanelWidth = Math.max(148, destination.label.length * 25);
         const labelPanel = this.add.rectangle(0, 62, labelPanelWidth, 62, sceneTheme.colors.ink, 0.82);
         labelPanel.setStrokeStyle(2, palette.stroke, 0.48);
+        labelPanel.setInteractive({ useHandCursor: true });
         const label = this.add.text(0, 47, destination.label, {
             fontFamily: sceneTheme.fonts.ui,
             fontSize: '20px',
@@ -296,7 +297,7 @@ export class WorldMapScene extends Scene {
         }).setOrigin(0.5);
 
         let pointerDownPosition: WorldMapSurfacePosition | undefined;
-        pin.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        const onPointerDown = (pointer: Phaser.Input.Pointer) => {
             if (!this.isPointerInsideMapViewport(pointer)) {
                 return;
             }
@@ -304,8 +305,8 @@ export class WorldMapScene extends Scene {
             pointerDownPosition = { x: pointer.x, y: pointer.y };
             pin.setFillStyle(palette.hoverFill, 1);
             this.previewDestination(destination);
-        });
-        pin.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+        };
+        const onPointerUp = (pointer: Phaser.Input.Pointer) => {
             if (!pointerDownPosition || !this.isPointerInsideMapViewport(pointer)) {
                 pointerDownPosition = undefined;
                 return;
@@ -324,17 +325,23 @@ export class WorldMapScene extends Scene {
             }
 
             this.restoreDefaultStatusText();
-        });
-        pin.on('pointerover', (pointer: Phaser.Input.Pointer) => {
+        };
+        const onPointerOver = (pointer: Phaser.Input.Pointer) => {
             if (this.isPointerInsideMapViewport(pointer)) {
                 pin.setFillStyle(palette.hoverFill, 1);
                 this.previewDestination(destination);
             }
-        });
-        pin.on('pointerout', () => {
+        };
+        const onPointerOut = () => {
             pin.setFillStyle(palette.fill, 0.98);
             this.restoreDefaultStatusText();
-        });
+        };
+        for (const target of [pin, labelPanel]) {
+            target.on('pointerdown', onPointerDown);
+            target.on('pointerup', onPointerUp);
+            target.on('pointerover', onPointerOver);
+            target.on('pointerout', onPointerOut);
+        }
 
         marker.add([aura, pin, glyph, labelPanel, label, region]);
 
