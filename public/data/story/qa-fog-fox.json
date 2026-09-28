@@ -1,0 +1,1062 @@
+{
+  "storyId": "story.qa-fog-fox",
+  "title": "雾林药铺",
+  "entryNodeId": "scene.qa-fog.entry",
+  "initialState": {
+    "locationId": "location.qingyun-sect-gate.archway",
+    "sublocationId": "sublocation.fog-clinic",
+    "attributes": {
+      "口才": 4,
+      "洞察": 5,
+      "医术": 2
+    },
+    "relations": {
+      "npc.qa-fog-fox": 20
+    },
+    "flags": {
+      "qa-fog.alive": true,
+      "qa-fog.hand-injured": false
+    },
+    "questStages": {
+      "quest.qa-fog-heal-fox": "available"
+    }
+  },
+  "nodes": [
+    {
+      "id": "scene.qa-fog.entry",
+      "type": "story",
+      "title": "雾林药铺",
+      "summary": "药铺紧邻雾林入口。屋檐下的老人抬头望向来客。",
+      "detail": "药铺紧邻雾林入口。屋檐下的老人抬头望向来客。",
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-exterior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.first",
+      "type": "story",
+      "title": "药铺初见",
+      "summary": "狐爷爷扶住门框，手边的药篓还空着。",
+      "detail": "狐爷爷扶住门框，手边的药篓还空着。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.first",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "雾林的白叶草能救急，可我今日走不开。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "qa-fog.met",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.revisit",
+      "type": "story",
+      "title": "再访药铺",
+      "summary": "老人记得你来过。他先看了看药篓，才继续说话。",
+      "detail": "老人记得你来过。他先看了看药篓，才继续说话。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.revisit",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "你已经听过我的请求。今日又有什么发现？"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-exterior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.secret",
+      "type": "story",
+      "title": "失窃的药方",
+      "summary": "老人说旧药方被盗，随后承认自己曾是隐姓埋名的医师。",
+      "detail": "老人说旧药方被盗，随后承认自己曾是隐姓埋名的医师。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.secret",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "若有人知道我的旧身份，药方就再也保不住。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "learnKnowledge",
+          "actorId": "player",
+          "knowledgeId": "qa-fog.recipe-stolen"
+        },
+        {
+          "kind": "learnKnowledge",
+          "actorId": "player",
+          "knowledgeId": "qa-fog.fox-identity"
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.diagnosis",
+      "type": "story",
+      "title": "察觉中毒",
+      "summary": "他的手指发抖，腕上有细浅的紫痕。你意识到他中了毒。",
+      "detail": "他的手指发抖，腕上有细浅的紫痕。你意识到他中了毒。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.diagnosis",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "你看出来了。若要施针，还得有银针与白叶草。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "learnKnowledge",
+          "actorId": "player",
+          "knowledgeId": "qa-fog.poisoned"
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.gather",
+      "type": "story",
+      "title": "雾林采药",
+      "summary": "你在林边找到两株白叶草，药铺伙计借给你一根银针。银针用于检查，不会随施针消耗。",
+      "detail": "你在林边找到两株白叶草，药铺伙计借给你一根银针。银针用于检查，不会随施针消耗。",
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.gather-supplies",
+          "effects": [
+            {
+              "kind": "grantItem",
+              "transactionId": "tx.qa-fog.needle",
+              "itemId": "tool.qa-fog-silver-needle",
+              "itemType": "tool",
+              "count": 1
+            },
+            {
+              "kind": "grantItem",
+              "transactionId": "tx.qa-fog.herbs",
+              "itemId": "consumable.qa-fog-white-leaf",
+              "itemType": "consumable",
+              "count": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.reproach",
+      "type": "story",
+      "title": "被问起告密",
+      "summary": "狐爷爷没有忘记守卫来访。他感谢你仍肯救人，却不再向你托付秘密。",
+      "detail": "狐爷爷没有忘记守卫来访。他感谢你仍肯救人，却不再向你托付秘密。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.reproach",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "药可以交给我；至于旧事，就别再说你会守口如瓶。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.chapter3",
+      "type": "story",
+      "title": "第三章求助",
+      "summary": "夜里雾林的路再度封住。你来问狐爷爷可有旧药方留下的线索。",
+      "detail": "夜里雾林的路再度封住。你来问狐爷爷可有旧药方留下的线索。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.chapter3",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "我记得你做过什么，也记得你答应过什么。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第三章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "夜晚",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.promised",
+      "type": "story",
+      "title": "守密承诺",
+      "summary": "狐爷爷终于松开攥着药方的手，答应把所需药材告诉你。",
+      "detail": "狐爷爷终于松开攥着药方的手，答应把所需药材告诉你。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.promised",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "此事只让你知道。山路边能找到白叶草。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.guard",
+      "type": "story",
+      "title": "告知守卫",
+      "summary": "守卫听完旧医师的身份，当即记下此事。狐爷爷后来知道是你说的。",
+      "detail": "守卫听完旧医师的身份，当即记下此事。狐爷爷后来知道是你说的。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.guard",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我会核实药方的来历，但不会假装没有听见。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.report-to-guard",
+          "effects": [
+            {
+              "kind": "learnKnowledge",
+              "actorId": "npc.qa-fog-guard",
+              "knowledgeId": "qa-fog.fox-identity"
+            },
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.reported",
+              "value": true
+            },
+            {
+              "kind": "adjustRelation",
+              "relationId": "npc.qa-fog-fox",
+              "delta": -20
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.healed",
+      "type": "story",
+      "title": "委托完成",
+      "summary": "药草发挥了作用。狐爷爷慢慢稳住呼吸，送你一张灵狐卡作为谢礼。",
+      "detail": "药草发挥了作用。狐爷爷慢慢稳住呼吸，送你一张灵狐卡作为谢礼。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.healed",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "这份恩情我记得，卡牌请你收下。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.quest-complete",
+          "effects": [
+            {
+              "kind": "setQuestStage",
+              "questId": "quest.qa-fog-heal-fox",
+              "stage": "completed"
+            },
+            {
+              "kind": "grantCard",
+              "grantId": "grant.qa-fog.fox-card",
+              "cardId": "CR_001",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.trusted",
+      "type": "story",
+      "title": "旧药方的山路",
+      "summary": "狐爷爷指给你一条避开毒雾的小径，并托你护好药方。",
+      "detail": "狐爷爷指给你一条避开毒雾的小径，并托你护好药方。",
+      "tags": [],
+      "chapter": "第三章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "夜晚",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.trusted-help",
+          "effects": [
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.chapter3-help",
+              "value": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.alternative",
+      "type": "story",
+      "title": "另寻帮助",
+      "summary": "狐爷爷婉拒说出隐路。你可以从集市寻找熟悉雾林的同行者，旅程没有就此中断。",
+      "detail": "狐爷爷婉拒说出隐路。你可以从集市寻找熟悉雾林的同行者，旅程没有就此中断。",
+      "tags": [],
+      "chapter": "第三章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "夜晚",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "qa-fog.chapter3-alternative",
+          "value": true
+        }
+      ]
+    }
+  ],
+  "choices": [
+    {
+      "id": "choice.qa-fog.entry.first",
+      "from": "scene.qa-fog.entry",
+      "to": "scene.qa-fog.first",
+      "text": "初次向老人打招呼",
+      "description": "初次向老人打招呼",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.met",
+        "expected": false
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.entry.return",
+      "from": "scene.qa-fog.entry",
+      "to": "scene.qa-fog.revisit",
+      "text": "再次走进药铺",
+      "description": "再次走进药铺",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.met",
+        "expected": true
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.first.ask-secret",
+      "from": "scene.qa-fog.first",
+      "to": "scene.qa-fog.secret",
+      "text": "问起失窃的药方",
+      "description": "问起失窃的药方",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.first.observe",
+      "from": "scene.qa-fog.first",
+      "to": "scene.qa-fog.diagnosis",
+      "text": "留意他颤抖的手",
+      "description": "留意他颤抖的手",
+      "enabledWhen": {
+        "kind": "attribute",
+        "attribute": "洞察",
+        "operator": ">=",
+        "value": 5
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.first.gather",
+      "from": "scene.qa-fog.first",
+      "to": "scene.qa-fog.gather",
+      "text": "答应入林采药",
+      "description": "答应入林采药",
+      "enabledWhen": {
+        "kind": "all",
+        "conditions": [
+          {
+            "kind": "questStage",
+            "questId": "quest.qa-fog-heal-fox",
+            "stage": "available"
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.alive",
+            "expected": true
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "setQuestStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "gather"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.revisit.reproach",
+      "from": "scene.qa-fog.revisit",
+      "to": "scene.qa-fog.reproach",
+      "text": "听他质问告密一事",
+      "description": "听他质问告密一事",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.reported",
+        "expected": true
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.revisit.secret",
+      "from": "scene.qa-fog.revisit",
+      "to": "scene.qa-fog.secret",
+      "text": "再谈旧药方",
+      "description": "再谈旧药方",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.reported",
+        "expected": false
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.revisit.gather",
+      "from": "scene.qa-fog.revisit",
+      "to": "scene.qa-fog.gather",
+      "text": "继续寻找救治办法",
+      "description": "继续寻找救治办法",
+      "visibleWhen": {
+        "kind": "not",
+        "condition": {
+          "kind": "questStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "completed"
+        }
+      },
+      "effects": [
+        {
+          "kind": "setQuestStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "gather"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.revisit.chapter3",
+      "from": "scene.qa-fog.revisit",
+      "to": "scene.qa-fog.chapter3",
+      "text": "第三章再来求助",
+      "description": "第三章再来求助",
+      "visibleWhen": {
+        "kind": "questStage",
+        "questId": "quest.qa-fog-heal-fox",
+        "stage": "completed"
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.secret.promise",
+      "from": "scene.qa-fog.secret",
+      "to": "scene.qa-fog.promised",
+      "text": "答应保守他的秘密",
+      "description": "答应保守他的秘密",
+      "visibleWhen": {
+        "kind": "all",
+        "conditions": [
+          {
+            "kind": "knowledge",
+            "actorId": "player",
+            "knowledgeId": "qa-fog.recipe-stolen"
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.reported",
+            "expected": false
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.promised",
+            "expected": false
+          },
+          {
+            "kind": "not",
+            "condition": {
+              "kind": "questStage",
+              "questId": "quest.qa-fog-heal-fox",
+              "stage": "completed"
+            }
+          }
+        ]
+      },
+      "enabledWhen": {
+        "kind": "attribute",
+        "attribute": "口才",
+        "operator": ">=",
+        "value": 6
+      },
+      "effects": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.promise",
+          "effects": [
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.promised",
+              "value": true
+            },
+            {
+              "kind": "adjustRelation",
+              "relationId": "npc.qa-fog-fox",
+              "delta": 10
+            }
+          ]
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.secret.report",
+      "from": "scene.qa-fog.secret",
+      "to": "scene.qa-fog.guard",
+      "text": "将身份告诉守卫",
+      "description": "将身份告诉守卫",
+      "visibleWhen": {
+        "kind": "knowledge",
+        "actorId": "player",
+        "knowledgeId": "qa-fog.fox-identity"
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.secret.leave",
+      "from": "scene.qa-fog.secret",
+      "to": "scene.qa-fog.gather",
+      "text": "先去采药",
+      "description": "先去采药",
+      "visibleWhen": {
+        "kind": "not",
+        "condition": {
+          "kind": "questStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "completed"
+        }
+      },
+      "effects": [
+        {
+          "kind": "setQuestStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "gather"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.secret.return",
+      "from": "scene.qa-fog.secret",
+      "to": "scene.qa-fog.revisit",
+      "text": "先离开药方话题",
+      "description": "先离开药方话题",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.diagnosis.needle",
+      "from": "scene.qa-fog.diagnosis",
+      "to": "scene.qa-fog.healed",
+      "text": "当场施针救治",
+      "description": "当场施针救治",
+      "visibleWhen": {
+        "kind": "knowledge",
+        "actorId": "player",
+        "knowledgeId": "qa-fog.poisoned"
+      },
+      "enabledWhen": {
+        "kind": "all",
+        "conditions": [
+          {
+            "kind": "attribute",
+            "attribute": "医术",
+            "operator": ">=",
+            "value": 4
+          },
+          {
+            "kind": "itemCount",
+            "itemId": "tool.qa-fog-silver-needle",
+            "operator": ">=",
+            "value": 1
+          },
+          {
+            "kind": "itemCount",
+            "itemId": "consumable.qa-fog-white-leaf",
+            "operator": ">=",
+            "value": 1
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.hand-injured",
+            "expected": false
+          },
+          {
+            "kind": "questStage",
+            "questId": "quest.qa-fog-heal-fox",
+            "stage": "gather"
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.alive",
+            "expected": true
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.needle-treatment",
+          "effects": [
+            {
+              "kind": "consumeItem",
+              "transactionId": "tx.qa-fog.needle-herb",
+              "itemId": "consumable.qa-fog-white-leaf",
+              "itemType": "consumable",
+              "count": 1
+            },
+            {
+              "kind": "adjustRelation",
+              "relationId": "npc.qa-fog-fox",
+              "delta": 8
+            },
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.needle-route",
+              "value": true
+            }
+          ]
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.diagnosis.prepare",
+      "from": "scene.qa-fog.diagnosis",
+      "to": "scene.qa-fog.gather",
+      "text": "采药并借来银针",
+      "description": "采药并借来银针",
+      "visibleWhen": {
+        "kind": "not",
+        "condition": {
+          "kind": "questStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "completed"
+        }
+      },
+      "effects": [
+        {
+          "kind": "setQuestStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "gather"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.diagnosis.return",
+      "from": "scene.qa-fog.diagnosis",
+      "to": "scene.qa-fog.revisit",
+      "text": "先退回药铺门口",
+      "description": "先退回药铺门口",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.gather.regular",
+      "from": "scene.qa-fog.gather",
+      "to": "scene.qa-fog.healed",
+      "text": "交药草请医师照料",
+      "description": "交药草请医师照料",
+      "enabledWhen": {
+        "kind": "all",
+        "conditions": [
+          {
+            "kind": "itemCount",
+            "itemId": "consumable.qa-fog-white-leaf",
+            "operator": ">=",
+            "value": 1
+          },
+          {
+            "kind": "questStage",
+            "questId": "quest.qa-fog-heal-fox",
+            "stage": "gather"
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.alive",
+            "expected": true
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.regular-treatment",
+          "effects": [
+            {
+              "kind": "consumeItem",
+              "transactionId": "tx.qa-fog.regular-herb",
+              "itemId": "consumable.qa-fog-white-leaf",
+              "itemType": "consumable",
+              "count": 1
+            },
+            {
+              "kind": "adjustRelation",
+              "relationId": "npc.qa-fog-fox",
+              "delta": 5
+            },
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.regular-route",
+              "value": true
+            }
+          ]
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.gather.needle",
+      "from": "scene.qa-fog.gather",
+      "to": "scene.qa-fog.diagnosis",
+      "text": "回药铺尝试施针",
+      "description": "回药铺尝试施针",
+      "enabledWhen": {
+        "kind": "knowledge",
+        "actorId": "player",
+        "knowledgeId": "qa-fog.poisoned"
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.reproach.help",
+      "from": "scene.qa-fog.reproach",
+      "to": "scene.qa-fog.gather",
+      "text": "继续采药",
+      "description": "继续采药",
+      "visibleWhen": {
+        "kind": "not",
+        "condition": {
+          "kind": "questStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "completed"
+        }
+      },
+      "effects": [
+        {
+          "kind": "setQuestStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "gather"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.reproach.chapter3",
+      "from": "scene.qa-fog.reproach",
+      "to": "scene.qa-fog.chapter3",
+      "text": "第三章再来求助",
+      "description": "第三章再来求助",
+      "visibleWhen": {
+        "kind": "questStage",
+        "questId": "quest.qa-fog-heal-fox",
+        "stage": "completed"
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.chapter3.trusted",
+      "from": "scene.qa-fog.chapter3",
+      "to": "scene.qa-fog.trusted",
+      "text": "请他指出隐秘山路",
+      "description": "请他指出隐秘山路",
+      "visibleWhen": {
+        "kind": "all",
+        "conditions": [
+          {
+            "kind": "questStage",
+            "questId": "quest.qa-fog-heal-fox",
+            "stage": "completed"
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.alive",
+            "expected": true
+          },
+          {
+            "kind": "relation",
+            "relationId": "npc.qa-fog-fox",
+            "operator": ">=",
+            "value": 30
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.promised",
+            "expected": true
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.reported",
+            "expected": false
+          },
+          {
+            "kind": "actorAbility",
+            "actorId": "npc.qa-fog-fox",
+            "ability": "医术",
+            "operator": ">=",
+            "value": 6
+          }
+        ]
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.chapter3.alternative",
+      "from": "scene.qa-fog.chapter3",
+      "to": "scene.qa-fog.alternative",
+      "text": "另寻同行者",
+      "description": "另寻同行者",
+      "visibleWhen": {
+        "kind": "not",
+        "condition": {
+          "kind": "all",
+          "conditions": [
+            {
+              "kind": "questStage",
+              "questId": "quest.qa-fog-heal-fox",
+              "stage": "completed"
+            },
+            {
+              "kind": "flag",
+              "flag": "qa-fog.alive",
+              "expected": true
+            },
+            {
+              "kind": "relation",
+              "relationId": "npc.qa-fog-fox",
+              "operator": ">=",
+              "value": 30
+            },
+            {
+              "kind": "flag",
+              "flag": "qa-fog.promised",
+              "expected": true
+            },
+            {
+              "kind": "flag",
+              "flag": "qa-fog.reported",
+              "expected": false
+            },
+            {
+              "kind": "actorAbility",
+              "actorId": "npc.qa-fog-fox",
+              "ability": "医术",
+              "operator": ">=",
+              "value": 6
+            }
+          ]
+        }
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.promised.gather",
+      "from": "scene.qa-fog.promised",
+      "to": "scene.qa-fog.gather",
+      "text": "备好银针并去采药",
+      "description": "备好银针并去采药",
+      "visibleWhen": {
+        "kind": "not",
+        "condition": {
+          "kind": "questStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "completed"
+        }
+      },
+      "effects": [
+        {
+          "kind": "setQuestStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "gather"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.promised.observe",
+      "from": "scene.qa-fog.promised",
+      "to": "scene.qa-fog.diagnosis",
+      "text": "再查看他的伤势",
+      "description": "再查看他的伤势",
+      "enabledWhen": {
+        "kind": "attribute",
+        "attribute": "洞察",
+        "operator": ">=",
+        "value": 5
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.guard.return",
+      "from": "scene.qa-fog.guard",
+      "to": "scene.qa-fog.revisit",
+      "text": "回药铺面对狐爷爷",
+      "description": "回药铺面对狐爷爷",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.guard.help",
+      "from": "scene.qa-fog.guard",
+      "to": "scene.qa-fog.gather",
+      "text": "仍去采药救人",
+      "description": "仍去采药救人",
+      "visibleWhen": {
+        "kind": "not",
+        "condition": {
+          "kind": "questStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "completed"
+        }
+      },
+      "effects": [
+        {
+          "kind": "setQuestStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "gather"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.healed.chapter3",
+      "from": "scene.qa-fog.healed",
+      "to": "scene.qa-fog.chapter3",
+      "text": "第三章前来求助",
+      "description": "第三章前来求助",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.healed.entry",
+      "from": "scene.qa-fog.healed",
+      "to": "scene.qa-fog.entry",
+      "text": "回药铺门口再访",
+      "description": "回药铺门口再访",
+      "effects": [],
+      "flags": []
+    }
+  ],
+  "shareFactsAcrossStories": true
+}

@@ -6,12 +6,17 @@
       "kind": "unit",
       "description": "青云宗山门附近常见的灵狐，机敏多疑，擅长偷袭与撤退。",
       "rarity": "common",
-      "labels": ["sect_qingyun", "青云宗山门附近", "灵狐"],
+      "labels": [
+        "sect_qingyun",
+        "青云宗山门附近",
+        "灵狐"
+      ],
       "limitPerDeck": 3,
-
       "realmId": "realm_qi_1",
       "race": "兽族",
-      "linggen": ["木"],
+      "linggen": [
+        "木"
+      ],
       "factionId": "sect_qingyun",
       "attack": 4,
       "health": 2,
@@ -24,7 +29,9 @@
           "conditions": [
             {
               "type": "unitCountAtLeast",
-              "labels": ["灵兽"],
+              "labels": [
+                "灵兽"
+              ],
               "value": 2
             }
           ],
@@ -37,7 +44,25 @@
           "text": "登场时：若本回合你已召唤过其他灵兽，则本回合内本卡攻击力+1。",
           "scriptId": "effect.CR_001.onSummon"
         }
-      ]
+      ],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "scroll",
+        "artwork": "/assets/card-faces/CR_001/83e366dba5b6eabeff81-art.png",
+        "fingerprint": "83e366dba5b6eabeff81622871774e952209cdfbefe628d6145ee658ef48e37e",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/CR_001/83e366dba5b6eabeff81-jade-runtime.png",
+            "preview": "/assets/card-faces/CR_001/83e366dba5b6eabeff81-jade-preview.png",
+            "templateVersion": 1
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/CR_001/83e366dba5b6eabeff81-scroll-runtime.png",
+            "preview": "/assets/card-faces/CR_001/83e366dba5b6eabeff81-scroll-preview.png",
+            "templateVersion": 1
+          }
+        }
+      }
     },
     {
       "id": "CR_002",
@@ -45,12 +70,19 @@
       "kind": "unit",
       "description": "青云宗外门弟子，对基础剑术与御兽之术略有涉猎，可在战斗中协助主角。",
       "rarity": "uncommon",
-      "labels": ["sect_qingyun", "青云宗外门弟子院", "队友", "外门弟子"],
+      "labels": [
+        "sect_qingyun",
+        "青云宗外门弟子院",
+        "队友",
+        "外门弟子"
+      ],
       "limitPerDeck": 2,
-
       "realmId": "realm_qi_6",
       "race": "人族",
-      "linggen": ["金", "木"],
+      "linggen": [
+        "金",
+        "木"
+      ],
       "factionId": "sect_qingyun",
       "attack": 6,
       "health": 28,
@@ -59,12 +91,16 @@
           "timing": "turnStart",
           "target": {
             "scope": "allyUnits",
-            "requiredLabelsAllOf": ["灵兽"]
+            "requiredLabelsAllOf": [
+              "灵兽"
+            ]
           },
           "conditions": [
             {
               "type": "unitCountAtLeast",
-              "labels": ["灵兽"],
+              "labels": [
+                "灵兽"
+              ],
               "value": 1
             }
           ],
@@ -85,12 +121,17 @@
       "kind": "unit",
       "description": "栖息于青云峰顶的雷属性灵禽，速度奇快，能释放微弱的雷电之力。",
       "rarity": "common",
-      "labels": ["灵兽", "灵禽", "雷属性"],
+      "labels": [
+        "灵兽",
+        "灵禽",
+        "雷属性"
+      ],
       "limitPerDeck": 3,
-
       "realmId": "realm_qi_1",
       "race": "兽族",
-      "linggen": ["雷"],
+      "linggen": [
+        "雷"
+      ],
       "factionId": "neutral",
       "attack": 5,
       "health": 18,
@@ -118,12 +159,18 @@
       "kind": "unit",
       "description": "青云宗内门弟子，修炼有成，掌握了基础剑诀，实力不容小觑。",
       "rarity": "rare",
-      "labels": ["sect_qingyun", "内门弟子", "队友", "剑修"],
+      "labels": [
+        "sect_qingyun",
+        "内门弟子",
+        "队友",
+        "剑修"
+      ],
       "limitPerDeck": 2,
-
       "realmId": "realm_qi_12",
       "race": "人族",
-      "linggen": ["金"],
+      "linggen": [
+        "金"
+      ],
       "factionId": "sect_qingyun",
       "attack": 8,
       "health": 35,
@@ -151,12 +198,17 @@
       "kind": "unit",
       "description": "寒潭中的古老灵兽，背甲坚硬无比，擅长防御。",
       "rarity": "uncommon",
-      "labels": ["灵兽", "水属性", "防御"],
+      "labels": [
+        "灵兽",
+        "水属性",
+        "防御"
+      ],
       "limitPerDeck": 2,
-
       "realmId": "realm_qi_6",
       "race": "兽族",
-      "linggen": ["水"],
+      "linggen": [
+        "水"
+      ],
       "factionId": "neutral",
       "attack": 3,
       "health": 45,
@@ -184,12 +236,16 @@
       "kind": "unit",
       "description": "堕入魔道的修士，性情残暴，以杀戮为乐。",
       "rarity": "uncommon",
-      "labels": ["魔道", "敌人"],
+      "labels": [
+        "魔道",
+        "敌人"
+      ],
       "limitPerDeck": 2,
-
       "realmId": "realm_qi_6",
       "race": "人族",
-      "linggen": ["血"],
+      "linggen": [
+        "血"
+      ],
       "factionId": "demon",
       "attack": 9,
       "health": 25,
@@ -217,12 +273,17 @@
       "kind": "unit",
       "description": "火山附近的凶猛灵兽，全身环绕着火焰，攻击带有灼烧效果。",
       "rarity": "rare",
-      "labels": ["灵兽", "火属性", "凶兽"],
+      "labels": [
+        "灵兽",
+        "火属性",
+        "凶兽"
+      ],
       "limitPerDeck": 2,
-
       "realmId": "realm_qi_12",
       "race": "兽族",
-      "linggen": ["火"],
+      "linggen": [
+        "火"
+      ],
       "factionId": "neutral",
       "attack": 10,
       "health": 30,
@@ -251,12 +312,17 @@
       "kind": "unit",
       "description": "负责照料灵药园的小童，精通草药之道，可以治疗伤势。",
       "rarity": "uncommon",
-      "labels": ["sect_qingyun", "辅助", "治疗"],
+      "labels": [
+        "sect_qingyun",
+        "辅助",
+        "治疗"
+      ],
       "limitPerDeck": 2,
-
       "realmId": "realm_qi_1",
       "race": "人族",
-      "linggen": ["木"],
+      "linggen": [
+        "木"
+      ],
       "factionId": "sect_qingyun",
       "attack": 2,
       "health": 20,
@@ -284,12 +350,19 @@
       "kind": "unit",
       "description": "青云宗精通剑阵的长老，可同时指挥多名弟子结成剑阵。",
       "rarity": "epic",
-      "labels": ["sect_qingyun", "长老", "剑修", "队友"],
+      "labels": [
+        "sect_qingyun",
+        "长老",
+        "剑修",
+        "队友"
+      ],
       "limitPerDeck": 1,
-
       "realmId": "realm_foundation_early",
       "race": "人族",
-      "linggen": ["金", "木"],
+      "linggen": [
+        "金",
+        "木"
+      ],
       "factionId": "sect_qingyun",
       "attack": 12,
       "health": 50,
@@ -298,7 +371,9 @@
           "timing": "turnStart",
           "target": {
             "scope": "allyUnits",
-            "requiredLabelsAnyOf": ["sect_qingyun"]
+            "requiredLabelsAnyOf": [
+              "sect_qingyun"
+            ]
           },
           "conditions": [],
           "actions": [
@@ -322,9 +397,11 @@
       "kind": "unit",
       "description": "盘踞在山道上的强盗，实力不强但数量众多。",
       "rarity": "common",
-      "labels": ["敌人", "人类"],
+      "labels": [
+        "敌人",
+        "人类"
+      ],
       "limitPerDeck": 3,
-
       "realmId": "realm_mortal",
       "race": "人族",
       "linggen": [],
@@ -339,12 +416,17 @@
       "kind": "unit",
       "description": "强大的金丹期剑修，需要献祭1只灵兽才能召唤。",
       "rarity": "rare",
-      "labels": ["sect_qingyun", "剑修", "金丹期"],
+      "labels": [
+        "sect_qingyun",
+        "剑修",
+        "金丹期"
+      ],
       "limitPerDeck": 2,
-
       "realmId": "realm_nascent_early",
       "race": "人族",
-      "linggen": ["金"],
+      "linggen": [
+        "金"
+      ],
       "factionId": "sect_qingyun",
       "attack": 12,
       "health": 35,
@@ -371,12 +453,21 @@
       "kind": "unit",
       "description": "极其强大的元婴期修士，需要献祭2只灵兽才能召唤。",
       "rarity": "epic",
-      "labels": ["sect_qingyun", "道主", "元婴期"],
+      "labels": [
+        "sect_qingyun",
+        "道主",
+        "元婴期"
+      ],
       "limitPerDeck": 1,
-
       "realmId": "realm_unity_late",
       "race": "人族",
-      "linggen": ["金", "木", "水", "火", "土"],
+      "linggen": [
+        "金",
+        "木",
+        "水",
+        "火",
+        "土"
+      ],
       "factionId": "sect_qingyun",
       "attack": 20,
       "health": 60,
@@ -417,16 +508,23 @@
       "kind": "unit",
       "description": "剑修宗门的外门弟子，负责在战后将散落各处的剑器重新召回。",
       "rarity": "common",
-      "labels": ["剑修", "外门弟子", "sect_sword_sect"],
+      "labels": [
+        "剑修",
+        "外门弟子",
+        "sect_sword_sect"
+      ],
       "limitPerDeck": 3,
-
       "realmId": "realm_mortal",
       "race": "人族",
-      "linggen": ["金"],
+      "linggen": [
+        "金"
+      ],
       "factionId": "sect_sword_sect",
       "attack": 3,
       "health": 15,
-      "gongfaIds": ["gongfa.return_sword_end_turn"]
+      "gongfaIds": [
+        "gongfa.return_sword_end_turn"
+      ]
     },
     {
       "id": "SX_YJS_001",
@@ -434,16 +532,25 @@
       "kind": "unit",
       "description": "剑修宗门的内门弟子，掌握了基础的控剑术，能够在装备剑器时立即发动攻击。",
       "rarity": "common",
-      "labels": ["剑修", "内门弟子", "sect_sword_sect"],
+      "labels": [
+        "剑修",
+        "内门弟子",
+        "sect_sword_sect"
+      ],
       "limitPerDeck": 3,
-
       "realmId": "realm_qi_6",
       "race": "人族",
-      "linggen": ["金", "木"],
+      "linggen": [
+        "金",
+        "木"
+      ],
       "factionId": "sect_sword_sect",
       "attack": 6,
       "health": 28,
-      "gongfaIds": ["gongfa.search_sword_on_summon", "gongfa.sword_control_basic"]
+      "gongfaIds": [
+        "gongfa.search_sword_on_summon",
+        "gongfa.sword_control_basic"
+      ]
     },
     {
       "id": "SX_TY_001",
@@ -451,16 +558,25 @@
       "kind": "unit",
       "description": "剑修宗门的内门弟子，擅长防御，装备剑器时能够凝聚护甲保护自身。",
       "rarity": "common",
-      "labels": ["剑修", "内门弟子", "sect_sword_sect"],
+      "labels": [
+        "剑修",
+        "内门弟子",
+        "sect_sword_sect"
+      ],
       "limitPerDeck": 3,
-
       "realmId": "realm_qi_6",
       "race": "人族",
-      "linggen": ["金", "土"],
+      "linggen": [
+        "金",
+        "土"
+      ],
       "factionId": "sect_sword_sect",
       "attack": 4,
       "health": 30,
-      "gongfaIds": ["gongfa.sword_recall", "gongfa.sword_control_shield"]
+      "gongfaIds": [
+        "gongfa.sword_recall",
+        "gongfa.sword_control_shield"
+      ]
     },
     {
       "id": "SX_JXTM_001",
@@ -468,16 +584,24 @@
       "kind": "unit",
       "description": "剑修宗门的真传弟子，剑心通明，能够以剑意攻击所有敌人。",
       "rarity": "rare",
-      "labels": ["剑修", "真传弟子", "sect_sword_sect"],
+      "labels": [
+        "剑修",
+        "真传弟子",
+        "sect_sword_sect"
+      ],
       "limitPerDeck": 2,
-
       "realmId": "realm_qi_12",
       "race": "人族",
-      "linggen": ["金"],
+      "linggen": [
+        "金"
+      ],
       "factionId": "sect_sword_sect",
       "attack": 8,
       "health": 35,
-      "gongfaIds": ["gongfa.search_swords_to_discard", "gongfa.sword_heart_slash_aoe"]
+      "gongfaIds": [
+        "gongfa.search_swords_to_discard",
+        "gongfa.sword_heart_slash_aoe"
+      ]
     },
     {
       "id": "SX_JYNX_001",
@@ -485,12 +609,17 @@
       "kind": "unit",
       "description": "剑修宗门的峰主，剑意凝形，能够筛选剑修卡牌并以剑意爆发攻击所有敌人。",
       "rarity": "epic",
-      "labels": ["剑修", "峰主", "sect_sword_sect"],
+      "labels": [
+        "剑修",
+        "峰主",
+        "sect_sword_sect"
+      ],
       "limitPerDeck": 1,
-
       "realmId": "realm_foundation_early",
       "race": "人族",
-      "linggen": ["金"],
+      "linggen": [
+        "金"
+      ],
       "factionId": "sect_sword_sect",
       "attack": 12,
       "health": 50,
@@ -498,7 +627,10 @@
         "minStar": 2,
         "amount": 1
       },
-      "gongfaIds": ["gongfa.draw_filter_sword_cultivator", "gongfa.sword_intent_burst_aoe"]
+      "gongfaIds": [
+        "gongfa.draw_filter_sword_cultivator",
+        "gongfa.sword_intent_burst_aoe"
+      ]
     }
   ]
 }

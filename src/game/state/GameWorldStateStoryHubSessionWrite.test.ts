@@ -7,6 +7,7 @@ import { resetRunPersistenceForTests } from '../services/RunPersistence';
 import {
     createStoryRuntimeSessionStorageKey,
     loadHubSessionSnapshot,
+    loadStoryHubSessionDocumentSnapshot,
     loadStoryRuntimeSession,
     resetStoryHubSessionPersistenceForTests,
     STORY_HUB_SESSION_SCHEMA_VERSION,
@@ -29,6 +30,7 @@ import {
     writeGameWorldStateHubSessionSnapshotWithFallbackStorage,
     writeGameWorldStateStoryHubSessionDocument,
     writeGameWorldStateStoryHubSessionPlan,
+    writeGameWorldStateSharedNarrativeFactsWithFallbackStorage,
     writeGameWorldStateStoryRuntimeSessionWithFallbackStorage,
 } from './GameWorldStateStoryHubSessionWrite';
 
@@ -423,6 +425,41 @@ describe('GameWorldStateStoryHubSessionWrite', () => {
                 [sessionKey]: document.stories[sessionKey],
             },
         });
+    });
+
+    it('writes a story session and shared one-time item facts in one document', () => {
+        const storage = new MemoryStorage();
+        const storyState: StoryState = {
+            ...createStoryState('scene.qa-fog.gather'),
+            settledEventIds: ['event.qa-fog.gather-supplies'],
+            itemTransactions: [{
+                transactionId: 'tx.qa-fog.herbs',
+                itemId: 'consumable.qa-fog-white-leaf',
+                itemType: 'consumable',
+                countDelta: 2,
+            }],
+        };
+        const snapshot = {
+            hubId: 'hub.qingyun-sect-gate',
+            actionId: 'action.qa-fog',
+            storyGraphFile: 'data/story/qa-fog-fox.json',
+            storyState,
+            selectedChoiceIds: ['choice.qa-fog.first.gather'],
+            updatedAt: '2026-09-28T00:00:00.000Z',
+        };
+
+        writeGameWorldStateStoryRuntimeSessionWithFallbackStorage({
+            snapshot, storage, shareFactsAcrossStories: true,
+        });
+        const document = loadStoryHubSessionDocumentSnapshot(storage);
+        expect(document.stories[createStoryRuntimeSessionStorageKey(snapshot)].storyState.itemTransactions)
+            .toEqual(storyState.itemTransactions);
+        expect(document.sharedNarrative?.itemTransactions).toEqual(storyState.itemTransactions);
+        expect(document.sharedNarrative?.settledEventIds).toEqual(['event.qa-fog.gather-supplies']);
+
+        writeGameWorldStateSharedNarrativeFactsWithFallbackStorage({ storyState, storage });
+        expect(loadStoryHubSessionDocumentSnapshot(storage).sharedNarrative?.itemTransactions)
+            .toEqual(storyState.itemTransactions);
     });
 
     it('rejects incompatible compatibility metadata before writing', () => {

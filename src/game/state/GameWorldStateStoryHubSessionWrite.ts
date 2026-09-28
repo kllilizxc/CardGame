@@ -4,6 +4,7 @@ import {
     loadStoryHubSessionDocumentSnapshot,
     resolveStoryHubSessionStorageAdapter,
     saveStoryHubSessionDocumentSnapshot,
+    sharedNarrativeFactsFromStory,
     type HubSessionSnapshot,
     STORY_HUB_SESSION_SCHEMA_VERSION,
     STORY_HUB_SESSION_STORAGE_KEY,
@@ -12,7 +13,7 @@ import {
     type StoryRuntimeSessionSnapshot,
 } from '../services/StoryHubSessionPersistence';
 import { SAVE_COMPATIBILITY_REGISTRY } from '../services/SaveCompatibility';
-import type { StoryHubSessionKey } from '../types/story';
+import type { StoryHubSessionKey, StoryState } from '../types/story';
 import {
     createGameWorldState,
     type DeepReadonly,
@@ -41,6 +42,12 @@ export interface GameWorldStateHubSessionSnapshotWriteOptions {
 
 export interface GameWorldStateStoryRuntimeSessionWriteOptions {
     readonly snapshot: DeepReadonly<StoryRuntimeSessionSnapshot>;
+    readonly shareFactsAcrossStories?: boolean;
+    readonly storage?: StoryHubSessionStorageAdapter;
+}
+
+export interface GameWorldStateSharedNarrativeFactsWriteOptions {
+    readonly storyState: DeepReadonly<StoryState>;
     readonly storage?: StoryHubSessionStorageAdapter;
 }
 
@@ -194,13 +201,24 @@ export function planGameWorldStateHubSessionSnapshotWrite({
 
 export function planGameWorldStateStoryRuntimeSessionWrite({
     snapshot,
+    shareFactsAcrossStories,
     storage,
 }: GameWorldStateStoryRuntimeSessionWriteOptions): GameWorldStateStoryHubSessionWritePlan {
     const document = loadStoryHubSessionDocumentSnapshot(storage);
     const clonedSnapshot = cloneStoryRuntimeSessionSnapshot(snapshot);
 
     document.stories[createStoryRuntimeSessionStorageKey(clonedSnapshot)] = clonedSnapshot;
+    if (shareFactsAcrossStories) document.sharedNarrative = sharedNarrativeFactsFromStory(clonedSnapshot.storyState);
 
+    return planGameWorldStateStoryHubSessionWriteFromDocument({ document });
+}
+
+export function planGameWorldStateSharedNarrativeFactsWrite({
+    storyState,
+    storage,
+}: GameWorldStateSharedNarrativeFactsWriteOptions): GameWorldStateStoryHubSessionWritePlan {
+    const document = loadStoryHubSessionDocumentSnapshot(storage);
+    document.sharedNarrative = sharedNarrativeFactsFromStory(JSON.parse(JSON.stringify(storyState)) as StoryState);
     return planGameWorldStateStoryHubSessionWriteFromDocument({ document });
 }
 
@@ -311,6 +329,17 @@ export function writeGameWorldStateStoryRuntimeSessionWithFallbackStorage(
             ...options,
             storage,
         }),
+        storage,
+        true,
+    );
+}
+
+export function writeGameWorldStateSharedNarrativeFactsWithFallbackStorage(
+    options: GameWorldStateSharedNarrativeFactsWriteOptions,
+): GameWorldStateStoryHubSessionWriteResult {
+    const storage = resolveStoryHubSessionStorageAdapter(options.storage);
+    return writeGameWorldStateStoryHubSessionPlanWithStorage(
+        planGameWorldStateSharedNarrativeFactsWrite({ ...options, storage }),
         storage,
         true,
     );

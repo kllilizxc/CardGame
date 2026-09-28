@@ -348,6 +348,18 @@
       "kind": "worldSeed",
       "schemaVersion": 1,
       "publicPath": "data/world/skills.techniques.json"
+    },
+    {
+      "resourceId": "story.qa-fog-fox",
+      "kind": "story",
+      "schemaVersion": 1,
+      "publicPath": "data/story/qa-fog-fox.json"
+    },
+    {
+      "resourceId": "world.seed.quests",
+      "kind": "worldSeed",
+      "schemaVersion": 1,
+      "publicPath": "data/world/quests.json"
     }
   ]
 }

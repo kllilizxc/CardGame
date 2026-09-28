@@ -1,0 +1,774 @@
+{
+  "schemaVersion": 1,
+  "assets": [
+    {
+      "id": "asset:cardgame:public/assets/bg.png",
+      "path": "public/assets/bg.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:f61a3f403dfe2564d4883374a16dde2794e2c05d1430301c3a66ae4554ce79c6",
+      "versions": [
+        {
+          "id": "version:cardgame:f61a3f403dfe2564d4883374a16dde2794e2c05d1430301c3a66ae4554ce79c6",
+          "path": "public/assets/bg.png",
+          "revision": "868de612a0040e2a25e14f8b983d1c9fc96f0ac8cc6ed93dba9a74366b6c82e1",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/CR_001/83e366dba5b6eabeff81-art.png",
+      "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:9ac62aa4f3b49ea6a2f3d825437be581b53ea9c99b904071853c74c4258e1a5b",
+      "versions": [
+        {
+          "id": "version:cardgame:9ac62aa4f3b49ea6a2f3d825437be581b53ea9c99b904071853c74c4258e1a5b",
+          "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-art.png",
+          "revision": "a63437fb4d2f976d45f73e2d656153e45dd22259b773924c3218766f1fe9ed61",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/CR_001/83e366dba5b6eabeff81-jade-preview.png",
+      "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:735bfa33eba1db44a8ad846ebf3bdd933c01b705aedd41b46dc7c5db6ca19e70",
+      "versions": [
+        {
+          "id": "version:cardgame:735bfa33eba1db44a8ad846ebf3bdd933c01b705aedd41b46dc7c5db6ca19e70",
+          "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-jade-preview.png",
+          "revision": "208dd672883e2e82f7f291d155b8a0d5ba39d1d01637f1edfd0770ee7eddf08b",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/CR_001/83e366dba5b6eabeff81-jade-runtime.png",
+      "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:2a59032ecc4cb88bbad5add3c76edb25ecda45a4cd658136219bc51ff2c1ba90",
+      "versions": [
+        {
+          "id": "version:cardgame:2a59032ecc4cb88bbad5add3c76edb25ecda45a4cd658136219bc51ff2c1ba90",
+          "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-jade-runtime.png",
+          "revision": "b972a3071b7cb3fb32eb0aab3874cec7199b1f2d6cf18cde13be1bf140f1f91c",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/CR_001/83e366dba5b6eabeff81-scroll-preview.png",
+      "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:fa953d23d66d3c52819c3261e81a3ada697d776ba652f3974b5affb591f4d0e9",
+      "versions": [
+        {
+          "id": "version:cardgame:fa953d23d66d3c52819c3261e81a3ada697d776ba652f3974b5affb591f4d0e9",
+          "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-scroll-preview.png",
+          "revision": "9b59b1b05560fcf5fb0611d60461a5c159d95385308615f95bf6e924152443f6",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/CR_001/83e366dba5b6eabeff81-scroll-runtime.png",
+      "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:59b45eb71b5729f306aab118414d55cf042ee267bd5d0fa6bf85192aff0e34bb",
+      "versions": [
+        {
+          "id": "version:cardgame:59b45eb71b5729f306aab118414d55cf042ee267bd5d0fa6bf85192aff0e34bb",
+          "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-scroll-runtime.png",
+          "revision": "b0aeb02194886a977c79316bb16b793690e8dbf57d612da3409650de598641bb",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/items/herbs/white-leaf-v1.png",
+      "path": "public/assets/items/herbs/white-leaf-v1.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "item-icon"
+      },
+      "metadataRevision": "d8b29ac0377f5850c17e00ab1d2cef8f4ee43faf5bf4ac116ae9316aa4ea6e6a",
+      "currentVersionId": "version:cardgame:a4a5dc4f856696e90cd68c8ad29bb50f7089919ed89d065ed7253978596df8a0",
+      "versions": [
+        {
+          "id": "version:cardgame:a4a5dc4f856696e90cd68c8ad29bb50f7089919ed89d065ed7253978596df8a0",
+          "path": "public/assets/items/herbs/white-leaf-v1.png",
+          "revision": "76d6862efeea50e67a03a42248f4935b6ea5f92d4b98ef8422468d8240e6cc8f",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "item-icon"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/logo.png",
+      "path": "public/assets/logo.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:fe5362eb2effd29010639e91fd3025634cc98b0cc829916fac8f8c2e7eef5fe9",
+      "versions": [
+        {
+          "id": "version:cardgame:fe5362eb2effd29010639e91fd3025634cc98b0cc829916fac8f8c2e7eef5fe9",
+          "path": "public/assets/logo.png",
+          "revision": "cc15da4ad8d0aacd84e8f7a1990b0ff7ecaf39646f4f6b9c296a183aad2e9076",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/star.png",
+      "path": "public/assets/star.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:af2357f5bcf094150818c95c89978f3105f3daf7715a8b4b8bad5072861c5f52",
+      "versions": [
+        {
+          "id": "version:cardgame:af2357f5bcf094150818c95c89978f3105f3daf7715a8b4b8bad5072861c5f52",
+          "path": "public/assets/star.png",
+          "revision": "032a4a304b316d4f8d37b24b5d94011a029560717a4fdd089dfa46ad9c8fa2eb",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/story/qa-fog/apothecary-exterior-v1.png",
+      "path": "public/assets/story/qa-fog/apothecary-exterior-v1.png",
+      "tags": [],
+      "metadata": {
+        "provider": "codex",
+        "purpose": "story-scene",
+        "styleProfile": "wenxin-v1",
+        "status": "candidate"
+      },
+      "metadataRevision": "7338ce4e58bed805b6baa057cc519d93d9d51c5d3249a6c488d1ae5f5b0509cb",
+      "currentVersionId": "version:cardgame:2e3229cc6b7ec871d05c80887bfa43492953235f36cdacbbab8bd6a97dfcc363",
+      "versions": [
+        {
+          "id": "version:cardgame:2e3229cc6b7ec871d05c80887bfa43492953235f36cdacbbab8bd6a97dfcc363",
+          "path": "public/assets/story/qa-fog/apothecary-exterior-v1.png",
+          "revision": "0e403d8f9339c723d8ab7dd302fb850faa166d3a0681a6592221785588136aca",
+          "mimeType": "image/png",
+          "metadata": {
+            "provider": "codex",
+            "purpose": "story-scene",
+            "styleProfile": "wenxin-v1",
+            "status": "candidate"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/story/qa-fog/apothecary-interior-v1.png",
+      "path": "public/assets/story/qa-fog/apothecary-interior-v1.png",
+      "tags": [],
+      "metadata": {
+        "provider": "codex",
+        "purpose": "story-scene",
+        "styleProfile": "wenxin-v1",
+        "status": "candidate"
+      },
+      "metadataRevision": "7338ce4e58bed805b6baa057cc519d93d9d51c5d3249a6c488d1ae5f5b0509cb",
+      "currentVersionId": "version:cardgame:0c02503507a081fd91f22228dfa8816c9b3fb5a2d834a3555c70e71f41f52f10",
+      "versions": [
+        {
+          "id": "version:cardgame:0c02503507a081fd91f22228dfa8816c9b3fb5a2d834a3555c70e71f41f52f10",
+          "path": "public/assets/story/qa-fog/apothecary-interior-v1.png",
+          "revision": "85deb945203676706bf2d8a754a33fcfdfcec2c0e5561fcc93497ab4fda6be90",
+          "mimeType": "image/png",
+          "metadata": {
+            "provider": "codex",
+            "purpose": "story-scene",
+            "styleProfile": "wenxin-v1",
+            "status": "candidate"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/story/qa-fog/fox-physician-v1.png",
+      "path": "public/assets/story/qa-fog/fox-physician-v1.png",
+      "tags": [],
+      "metadata": {
+        "provider": "codex-imagegen",
+        "purpose": "story-portrait"
+      },
+      "metadataRevision": "bbf31061a14bc24493f68fb4240fc673ddec6916f86016997fe4e919a617aa32",
+      "currentVersionId": "version:cardgame:0be42cad9899be410070904acf403798fcd180e52af3e11da486eab832d3314c",
+      "versions": [
+        {
+          "id": "version:cardgame:0be42cad9899be410070904acf403798fcd180e52af3e11da486eab832d3314c",
+          "path": "public/assets/story/qa-fog/fox-physician-v1.png",
+          "revision": "5030978a64af28653e1551d9a32046f1335f7479d0c5263cc1c4f400e8ed14f1",
+          "mimeType": "image/png",
+          "metadata": {
+            "provider": "codex-imagegen",
+            "purpose": "story-portrait"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "path": "public/assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "tags": [],
+      "metadata": {
+        "provider": "codex",
+        "purpose": "story-scene",
+        "styleProfile": "wenxin-v1",
+        "status": "candidate"
+      },
+      "metadataRevision": "7338ce4e58bed805b6baa057cc519d93d9d51c5d3249a6c488d1ae5f5b0509cb",
+      "currentVersionId": "version:cardgame:2179c15a0e29789bf5139ed82a4d3ae035125343b1299c17f2b388934be51361",
+      "versions": [
+        {
+          "id": "version:cardgame:2179c15a0e29789bf5139ed82a4d3ae035125343b1299c17f2b388934be51361",
+          "path": "public/assets/story/qa-fog/whiteleaf-clearing-v1.png",
+          "revision": "7242018de5366e23ccf18d6cfb8c3fb2dbbc3d703b93c5e6ef010fd15d11e061",
+          "mimeType": "image/png",
+          "metadata": {
+            "provider": "codex",
+            "purpose": "story-scene",
+            "styleProfile": "wenxin-v1",
+            "status": "candidate"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/disciple-reference-v2.png",
+      "path": "public/assets/wenxin/disciple-reference-v2.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:a3e2133f80c0f84d5be90fdad5dd237485459293aafb3775e759d695bd73c2c7",
+      "versions": [
+        {
+          "id": "version:cardgame:a3e2133f80c0f84d5be90fdad5dd237485459293aafb3775e759d695bd73c2c7",
+          "path": "public/assets/wenxin/disciple-reference-v2.png",
+          "revision": "df9aa0963b43ff13089bfc29201664f19f5503e0a7cad4d54aba9dc3e0f0f526",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/frames/back.png",
+      "path": "public/assets/wenxin/frames/back.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:6cb56c057278c233be6f055262c251b190e682f3ce341bf5ba1c186b40f0f1a8",
+      "versions": [
+        {
+          "id": "version:cardgame:6cb56c057278c233be6f055262c251b190e682f3ce341bf5ba1c186b40f0f1a8",
+          "path": "public/assets/wenxin/frames/back.png",
+          "revision": "ae3f3c9f6a01e4f59d50277ca5130d6a3e7847e5b7a430625649e339b5f23633",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/frames/disc.png",
+      "path": "public/assets/wenxin/frames/disc.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:4565cf16e1d264e540881d3e79742ea6bc178e9045c1c7254fa376b146d5d3c3",
+      "versions": [
+        {
+          "id": "version:cardgame:4565cf16e1d264e540881d3e79742ea6bc178e9045c1c7254fa376b146d5d3c3",
+          "path": "public/assets/wenxin/frames/disc.png",
+          "revision": "7c77def94a18422dc886d9d6929237f75fefb3e1798c8040fe8f33a1c66b90cb",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/frames/eagle.png",
+      "path": "public/assets/wenxin/frames/eagle.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:f2e44631b73c50c0021ed50fc30ecf488d163e386128c5d0986f3768689f63ae",
+      "versions": [
+        {
+          "id": "version:cardgame:f2e44631b73c50c0021ed50fc30ecf488d163e386128c5d0986f3768689f63ae",
+          "path": "public/assets/wenxin/frames/eagle.png",
+          "revision": "ce8fbaed34a7222613cb633926d459c62e897bf5308247b4f8c7c880a66a0b5d",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/frames/fox.png",
+      "path": "public/assets/wenxin/frames/fox.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:0c7616e2fe37a159e27db9d9ed5006bdc9daee372485647668b498e361b1ea6f",
+      "versions": [
+        {
+          "id": "version:cardgame:0c7616e2fe37a159e27db9d9ed5006bdc9daee372485647668b498e361b1ea6f",
+          "path": "public/assets/wenxin/frames/fox.png",
+          "revision": "0c3f0f79e8c44bc3cecff012f75c9bceddeff94a21a1ac32fef82be94482783d",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/frames/sage.png",
+      "path": "public/assets/wenxin/frames/sage.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:cdaddb87fcf58ba349c7b7451634e0baa0877fde9eca54b7a9b984d5a075e519",
+      "versions": [
+        {
+          "id": "version:cardgame:cdaddb87fcf58ba349c7b7451634e0baa0877fde9eca54b7a9b984d5a075e519",
+          "path": "public/assets/wenxin/frames/sage.png",
+          "revision": "f6d73dfd515d6f26a5f63c9ae0d2d0fe526403bc683174d283abd9acb4281582",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/frames/sword.png",
+      "path": "public/assets/wenxin/frames/sword.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:aadc6f4438835702a5e4b584ec9d788b93911b32742a7c7a4a9f73194dc05c76",
+      "versions": [
+        {
+          "id": "version:cardgame:aadc6f4438835702a5e4b584ec9d788b93911b32742a7c7a4a9f73194dc05c76",
+          "path": "public/assets/wenxin/frames/sword.png",
+          "revision": "9cfeb103d5a9ebe4852a8ac18c1cf61acd70411a3187614576b62b5630e70603",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/frames/talis.png",
+      "path": "public/assets/wenxin/frames/talis.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:d05e7667631a41b1b689d8526471b155d41cb936c8a4630192385a6a754c3fa7",
+      "versions": [
+        {
+          "id": "version:cardgame:d05e7667631a41b1b689d8526471b155d41cb936c8a4630192385a6a754c3fa7",
+          "path": "public/assets/wenxin/frames/talis.png",
+          "revision": "15a3ac9fb84c121984a908b673ed9a62abb79fc83359d7dc486db3379e9e6b0b",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-bell.png",
+      "path": "public/assets/wenxin/series-bell.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:7108f8390860662b270eac13d41fad5209f1846e4e2db81a207544c7a5d3819b",
+      "versions": [
+        {
+          "id": "version:cardgame:7108f8390860662b270eac13d41fad5209f1846e4e2db81a207544c7a5d3819b",
+          "path": "public/assets/wenxin/series-bell.png",
+          "revision": "47c375bb281377172d7210195d8cfa73fc57ef5a07be5d867af5c207e08d5506",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-casket.png",
+      "path": "public/assets/wenxin/series-casket.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:42d5d18d64b8abaef7fd1cf992494dc19f5f311020ae52e3cbfbcb60d315a885",
+      "versions": [
+        {
+          "id": "version:cardgame:42d5d18d64b8abaef7fd1cf992494dc19f5f311020ae52e3cbfbcb60d315a885",
+          "path": "public/assets/wenxin/series-casket.png",
+          "revision": "dd6764dcb9927beb9dcf0c509b1f77bc9de0773a3fda274fdd3528685b06b286",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-cloud.png",
+      "path": "public/assets/wenxin/series-cloud.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:bec6a313f5e7da32a0e96c8e91db9146a63e18c147ddc074cb38462cfe436830",
+      "versions": [
+        {
+          "id": "version:cardgame:bec6a313f5e7da32a0e96c8e91db9146a63e18c147ddc074cb38462cfe436830",
+          "path": "public/assets/wenxin/series-cloud.png",
+          "revision": "bf407fdee904e33b952f802f6992df34f5bc7b4039646b0066fa01d333adc21b",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-eagle.png",
+      "path": "public/assets/wenxin/series-eagle.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:1660c6b1efcc4115a597b4a35a9011ac99424df146ae359bdbf7d1f05661542c",
+      "versions": [
+        {
+          "id": "version:cardgame:1660c6b1efcc4115a597b4a35a9011ac99424df146ae359bdbf7d1f05661542c",
+          "path": "public/assets/wenxin/series-eagle.png",
+          "revision": "9956bfb4213663b72bee8c9a117f85cd5dad65f6aafb719ecf43719982ca1af2",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-elder.png",
+      "path": "public/assets/wenxin/series-elder.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:9cf9660aeed0933688656d22fa4d523fabb6cca995deac00e8181cfb7cb0ccf6",
+      "versions": [
+        {
+          "id": "version:cardgame:9cf9660aeed0933688656d22fa4d523fabb6cca995deac00e8181cfb7cb0ccf6",
+          "path": "public/assets/wenxin/series-elder.png",
+          "revision": "99fcac8c92bc3e4864f16df6920585a45ade3ff91e7d966a30f07298d8643785",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-floor.png",
+      "path": "public/assets/wenxin/series-floor.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:e9270223e1bd1ff5ad66581e9d6459517a5d4c23198b7be5a84ced5f30dca2cc",
+      "versions": [
+        {
+          "id": "version:cardgame:e9270223e1bd1ff5ad66581e9d6459517a5d4c23198b7be5a84ced5f30dca2cc",
+          "path": "public/assets/wenxin/series-floor.png",
+          "revision": "4599ddea43a57b27b5c8cebdeb6ebb0813fd2c466541caa58580a18f613ba218",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-fox.png",
+      "path": "public/assets/wenxin/series-fox.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:88578cb0327a72677e532fb14ddc77196273cfa79954b006d16c4dbb9838c409",
+      "versions": [
+        {
+          "id": "version:cardgame:88578cb0327a72677e532fb14ddc77196273cfa79954b006d16c4dbb9838c409",
+          "path": "public/assets/wenxin/series-fox.png",
+          "revision": "c89abef8bb94dd07096a12db2b3ec37e85f297426286afa6dfdfdbdfbcc0e8cf",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-gallery.png",
+      "path": "public/assets/wenxin/series-gallery.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:f0541c206b2161be342734e36a7887742b007ebb178a543df52fae587fac9caa",
+      "versions": [
+        {
+          "id": "version:cardgame:f0541c206b2161be342734e36a7887742b007ebb178a543df52fae587fac9caa",
+          "path": "public/assets/wenxin/series-gallery.png",
+          "revision": "346d15492ee2c535d14a2e375ac64fd5d081f5563663c7199bfd23dd7249a5f6",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-ghost.png",
+      "path": "public/assets/wenxin/series-ghost.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:4d6d0e21d0949c21ed9f0035851cc3737d1fbb645b5347c373b4b28acc256e87",
+      "versions": [
+        {
+          "id": "version:cardgame:4d6d0e21d0949c21ed9f0035851cc3737d1fbb645b5347c373b4b28acc256e87",
+          "path": "public/assets/wenxin/series-ghost.png",
+          "revision": "907f2e5cfec44923c1ad0498083e64e9f453356ef08a88915b391271003fe05b",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-girl.png",
+      "path": "public/assets/wenxin/series-girl.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:22dd2baf75c68f22d5c547fff876e6af5dda91c0d7f571a462a2876ba1cd9713",
+      "versions": [
+        {
+          "id": "version:cardgame:22dd2baf75c68f22d5c547fff876e6af5dda91c0d7f571a462a2876ba1cd9713",
+          "path": "public/assets/wenxin/series-girl.png",
+          "revision": "73856fa442f82cbc64b5092f892c0a31bbd0e8d771adbe9075098a1b7e1c5949",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-island.png",
+      "path": "public/assets/wenxin/series-island.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:23e0684ecc33e6597238d2eab059d1ad4c1b2a870739ddbf57b032386058e547",
+      "versions": [
+        {
+          "id": "version:cardgame:23e0684ecc33e6597238d2eab059d1ad4c1b2a870739ddbf57b032386058e547",
+          "path": "public/assets/wenxin/series-island.png",
+          "revision": "fbf634758b7e2cbc1f419863d0bfb23d289425884f4b6cff24a5459ec377af1e",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-prompts.json",
+      "path": "public/assets/wenxin/series-prompts.json",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:1b4faf1300ee2da3b85fd8fa771cb1adc30f674148026093c364b97ea1664a03",
+      "versions": [
+        {
+          "id": "version:cardgame:1b4faf1300ee2da3b85fd8fa771cb1adc30f674148026093c364b97ea1664a03",
+          "path": "public/assets/wenxin/series-prompts.json",
+          "revision": "cbe3b22a0b94ace91c5f1aaf8b0876dede24694c3fa67cbda9c70222004b40e9",
+          "mimeType": "application/json",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-sky.png",
+      "path": "public/assets/wenxin/series-sky.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:b70a8a5287fdcb97f19315088b558d0241f6611814678efe2b1b910af62a0304",
+      "versions": [
+        {
+          "id": "version:cardgame:b70a8a5287fdcb97f19315088b558d0241f6611814678efe2b1b910af62a0304",
+          "path": "public/assets/wenxin/series-sky.png",
+          "revision": "855f642063a0ef9b713c47776e6b531b418994dae6ba5513c1ddfa6341fe4f11",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-story.png",
+      "path": "public/assets/wenxin/series-story.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:483081a3cde1d80ea71e06142cce546374f434b849526bf84ba9b936f7cf9dea",
+      "versions": [
+        {
+          "id": "version:cardgame:483081a3cde1d80ea71e06142cce546374f434b849526bf84ba9b936f7cf9dea",
+          "path": "public/assets/wenxin/series-story.png",
+          "revision": "a36fe88cd32b87d1ddc1f3d626b1ac59cd8b041bbe932f2aadfe679ca7523af1",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-sword.png",
+      "path": "public/assets/wenxin/series-sword.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:c3d7726895d5c210fc41df08ab712e0b79373988d221f2ea68a9854ac0e7dbbc",
+      "versions": [
+        {
+          "id": "version:cardgame:c3d7726895d5c210fc41df08ab712e0b79373988d221f2ea68a9854ac0e7dbbc",
+          "path": "public/assets/wenxin/series-sword.png",
+          "revision": "7a213ffc6896a364790182b64896dbf31ca3919f21c75622fb6264f66e974d71",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-talisman.png",
+      "path": "public/assets/wenxin/series-talisman.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:efd51f526cd594b7755354a7162ac4117b5b5f6dd408d7eb308032a8d23024da",
+      "versions": [
+        {
+          "id": "version:cardgame:efd51f526cd594b7755354a7162ac4117b5b5f6dd408d7eb308032a8d23024da",
+          "path": "public/assets/wenxin/series-talisman.png",
+          "revision": "4733305d5ca6451aec3dc67a3ebefc52ad00b77e1223fb718cc0be2e21f609cb",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-turtle-prompt.json",
+      "path": "public/assets/wenxin/series-turtle-prompt.json",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:7b9d84f0340e21e3c548f71acdc84d83ea72b74fc2b3f9b9408d207bcfa799c2",
+      "versions": [
+        {
+          "id": "version:cardgame:7b9d84f0340e21e3c548f71acdc84d83ea72b74fc2b3f9b9408d207bcfa799c2",
+          "path": "public/assets/wenxin/series-turtle-prompt.json",
+          "revision": "f1dbd1478fd45b86cd351c3bfbc99d963d235ca07e8d99a5fe4e54ae19a8f4f8",
+          "mimeType": "application/json",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-turtle.png",
+      "path": "public/assets/wenxin/series-turtle.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:f4b38952351537cb75a1a1e3a5dad3aad0d98616404bc1c54da33f6516f1fc80",
+      "versions": [
+        {
+          "id": "version:cardgame:f4b38952351537cb75a1a1e3a5dad3aad0d98616404bc1c54da33f6516f1fc80",
+          "path": "public/assets/wenxin/series-turtle.png",
+          "revision": "7ab25fcddc679c24b4e1036f080ad2012fb85c9f3668ba6f16e41f73c58d1a91",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-wolf-prompt.json",
+      "path": "public/assets/wenxin/series-wolf-prompt.json",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:6e33ba72eddfdfb2721071587cc928c869643ceea4fc638498decd7ccaa9066d",
+      "versions": [
+        {
+          "id": "version:cardgame:6e33ba72eddfdfb2721071587cc928c869643ceea4fc638498decd7ccaa9066d",
+          "path": "public/assets/wenxin/series-wolf-prompt.json",
+          "revision": "e78d14c7f5535f9bdace6891d1aac814daef2661d305ab04b14417497ec9ecd7",
+          "mimeType": "application/json",
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/wenxin/series-wolf.png",
+      "path": "public/assets/wenxin/series-wolf.png",
+      "tags": [],
+      "metadata": {},
+      "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "currentVersionId": "version:cardgame:d2a19af127b136d8c5eee4565a54d92656fe69343fba51ee158d0dfe0a662351",
+      "versions": [
+        {
+          "id": "version:cardgame:d2a19af127b136d8c5eee4565a54d92656fe69343fba51ee158d0dfe0a662351",
+          "path": "public/assets/wenxin/series-wolf.png",
+          "revision": "163dd49fd40f70b4b5ff5adaaa2e678233bcda1176c4fed9c321c6594a79520e",
+          "mimeType": "image/png",
+          "metadata": {}
+        }
+      ]
+    }
+  ],
+  "entriesByPath": {},
+  "entriesByFilePath": {}
+}

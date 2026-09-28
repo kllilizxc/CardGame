@@ -19,6 +19,7 @@ export interface WorldStateStashSeed {
     stashId?: string;
     deckRef?: string;
     items?: WorldStateItemStackSeed[];
+    itemSlotCapacity?: number;
     spiritStones?: number;
 }
 
@@ -62,6 +63,7 @@ export function createPersistentStashFromWorldStateSeed({
         deckRef: stashSeed?.deckRef ?? DEFAULT_DECK_REF,
         deck: cloneCardStacks(starterDeck.cards),
         items: cloneItemStacks(stashSeed?.items ?? DEFAULT_STARTER_ITEMS),
+        ...(stashSeed?.itemSlotCapacity ? { itemSlotCapacity: stashSeed.itemSlotCapacity } : {}),
         spiritStones: stashSeed?.spiritStones ?? DEFAULT_STARTER_SPIRIT_STONES,
         lastRunSummary: null,
     };

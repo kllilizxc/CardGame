@@ -6,9 +6,31 @@
       "gender": "male",
       "realm": "金丹期",
       "factionId": "sect_qingyun",
-      "roles": ["长老", "入门考核负责人"],
-      "tags": ["严厉", "负责"],
+      "roles": [
+        "长老",
+        "入门考核负责人"
+      ],
+      "tags": [
+        "严厉",
+        "负责"
+      ],
       "description": "这里写人物外貌、性格、人设关键点。"
+    },
+    {
+      "id": "npc.qa-fog-fox",
+      "name": "狐爷爷",
+      "description": "隐瞒旧身份的医师；他的秘密不等于玩家已经知情。",
+      "goal": "护住旧药方并治好自己的毒伤。",
+      "abilities": {
+        "医术": 7
+      },
+      "portraitAsset": "assets/story/qa-fog/fox-physician-v1.png"
+    },
+    {
+      "id": "npc.qa-fog-guard",
+      "name": "山门守卫",
+      "description": "巡查药方失窃的守卫。",
+      "goal": "查清旧药方流向。"
     }
   ]
 }

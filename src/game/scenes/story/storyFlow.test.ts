@@ -304,7 +304,14 @@ describe('storyFlow', () => {
         );
 
         const brokenSetupGraph = structuredClone(battleGraph);
-        brokenSetupGraph.choices[0].effects[0].battle.deterministicBattleSetup.deckOrder = 'debug-no-shuffle';
+        const setupEffect = brokenSetupGraph.choices[0].effects[0];
+        if (setupEffect.kind !== 'startBattle') {
+            throw new Error('Expected the first compact battle choice effect to be startBattle.');
+        }
+        if (!setupEffect.battle.deterministicBattleSetup) {
+            throw new Error('Expected deterministic battle setup.');
+        }
+        (setupEffect.battle.deterministicBattleSetup as { deckOrder: string }).deckOrder = 'debug-no-shuffle';
 
         expect(() => validatePlayableStoryGraph(brokenSetupGraph)).toThrow(
             'Story graph choices[0].effects[0].battle.deterministicBattleSetup.deckOrder must be preserve-json-order when deterministic battle setup is provided.',

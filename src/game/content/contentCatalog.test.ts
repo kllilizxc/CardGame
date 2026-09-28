@@ -103,6 +103,8 @@ const expectedCheckedInResources = [
     ['worldSeed', 'data/world/npcs.json'],
     ['worldSeed', 'data/world/protagonist.json'],
     ['worldSeed', 'data/world/skills.techniques.json'],
+    ['story', 'data/story/qa-fog-fox.json'],
+    ['worldSeed', 'data/world/quests.json'],
 ] as const;
 
 const expectedTutorialCatalogEntries = [

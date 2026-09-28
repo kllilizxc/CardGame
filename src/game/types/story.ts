@@ -1,6 +1,21 @@
 import type { DeterministicBattleSetup } from './battle';
+import type { ExpeditionItemType } from './expedition';
 
 export type StoryAttributeOperator = '>' | '>=' | '<' | '<=' | '==' | '!=';
+
+export interface StoryCardGrant {
+    grantId: string;
+    cardId: string;
+    count: number;
+}
+
+export interface StoryItemTransaction {
+    transactionId: string;
+    itemId: string;
+    itemType: ExpeditionItemType;
+    /** Positive for a grant, negative for a consumption. */
+    countDelta: number;
+}
 
 export interface StoryState {
     storyId: string;
@@ -11,7 +26,24 @@ export interface StoryState {
     triggeredDialogueIds: string[];
     flags: Record<string, boolean>;
     attributes: Record<string, number>;
+    /** Derived from currently equipped items; never copied into shared base attributes. */
+    equipmentModifiers?: Record<string, number>;
     relations: Record<string, number>;
+    /** Runtime abilities keyed by stable actor ID, seeded from the NPC catalog. */
+    actorAbilities?: Record<string, Record<string, number>>;
+    /** Legacy story-content location text, distinct from the runtime location ID. */
+    currentLocationLabel?: string;
+    knowledge?: Record<string, string[]>;
+    questStages?: Record<string, string>;
+    settledEventIds?: string[];
+    cardGrants?: StoryCardGrant[];
+    itemTransactions?: StoryItemTransaction[];
+    /** Current stash quantities, refreshed before evaluating a choice. */
+    itemCounts?: Record<string, number>;
+    /** Current line in the active node; kept in the story session, not shared facts. */
+    currentDialogueId?: string;
+    /** Page within the current portrait reading passage; kept in the story session. */
+    currentReadingPage?: number;
 }
 
 export interface StoryInitialStateSeed {
@@ -24,6 +56,21 @@ export interface StoryInitialStateSeed {
     flags?: Record<string, boolean>;
     attributes?: Record<string, number>;
     relations?: Record<string, number>;
+    actorAbilities?: Record<string, Record<string, number>>;
+    knowledge?: Record<string, string[]>;
+    questStages?: Record<string, string>;
+    settledEventIds?: string[];
+}
+
+export interface StorySharedFacts {
+    flags: Record<string, boolean>;
+    attributes: Record<string, number>;
+    relations: Record<string, number>;
+    knowledge: Record<string, string[]>;
+    questStages: Record<string, string>;
+    settledEventIds: string[];
+    cardGrants?: StoryCardGrant[];
+    itemTransactions?: StoryItemTransaction[];
 }
 
 export interface StoryAttributeCondition {
@@ -31,6 +78,45 @@ export interface StoryAttributeCondition {
     attribute: string;
     operator: StoryAttributeOperator;
     value: number;
+}
+
+export interface StoryAlwaysCondition {
+    kind: 'always';
+}
+
+export interface StoryRelationCondition {
+    kind: 'relation';
+    relationId: string;
+    operator: StoryAttributeOperator;
+    value: number;
+}
+
+export interface StoryItemCountCondition {
+    kind: 'itemCount';
+    itemId: string;
+    operator: StoryAttributeOperator;
+    value: number;
+}
+
+export interface StoryActorAbilityCondition {
+    kind: 'actorAbility';
+    actorId: string;
+    ability: string;
+    operator: StoryAttributeOperator;
+    value: number;
+}
+
+export interface StoryKnowledgeCondition {
+    kind: 'knowledge';
+    actorId: string;
+    knowledgeId: string;
+    expected?: boolean;
+}
+
+export interface StoryQuestStageCondition {
+    kind: 'questStage';
+    questId: string;
+    stage: string;
 }
 
 export interface StoryFlagCondition {
@@ -67,7 +153,13 @@ export interface StoryNotCondition {
 }
 
 export type StoryCondition =
+    | StoryAlwaysCondition
     | StoryAttributeCondition
+    | StoryRelationCondition
+    | StoryItemCountCondition
+    | StoryActorAbilityCondition
+    | StoryKnowledgeCondition
+    | StoryQuestStageCondition
     | StoryFlagCondition
     | StoryVisitedNodeCondition
     | StoryTriggeredDialogueCondition
@@ -130,6 +222,49 @@ export interface StoryMoveToEffect {
 export interface StoryGoToNodeEffect {
     kind: 'goToNode';
     nodeId: string;
+}
+
+export interface StorySetLocationLabelEffect {
+    kind: 'setLocationLabel';
+    location: string;
+}
+
+export interface StoryLearnKnowledgeEffect {
+    kind: 'learnKnowledge';
+    actorId: string;
+    knowledgeId: string;
+}
+
+export interface StorySetQuestStageEffect {
+    kind: 'setQuestStage';
+    questId: string;
+    stage: string;
+}
+
+export interface StoryGrantCardEffect extends StoryCardGrant {
+    kind: 'grantCard';
+}
+
+export interface StoryGrantItemEffect {
+    kind: 'grantItem';
+    transactionId: string;
+    itemId: string;
+    itemType: ExpeditionItemType;
+    count: number;
+}
+
+export interface StoryConsumeItemEffect {
+    kind: 'consumeItem';
+    transactionId: string;
+    itemId: string;
+    itemType: ExpeditionItemType;
+    count: number;
+}
+
+export interface StoryOnceEffect {
+    kind: 'once';
+    eventId: string;
+    effects: StoryEffect[];
 }
 
 export interface StoryBattleTrigger {
@@ -213,6 +348,13 @@ export type StoryEffect =
     | StoryAdjustRelationEffect
     | StoryMoveToEffect
     | StoryGoToNodeEffect
+    | StorySetLocationLabelEffect
+    | StoryLearnKnowledgeEffect
+    | StorySetQuestStageEffect
+    | StoryGrantCardEffect
+    | StoryGrantItemEffect
+    | StoryConsumeItemEffect
+    | StoryOnceEffect
     | StoryStartBattleEffect;
 
 export type StoryEffectKind = StoryEffect['kind'];

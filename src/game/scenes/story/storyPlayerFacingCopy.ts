@@ -61,6 +61,8 @@ export function describeStructuredConditionForPlayer(condition: StoryCondition, 
                 : '需要满足至少一项前置条件';
         case 'not':
             return `需要避开以下情况：${describeStructuredConditionForPlayer(condition.condition, storyState)}`;
+        default:
+            return '需要满足相关剧情条件';
     }
 }
 

@@ -19,6 +19,15 @@
           "storyResourceId": "story.qingyun-entry",
           "storyGraphFile": "data/story/story-graph.json",
           "statusText": "山门云阶前，青云宗入门故事已开启。"
+        },
+        {
+          "id": "action.qa-fog-fox",
+          "kind": "startStory",
+          "label": "走进雾林药铺",
+          "description": "雾林遇狐多路线剧情与最新手机运行态的受管试玩复核",
+          "storyResourceId": "story.qa-fog-fox",
+          "storyGraphFile": "data/story/qa-fog-fox.json",
+          "statusText": "已进入走进雾林药铺。"
         }
       ],
       "presentation": {
