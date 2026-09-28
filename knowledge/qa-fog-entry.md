@@ -1,6 +1,7 @@
 ---
 title: 雾林药铺
 scene: true
+storyId: story.qa-fog-fox
 nodeId: scene.qa-fog.entry
 chapter: 第一章
 location: 青云宗山门
