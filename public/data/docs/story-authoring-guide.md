@@ -19,6 +19,8 @@
 
 ## 推荐写作流程
 
+知识库中的剧情继续用普通 Markdown 场景文档和链接组织。需要跨剧情共享任务、人物或道具事实时，入口文档声明 `shareFactsAcrossStories: true`；每个可达场景在 frontmatter 写稳定 `nodeId`，每条选项在链接旁的 `story-choice` 元数据写稳定 `id`。编译器会拒绝缺失的 ID，以免移动文档或调整选项顺序后把旧存档指向另一段剧情。普通资料文档和非共享的旧短剧情仍可使用原有文档与链接。
+
 1. **先画节点骨架**：列出入口、关键分支、阶段终点；每个节点只承载一个清晰剧情 beat。
 2. **固定稳定 ID**：`storyId`、node id、choice id、flag、dialogue id、location id、relation id 都使用稳定命名。改名会破坏存档和测试引用。
 3. **补 `initialState`**：至少提供入口 `locationId`、`sublocationId`，并初始化本章会使用的 attributes、relations、flags。
