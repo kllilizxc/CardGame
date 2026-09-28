@@ -83,6 +83,32 @@ describe('雾林遇狐的玩家路线', () => {
         expect(play.choice('choice.qa-fog.chapter3.alternative')?.selectable).toBe(true);
     });
 
+    it('lets the ordinary visitor learn medicine once, then perform the needle treatment', () => {
+        const play = route();
+        play.choose('choice.qa-fog.entry.first');
+        play.choose('choice.qa-fog.first.observe');
+        expect(play.state.attributes['医术']).toBe(2);
+        expect(play.choice('choice.qa-fog.diagnosis.needle')?.selectable).toBe(false);
+        expect(play.choice('choice.qa-fog.diagnosis.pulse-lesson')?.selectable).toBe(true);
+
+        play.choose('choice.qa-fog.diagnosis.pulse-lesson');
+        expect(play.state.attributes['医术']).toBe(4);
+        expect(play.state.settledEventIds?.filter(id => id === 'event.qa-fog.pulse-lesson')).toHaveLength(1);
+        play.choose('choice.qa-fog.pulse-lesson.return');
+        expect(play.choice('choice.qa-fog.diagnosis.pulse-lesson')?.visible).toBe(false);
+        expect(play.choice('choice.qa-fog.diagnosis.needle')?.selectable).toBe(false);
+
+        play.choose('choice.qa-fog.diagnosis.prepare');
+        play.choose('choice.qa-fog.gather.needle');
+        expect(play.state.attributes['医术']).toBe(4);
+        expect(play.choice('choice.qa-fog.diagnosis.needle')?.selectable).toBe(true);
+        play.choose('choice.qa-fog.diagnosis.needle');
+        expect(play.state.flags['qa-fog.needle-route']).toBe(true);
+        expect(play.stash.items.find(item => item.id === 'tool.qa-fog-silver-needle')?.count).toBe(1);
+        expect(play.stash.items.find(item => item.id === 'consumable.qa-fog-white-leaf')?.count).toBe(1);
+        expect(play.stash.deck).toEqual([{ id: 'CR_001', count: 1 }]);
+    });
+
     it('consumes one herb for the trained healer while preserving the silver needle', () => {
         const play = route({ 医术: 4 });
         play.choose('choice.qa-fog.entry.first');

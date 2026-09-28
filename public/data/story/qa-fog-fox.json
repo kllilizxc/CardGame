@@ -355,6 +355,77 @@
       ]
     },
     {
+      "id": "scene.qa-fog.pulse-lesson",
+      "type": "story",
+      "title": "药柜边的辨脉课",
+      "summary": "狐爷爷扶着药柜，教你从呼吸、腕脉和指尖的颜色判断毒势。学会辨脉后，你的医术提升 2 点；真正施针仍需银针和白叶草。",
+      "detail": "狐爷爷扶着药柜，教你从呼吸、腕脉和指尖的颜色判断毒势。学会辨脉后，你的医术提升 2 点；真正施针仍需银针和白叶草。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.pulse-lesson.001",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "先别急着拿针。看我的呼吸，是急，还是乱？"
+        },
+        {
+          "id": "line.qa-fog.pulse-lesson.002",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "呼吸不急，可每隔几下就会停顿。"
+        },
+        {
+          "id": "line.qa-fog.pulse-lesson.003",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "再看指尖。紫色只到第一节，毒还没有走到心口。"
+        },
+        {
+          "id": "line.qa-fog.pulse-lesson.004",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "难怪手会发抖，脉却还稳得住。"
+        },
+        {
+          "id": "line.qa-fog.pulse-lesson.005",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "你看明白了。记住，下针之前还要备好银针和白叶草。"
+        },
+        {
+          "id": "line.qa-fog.pulse-lesson.006",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我先去采药，再回来试。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.pulse-lesson",
+          "effects": [
+            {
+              "kind": "adjustAttribute",
+              "attribute": "医术",
+              "delta": 2
+            },
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.learned-pulse",
+              "value": true
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "scene.qa-fog.mist-fox",
       "type": "story",
       "title": "雾中野狐",
@@ -4329,6 +4400,20 @@
       "flags": []
     },
     {
+      "id": "choice.qa-fog.diagnosis.pulse-lesson",
+      "from": "scene.qa-fog.diagnosis",
+      "to": "scene.qa-fog.pulse-lesson",
+      "text": "请狐爷爷教我辨脉",
+      "description": "请狐爷爷教我辨脉",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.learned-pulse",
+        "expected": false
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
       "id": "choice.qa-fog.diagnosis.prepare",
       "from": "scene.qa-fog.diagnosis",
       "to": "scene.qa-fog.gather",
@@ -4736,6 +4821,15 @@
       "to": "scene.qa-fog.entry",
       "text": "回药铺门口再访",
       "description": "回药铺门口再访",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.pulse-lesson.return",
+      "from": "scene.qa-fog.pulse-lesson",
+      "to": "scene.qa-fog.diagnosis",
+      "text": "记住要领，回到药柜前",
+      "description": "记住要领，回到药柜前",
       "effects": [],
       "flags": []
     },
