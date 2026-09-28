@@ -41,8 +41,10 @@ export class WenxinStoryStage {
         }
         this.requestedPortrait = undefined;
         this.customPortrait?.setVisible(false);
-        const girl = /少女|青玉铃|体弱|姑娘/.test(text);
-        const elder = /长老|执事|宗门|青云|问心|山门/.test(text) || speakerId === 'npc_qingyun_elder_1';
+        const inferFromText = speakerId === undefined;
+        const girl = inferFromText && /少女|青玉铃|体弱|姑娘/.test(text);
+        const elder = speakerId === 'npc_qingyun_elder_1'
+            || inferFromText && /长老|执事|宗门|青云|问心|山门/.test(text);
         this.speaking = girl && speakerId !== 'npc_qingyun_elder_1' ? 'girl' : 'deacon';
         this.emotion = emotion;
         for (const p of this.portraits) {

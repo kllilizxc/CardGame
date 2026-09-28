@@ -21,5 +21,6 @@ backgroundAsset: assets/story/qa-fog/apothecary-interior-v1.png
 
 ## 选项
 
+- [第二章查清雨前旧账](./qa-fog-ch2-invitation.md) <!-- story-choice: {"id":"choice.qa-fog.healed.chapter2"} -->
 - [第三章前来求助](./qa-fog-chapter3.md) <!-- story-choice: {"id":"choice.qa-fog.healed.chapter3"} -->
 - [回药铺门口再访](./qa-fog-entry.md) <!-- story-choice: {"id":"choice.qa-fog.healed.entry"} -->

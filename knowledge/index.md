@@ -8,6 +8,7 @@
 - [资料文档索引](../public/data/docs/index.md)
 - [现有剧情编写指南](../public/data/docs/story-authoring-guide.md)
 - [雾林遇狐：可玩剧情入口](./qa-fog-entry.md)
+- [雾林遇狐：第二章场景目录](./qa-fog-chapter2-index.md)
 - [项目开发约定](../AGENTS.md)
 
 目前游戏继续读取现有运行数据。Markdown 编译为可玩分支的约定（详见 dsh-worka-bench 的 docs/design/cardgame-ideal-desktop-design.md）：
