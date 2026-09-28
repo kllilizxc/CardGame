@@ -76,6 +76,7 @@ export class TalismanSprite extends BaseCardSprite {
             },
             emitSceneEvents: false // 符箓使用自己的场景事件，不需要通用的 cardDragEnd
         });
+        this.attachCardFace(cardData);
     }
 
     private getEffectDescription(): string {

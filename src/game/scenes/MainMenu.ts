@@ -1,65 +1,124 @@
 import { GameObjects, Scene } from 'phaser';
 
 import { EventBus } from '../EventBus';
+import { isPortraitGameViewport } from '../layout/gameViewport';
+import {
+    createSceneBackdrop,
+    createSceneButton,
+    createScenePanel,
+    createStatusLine,
+    getSceneTextStyle,
+    sceneTheme,
+} from './shared/sceneTheme';
 
-export class MainMenu extends Scene
-{
-    background: GameObjects.Image;
-    logo: GameObjects.Image;
-    title: GameObjects.Text;
-    logoTween: Phaser.Tweens.Tween | null;
+export class MainMenu extends Scene {
+    background!: GameObjects.Rectangle;
+    logo!: GameObjects.Container;
+    title!: GameObjects.Text;
+    logoTween: Phaser.Tweens.Tween | null = null;
 
-    constructor ()
-    {
+    constructor() {
         super('MainMenu');
     }
 
-    create ()
-    {
+    create() {
         const { width, height } = this.scale;
+        if (isPortraitGameViewport(width, height)) {
+            this.createPortraitMenu();
+            EventBus.emit('current-scene-ready', this);
+            return;
+        }
+        const backdropObjects = createSceneBackdrop(this);
+        this.background = backdropObjects[0] as GameObjects.Rectangle;
 
-        this.background = this.add.image(width / 2, height / 2, 'background');
-        this.background.setDisplaySize(width, height);
+        this.logo = this.createFloatingSeal(width / 2, height * 0.23);
+        this.title = this.add.text(width / 2, height * 0.34, '青云问道', getSceneTextStyle('sceneTitle', {
+            fontSize: '60px',
+        })).setOrigin(0.5);
 
-        this.logo = this.add.image(width / 2, height * 0.28, 'logo').setDepth(100);
+        this.add.text(width / 2, height * 0.395, '山麓初启，收好卡匣，择一条路迈入仙门。', getSceneTextStyle('sceneSubtitle')).setOrigin(0.5);
 
-        this.title = this.add.text(width / 2, height * 0.44, '主菜单', {
-            fontFamily: 'Arial Black', fontSize: 38, color: '#ffffff',
-            stroke: '#000000', strokeThickness: 8,
-            align: 'center'
-        }).setOrigin(0.5).setDepth(100);
+        const panelWidth = 760;
+        const panelHeight = 350;
+        const panelX = width / 2;
+        const panelY = height * 0.64;
+        const panelTop = panelY - panelHeight / 2;
 
-        this.add.text(width / 2, height * 0.5, '选择一个入口开始游玩', {
-            fontFamily: 'Arial',
-            fontSize: 22,
-            color: '#dbeafe',
-            stroke: '#000000',
-            strokeThickness: 4,
-            align: 'center'
-        }).setOrigin(0.5).setDepth(100);
+        createScenePanel(this, {
+            x: panelX,
+            y: panelY,
+            width: panelWidth,
+            height: panelHeight,
+        });
 
-        this.createMenuButton({
-            x: width / 2,
-            y: height * 0.6,
-            width: 360,
-            height: 72,
+        this.add.text(panelX, panelTop + 54, '山门第一程', getSceneTextStyle('panelTitle')).setOrigin(0.5);
+        this.add.text(
+            panelX,
+            panelTop + 116,
+            '城镇、宗门山门与试炼入口都已在青云山麓铺开。先入大地图，再决定去何处落脚、听闻或闯关。',
+            getSceneTextStyle('body', {
+                align: 'center',
+                wordWrap: { width: panelWidth - 140 },
+            }),
+        ).setOrigin(0.5, 0);
+
+        createStatusLine(this, {
+            x: panelX,
+            y: panelTop + 220,
+            width: panelWidth - 140,
+            text: '当前开放：青云镇、青云宗山门、集市茶棚，以及两处试炼入口。',
+            align: 'center',
+        });
+
+        createSceneButton(this, {
+            x: panelX,
+            y: panelTop + 292,
+            width: 430,
+            height: 88,
             label: '进入大地图',
-            description: '选择青云镇、青云宗山门、集市茶棚或青云外山试炼',
-            onClick: () => this.startWorldMapScene()
+            description: '前往青云山麓，选择城镇、山门或秘境入口',
+            onClick: () => this.startWorldMapScene(),
         });
 
         EventBus.emit('current-scene-ready', this);
     }
-    
-    changeScene ()
-    {
+
+    private createPortraitMenu(): void {
+        const { width } = this.scale;
+        const backdropObjects = createSceneBackdrop(this);
+        this.background = backdropObjects[0] as GameObjects.Rectangle;
+        this.logo = this.createFloatingSeal(width / 2, 132);
+        this.title = this.add.text(width / 2, 274, '青云问道', getSceneTextStyle('sceneTitle', {
+            fontSize: '52px',
+        })).setOrigin(0.5);
+        this.add.text(width / 2, 334, '山麓初启，择一条路迈入仙门。', getSceneTextStyle('sceneSubtitle', {
+            fontSize: '20px', align: 'center', wordWrap: { width: width - 64 },
+        })).setOrigin(0.5);
+
+        const panelWidth = width - 40;
+        const panelTop = 380;
+        createScenePanel(this, { x: width / 2, y: 622, width: panelWidth, height: 484 });
+        this.add.text(width / 2, panelTop + 50, '山门第一程', getSceneTextStyle('panelTitle', {
+            fontSize: '31px',
+        })).setOrigin(0.5);
+        this.add.text(width / 2, panelTop + 117,
+            '城镇、宗门山门与试炼入口都已在青云山麓铺开。先入大地图，再决定去何处落脚、听闻或闯关。',
+            getSceneTextStyle('body', { fontSize: '21px', align: 'center',
+                wordWrap: { width: panelWidth - 62 } }),
+        ).setOrigin(0.5, 0);
+        createStatusLine(this, { x: width / 2, y: 665, width: panelWidth - 42,
+            text: '当前开放：青云镇、青云宗山门、集市茶棚及试炼入口。', align: 'center' });
+        createSceneButton(this, { x: width / 2, y: 792, width: panelWidth - 56, height: 86,
+            label: '进入大地图', description: '选择城镇、山门或秘境入口',
+            onClick: () => this.startWorldMapScene() });
+    }
+
+    changeScene() {
         this.startWorldMapScene();
     }
 
-    private startWorldMapScene ()
-    {
-        if (this.logoTween)
-        {
+    private startWorldMapScene() {
+        if (this.logoTween) {
             this.logoTween.stop();
             this.logoTween = null;
         }
@@ -67,68 +126,59 @@ export class MainMenu extends Scene
         this.scene.start('WorldMapScene');
     }
 
-    private createMenuButton (config: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-        label: string;
-        description: string;
-        onClick: () => void;
-    })
-    {
-        const button = this.add.rectangle(config.x, config.y, config.width, config.height, 0x1d4ed8, 0.92);
-        button.setStrokeStyle(3, 0xffffff, 0.86);
-        button.setInteractive({ useHandCursor: true });
-        button.setDepth(100);
-        button.on('pointerover', () => button.setFillStyle(0x2563eb, 1));
-        button.on('pointerout', () => button.setFillStyle(0x1d4ed8, 0.92));
-        button.on('pointerdown', config.onClick);
+    private createFloatingSeal(x: number, y: number): GameObjects.Container {
+        const seal = this.add.container(x, y);
+        if (this.textures.exists('wenxin:casket')) {
+            seal.add(this.add.image(0, -12, 'wenxin:casket').setDisplaySize(220, 220));
+            this.logoTween = this.tweens.add({ targets: seal, y: y - 8, duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+            return seal;
+        }
+        const outerGlow = this.add.circle(0, 0, 90, sceneTheme.colors.jade, 0.16);
+        const outerRing = this.add.circle(0, 0, 64, sceneTheme.colors.ink, 0.88);
+        outerRing.setStrokeStyle(4, sceneTheme.colors.gold, 0.72);
+        const innerRing = this.add.circle(0, 0, 46, sceneTheme.colors.panelInner, 0.96);
+        innerRing.setStrokeStyle(2, sceneTheme.colors.jadeBright, 0.4);
+        const sigil = this.add.text(0, -2, '云', {
+            fontFamily: sceneTheme.fonts.display,
+            fontSize: '46px',
+            color: '#f3ead3',
+            stroke: '#140f0a',
+            strokeThickness: 4,
+        }).setOrigin(0.5);
+        const caption = this.add.text(0, 72, '问道山麓', {
+            fontFamily: sceneTheme.fonts.body,
+            fontSize: '18px',
+            color: '#d9c6a2',
+            letterSpacing: 1.4,
+        }).setOrigin(0.5);
 
-        this.add.text(config.x, config.y - 12, config.label, {
-            fontFamily: 'Arial',
-            fontSize: 24,
-            color: '#f8fafc',
-            fontStyle: 'bold'
-        }).setOrigin(0.5).setDepth(101);
+        seal.add([outerGlow, outerRing, innerRing, sigil, caption]);
 
-        this.add.text(config.x, config.y + 18, config.description, {
-            fontFamily: 'Arial',
-            fontSize: 16,
-            color: '#bfdbfe'
-        }).setOrigin(0.5).setDepth(101);
+        return seal;
     }
 
-    moveLogo (vueCallback: ({ x, y }: { x: number, y: number }) => void)
-    {
-        if (this.logoTween)
-        {
-            if (this.logoTween.isPlaying())
-            {
+    moveLogo(vueCallback: ({ x, y }: { x: number, y: number }) => void) {
+        if (this.logoTween) {
+            if (this.logoTween.isPlaying()) {
                 this.logoTween.pause();
-            }
-            else
-            {
+            } else {
                 this.logoTween.play();
             }
-        } 
-        else
-        {
+        } else {
             this.logoTween = this.tweens.add({
                 targets: this.logo,
-                x: { value: 750, duration: 3000, ease: 'Back.easeInOut' },
-                y: { value: 80, duration: 1500, ease: 'Sine.easeOut' },
+                x: { value: this.scale.width * 0.68, duration: 3000, ease: 'Sine.easeInOut' },
+                y: { value: this.scale.height * 0.17, duration: 1600, ease: 'Sine.easeOut' },
                 yoyo: true,
                 repeat: -1,
                 onUpdate: () => {
-                    if (vueCallback)
-                    {
+                    if (vueCallback) {
                         vueCallback({
                             x: Math.floor(this.logo.x),
-                            y: Math.floor(this.logo.y)
+                            y: Math.floor(this.logo.y),
                         });
                     }
-                }
+                },
             });
         }
     }

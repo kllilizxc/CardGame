@@ -57,6 +57,8 @@ export interface Realm {
 
 // 通用卡牌基础信息
 export interface BaseCard {
+  /** Cosmetic card artwork selected through the shared card-face workflow. */
+  cardFace?: import('../../../../src/game/objects/cardFaceAppearance').CardFaceAppearance;
   /** 全局唯一 ID，如 "CR_001" */
   id: string;
   /** 卡牌名称 */

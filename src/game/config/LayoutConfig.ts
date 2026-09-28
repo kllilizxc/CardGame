@@ -81,10 +81,10 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
     return {
         // 卡牌预览面板 - 左上角
         cardPreview: {
-            x: width * 0.1,
+            x: width * 0.14,
             y: height * 0.5,
-            width: width * 0.2,
-            height: height * 0.5
+            width: width * 0.24,
+            height: height * 0.56
         },
         
         // 战斗日志 - 右侧
@@ -98,49 +98,49 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
         // 手牌区域 - 底部中央
         handZone: {
             x: width * 0.5,
-            y: height * 0.9,
+            y: height * 0.865,
             width: width * 0.6,
             height: height * 0.16
         },
         
         // 玩家场地区域 - 中下部
         playerFieldZone: {
-            x: width * 0.5,
-            y: height * 0.65,
-            width: width * 0.6,
-            height: height * 0.3
+            x: width * 0.76,
+            y: height * 0.50,
+            width: width * 0.43,
+            height: height * 0.44
         },
         
         // 敌方场地区域 - 中上部
         enemyFieldZone: {
-            x: width * 0.5,
-            y: height * 0.25,
-            width: width * 0.6,
-            height: height * 0.3
+            x: width * 0.24,
+            y: height * 0.50,
+            width: width * 0.43,
+            height: height * 0.44
         },
         
         // 场地卡区域 - 中央
         fieldCardZone: {
-            x: width * 0.25,
-            y: height * 0.45,
-            width: width * 0.1,
-            height: height * 0.2
+            x: width * 0.055,
+            y: height * 0.72,
+            width: width * 0.075,
+            height: height * 0.12
         },
         
         // 卡组按钮 - 左下角
         deckButton: {
             x: width * 0.08,
             y: height - height * 0.08,
-            width: 120,
-            height: 100
+            width: 148,
+            height: 108
         },
         
         // 弃牌堆按钮 - 右下角
         discardPileButton: {
             x: width - width * 0.08,
             y: height - height * 0.08,
-            width: 120,
-            height: 100
+            width: 148,
+            height: 108
         },
 
         // 右侧操作按钮
@@ -165,14 +165,14 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
         
         // 丹药槽位 - 左下角，卡组按钮上方
         pillSlots: {
-            x: width * 0.08,
+            x: width * 0.105,
             y: height - height * 0.18
         },
         
         // 技能UI
         skillUI: {
-            x: width * 0.75,
-            y: height * 0.45
+            x: width * 0.5,
+            y: height * 0.72
         },
         
         // 深度配置（从低到高）

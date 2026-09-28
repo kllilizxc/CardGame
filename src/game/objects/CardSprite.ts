@@ -1,4 +1,8 @@
 import { GameObjects } from 'phaser';
+import { WenxinUnitView } from '../art/wenxin/WenxinUnitView';
+import { unitArt, UNIT_ART, type BattleSide } from '../art/wenxin/presentation';
+import { watchCardFace } from './cardFaceAppearance';
+import { isPortraitGameViewport } from '../layout/gameViewport';
 import type { UnitCard } from '@data/types/cards/unit';
 import type { Gongfa } from '@data/types/gongfa';
 import type { StatusInstance } from '@data/types/status';
@@ -15,6 +19,10 @@ type BattleSceneCardDragBridge = Phaser.Scene & {
 };
 
 export class CardSprite extends BaseCardSprite {
+    public battleView?: WenxinUnitView;
+    private cardVisibility = new Map<GameObjects.GameObject, boolean>();
+    private faceImage?: GameObjects.Image;
+    private releaseFace?: () => void;
     private cardData: UnitCard;
     private starsText: GameObjects.Text;
     private realmText: GameObjects.Text;
@@ -136,6 +144,60 @@ export class CardSprite extends BaseCardSprite {
                 }
             }
         });
+
+        const original = this.list.filter(object => 'setVisible' in object) as Array<GameObjects.GameObject & { visible: boolean; setVisible(visible: boolean): unknown }>;
+        const initialVisibility = original.map(object => ({ object, visible: object.visible }));
+        this.releaseFace = watchCardFace(scene, cardData, key => {
+            if (!this.active) return;
+            this.faceImage?.destroy();
+            this.faceImage = undefined;
+            for (const { object, visible } of initialVisibility) if (object.active) object.setVisible(visible);
+            if (key) {
+                for (const { object } of initialVisibility) {
+                    if (object.active && object !== this.attackText && object !== this.healthText && object !== this.gongfaContainer) object.setVisible(false);
+                }
+                this.faceImage = scene.add.image(0, 0, key).setDisplaySize(this.CARD_WIDTH, this.CARD_HEIGHT);
+                this.addAt(this.faceImage, 0);
+                this.attackText.setPosition(-67, 112);
+                this.healthText.setPosition(67, 112);
+                this.gongfaContainer.setScale(0.5).setPosition(0, 83);
+            } else {
+                this.attackText.setPosition(-50, 100);
+                this.healthText.setPosition(50, 100);
+                this.gongfaContainer.setScale(1).setPosition(0, 0);
+            }
+            this.updateDisplayMode();
+            if (this.battleView) {
+                this.cardVisibility.clear();
+                for (const object of this.list) if (object !== this.battleView && 'setVisible' in object) {
+                    const visible = (object as GameObjects.Image).visible;
+                    this.cardVisibility.set(object, visible);
+                    (object as GameObjects.Image).setVisible(false);
+                }
+            }
+        });
+    }
+
+    public setBattlePresentation(side?: BattleSide): void {
+        if (side && this.battleView?.side === side) return;
+        if (this.battleView) {
+            this.battleView.destroy();
+            this.battleView = undefined;
+            for (const [object, visible] of this.cardVisibility) if (object.active && 'setVisible' in object) (object as GameObjects.Image).setVisible(visible);
+            this.cardVisibility.clear();
+            if (this.input) this.input.hitArea.setTo(0, 0, this.CARD_WIDTH, this.CARD_HEIGHT);
+        }
+        const key = unitArt(this.cardData.id);
+        if (!side || !key) { this.updateDisplayMode(); return; }
+        for (const object of this.list) if ('setVisible' in object) {
+            this.cardVisibility.set(object, (object as GameObjects.Image).visible);
+            (object as GameObjects.Image).setVisible(false);
+        }
+        this.battleView = new WenxinUnitView(this.scene, this, key, side);
+        this.add(this.battleView);
+        const m = UNIT_ART[key];
+        const artScale = isPortraitGameViewport(this.scene.scale.width, this.scene.scale.height) ? 1.6 : 3;
+        if (this.input) this.input.hitArea.setTo(90 - (side === 'me' ? m.w - m.ax : m.ax) * artScale, 130 - m.ay * artScale, m.w * artScale, m.h * artScale + 70);
     }
 
     public getCardData(): UnitCard {
@@ -150,6 +212,7 @@ export class CardSprite extends BaseCardSprite {
         }
         
         // 更新攻击力
+        this.battleView?.refreshStats();
         this.attackText.setText(`⚔${this.cardData.attack}`);
         
         // 更新生命值
@@ -180,11 +243,11 @@ export class CardSprite extends BaseCardSprite {
     // 重写：更新显示模式
     protected updateDisplayMode(): void {
         // 只有在hover模式下才显示描述
-        const shouldShowDescription = this.currentDisplayMode === 'hover';
+        const shouldShowDescription = this.currentDisplayMode === 'hover' && !this.faceImage && !this.battleView;
         this.descriptionText.setVisible(shouldShowDescription);
         
         // 功法列表始终显示（如果有的话）
-        this.gongfaContainer.setVisible(true);
+        this.gongfaContainer.setVisible(!this.battleView);
     }
 
     /**
@@ -419,6 +482,7 @@ export class CardSprite extends BaseCardSprite {
      * 销毁时清理功法提示框和状态显示
      */
     public destroy(fromScene?: boolean): void {
+        this.releaseFace?.();
         this.gongfaTooltip.destroy();
         this.clearStatusDisplay();
         super.destroy(fromScene);

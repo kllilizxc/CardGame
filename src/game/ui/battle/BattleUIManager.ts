@@ -1,6 +1,7 @@
 import type { Scene } from 'phaser';
 import type { BattleLayoutConfig } from '../../config/LayoutConfig';
 import type { BattleState } from '../../state/BattleState';
+import { sceneTheme } from '../../scenes/shared/sceneTheme';
 
 /**
  * 战斗 UI 管理器
@@ -74,9 +75,9 @@ export class BattleUIManager {
     private createTitle(): void {
         const { width, height } = this.scene.scale;
         const titleFontSize = Math.floor(height * 0.03) + 'px';
-        const titleText = this.scene.add.text(width / 2, height * 0.04, '修仙卡牌 - 战斗场景', {
+        const titleText = this.scene.add.text(width / 2, height * 0.04, '斗法', {
             fontSize: titleFontSize,
-            color: '#ffffff',
+            color: '#f3ead3',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         titleText.setDepth(this.layout.depth.uiText);
@@ -92,7 +93,7 @@ export class BattleUIManager {
         // 敌方场地边框和标签
         const enemyConfig = this.layout.enemyFieldZone;
         const enemyFieldGraphics = this.scene.add.graphics();
-        enemyFieldGraphics.lineStyle(2, 0xe74c3c, 0.7);
+        enemyFieldGraphics.lineStyle(2, sceneTheme.colors.ember, 0.7);
         enemyFieldGraphics.strokeRect(
             enemyConfig.x - enemyConfig.width / 2,
             enemyConfig.y - enemyConfig.height / 2,
@@ -101,7 +102,7 @@ export class BattleUIManager {
         );
         const enemyLabel = this.scene.add.text(enemyConfig.x, enemyConfig.y - enemyConfig.height / 2 - 20, '敌方场地', {
             fontSize: fontSize,
-            color: '#e74c3c',
+            color: '#b98e82',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         enemyFieldGraphics.setDepth(this.layout.depth.fieldZoneVisuals);
@@ -110,7 +111,7 @@ export class BattleUIManager {
         // 场地卡区域边框和标签
         const fieldConfig = this.layout.fieldCardZone;
         const fieldZoneGraphics = this.scene.add.graphics();
-        fieldZoneGraphics.lineStyle(2, 0xf39c12, 0.7);
+        fieldZoneGraphics.lineStyle(2, sceneTheme.colors.gold, 0.7);
         fieldZoneGraphics.strokeRect(
             fieldConfig.x - fieldConfig.width / 2,
             fieldConfig.y - fieldConfig.height / 2,
@@ -119,7 +120,7 @@ export class BattleUIManager {
         );
         const fieldLabel = this.scene.add.text(fieldConfig.x, fieldConfig.y - fieldConfig.height / 2 - 15, '场地', {
             fontSize: fontSize,
-            color: '#f39c12',
+            color: '#e8d5ab',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         fieldZoneGraphics.setDepth(this.layout.depth.fieldZoneVisuals);
@@ -128,7 +129,7 @@ export class BattleUIManager {
         // 我方场地边框和标签
         const playerConfig = this.layout.playerFieldZone;
         const playerFieldGraphics = this.scene.add.graphics();
-        playerFieldGraphics.lineStyle(2, 0x2ecc71, 0.7);
+        playerFieldGraphics.lineStyle(2, sceneTheme.colors.jadeBright, 0.7);
         playerFieldGraphics.strokeRect(
             playerConfig.x - playerConfig.width / 2,
             playerConfig.y - playerConfig.height / 2,
@@ -137,7 +138,7 @@ export class BattleUIManager {
         );
         const playerLabel = this.scene.add.text(playerConfig.x, playerConfig.y - playerConfig.height / 2 - 20, '我方场地（拖拽卡牌到这里）', {
             fontSize: fontSize,
-            color: '#2ecc71',
+            color: '#72a68a',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         playerFieldGraphics.setDepth(this.layout.depth.fieldZoneVisuals);
@@ -146,7 +147,7 @@ export class BattleUIManager {
         // 手牌区域边框和标签
         const handConfig = this.layout.handZone;
         const handGraphics = this.scene.add.graphics();
-        handGraphics.lineStyle(2, 0xf39c12, 0.5);
+        handGraphics.lineStyle(2, sceneTheme.colors.gold, 0.5);
         handGraphics.strokeRect(
             handConfig.x - handConfig.width / 2,
             handConfig.y - handConfig.height / 2,
@@ -155,7 +156,7 @@ export class BattleUIManager {
         );
         const handLabel = this.scene.add.text(handConfig.x, handConfig.y - handConfig.height / 2 - 20, '手牌', {
             fontSize: fontSize,
-            color: '#f39c12',
+            color: '#e8d5ab',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         handGraphics.setDepth(this.layout.depth.fieldZoneVisuals);
@@ -174,57 +175,57 @@ export class BattleUIManager {
 
         // 抽卡按钮
         this.drawButton = this.scene.add.rectangle(
-            drawCfg.x, drawCfg.y, drawCfg.width, drawCfg.height, 0xf39c12
+            drawCfg.x, drawCfg.y, drawCfg.width, drawCfg.height, sceneTheme.colors.gold
         ).setInteractive({ useHandCursor: true });
         this.drawButton.setDepth(this.layout.depth.uiButtons);
 
         const drawText = this.scene.add.text(drawCfg.x, drawCfg.y, '抽一张卡', {
             fontSize: fontSize,
-            color: '#ffffff',
+            color: '#f3ead3',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         drawText.setDepth(this.layout.depth.uiText);
 
-        this.drawButton.on('pointerover', () => this.drawButton!.setFillStyle(0xffd700));
-        this.drawButton.on('pointerout', () => this.drawButton!.setFillStyle(0xf39c12));
+        this.drawButton.on('pointerover', () => this.drawButton!.setFillStyle(sceneTheme.colors.goldSoft));
+        this.drawButton.on('pointerout', () => this.drawButton!.setFillStyle(sceneTheme.colors.gold));
         this.drawButton.on('pointerdown', () => {
             if (this.onDrawCard) this.onDrawCard();
         });
 
         // 结束回合按钮
         this.endTurnButton = this.scene.add.rectangle(
-            endTurnCfg.x, endTurnCfg.y, endTurnCfg.width, endTurnCfg.height, 0xe74c3c
+            endTurnCfg.x, endTurnCfg.y, endTurnCfg.width, endTurnCfg.height, sceneTheme.colors.ember
         ).setInteractive({ useHandCursor: true });
         this.endTurnButton.setDepth(this.layout.depth.uiButtons);
 
         const endTurnText = this.scene.add.text(endTurnCfg.x, endTurnCfg.y, '结束回合', {
             fontSize: fontSize,
-            color: '#ffffff',
+            color: '#f3ead3',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         endTurnText.setDepth(this.layout.depth.uiText);
 
-        this.endTurnButton.on('pointerover', () => this.endTurnButton!.setFillStyle(0xff6b6b));
-        this.endTurnButton.on('pointerout', () => this.endTurnButton!.setFillStyle(0xe74c3c));
+        this.endTurnButton.on('pointerover', () => this.endTurnButton!.setFillStyle(sceneTheme.colors.emberBright));
+        this.endTurnButton.on('pointerout', () => this.endTurnButton!.setFillStyle(sceneTheme.colors.ember));
         this.endTurnButton.on('pointerdown', () => {
             if (this.onEndTurn) this.onEndTurn();
         });
 
         // 速度切换按钮
         this.speedButton = this.scene.add.rectangle(
-            speedCfg.x, speedCfg.y, speedCfg.width, speedCfg.height, 0x3498db
+            speedCfg.x, speedCfg.y, speedCfg.width, speedCfg.height, sceneTheme.colors.jade
         ).setInteractive({ useHandCursor: true });
         this.speedButton.setDepth(this.layout.depth.uiButtons);
 
         this.speedText = this.scene.add.text(speedCfg.x, speedCfg.y, '速度 x1', {
             fontSize: fontSize,
-            color: '#ffffff',
+            color: '#f3ead3',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.speedText.setDepth(this.layout.depth.uiText);
 
-        this.speedButton.on('pointerover', () => this.speedButton!.setFillStyle(0x5dade2));
-        this.speedButton.on('pointerout', () => this.speedButton!.setFillStyle(0x3498db));
+        this.speedButton.on('pointerover', () => this.speedButton!.setFillStyle(sceneTheme.colors.jadeBright));
+        this.speedButton.on('pointerout', () => this.speedButton!.setFillStyle(sceneTheme.colors.jade));
         this.speedButton.on('pointerdown', () => {
             if (this.onToggleSpeed) {
                 this.onToggleSpeed();
@@ -245,14 +246,14 @@ export class BattleUIManager {
         // 统计信息
         this.statsText = this.scene.add.text(buttonX, height * 0.64, '', {
             fontSize: fontSize,
-            color: '#ffffff'
+            color: '#f3ead3'
         }).setOrigin(0.5);
         this.statsText.setDepth(this.layout.depth.uiText);
 
         // 回合提示
         this.turnText = this.scene.add.text(width / 2, height * 0.45, '', {
             fontSize: titleFontSize,
-            color: '#f39c12',
+            color: '#e8d5ab',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.turnText.setDepth(this.layout.depth.uiText);
@@ -283,7 +284,7 @@ export class BattleUIManager {
         // 创建标题文本
         const titleText = this.scene.add.text(buttonX, buttonY - 15, '牌库', {
             fontSize: fontSize,
-            color: '#ffffff',
+            color: '#f3ead3',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         titleText.setDepth(this.layout.depth.uiText);
@@ -333,7 +334,7 @@ export class BattleUIManager {
             buttonY,
             buttonWidth,
             buttonHeight,
-            0x8e44ad,
+            sceneTheme.colors.slate,
             0.8
         ).setInteractive({ useHandCursor: true });
         this.discardPileButton.setDepth(this.layout.depth.uiButtons);
@@ -341,7 +342,7 @@ export class BattleUIManager {
         // 创建标题文本
         const titleText = this.scene.add.text(buttonX, buttonY - 15, '弃牌堆', {
             fontSize: fontSize,
-            color: '#ffffff',
+            color: '#f3ead3',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         titleText.setDepth(this.layout.depth.uiText);
@@ -349,7 +350,7 @@ export class BattleUIManager {
         // 创建数量文本
         const countText = this.scene.add.text(buttonX, buttonY + 10, '0', {
             fontSize: (parseInt(fontSize) * 1.5) + 'px',
-            color: '#e74c3c',
+            color: '#b98e82',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         countText.setDepth(this.layout.depth.uiText);
@@ -360,12 +361,12 @@ export class BattleUIManager {
 
         // 添加交互效果
         this.discardPileButton.on('pointerover', () => {
-            this.discardPileButton!.setFillStyle(0x9b59b6, 0.9);
+            this.discardPileButton!.setFillStyle(sceneTheme.colors.slate, 0.9);
             titleText.setColor('#e74c3c');
         });
 
         this.discardPileButton.on('pointerout', () => {
-            this.discardPileButton!.setFillStyle(0x8e44ad, 0.8);
+            this.discardPileButton!.setFillStyle(sceneTheme.colors.slate, 0.8);
             titleText.setColor('#ffffff');
         });
 
@@ -444,11 +445,11 @@ export class BattleUIManager {
         if (!this.drawButton) return;
         if (enabled) {
             this.drawButton.setInteractive({ useHandCursor: true });
-            this.drawButton.setFillStyle(0xf39c12);
+            this.drawButton.setFillStyle(sceneTheme.colors.gold);
             this.drawButton.setAlpha(1);
         } else {
             this.drawButton.disableInteractive();
-            this.drawButton.setFillStyle(0x666666);
+            this.drawButton.setFillStyle(sceneTheme.colors.slate);
             this.drawButton.setAlpha(0.5);
         }
     }
@@ -460,11 +461,11 @@ export class BattleUIManager {
         if (!this.endTurnButton) return;
         if (enabled) {
             this.endTurnButton.setInteractive({ useHandCursor: true });
-            this.endTurnButton.setFillStyle(0xe74c3c);
+            this.endTurnButton.setFillStyle(sceneTheme.colors.ember);
             this.endTurnButton.setAlpha(1);
         } else {
             this.endTurnButton.disableInteractive();
-            this.endTurnButton.setFillStyle(0x666666);
+            this.endTurnButton.setFillStyle(sceneTheme.colors.slate);
             this.endTurnButton.setAlpha(0.5);
         }
     }

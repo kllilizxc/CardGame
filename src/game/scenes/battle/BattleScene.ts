@@ -1,4 +1,6 @@
 import { Scene } from 'phaser';
+import { WenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
+import { ensureWenxinArt } from '../../art/wenxin/WenxinArt';
 import { EventBus, EXPEDITION_BATTLE_COMPLETE_EVENT, STORY_BATTLE_COMPLETE_EVENT } from '../../EventBus';
 import { CardSprite } from '../../objects/CardSprite';
 import { ArtifactSprite } from '../../objects/ArtifactSprite';
@@ -316,7 +318,10 @@ export class BattleScene extends Scene {
         const { width, height } = this.scale;
 
         this.cardScale = this.calculateCardScale();
-        this.cameras.main.setBackgroundColor(0x1a1a2e);
+        this.cameras.main.setBackgroundColor(0x0d1320);
+        await ensureWenxinArt(this);
+        if (!this.sys.isActive()) return;
+        new WenxinBattleStage(this);
         
         // 初始化游戏状态
         this.battleState = new BattleState();

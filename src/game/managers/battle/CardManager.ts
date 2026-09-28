@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { getWenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
 import { CardSprite } from '../../objects/CardSprite';
 import { ArtifactSprite } from '../../objects/ArtifactSprite';
 import { TalismanSprite } from '../../objects/TalismanSprite';
@@ -95,6 +96,7 @@ export class CardManager {
 
     // 排列手牌
     public arrangeHand(hand: BaseCardSprite[]): void {
+        hand.forEach(card => { if (card instanceof CardSprite) card.setBattlePresentation(); });
         const layoutZone = this.layout?.handZone;
         if (layoutZone) {
             const y = layoutZone.y;
@@ -145,6 +147,8 @@ export class CardManager {
 
     // 排列玩家场地
     public arrangePlayerField(playerField: CardSprite[]): void {
+        const stage = getWenxinBattleStage(this.scene);
+        if (stage) { stage.arrange(playerField, 'me'); return; }
         const layoutZone = this.layout?.playerFieldZone;
         if (layoutZone) {
             const y = layoutZone.y;
@@ -195,6 +199,8 @@ export class CardManager {
 
     // 排列敌方场地
     public arrangeEnemyField(enemyField: CardSprite[]): void {
+        const stage = getWenxinBattleStage(this.scene);
+        if (stage) { stage.arrange(enemyField, 'foe'); return; }
         const layoutZone = this.layout?.enemyFieldZone;
         if (layoutZone) {
             const y = layoutZone.y;

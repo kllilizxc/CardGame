@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
+import { createSceneBackdrop, createScenePanel, sceneTheme } from '../shared/sceneTheme';
 import {
     CONTENT_CATALOG_CACHE_KEY,
     CONTENT_CATALOG_PUBLIC_PATH,
@@ -10,7 +11,6 @@ import {
 import {
     clampWorldMapSurfacePosition,
     createWorldMapDestinationPreviewText,
-    createWorldMapDestinationSelectionStatusText,
     createWorldMapInitialSurfacePosition,
     createWorldMapDestinationIntent,
     getWorldMapDestinationSurfacePosition,
@@ -104,23 +104,21 @@ export class WorldMapScene extends Scene {
         const { width, height } = this.scale;
         const container = this.add.container(0, 0);
 
-        this.cameras.main.setBackgroundColor(0x07111f);
-        container.add(this.add.rectangle(width / 2, height / 2, width, height, 0x0f172a, 1));
-        container.add(this.add.circle(width * 0.22, height * 0.24, 360, 0x0ea5e9, 0.13));
-        container.add(this.add.circle(width * 0.78, height * 0.72, 420, 0x22c55e, 0.11));
+        this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
+        container.add(createSceneBackdrop(this));
 
         container.add(this.add.text(width / 2, 78, this.worldMap.title, {
-            fontFamily: 'Arial Black',
+            fontFamily: sceneTheme.fonts.display,
             fontSize: '50px',
-            color: '#f8fafc',
-            stroke: '#020617',
+            color: '#f3ead3',
+            stroke: '#140f0a',
             strokeThickness: 8,
         }).setOrigin(0.5));
 
         container.add(this.add.text(width / 2, 132, this.worldMap.subtitle, {
-            fontFamily: 'Arial',
+            fontFamily: sceneTheme.fonts.ui,
             fontSize: '23px',
-            color: '#bfdbfe',
+            color: '#d9c6a2',
         }).setOrigin(0.5));
 
         const panelWidth = Math.min(1580, width - 220);
@@ -130,29 +128,27 @@ export class WorldMapScene extends Scene {
         const panelLeft = panelX - panelWidth / 2;
         const panelTop = panelY - panelHeight / 2;
         const contentX = panelLeft + 60;
-        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x111827, 0.96);
-        panel.setStrokeStyle(3, 0x38bdf8, 0.82);
-        container.add(panel);
+        container.add(createScenePanel(this, { x: panelX, y: panelY, width: panelWidth, height: panelHeight }));
 
         container.add(this.add.text(contentX, panelTop + 54, '可前往地点', {
-            fontFamily: 'Arial',
+            fontFamily: sceneTheme.fonts.ui,
             fontSize: '36px',
-            color: '#fef3c7',
+            color: '#e8d5ab',
             fontStyle: 'bold',
         }));
 
         container.add(this.add.text(contentX, panelTop + 104, this.worldMap.description, {
-            fontFamily: 'Arial',
+            fontFamily: sceneTheme.fonts.ui,
             fontSize: '19px',
-            color: '#dbeafe',
+            color: '#f3ead3',
             lineSpacing: 8,
             wordWrap: { width: panelWidth - 120 },
         }));
 
         this.statusText = this.add.text(contentX, panelTop + 182, WORLD_MAP_FALLBACK_STATUS_TEXT, {
-            fontFamily: 'Arial',
+            fontFamily: sceneTheme.fonts.ui,
             fontSize: '18px',
-            color: '#fde68a',
+            color: '#e8d5ab',
             wordWrap: { width: panelWidth - 120 },
         });
         this.statusText.setText(this.returnStatusText ?? WORLD_MAP_FALLBACK_STATUS_TEXT);
@@ -179,10 +175,10 @@ export class WorldMapScene extends Scene {
             viewportCenterY,
             viewport.width,
             viewport.height,
-            0x020617,
+            sceneTheme.colors.ink,
             1,
         );
-        viewportBackground.setStrokeStyle(2, 0x0ea5e9, 0.4);
+        viewportBackground.setStrokeStyle(2, sceneTheme.colors.gold, 0.4);
         container.add(viewportBackground);
 
         const initialSurfacePosition = createWorldMapInitialSurfacePosition(this.worldMap.presentation, viewport);
@@ -212,14 +208,14 @@ export class WorldMapScene extends Scene {
             0x000000,
             0,
         );
-        frame.setStrokeStyle(4, 0x38bdf8, 0.74);
+        frame.setStrokeStyle(4, sceneTheme.colors.gold, 0.74);
         container.add(frame);
 
         const hint = this.add.text(viewport.left + 24, viewport.top + 18, '拖拽地图查看周边 · 点击标记进入', {
-            fontFamily: 'Arial',
+            fontFamily: sceneTheme.fonts.ui,
             fontSize: '17px',
-            color: '#bae6fd',
-            backgroundColor: '#0f172acc',
+            color: '#d9c6a2',
+            backgroundColor: '#493824cc',
             padding: { x: 12, y: 7 },
         });
         container.add(hint);
@@ -227,9 +223,9 @@ export class WorldMapScene extends Scene {
 
     private createMapSurfaceBackdrop(): Phaser.GameObjects.Rectangle {
         const { mapWidth, mapHeight } = this.worldMap.presentation;
-        const backdrop = this.add.rectangle(0, 0, mapWidth, mapHeight, 0x0b1220, 1);
+        const backdrop = this.add.rectangle(0, 0, mapWidth, mapHeight, sceneTheme.colors.panel, 1);
         backdrop.setOrigin(0, 0);
-        backdrop.setStrokeStyle(6, 0x1e293b, 1);
+        backdrop.setStrokeStyle(6, sceneTheme.colors.slate, 1);
 
         return backdrop;
     }
@@ -238,14 +234,14 @@ export class WorldMapScene extends Scene {
         const { mapWidth, mapHeight } = this.worldMap.presentation;
         const graphics = this.add.graphics();
 
-        graphics.fillStyle(0x0f2f2f, 0.42);
+        graphics.fillStyle(sceneTheme.colors.jade, 0.42);
         graphics.fillEllipse(mapWidth * 0.32, mapHeight * 0.68, 720, 330);
-        graphics.fillStyle(0x164e63, 0.34);
+        graphics.fillStyle(sceneTheme.colors.jadeBright, 0.34);
         graphics.fillEllipse(mapWidth * 0.62, mapHeight * 0.42, 760, 390);
-        graphics.fillStyle(0x3f2d20, 0.35);
+        graphics.fillStyle(sceneTheme.colors.ember, 0.35);
         graphics.fillEllipse(mapWidth * 0.76, mapHeight * 0.74, 480, 260);
 
-        graphics.lineStyle(5, 0x94a3b8, 0.2);
+        graphics.lineStyle(5, sceneTheme.colors.parchmentSoft, 0.2);
         graphics.beginPath();
         graphics.moveTo(mapWidth * 0.18, mapHeight * 0.74);
         graphics.lineTo(mapWidth * 0.35, mapHeight * 0.62);
@@ -254,7 +250,7 @@ export class WorldMapScene extends Scene {
         graphics.lineTo(mapWidth * 0.8, mapHeight * 0.74);
         graphics.strokePath();
 
-        graphics.lineStyle(2, 0x7dd3fc, 0.11);
+        graphics.lineStyle(2, sceneTheme.colors.gold, 0.11);
         for (let x = 120; x < mapWidth; x += 160) {
             graphics.lineBetween(x, 0, x, mapHeight);
         }
@@ -277,26 +273,26 @@ export class WorldMapScene extends Scene {
         pin.setInteractive({ useHandCursor: true });
 
         const glyph = this.add.text(0, -1, this.getDestinationMarkerGlyph(destination), {
-            fontFamily: 'Arial Black',
+            fontFamily: sceneTheme.fonts.display,
             fontSize: '24px',
-            color: '#f8fafc',
-            stroke: '#020617',
+            color: '#f3ead3',
+            stroke: '#140f0a',
             strokeThickness: 4,
         }).setOrigin(0.5);
 
         const labelPanelWidth = Math.max(148, destination.label.length * 25);
-        const labelPanel = this.add.rectangle(0, 62, labelPanelWidth, 62, 0x020617, 0.82);
+        const labelPanel = this.add.rectangle(0, 62, labelPanelWidth, 62, sceneTheme.colors.ink, 0.82);
         labelPanel.setStrokeStyle(2, palette.stroke, 0.48);
         const label = this.add.text(0, 47, destination.label, {
-            fontFamily: 'Arial',
+            fontFamily: sceneTheme.fonts.ui,
             fontSize: '20px',
-            color: '#f8fafc',
+            color: '#f3ead3',
             fontStyle: 'bold',
         }).setOrigin(0.5);
         const region = this.add.text(0, 72, `${destination.presentation.regionLabel} · ${markerLabel}`, {
-            fontFamily: 'Arial',
+            fontFamily: sceneTheme.fonts.ui,
             fontSize: '14px',
-            color: '#bae6fd',
+            color: '#d9c6a2',
         }).setOrigin(0.5);
 
         let pointerDownPosition: WorldMapSurfacePosition | undefined;
@@ -352,16 +348,16 @@ export class WorldMapScene extends Scene {
     } {
         if (destination.kind === 'hub') {
             return {
-                fill: 0x2563eb,
-                hoverFill: 0x38bdf8,
-                stroke: 0xbfdbfe,
+                fill: sceneTheme.colors.jade,
+                hoverFill: sceneTheme.colors.gold,
+                stroke: sceneTheme.colors.goldSoft,
             };
         }
 
         return {
-            fill: 0x16a34a,
-            hoverFill: 0x22c55e,
-            stroke: 0xdcfce7,
+            fill: sceneTheme.colors.ember,
+            hoverFill: sceneTheme.colors.emberBright,
+            stroke: sceneTheme.colors.goldSoft,
         };
     }
 

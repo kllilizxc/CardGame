@@ -1,10 +1,11 @@
 import { Scene } from 'phaser';
+import { ensureWenxinArt } from '../art/wenxin/WenxinArt';
+import { resolvePreviewHubActionLaunch } from '../services/PreviewEntry';
 
 import {
     CONTENT_CATALOG_CACHE_KEY,
     CONTENT_CATALOG_PUBLIC_PATH,
 } from '../content/contentCatalog';
-import { resolvePreviewHubActionLaunch } from '../services/PreviewEntry';
 
 export class Preloader extends Scene
 {
@@ -15,22 +16,12 @@ export class Preloader extends Scene
 
     init ()
     {
-        //  We loaded this image in our Boot Scene, so we can display it here
-        this.add.image(512, 384, 'background');
-
-        //  A simple progress bar. This is the outline of the bar.
-        this.add.rectangle(512, 384, 468, 32).setStrokeStyle(1, 0xffffff);
-
-        //  This is the progress bar itself. It will increase in size from the left based on the % of progress.
-        const bar = this.add.rectangle(512-230, 384, 4, 28, 0xffffff);
-
-        //  Use the 'progress' event emitted by the LoaderPlugin to update the loading bar
-        this.load.on('progress', (progress: number) => {
-
-            //  Update the progress bar (our bar is 464px wide, so 100% = 464px)
-            bar.width = 4 + (460 * progress);
-
-        });
+        const { width, height } = this.scale;
+        this.cameras.main.setBackgroundColor('#20282e');
+        this.add.text(width / 2, height / 2 - 100, '青云问道', { fontFamily: 'serif', fontSize: '48px', color: '#dfc99f' }).setOrigin(.5);
+        this.add.rectangle(width / 2, height / 2, 604, 20).setStrokeStyle(2, 0xc6aa7a);
+        const bar = this.add.rectangle(width / 2 - 296, height / 2, 4, 12, 0x849a8d).setOrigin(0, .5);
+        this.load.on('progress', (progress: number) => { bar.width = 4 + 588 * progress; });
     }
 
     preload ()
@@ -45,16 +36,26 @@ export class Preloader extends Scene
         this.load.image('star', 'star.png');
     }
 
-    create ()
+    async create ()
     {
         //  When all the assets have loaded, it's often worth creating global objects here that the rest of the game can use.
         //  For example, you can define global animations here, so we can use them in other scenes.
 
-        const previewLaunch = resolvePreviewHubActionLaunch(
-            typeof location === 'undefined' ? '' : location.search,
-            this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
-        );
-        if (previewLaunch) this.scene.start('HubScene', previewLaunch);
-        else this.scene.start('MainMenu');
+        //  Move to the MainMenu. You could also swap this for a Scene Transition, such as a camera fade.
+        const label = this.add.text(this.scale.width / 2, this.scale.height / 2 + 60, '展开画卷……', { fontSize: '24px', color: '#dfc99f' }).setOrigin(.5);
+        try {
+            await ensureWenxinArt(this);
+            if (!this.sys.isActive()) return;
+            const previewLaunch = resolvePreviewHubActionLaunch(
+                typeof location === 'undefined' ? '' : location.search,
+                this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+            );
+            if (previewLaunch) this.scene.start('HubScene', previewLaunch);
+            else this.scene.start('MainMenu');
+        } catch (error) {
+            label.setText('素材未能载入，点击重试').setInteractive({ useHandCursor: true });
+            label.once('pointerdown', () => this.scene.restart());
+            console.error(error);
+        }
     }
 }

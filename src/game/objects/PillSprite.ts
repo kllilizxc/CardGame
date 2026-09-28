@@ -90,6 +90,7 @@ export class PillSprite extends BaseCardSprite {
             },
             emitSceneEvents: false // 丹药使用自己的事件
         });
+        this.attachCardFace(cardData);
     }
 
     /**

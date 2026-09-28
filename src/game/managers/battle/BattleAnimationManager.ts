@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { getWenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
 import { CardSprite } from '../../objects/CardSprite';
 import type { ArtifactSprite } from '../../objects/ArtifactSprite';
 import type { TalismanSprite } from '../../objects/TalismanSprite';
@@ -50,6 +51,7 @@ export class BattleAnimationManager {
         delay: number,
         onDamage: (target: CardSprite, damage: number) => void
     ): void {
+        if (getWenxinBattleStage(this.scene)?.attack(attacker, target, damage, delay, onDamage, config => this.addTweens(config))) return;
         const originalX = attacker.x;
         const originalY = attacker.y;
         const targetX = target.x;
@@ -170,6 +172,8 @@ export class BattleAnimationManager {
     }
 
     public playSummonAnimation(card: CardSprite, star: number): void {
+        const stage = getWenxinBattleStage(this.scene);
+        if (stage && card.battleView) { stage.summon(card); return; }
         if (!card.active || star < 5) {
             return;
         }
@@ -324,6 +328,19 @@ export class BattleAnimationManager {
         delay: number,
         onDamage: (damage: number) => void
     ): void {
+        if (attacker.battleView) {
+            const pose = attacker.battleView.pose;
+            this.addTweens({ targets: { t: 0 }, t: 1, duration: Math.max(1, delay), onComplete: () => {
+                if (!attacker.active) return;
+                pose.run = 1;
+                this.addTweens({ targets: pose, ox: 420, oy: -40, duration: 350, ease: 'Quad.easeIn', onComplete: () => {
+                    onDamage(damage);
+                    this.playPlayerHitEffect(damage);
+                    this.addTweens({ targets: pose, ox: 0, oy: 0, duration: 300, ease: 'Sine.easeInOut', onComplete: () => { pose.run = 0; } });
+                } });
+            } });
+            return;
+        }
         const originalX = attacker.x;
         const originalY = attacker.y;
         const { width, height } = this.scene.scale;
@@ -477,6 +494,7 @@ export class BattleAnimationManager {
 
     // 死亡动画
     public playDeathAnimation(target: CardSprite): void {
+        getWenxinBattleStage(this.scene)?.shatter(target);
         const baseScale = target.scale;
         this.addTweens({
             targets: target,
