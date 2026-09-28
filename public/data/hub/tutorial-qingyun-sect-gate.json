@@ -2,7 +2,7 @@
   "hubId": "tutorial.qingyun-hub-sect-gate",
   "title": "教学青云山门",
   "subtitle": "教程主线的山门入口",
-  "description": "教学山门作为独立 Hub 资源引用青云入门故事，证明山门路线有自己的 Hub session，不污染普通主线。",
+  "description": "入门弟子在山门前排队，执事正准备引他们踏上问心阶。",
   "defaultLocationId": "location.tutorial-qingyun-sect-gate.archway",
   "locations": [
     {
@@ -15,7 +15,7 @@
           "id": "action.tutorial-qingyun-sect-gate.start-entry-story",
           "kind": "startStory",
           "label": "叩问教学山门",
-          "description": "从教学山门 Hub 启动青云入门故事。",
+          "description": "向山门执事报到，准备踏上问心阶。",
           "storyResourceId": "tutorial.qingyun-story-entry",
           "storyGraphFile": "data/story/tutorial-qingyun-entry.json",
           "statusText": "你叩问教学山门，准备踏上问心阶。"
