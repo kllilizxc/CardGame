@@ -1,14 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 
 import {
+    clearActiveRun,
+    createActiveRunStorageKey,
+    loadActiveRun,
     loadPersistentStash,
     resetRunPersistenceForTests,
+    saveActiveRun,
     savePersistentStash,
     STASH_STORAGE_KEY,
 } from './RunPersistence';
+import { previewStoragePrefix } from './PreviewStorage';
 import {
+    createRunSnapshot,
     createItemStack,
     createTestPersistentStash,
+    DEFAULT_EXPEDITION_TARGET,
 } from '../testing/fixtures/expeditionWorldStateFixtures';
 
 class MemoryStorage implements Storage {
@@ -110,6 +117,60 @@ describe('RunPersistence', () => {
 
         expect(JSON.parse(ambientStorage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(TEST_STASH);
         expect(loadPersistentStash()).toEqual(TEST_STASH);
+    });
+
+    it('isolates default stash and active runs by candidate and profile without reading ordinary saves', () => {
+        const storage = globalThis.localStorage as MemoryStorage;
+        const ordinaryStash = createTestPersistentStash({ spiritStones: 73 });
+        storage.setItem(STASH_STORAGE_KEY, JSON.stringify(ordinaryStash));
+        const previousLocation = Object.getOwnPropertyDescriptor(globalThis, 'location');
+        const base = `?workaProject=cardgame&workaCandidate=main-latest&workaCommit=${'a'.repeat(40)}`;
+        const searchA = `${base}&workaProfile=one`;
+        const searchB = `${base}&workaProfile=two`;
+        const otherCandidate = `?workaProject=cardgame&workaCandidate=next&workaCommit=${'b'.repeat(40)}&workaProfile=one`;
+        const setSearch = (search: string) => Object.defineProperty(globalThis, 'location', {
+            configurable: true,
+            value: { search },
+        });
+
+        try {
+            setSearch(searchA);
+            expect(loadPersistentStash()).toBeNull();
+            expect(loadActiveRun(DEFAULT_EXPEDITION_TARGET)).toBeNull();
+            savePersistentStash(TEST_STASH);
+            saveActiveRun(createRunSnapshot(DEFAULT_EXPEDITION_TARGET, { runId: 'run-one' }));
+
+            const prefixA = previewStoragePrefix(searchA)!;
+            expect(storage.getItem(`${prefixA}${STASH_STORAGE_KEY}`)).toBe(JSON.stringify(TEST_STASH));
+            expect(storage.getItem(`${prefixA}${createActiveRunStorageKey(DEFAULT_EXPEDITION_TARGET)}`)).not.toBeNull();
+            expect(storage.getItem(STASH_STORAGE_KEY)).toBe(JSON.stringify(ordinaryStash));
+
+            setSearch(searchB);
+            expect(loadPersistentStash()).toBeNull();
+            expect(loadActiveRun(DEFAULT_EXPEDITION_TARGET)).toBeNull();
+            savePersistentStash(createTestPersistentStash({ spiritStones: 5 }));
+            saveActiveRun(createRunSnapshot(DEFAULT_EXPEDITION_TARGET, { runId: 'run-two' }));
+
+            setSearch(searchA);
+            expect(loadPersistentStash()?.spiritStones).toBe(TEST_STASH.spiritStones);
+            expect(loadActiveRun(DEFAULT_EXPEDITION_TARGET)?.runId).toBe('run-one');
+            clearActiveRun(DEFAULT_EXPEDITION_TARGET);
+
+            setSearch(searchB);
+            expect(loadPersistentStash()?.spiritStones).toBe(5);
+            expect(loadActiveRun(DEFAULT_EXPEDITION_TARGET)?.runId).toBe('run-two');
+
+            setSearch(otherCandidate);
+            expect(loadPersistentStash()).toBeNull();
+            expect(loadActiveRun(DEFAULT_EXPEDITION_TARGET)).toBeNull();
+
+            setSearch('');
+            expect(loadPersistentStash()).toEqual(ordinaryStash);
+            expect(loadActiveRun(DEFAULT_EXPEDITION_TARGET)).toBeNull();
+        } finally {
+            if (previousLocation) Object.defineProperty(globalThis, 'location', previousLocation);
+            else delete (globalThis as { location?: Location }).location;
+        }
     });
 
     it('keeps default persistent stash memory fallback when localStorage is unavailable', () => {

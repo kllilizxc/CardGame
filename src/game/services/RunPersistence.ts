@@ -3,6 +3,7 @@ import {
     DEFAULT_EXPEDITION_MAP_ID,
 } from '../config/ExpeditionDefaults';
 import type { ExpeditionRouteIdentity, PersistentStash, RunSnapshot } from '../types/expedition';
+import { gameStorage } from './PreviewStorage';
 
 export const STASH_STORAGE_KEY = 'cardgame.persistent-stash.v1';
 export const ACTIVE_RUN_STORAGE_KEY = 'cardgame.active-run.v1';
@@ -20,7 +21,7 @@ function getStorageAdapter(storage?: RunPersistenceStorageAdapter): RunPersisten
     }
 
     if (typeof globalThis.localStorage !== 'undefined') {
-        return globalThis.localStorage;
+        return gameStorage(globalThis.localStorage);
     }
 
     return {
