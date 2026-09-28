@@ -355,6 +355,22 @@
       ]
     },
     {
+      "id": "scene.qa-fog.mist-fox",
+      "type": "story",
+      "title": "雾中野狐",
+      "summary": "被折断的白叶草一路伸向林内。雾气里，一只野狐守着散落的药篓，前爪缠着细细的蓝线。它没有扑上来，却也不肯放你过去。",
+      "detail": "被折断的白叶草一路伸向林内。雾气里，一只野狐守着散落的药篓，前爪缠着细细的蓝线。它没有扑上来，却也不肯放你过去。\n\n你认得这不是药铺里的老人。野狐闻到你怀中的白叶草，压低身子，像是在防备又一次被夺走东西。",
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "白叶草林地",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": []
+    },
+    {
       "id": "scene.qa-fog.trusted",
       "type": "story",
       "title": "旧药方的山路",
@@ -401,6 +417,99 @@
           "kind": "setFlag",
           "flag": "qa-fog.chapter3-alternative",
           "value": true
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.blue-thread",
+      "type": "story",
+      "title": "蓝线留下的路",
+      "summary": "你把那截蓝线放在灯下。狐爷爷认出封包上的草灰，却不认线的染法。他说往山路去的商贩会在青云镇集市歇脚，或许有人见过同样的药篓。",
+      "detail": "你把那截蓝线放在灯下。狐爷爷认出封包上的草灰，却不认线的染法。他说往山路去的商贩会在青云镇集市歇脚，或许有人见过同样的药篓。\n\n你得到一条可追的线索，不必靠狐爷爷的信任才能继续寻找偷药人。",
+      "tags": [],
+      "chapter": "第三章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "夜晚",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.battle-pending",
+      "type": "story",
+      "title": "雾中交锋",
+      "summary": "卡匣展开，野狐跃上石头。若交锋中断，你还可以退回林缘照料伤者；胜负会由战斗结算。",
+      "detail": "卡匣展开，野狐跃上石头。若交锋中断，你还可以退回林缘照料伤者；胜负会由战斗结算。",
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "白叶草林地",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.battle-victory",
+      "type": "story",
+      "title": "雾狐退让",
+      "summary": "你挡住野狐的扑击，却没有再追。它退到树根后，前爪上的蓝线被枝条勾下一截。线头沾着药铺封包才会用的草灰；有人带着药材来过这里。",
+      "detail": "你挡住野狐的扑击，却没有再追。它退到树根后，前爪上的蓝线被枝条勾下一截。线头沾着药铺封包才会用的草灰；有人带着药材来过这里。\n\n野狐叼走空药篓，雾中留下一条向山路延伸的足迹。你把蓝线收好，先带白叶草回药铺。",
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "白叶草林地",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.mist-fox-victory",
+          "effects": [
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.mist-fox-resolved",
+              "value": true
+            },
+            {
+              "kind": "learnKnowledge",
+              "actorId": "player",
+              "knowledgeId": "qa-fog.blue-thread"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.battle-defeat",
+      "type": "story",
+      "title": "退回林缘",
+      "summary": "野狐占住药篓，你只得避开它，退到林边。好在怀中的两株白叶草没有丢失，救治狐爷爷仍来得及。",
+      "detail": "野狐占住药篓，你只得避开它，退到林边。好在怀中的两株白叶草没有丢失，救治狐爷爷仍来得及。\n\n等雾散了再查药篓也不迟。眼下先把药草送回去。",
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "白叶草林地",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.mist-fox-defeat",
+          "effects": [
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.mist-fox-resolved",
+              "value": true
+            }
+          ]
         }
       ]
     }
@@ -836,6 +945,30 @@
       "flags": []
     },
     {
+      "id": "choice.qa-fog.gather.track",
+      "from": "scene.qa-fog.gather",
+      "to": "scene.qa-fog.mist-fox",
+      "text": "追查林中拖走药草的脚印",
+      "description": "追查林中拖走药草的脚印",
+      "visibleWhen": {
+        "kind": "all",
+        "conditions": [
+          {
+            "kind": "questStage",
+            "questId": "quest.qa-fog-heal-fox",
+            "stage": "gather"
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.mist-fox-resolved",
+            "expected": false
+          }
+        ]
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
       "id": "choice.qa-fog.reproach.help",
       "from": "scene.qa-fog.reproach",
       "to": "scene.qa-fog.gather",
@@ -970,6 +1103,20 @@
       "flags": []
     },
     {
+      "id": "choice.qa-fog.chapter3.blue-thread",
+      "from": "scene.qa-fog.chapter3",
+      "to": "scene.qa-fog.blue-thread",
+      "text": "沿雾狐身上的蓝线寻找偷药人",
+      "description": "沿雾狐身上的蓝线寻找偷药人",
+      "visibleWhen": {
+        "kind": "knowledge",
+        "actorId": "player",
+        "knowledgeId": "qa-fog.blue-thread"
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
       "id": "choice.qa-fog.promised.gather",
       "from": "scene.qa-fog.promised",
       "to": "scene.qa-fog.gather",
@@ -1054,6 +1201,103 @@
       "to": "scene.qa-fog.entry",
       "text": "回药铺门口再访",
       "description": "回药铺门口再访",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.mist-fox.fight",
+      "from": "scene.qa-fog.mist-fox",
+      "to": "scene.qa-fog.battle-pending",
+      "text": "护住药草，以卡匣挡开野狐",
+      "description": "护住药草，以卡匣挡开野狐",
+      "effects": [
+        {
+          "kind": "startBattle",
+          "battle": {
+            "battleId": "battle.qa-fog.mist-fox",
+            "encounterId": "test_encounter_01",
+            "encounterFile": "data/encounters/test-enemy.json",
+            "deckFile": "data/decks/starter-deck.json",
+            "onVictoryNodeId": "scene.qa-fog.battle-victory",
+            "onDefeatNodeId": "scene.qa-fog.battle-defeat",
+            "encounterResourceId": "test_encounter_01",
+            "deckResourceId": "deck.starter",
+            "launchText": "野狐从雾中跃出。先稳住卡匣，再护住药草。"
+          }
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.mist-fox.retreat",
+      "from": "scene.qa-fog.mist-fox",
+      "to": "scene.qa-fog.gather",
+      "text": "不惊动它，带药草退回林缘",
+      "description": "不惊动它，带药草退回林缘",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.blue-thread.seek-help",
+      "from": "scene.qa-fog.blue-thread",
+      "to": "scene.qa-fog.alternative",
+      "text": "带线索去找熟悉雾林的同行者",
+      "description": "带线索去找熟悉雾林的同行者",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.battle-pending.retreat",
+      "from": "scene.qa-fog.battle-pending",
+      "to": "scene.qa-fog.gather",
+      "text": "退回林缘",
+      "description": "退回林缘",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.battle-pending.victory",
+      "from": "scene.qa-fog.battle-pending",
+      "to": "scene.qa-fog.battle-victory",
+      "text": "战斗胜利后继续",
+      "description": "战斗胜利后继续",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.manual-battle-result",
+        "expected": true
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.battle-pending.defeat",
+      "from": "scene.qa-fog.battle-pending",
+      "to": "scene.qa-fog.battle-defeat",
+      "text": "战斗失利后继续",
+      "description": "战斗失利后继续",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.manual-battle-result",
+        "expected": true
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.battle-victory.return",
+      "from": "scene.qa-fog.battle-victory",
+      "to": "scene.qa-fog.gather",
+      "text": "回药铺照料伤者",
+      "description": "回药铺照料伤者",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.battle-defeat.return",
+      "from": "scene.qa-fog.battle-defeat",
+      "to": "scene.qa-fog.gather",
+      "text": "回药铺照料伤者",
+      "description": "回药铺照料伤者",
       "effects": [],
       "flags": []
     }
