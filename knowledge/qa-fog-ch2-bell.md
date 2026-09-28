@@ -43,8 +43,9 @@ backgroundAsset: assets/story/qa-fog/whiteleaf-clearing-v1.png
 - 青禾：他知道我们发现了纸。 <!-- story-line: {"id":"line.qa-fog.ch2.bell.025","speakerId":"npc.qa-fog-apprentice"} -->
 - 主角：先护住证据，再找看见他的人。 <!-- story-line: {"id":"line.qa-fog.ch2.bell.026","speakerId":"player"} -->
 - 青禾：守卫应该就在上游。 <!-- story-line: {"id":"line.qa-fog.ch2.bell.027","speakerId":"npc.qa-fog-apprentice"} -->
-- 主角：回药铺。纸需要干燥，话也需要想清楚。 <!-- story-line: {"id":"line.qa-fog.ch2.bell.028","speakerId":"player"} -->
+- 主角：可以先回药铺显字，也可以沿断线看看上游。 <!-- story-line: {"id":"line.qa-fog.ch2.bell.028","speakerId":"player"} -->
 
 ## 选项
 
 - [带着残页回药铺](./qa-fog-ch2-return.md) <!-- story-choice: {"id":"choice.qa-fog.ch2.bell.return"} -->
+- [沿断线追查上游的夜路](./qa-fog-ch2-upstream.md) <!-- story-choice: {"id":"choice.qa-fog.ch2.bell.upstream"} -->

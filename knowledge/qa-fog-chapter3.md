@@ -25,3 +25,4 @@ backgroundAsset: assets/story/qa-fog/apothecary-interior-v1.png
 - [沿雾狐身上的蓝线寻找偷药人](./qa-fog-blue-thread.md) <!-- story-choice: {"id":"choice.qa-fog.chapter3.blue-thread","visibleWhen":{"kind":"knowledge","actorId":"player","knowledgeId":"qa-fog.blue-thread"}} -->
 - [与守卫核对第二章的账页](./qa-fog-ch3-guard-copy.md) <!-- story-choice: {"id":"choice.qa-fog.chapter3.guard-copy","visibleWhen":{"kind":"flag","flag":"qa-fog.ch2.shared-ledger","expected":true}} -->
 - [带私存的线索请狐爷爷指路](./qa-fog-ch3-kept-page.md) <!-- story-choice: {"id":"choice.qa-fog.chapter3.kept-page","visibleWhen":{"kind":"flag","flag":"qa-fog.ch2.held-ledger","expected":true}} -->
+- [沿第二章探明的芦苇岸避险](./qa-fog-ch3-reed-route.md) <!-- story-choice: {"id":"choice.qa-fog.chapter3.reed-route","visibleWhen":{"kind":"knowledge","actorId":"player","knowledgeId":"qa-fog.ch2.reed-route"}} -->

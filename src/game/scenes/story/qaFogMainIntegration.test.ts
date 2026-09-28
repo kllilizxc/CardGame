@@ -21,8 +21,8 @@ describe('N1 story in the main game', () => {
         });
 
         const graph = validatePlayableStoryGraph(graphJson);
-        expect(graph.nodes).toHaveLength(28);
-        expect(graph.choices).toHaveLength(52);
+        expect(graph.nodes).toHaveLength(35);
+        expect(graph.choices).toHaveLength(61);
         const entry = createStoryFlowViewModel(graph, { storyState: createInitialStoryRuntime(graph) });
         const first = createStoryChoiceTransition(entry, 'choice.qa-fog.entry.first');
         expect(first.status).toBe('selected');

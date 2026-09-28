@@ -12,6 +12,8 @@
 6. [桥下的倒铃](./qa-fog-ch2-bell.md)
 7. [纸背现字](./qa-fog-ch2-return.md)
 
+在桥下可直接回药铺，也可继续查访夜路：[逆水的蓝线](./qa-fog-ch2-upstream.md) → [看桥人的空屋](./qa-fog-ch2-stonehouse.md) → [不肯报姓名的夜行人](./qa-fog-ch2-witness.md) → [封桥告示背后的路](./qa-fog-ch2-route.md) → [名册上留白的人](./qa-fog-ch2-record.md) → [雨停之前的同行](./qa-fog-ch2-rainwalk.md)，最后回到纸背显字。
+
 不同的山门决定会在第三章通向[守卫手里的账页](./qa-fog-ch3-guard-copy.md)或[狐爷爷的旧桥印](./qa-fog-ch3-kept-page.md)。
 
 人物资料仍以游戏现有 NPC 目录为准，场景中的对白和选项以各自 Markdown 文件为准。这个索引只是普通资料文档，不参与剧情编译。

@@ -7,7 +7,7 @@ import { createInitialStoryRuntime, createStoryChoiceTransition, createStoryFlow
 
 const graph = validatePlayableStoryGraph(graphJson);
 
-function playChapterTwo(shareWithGuard: boolean) {
+function playChapterTwo(shareWithGuard: boolean, takeLongRoute = false) {
     let storyState = goToStoryNode(createInitialStoryRuntime(graph), 'scene.qa-fog.healed');
     const choices = [
         'choice.qa-fog.healed.chapter2',
@@ -16,7 +16,15 @@ function playChapterTwo(shareWithGuard: boolean) {
         shareWithGuard ? 'choice.qa-fog.ch2.gate.share' : 'choice.qa-fog.ch2.gate.hold',
         `choice.qa-fog.ch2.${shareWithGuard ? 'share' : 'hold'}.clearing`,
         'choice.qa-fog.ch2.clearing.bell',
-        'choice.qa-fog.ch2.bell.return',
+        ...(takeLongRoute ? [
+            'choice.qa-fog.ch2.bell.upstream',
+            'choice.qa-fog.ch2.upstream.stonehouse',
+            'choice.qa-fog.ch2.stonehouse.witness',
+            'choice.qa-fog.ch2.witness.route',
+            'choice.qa-fog.ch2.route.record',
+            'choice.qa-fog.ch2.record.rainwalk',
+            'choice.qa-fog.ch2.rainwalk.return',
+        ] : ['choice.qa-fog.ch2.bell.return']),
         'choice.qa-fog.ch2.return.chapter3',
     ];
     for (const id of choices) {
@@ -34,8 +42,8 @@ describe('fog story chapter two', () => {
         expect(healed.find(choice => choice.id === 'choice.qa-fog.healed.chapter2')?.to).toBe('scene.qa-fog.ch2.invitation');
         const chapter = graph.nodes.filter(node => node.chapter === '第二章');
         const lineIds = chapter.flatMap(node => node.dialogues?.map(line => line.id) ?? []);
-        expect(chapter).toHaveLength(8);
-        expect(lineIds).toHaveLength(203);
+        expect(chapter).toHaveLength(14);
+        expect(lineIds).toHaveLength(504);
         expect(new Set(lineIds).size).toBe(lineIds.length);
     });
 
@@ -74,5 +82,26 @@ describe('fog story chapter two', () => {
         if (sharedFollowUp.status !== 'selected' || heldFollowUp.status !== 'selected') return;
         expect(sharedFollowUp.nextStoryState.flags['qa-fog.ch3.guard-patrol']).toBe(true);
         expect(heldFollowUp.nextStoryState.flags['qa-fog.ch3.fox-map']).toBe(true);
+    });
+
+    it('lets the longer investigation return safely and opens its own later route', () => {
+        const short = playChapterTwo(false);
+        const long = playChapterTwo(false, true);
+        expect(short.currentNodeId).toBe('scene.qa-fog.chapter3');
+        expect(long.currentNodeId).toBe('scene.qa-fog.chapter3');
+        expect(short.knowledge?.player ?? []).not.toContain('qa-fog.ch2.reed-route');
+        expect(long.knowledge?.player).toContain('qa-fog.ch2.reed-route');
+        expect(long.flags['qa-fog.ch2.met-courier']).toBe(true);
+        expect(long.settledEventIds?.filter(id => id === 'event.qa-fog.ch2.reed-route')).toHaveLength(1);
+        const shortRoute = createStoryFlowViewModel(graph, { storyState: short }).choices
+            .find(choice => choice.id === 'choice.qa-fog.chapter3.reed-route');
+        const longRoute = createStoryFlowViewModel(graph, { storyState: long }).choices
+            .find(choice => choice.id === 'choice.qa-fog.chapter3.reed-route');
+        expect(shortRoute?.visible).toBe(false);
+        expect(longRoute?.visible).toBe(true);
+        const next = createStoryChoiceTransition(createStoryFlowViewModel(graph, { storyState: long }), longRoute!.id);
+        if (next.status !== 'selected') throw new Error('Long route chapter three follow-up is blocked');
+        expect(next.nextStoryState.currentNodeId).toBe('scene.qa-fog.ch3.reed-route');
+        expect(next.nextStoryState.flags['qa-fog.ch3.reed-route']).toBe(true);
     });
 });
