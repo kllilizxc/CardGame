@@ -46,6 +46,7 @@ import type { AnyCard } from '@data/types/cards/all';
 import type { BattleLaunchPayload } from '../../types/expedition';
 import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import { createExpeditionBattleCompleteEvent } from './battleCompletion';
+import { findArtifactEquipTarget } from './artifactEquipTarget';
 import {
     getBuiltInTutorialStepsForEncounter,
     resolveTutorialStepDefinitions,
@@ -906,17 +907,11 @@ export class BattleScene extends Scene {
             this.battleLog.addLog('当前步骤不允许装备法宝');
             return false;
         }
-        // 检查是否拖到某个场上单位附近
-        let targetUnit: CardSprite | null = null;
-        let minDistance = 150; // 最大装备距离
-
-        for (const unit of this.playerField) {
-            const distance = Phaser.Math.Distance.Between(artifact.x, artifact.y, unit.x, unit.y);
-            if (distance < minDistance) {
-                minDistance = distance;
-                targetUnit = unit;
-            }
-        }
+        const targetUnit = findArtifactEquipTarget(
+            { x: artifact.x, y: artifact.y },
+            this.playerField,
+            unit => unit.battleView?.image.getBounds(),
+        );
 
         if (targetUnit) {
             // 尝试装备
