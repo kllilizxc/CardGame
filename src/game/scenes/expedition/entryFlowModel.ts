@@ -79,10 +79,10 @@ function formatStacks<T extends { id: string; count: number }>(stacks: T[]): str
 }
 
 function getDisplayNodeId(finalNodeId: string): string {
-    const withoutPath = finalNodeId.split(/[\\/]/).at(-1) ?? finalNodeId;
+    const withoutPath = finalNodeId.split(/[\\/]/).pop() ?? finalNodeId;
     const withoutQuery = withoutPath.split('?')[0];
-    const withoutFragment = withoutQuery.split('#').at(-1) ?? withoutQuery;
-    const withoutPrefix = withoutFragment.split(':').at(-1) ?? withoutFragment;
+    const withoutFragment = withoutQuery.split('#').pop() ?? withoutQuery;
+    const withoutPrefix = withoutFragment.split(':').pop() ?? withoutFragment;
 
     return withoutPrefix.endsWith('.json') ? withoutPrefix.replace(/\.json$/i, '') : withoutPrefix;
 }

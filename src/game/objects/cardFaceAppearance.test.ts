@@ -22,16 +22,16 @@ test('card face preferences preserve variants and ignore stale loads and destroy
         images[0].onload(); await Promise.resolve();
         expect(values).toEqual([]);
         images[1].onload(); await Promise.resolve();
-        expect(values.at(-1)).toContain('/scroll.png');
+        expect(values[values.length - 1]).toContain('/scroll.png');
         setCardFaceTheme('U-test-theme', 'original');
-        expect(values.at(-1)).toBeUndefined();
+        expect(values[values.length - 1]).toBeUndefined();
         stop();
         const count = values.length;
         setCardFaceTheme('U-test-theme', 'jade'); await Promise.resolve();
         expect(values.length).toBe(count);
         const removed: unknown[] = [];
         const release = watchCardFace({ textures: { exists: () => false, addImage: () => {} } } as any, { id: 'destroyed', cardFace: face }, value => removed.push(value));
-        release(); images.at(-1)!.onload(); await Promise.resolve();
+        release(); images[images.length - 1]!.onload(); await Promise.resolve();
         expect(removed).toEqual([]);
     } finally { (globalThis as any).window = savedWindow; (globalThis as any).Image = savedImage; }
 });

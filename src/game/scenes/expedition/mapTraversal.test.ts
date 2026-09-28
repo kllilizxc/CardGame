@@ -207,7 +207,7 @@ describe('mapTraversal', () => {
             shops: tutorialShop,
         });
         const expeditionState = ExpeditionState.bootstrap({
-            worldState: tutorialWorldState,
+            worldState: normalizeExpeditionWorldStateSeed(tutorialWorldState),
             starterDeck: tutorialStarterDeck,
             targetIdentity: tutorialTargetConfig,
             activeRunRouteKey: tutorialTargetConfig.routeKey,

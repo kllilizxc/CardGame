@@ -56,7 +56,7 @@ describe('nonCombatNodeFlow', () => {
 
     it('keeps weighted random event outcome selection when no fixed outcome is requested', () => {
         const { run } = createStartedRun();
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
 
         const view = createEventNodeView(event, run, () => 0.76);
 
@@ -66,7 +66,7 @@ describe('nonCombatNodeFlow', () => {
 
     it('uses an opt-in fixed event outcome and keeps reward and claimed state derived from that outcome', () => {
         const { state, run } = createStartedRun();
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
 
         const unclaimedView = createEventNodeView(event, run, () => {
             throw new Error('fixed event outcome selection should not call random');
@@ -98,7 +98,7 @@ describe('nonCombatNodeFlow', () => {
 
     it('fails actionably instead of falling back to random when a fixed event outcome is missing', () => {
         const { run } = createStartedRun();
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
 
         expect(() => createEventNodeView(event, run, () => 0, {
             outcomeSelection: {
