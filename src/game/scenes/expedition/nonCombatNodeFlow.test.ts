@@ -4,8 +4,11 @@ import prototypeEventsJson from '../../../../public/data/mijing/prototype-events
 import prototypeShopJson from '../../../../public/data/mijing/prototype-shop.json';
 import initialWorldState from '../../../../public/data/world/initial-state.json';
 import starterDeckJson from '../../../../public/data/decks/starter-deck.json';
+import artifactsJson from '../../../../public/data/cards/artifacts.json';
+import itemsJson from '../../../../public/data/world/items.artifacts.json';
 
 import { ExpeditionState } from '../../state/ExpeditionState';
+import { createContentDisplayNames } from '../../content/contentDisplayNames';
 import type {
     PrototypeEventDefinition,
     PrototypeShopDefinition,
@@ -43,7 +46,7 @@ describe('nonCombatNodeFlow', () => {
 
         expect(unclaimedView.title).toBe('弃置行囊');
         expect(unclaimedView.outcome.id).toBe('cache.spirit-stones');
-        expect(unclaimedView.rewardSummary).toBe('spiritStones +18');
+        expect(unclaimedView.rewardSummary).toBe('灵石 +18');
         expect(unclaimedView.claimed).toBe(false);
 
         state.claimEventNodeReward(event.nodeId, structuredClone(unclaimedView.outcome.rewards));
@@ -64,6 +67,25 @@ describe('nonCombatNodeFlow', () => {
         expect(view.rewardSummary).toBe('AR_001 +1 · artifact_fly_sword_basic +1');
     });
 
+    it('uses catalog names for event and shop rewards while keeping stable IDs in the reward data', () => {
+        const { run } = createStartedRun();
+        const displayNames = createContentDisplayNames([
+            { kind: 'card', data: artifactsJson },
+            { kind: 'item', data: itemsJson },
+        ]);
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
+        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'] as unknown as PrototypeShopDefinition;
+
+        const eventView = createEventNodeView(event, run, () => 0.76, { displayNames });
+        const shopView = createShopNodeView(shop, run, displayNames);
+
+        expect(eventView.rewardSummary).toBe('青云剑 +1 · 青云飞剑 +1');
+        expect(eventView.outcome.rewards.cards[0].id).toBe('AR_001');
+        expect(shopView.offers[0].costText).toBe('灵石 24');
+        expect(shopView.offers[0].rewardSummary).toBe('青云剑 +1');
+        expect(shopView.offers[2].rewardSummary).toBe('青云飞剑 +1');
+    });
+
     it('uses an opt-in fixed event outcome and keeps reward and claimed state derived from that outcome', () => {
         const { state, run } = createStartedRun();
         const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
@@ -78,7 +100,7 @@ describe('nonCombatNodeFlow', () => {
         });
 
         expect(unclaimedView.outcome.id).toBe('cache.talisman-roll');
-        expect(unclaimedView.rewardSummary).toBe('TL_002 +1 · tool_talisman_basic +1 · spiritStones +6');
+        expect(unclaimedView.rewardSummary).toBe('TL_002 +1 · tool_talisman_basic +1 · 灵石 +6');
         expect(unclaimedView.claimed).toBe(false);
 
         state.claimEventNodeReward(event.nodeId, structuredClone(unclaimedView.outcome.rewards));

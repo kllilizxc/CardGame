@@ -3,6 +3,12 @@ import { Scene } from 'phaser';
 import { EventBus } from '../../EventBus';
 import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import {
+    createContentDisplayNames,
+    getContentDisplayNameResources,
+    type ContentDisplayNameResource,
+    type ContentDisplayNames,
+} from '../../content/contentDisplayNames';
+import {
     ExpeditionState,
     type ExpeditionBootstrapSources,
     type ExpeditionWorldStateSeed,
@@ -63,6 +69,8 @@ type NonCombatMapNode = EventMapNode | ShopMapNode | ExtractMapNode;
 export class ExpeditionScene extends Scene {
     private launchData: NormalizedExpeditionSceneLaunchData = normalizeExpeditionSceneLaunchData();
     private expeditionResources?: ResolvedExpeditionSceneCatalogResources;
+    private displayNameResources: ContentDisplayNameResource[] = [];
+    private displayNames!: ContentDisplayNames;
     private expeditionState!: ExpeditionState;
     private mapDefinition!: ExpeditionMapDefinition;
     private eventCollection!: PrototypeEventCollection;
@@ -83,6 +91,7 @@ export class ExpeditionScene extends Scene {
     init(data?: ExpeditionSceneLaunchData): void {
         this.launchData = normalizeExpeditionSceneLaunchData(data);
         this.expeditionResources = undefined;
+        this.displayNameResources = [];
         this.pendingBattleResult = this.launchData.battleResult ?? null;
     }
 
@@ -94,6 +103,8 @@ export class ExpeditionScene extends Scene {
         this.load.json(expeditionResources.map.cacheKey, expeditionResources.map.publicPath);
         this.load.json(expeditionResources.events.cacheKey, expeditionResources.events.publicPath);
         this.load.json(expeditionResources.shop.cacheKey, expeditionResources.shop.publicPath);
+        this.displayNameResources = getContentDisplayNameResources(this.cache.json.get(CONTENT_CATALOG_CACHE_KEY));
+        for (const resource of this.displayNameResources) this.load.json(resource.cacheKey, resource.publicPath);
     }
 
     create(): void {
@@ -104,6 +115,10 @@ export class ExpeditionScene extends Scene {
         this.mapDefinition = this.cache.json.get(expeditionResources.map.cacheKey) as ExpeditionMapDefinition;
         this.eventCollection = this.cache.json.get(expeditionResources.events.cacheKey) as PrototypeEventCollection;
         this.shopCollection = this.cache.json.get(expeditionResources.shop.cacheKey) as PrototypeShopCollection;
+        this.displayNames = createContentDisplayNames(this.displayNameResources.map((resource) => ({
+            kind: resource.kind,
+            data: this.cache.json.get(resource.cacheKey),
+        })));
         this.assertLaunchTargetMatchesMapDefinition();
         this.expeditionState = ExpeditionState.bootstrap({
             worldState,
@@ -130,7 +145,7 @@ export class ExpeditionScene extends Scene {
         }).setOrigin(0.5);
         this.createWorldMapReturnButton();
 
-        this.runHud = new RunHud(this);
+        this.runHud = new RunHud(this, this.displayNames);
         this.runHud.setVisible(false);
         this.statusText = this.add.text(width / 2, height - 92, '', {
             fontFamily: 'Arial',
@@ -211,6 +226,7 @@ export class ExpeditionScene extends Scene {
         this.destroyActiveNodePanel();
         this.preparationPanel = new PreparationPanel(this, {
             stash: this.expeditionState.persistentStash,
+            displayNames: this.displayNames,
             onConfirm: () => this.startFreshRun(),
         });
     }
@@ -352,7 +368,7 @@ export class ExpeditionScene extends Scene {
         const canReopenNode = !!node && this.canReopenNonCombatNode(activeRun, node);
 
         if (!activeRun || (!isReachableNode(this.mapDefinition, activeRun, nodeId) && !canReopenNode)) {
-            this.statusText.setText('该节点尚未连通；只能前往当前节点直接连接的下一层节点。');
+            this.statusText.setText('暂时无法前往那里，请先选择相邻地点。');
             return;
         }
 
@@ -368,7 +384,7 @@ export class ExpeditionScene extends Scene {
         );
 
         if (!nextRun) {
-            this.statusText.setText('该节点尚未连通；路线保持不变。');
+            this.statusText.setText('暂时无法前往那里，仍留在当前地点。');
             return;
         }
 
@@ -389,7 +405,7 @@ export class ExpeditionScene extends Scene {
             return;
         }
 
-        this.statusText.setText(`已进入 ${nodeLabel}。事件、商店、撤离结算 UI 尚未在本任务中解析。`);
+        this.statusText.setText(`已抵达${nodeLabel}，请选择下一处地点继续探索。`);
     }
 
     private renderNodeMenu(activeRun: RunSnapshot): void {
@@ -408,14 +424,14 @@ export class ExpeditionScene extends Scene {
         const background = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x020617, 0.82);
         background.setStrokeStyle(2, 0x38bdf8, 0.72);
 
-        const title = this.add.text(panelX - panelWidth / 2 + 32, panelY - 54, '秘境非战斗节点', {
+        const title = this.add.text(panelX - panelWidth / 2 + 32, panelY - 54, '可前往地点', {
             fontFamily: 'Arial',
             fontSize: '24px',
             color: '#e0f2fe',
             fontStyle: 'bold',
         });
 
-        const subtitle = this.add.text(panelX - panelWidth / 2 + 32, panelY - 20, '事件、商店、撤离均在 ExpeditionScene 内处理；战斗和 BOSS 节点会切换到 BattleScene。', {
+        const subtitle = this.add.text(panelX - panelWidth / 2 + 32, panelY - 20, '可前往相邻地点；战斗地点会进入对战。', {
             fontFamily: 'Arial',
             fontSize: '17px',
             color: '#cbd5e1',
@@ -464,7 +480,7 @@ export class ExpeditionScene extends Scene {
         }
 
         if (!isReachableNode(this.mapDefinition, activeRun, node.id) && !this.canReopenNonCombatNode(activeRun, node)) {
-            this.statusText.setText('该节点尚未连通；只能前往当前节点直接连接的下一层节点。');
+            this.statusText.setText('暂时无法前往那里，请先选择相邻地点。');
             return;
         }
 
@@ -480,7 +496,7 @@ export class ExpeditionScene extends Scene {
         );
 
         if (!enteredRun) {
-            this.statusText.setText('该节点尚未连通；路线保持不变。');
+            this.statusText.setText('暂时无法前往那里，仍留在当前地点。');
             return;
         }
 
@@ -532,7 +548,7 @@ export class ExpeditionScene extends Scene {
 
         this.destroyActiveNodePanel();
 
-        const view = createEventNodeView(eventDefinition, activeRun, () => 0);
+        const view = createEventNodeView(eventDefinition, activeRun, () => 0, { displayNames: this.displayNames });
         const { container, contentX, panelY, panelHeight } = this.createModalPanel(view.title, this.getNodeLabel(eventDefinition.nodeId, '事件'));
         const description = this.add.text(contentX, panelY - panelHeight / 2 + 120, view.description, {
             fontFamily: 'Arial',
@@ -557,7 +573,7 @@ export class ExpeditionScene extends Scene {
             fontSize: '20px',
             color: '#fde68a',
         });
-        const messageText = this.add.text(contentX, rewardText.y + 44, message ?? (view.claimed ? '该事件奖励已经领取，无法重复获得。' : '领取后会立即写入 active run。'), {
+        const messageText = this.add.text(contentX, rewardText.y + 44, message ?? (view.claimed ? '该事件奖励已经领取，无法重复获得。' : '领取后会加入本次探索的背包。'), {
             fontFamily: 'Arial',
             fontSize: '18px',
             color: view.claimed ? '#fca5a5' : '#93c5fd',
@@ -597,16 +613,16 @@ export class ExpeditionScene extends Scene {
 
         this.destroyActiveNodePanel();
 
-        const view = createShopNodeView(shopDefinition, activeRun);
+        const view = createShopNodeView(shopDefinition, activeRun, this.displayNames);
         const { container, contentX, panelY, panelHeight } = this.createModalPanel(view.title, this.getNodeLabel(shopDefinition.nodeId, '商店'));
-        const description = this.add.text(contentX, panelY - panelHeight / 2 + 116, `${view.description}\n当前 run spiritStones：${view.spiritStones}`, {
+        const description = this.add.text(contentX, panelY - panelHeight / 2 + 116, `${view.description}\n当前灵石：${view.spiritStones}`, {
             fontFamily: 'Arial',
             fontSize: '20px',
             color: '#cbd5e1',
             wordWrap: { width: 860 },
             lineSpacing: 8,
         });
-        const messageText = this.add.text(contentX, description.y + 78, message ?? '选择一个可支付的商品；每个 offer 只能购买一次。', {
+        const messageText = this.add.text(contentX, description.y + 78, message ?? '选择要购买的商品；每件商品只能购买一次。', {
             fontFamily: 'Arial',
             fontSize: '18px',
             color: message ? '#fde68a' : '#93c5fd',
@@ -646,7 +662,7 @@ export class ExpeditionScene extends Scene {
                         ? `已购买 ${offerView.label}：${offerView.rewardSummary}`
                         : result.status === 'alreadyPurchased'
                             ? `${offerView.label} 已经购买过。`
-                            : `spiritStones 不足，无法购买 ${offerView.label}。`;
+                            : `灵石不足，无法购买 ${offerView.label}。`;
 
                     this.showShopPanel(shopDefinition, nextMessage);
                 },
@@ -669,7 +685,7 @@ export class ExpeditionScene extends Scene {
 
         const view = createExtractNodeView(node.id, activeRun);
         const { container, contentX, panelY, panelHeight } = this.createModalPanel(node.label, this.getNodeLabel(node.id, '撤离'));
-        const description = this.add.text(contentX, panelY - panelHeight / 2 + 126, '确认后会立刻结束本次秘境探索，并将当前携带的卡牌、道具与 spiritStones 存入永久仓库。', {
+        const description = this.add.text(contentX, panelY - panelHeight / 2 + 126, '确认后会结束本次探索，将携带的卡牌、道具与灵石存入储物袋。', {
             fontFamily: 'Arial',
             fontSize: '21px',
             color: '#cbd5e1',
@@ -712,7 +728,7 @@ export class ExpeditionScene extends Scene {
 
         if (!activeRun || activeRun.runId !== result.runId) {
             this.showPreparationPanel();
-            this.statusText.setText(`收到战斗结果 ${result.outcome}，但没有匹配的 active run。`);
+            this.statusText.setText('这场战斗未能对应当前探索，已返回入口。');
             return;
         }
 
@@ -748,7 +764,7 @@ export class ExpeditionScene extends Scene {
 
         this.expeditionState.activeRun = victoryResolution.run;
         this.showActiveRun(victoryResolution.run, 'resumed');
-        this.statusText.setText(`战斗节点 ${this.getNodeLabel(result.nodeId)} 返回：${result.outcome}。路线继续。`);
+        this.statusText.setText(`已通过${this.getNodeLabel(result.nodeId)}，可以继续探索。`);
     }
 
     private showTerminalSummary(summary: RunResolutionSummary): void {

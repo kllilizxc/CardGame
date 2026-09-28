@@ -2,9 +2,12 @@ import { beforeEach, describe, expect, it } from 'bun:test';
 
 import initialWorldState from '../../../../public/data/world/initial-state.json';
 import starterDeckJson from '../../../../public/data/decks/starter-deck.json';
+import artifactsJson from '../../../../public/data/cards/artifacts.json';
+import itemsJson from '../../../../public/data/world/items.artifacts.json';
 
 import { resetRunPersistenceForTests } from '../../services/RunPersistence';
 import { ExpeditionState } from '../../state/ExpeditionState';
+import { createContentDisplayNames } from '../../content/contentDisplayNames';
 import {
     createItemStack,
     normalizeExpeditionWorldStateSeed,
@@ -123,6 +126,30 @@ describe('entryFlowModel', () => {
         expect(createRunResolutionSummaryView({ ...baseSummary, outcome: 'boss-clear' }).subtitle).toBe(
             'Boss 通关：当前携带与搜刮的资产已存入永久仓库。',
         );
+    });
+
+    it('uses content names in the post-run summary without changing the saved reward IDs', () => {
+        const displayNames = createContentDisplayNames([
+            { kind: 'card', data: artifactsJson },
+            { kind: 'item', data: itemsJson },
+        ]);
+        const summary = {
+            runId: 'run-display-names',
+            outcome: 'extract' as const,
+            finalNodeId: 'extract.cliff-rope',
+            endedAt: '2026-05-08T12:00:00.000Z',
+            kept: {
+                cards: [{ id: 'AR_001', count: 1 }],
+                items: [createItemStack('artifact_fly_sword_basic', 'artifact', 1)],
+                spiritStones: 12,
+            },
+            lost: { cards: [], items: [], spiritStones: 0 },
+        };
+
+        const view = createRunResolutionSummaryView(summary, displayNames);
+        expect(view.keptCards).toEqual(['青云剑 ×1']);
+        expect(view.keptItems).toEqual(['青云飞剑 ×1']);
+        expect(summary.kept.cards[0].id).toBe('AR_001');
     });
 
     it('sanitizes settlement final node text for non-combat terminal summaries', () => {

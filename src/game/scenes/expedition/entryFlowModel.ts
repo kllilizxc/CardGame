@@ -1,4 +1,5 @@
 import type { PersistentStash, RunResolutionSummary, RunSnapshot } from '../../types/expedition';
+import type { ContentDisplayNames } from '../../content/contentDisplayNames';
 
 interface CountableStack {
     count: number;
@@ -74,8 +75,8 @@ export function createRunSummary(run: RunSnapshot, options: RunSummaryOptions = 
     };
 }
 
-function formatStacks<T extends { id: string; count: number }>(stacks: T[]): string[] {
-    return stacks.length > 0 ? stacks.map((stack) => `${stack.id} ×${stack.count}`) : ['无'];
+function formatStacks<T extends { id: string; count: number }>(stacks: T[], name: (id: string) => string): string[] {
+    return stacks.length > 0 ? stacks.map((stack) => `${name(stack.id)} ×${stack.count}`) : ['无'];
 }
 
 function getDisplayNodeId(finalNodeId: string): string {
@@ -126,7 +127,7 @@ export function createPostRunEntranceStatus(
         `上次结果：${getEntranceOutcomeLabel(summary.outcome)}。可立即开始新的秘境探索。`;
 }
 
-export function createRunResolutionSummaryView(summary: RunResolutionSummary): RunResolutionSummaryView {
+export function createRunResolutionSummaryView(summary: RunResolutionSummary, displayNames?: ContentDisplayNames): RunResolutionSummaryView {
     const copy = getResolutionCopy(summary.outcome);
     const kept = summary.outcome === 'defeat'
         ? { cards: [], items: [], spiritStones: 0 }
@@ -137,11 +138,11 @@ export function createRunResolutionSummaryView(summary: RunResolutionSummary): R
         title: copy.title,
         subtitle: copy.subtitle,
         finalNodeId: getDisplayNodeId(summary.finalNodeId),
-        keptCards: formatStacks(kept.cards),
-        keptItems: formatStacks(kept.items),
+        keptCards: formatStacks(kept.cards, displayNames?.cardName ?? ((id) => id)),
+        keptItems: formatStacks(kept.items, displayNames?.itemName ?? ((id) => id)),
         keptSpiritStones: String(kept.spiritStones),
-        lostCards: formatStacks(summary.lost.cards),
-        lostItems: formatStacks(summary.lost.items),
+        lostCards: formatStacks(summary.lost.cards, displayNames?.cardName ?? ((id) => id)),
+        lostItems: formatStacks(summary.lost.items, displayNames?.itemName ?? ((id) => id)),
         lostSpiritStones: String(summary.lost.spiritStones),
     };
 }

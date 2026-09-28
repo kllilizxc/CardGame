@@ -1,23 +1,26 @@
 import { GameObjects, Scene } from 'phaser';
 
 import { createPreparationSummary } from '../../scenes/expedition/entryFlowModel';
+import type { ContentDisplayNames } from '../../content/contentDisplayNames';
 import type { ExpeditionCardStack, ExpeditionItemStack, PersistentStash } from '../../types/expedition';
 
 export interface PreparationPanelConfig {
     stash: PersistentStash;
+    displayNames: ContentDisplayNames;
     onConfirm: () => void;
 }
 
-function formatCardLine(stack: ExpeditionCardStack): string {
-    return `${stack.id} ×${stack.count}`;
+function formatCardLine(stack: ExpeditionCardStack, displayNames: ContentDisplayNames): string {
+    return `${displayNames.cardName(stack.id)} ×${stack.count}`;
 }
 
-function formatItemLine(stack: ExpeditionItemStack): string {
-    return `${stack.id} ×${stack.count}`;
+function formatItemLine(stack: ExpeditionItemStack, displayNames: ContentDisplayNames): string {
+    return `${displayNames.itemName(stack.id)} ×${stack.count}`;
 }
 
 export class PreparationPanel extends GameObjects.Container {
     private readonly stash: PersistentStash;
+    private readonly displayNames: ContentDisplayNames;
     private readonly onConfirm: () => void;
     private confirmButton!: GameObjects.Rectangle;
 
@@ -25,6 +28,7 @@ export class PreparationPanel extends GameObjects.Container {
         super(scene, 0, 0);
 
         this.stash = config.stash;
+        this.displayNames = config.displayNames;
         this.onConfirm = config.onConfirm;
 
         this.createPanel();
@@ -78,8 +82,8 @@ export class PreparationPanel extends GameObjects.Container {
             fontStyle: 'bold',
         });
 
-        const deckList = this.scene.add.text(leftColumnX, deckHeading.y + 36, this.stash.deck.map(formatCardLine).join('\n'), {
-            fontFamily: 'Courier New',
+        const deckList = this.scene.add.text(leftColumnX, deckHeading.y + 36, this.stash.deck.map((stack) => formatCardLine(stack, this.displayNames)).join('\n'), {
+            fontFamily: 'Arial',
             fontSize: '18px',
             color: '#e2e8f0',
             lineSpacing: 8,
@@ -92,8 +96,8 @@ export class PreparationPanel extends GameObjects.Container {
             fontStyle: 'bold',
         });
 
-        const itemsText = this.scene.add.text(panelX + 110, itemsHeading.y + 36, this.stash.items.map(formatItemLine).join('\n'), {
-            fontFamily: 'Courier New',
+        const itemsText = this.scene.add.text(panelX + 110, itemsHeading.y + 36, this.stash.items.map((stack) => formatItemLine(stack, this.displayNames)).join('\n'), {
+            fontFamily: 'Arial',
             fontSize: '18px',
             color: '#e2e8f0',
             lineSpacing: 8,

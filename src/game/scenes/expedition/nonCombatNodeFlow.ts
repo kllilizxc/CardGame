@@ -7,6 +7,7 @@ import type {
     RunRewardBundle,
     RunSnapshot,
 } from '../../types/expedition';
+import type { ContentDisplayNames } from '../../content/contentDisplayNames';
 
 export interface EventNodeView {
     title: string;
@@ -18,6 +19,7 @@ export interface EventNodeView {
 
 export interface CreateEventNodeViewOptions {
     outcomeSelection?: ExpeditionEventOutcomeSelection;
+    displayNames?: ContentDisplayNames;
 }
 
 export class MissingFixedEventOutcomeError extends Error {
@@ -53,21 +55,21 @@ export interface ExtractNodeView {
     recorded: boolean;
 }
 
-function countRewardEntries(rewards: RunRewardBundle): string[] {
+function countRewardEntries(rewards: RunRewardBundle, displayNames?: ContentDisplayNames): string[] {
     const entries = [
-        ...rewards.cards.filter((stack) => stack.count > 0).map((stack) => `${stack.id} +${stack.count}`),
-        ...rewards.items.filter((stack) => stack.count > 0).map((stack) => `${stack.id} +${stack.count}`),
+        ...rewards.cards.filter((stack) => stack.count > 0).map((stack) => `${displayNames?.cardName(stack.id) ?? stack.id} +${stack.count}`),
+        ...rewards.items.filter((stack) => stack.count > 0).map((stack) => `${displayNames?.itemName(stack.id) ?? stack.id} +${stack.count}`),
     ];
 
     if (rewards.spiritStones !== 0) {
-        entries.push(`spiritStones +${rewards.spiritStones}`);
+        entries.push(`灵石 +${rewards.spiritStones}`);
     }
 
     return entries;
 }
 
-function createRewardSummary(rewards: RunRewardBundle): string {
-    const entries = countRewardEntries(rewards);
+function createRewardSummary(rewards: RunRewardBundle, displayNames?: ContentDisplayNames): string {
+    const entries = countRewardEntries(rewards, displayNames);
     return entries.length > 0 ? entries.join(' · ') : '无奖励';
 }
 
@@ -120,12 +122,12 @@ export function createEventNodeView(
         title: definition.title,
         description: definition.description,
         outcome,
-        rewardSummary: createRewardSummary(outcome.rewards),
+        rewardSummary: createRewardSummary(outcome.rewards, options.displayNames),
         claimed: run.nodeStates[definition.nodeId]?.rewardClaimed === true,
     };
 }
 
-export function createShopNodeView(definition: PrototypeShopDefinition, run: RunSnapshot): ShopNodeView {
+export function createShopNodeView(definition: PrototypeShopDefinition, run: RunSnapshot, displayNames?: ContentDisplayNames): ShopNodeView {
     const purchasedOfferIds = run.nodeStates[definition.nodeId]?.purchasedOfferIds ?? [];
 
     return {
@@ -140,8 +142,8 @@ export function createShopNodeView(definition: PrototypeShopDefinition, run: Run
                 : run.spiritStones < offer.cost.spiritStones
                     ? 'unaffordable'
                     : 'available',
-            costText: `spiritStones ${offer.cost.spiritStones}`,
-            rewardSummary: createRewardSummary(offer.rewards),
+            costText: `灵石 ${offer.cost.spiritStones}`,
+            rewardSummary: createRewardSummary(offer.rewards, displayNames),
         })),
     };
 }

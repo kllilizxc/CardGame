@@ -1,4 +1,5 @@
 import { GameObjects, Scene } from 'phaser';
+import type { ContentDisplayNames } from '../../content/contentDisplayNames';
 
 import {
     createRunResolutionSummaryView,
@@ -13,7 +14,7 @@ export class RunHud extends GameObjects.Container {
     private spiritStonesValue!: GameObjects.Text;
     private summaryOverlay?: GameObjects.Container;
 
-    constructor(scene: Scene) {
+    constructor(scene: Scene, private readonly displayNames: ContentDisplayNames) {
         super(scene, 0, 0);
 
         this.createHud();
@@ -77,7 +78,7 @@ export class RunHud extends GameObjects.Container {
         this.hidePostRunSummary();
 
         const { width, height } = this.scene.scale;
-        const view = createRunResolutionSummaryView(summary);
+        const view = createRunResolutionSummaryView(summary, this.displayNames);
         const overlay = this.scene.add.container(0, 0);
         const background = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.86);
         const panelWidth = Math.min(980, width * 0.78);
@@ -118,9 +119,9 @@ export class RunHud extends GameObjects.Container {
         const keptText = this.scene.add.text(
             leftX,
             keptHeading.y + 40,
-            `Cards\n${keptCards}\n\nItems\n${keptItems}\n\nspiritStones\n${view.keptSpiritStones}`,
+            `卡牌\n${keptCards}\n\n道具\n${keptItems}\n\n灵石\n${view.keptSpiritStones}`,
             {
-                fontFamily: 'Courier New',
+                fontFamily: 'Arial',
                 fontSize: '18px',
                 color: '#e2e8f0',
                 lineSpacing: 6,
@@ -137,9 +138,9 @@ export class RunHud extends GameObjects.Container {
         const lostText = this.scene.add.text(
             rightX,
             lostHeading.y + 40,
-            `Cards\n${lostCards}\n\nItems\n${lostItems}\n\nspiritStones\n${view.lostSpiritStones}`,
+            `卡牌\n${lostCards}\n\n道具\n${lostItems}\n\n灵石\n${view.lostSpiritStones}`,
             {
-                fontFamily: 'Courier New',
+                fontFamily: 'Arial',
                 fontSize: '18px',
                 color: '#e2e8f0',
                 lineSpacing: 6,

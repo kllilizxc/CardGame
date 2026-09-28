@@ -274,7 +274,7 @@ describe('mapTraversal', () => {
             storage,
         );
 
-        expect(fixedEventView.rewardSummary).toBe('TL_002 +1 · tool_talisman_basic +1 · spiritStones +12');
+        expect(fixedEventView.rewardSummary).toBe('TL_002 +1 · tool_talisman_basic +1 · 灵石 +12');
 
         const claimed = eventState.claimEventNodeReward(eventDefinition.nodeId, fixedEventView.outcome.rewards);
 
