@@ -345,6 +345,21 @@ export function resolveHubLocation(town: HubTownDefinition, locationId: string):
     return location;
 }
 
+export function findHubStartStoryAction(
+    town: HubTownDefinition,
+    actionId: string,
+    storyResourceId: string,
+): { location: HubTownLocation; action: HubTownStartStoryAction } | null {
+    for (const location of town.locations) {
+        const action = location.actions.find((candidate): candidate is HubTownStartStoryAction =>
+            candidate.kind === 'startStory'
+            && candidate.id === actionId
+            && candidate.storyResourceId === storyResourceId);
+        if (action) return { location, action };
+    }
+    return null;
+}
+
 export function createInitialHubNavigationState(
     town: HubTownDefinition,
     savedSession?: HubSessionSnapshot | null,

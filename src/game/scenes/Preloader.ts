@@ -4,6 +4,7 @@ import {
     CONTENT_CATALOG_CACHE_KEY,
     CONTENT_CATALOG_PUBLIC_PATH,
 } from '../content/contentCatalog';
+import { resolvePreviewHubActionLaunch } from '../services/PreviewEntry';
 
 export class Preloader extends Scene
 {
@@ -49,7 +50,11 @@ export class Preloader extends Scene
         //  When all the assets have loaded, it's often worth creating global objects here that the rest of the game can use.
         //  For example, you can define global animations here, so we can use them in other scenes.
 
-        //  Move to the MainMenu. You could also swap this for a Scene Transition, such as a camera fade.
-        this.scene.start('MainMenu');
+        const previewLaunch = resolvePreviewHubActionLaunch(
+            typeof location === 'undefined' ? '' : location.search,
+            this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
+        );
+        if (previewLaunch) this.scene.start('HubScene', previewLaunch);
+        else this.scene.start('MainMenu');
     }
 }

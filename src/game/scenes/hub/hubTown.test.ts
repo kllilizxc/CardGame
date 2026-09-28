@@ -237,6 +237,11 @@ describe('hub town shell content', () => {
                 storyResourceId: 'story.qingyun-entry',
                 storyGraphFile: 'data/story/story-graph.json',
             },
+            {
+                id: 'action.qa-fog-fox',
+                storyResourceId: 'story.qa-fog-fox',
+                storyGraphFile: 'data/story/qa-fog-fox.json',
+            },
         ]);
 
         const graph = validatePlayableStoryGraph(readPublicJsonFile(startStoryActions[0].storyGraphFile));

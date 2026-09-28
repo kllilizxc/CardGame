@@ -41,6 +41,13 @@ export default {
       workaCommit: game.commit,
       workaProfile: String(context.options.profile || 'default'),
     });
+    if (typeof context.options.storyId === 'string'
+      && typeof context.options.entryHubId === 'string'
+      && typeof context.options.entryActionId === 'string') {
+      query.set('workaHub', context.options.entryHubId);
+      query.set('workaAction', context.options.entryActionId);
+      query.set('workaStory', context.options.storyId);
+    }
     return {
       surfaces: [{ name: 'web', title: '游戏', service: 'web', path: `/?${query}` }],
       prepare: [{ name: 'install-dependencies', cwd: game.dir, command: ['bun', 'install', '--frozen-lockfile'], unless: 'node_modules/vite/bin/vite.js', timeoutMs: 180_000 }],
@@ -332,10 +339,13 @@ export default {
     }));
     const hubs = storyId ? (servedCatalog?.resources ?? []).filter(item => item.kind === 'hub' && typeof item.publicPath === 'string' && /^data\/hub\/[A-Za-z0-9._/-]+\.json$/.test(item.publicPath) && !item.publicPath.split('/').includes('..')) : [];
     const routeChecks = await Promise.all(hubs.map(async item => {
+      if (context.options.entryHubId && item.resourceId !== context.options.entryHubId) return false;
       const response = await fetch(new URL('/' + item.publicPath, base), { signal: AbortSignal.timeout(12_000) });
       if (!response.ok) return false;
       const hub = await response.json();
-      return hub.locations?.some(location => location.actions?.some(action => action.kind === 'startStory' && action.storyResourceId === storyId && action.storyGraphFile === storyPath)) === true;
+      return hub.locations?.some(location => location.actions?.some(action => action.kind === 'startStory'
+        && (!context.options.entryActionId || action.id === context.options.entryActionId)
+        && action.storyResourceId === storyId && action.storyGraphFile === storyPath)) === true;
     }));
     return [
       check('game-shell', response.ok && html.includes('src/main.tsx') && html.includes('root'), '游戏页面指向实际入口'),

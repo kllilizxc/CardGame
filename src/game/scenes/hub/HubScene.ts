@@ -24,6 +24,7 @@ import {
     createHubMapInitialSurfacePosition,
     createInitialHubNavigationState,
     createStoryHubSessionKeyFromAction,
+    findHubStartStoryAction,
     getHubLocationSurfacePosition,
     resolveHubLocation,
     shouldActivateHubMarker,
@@ -108,6 +109,16 @@ export class HubScene extends Scene {
             };
         }
         this.persistHubNavigationState();
+
+        const startAction = this.launchData.startActionId && this.launchData.startStoryResourceId
+            ? findHubStartStoryAction(this.town, this.launchData.startActionId, this.launchData.startStoryResourceId)
+            : null;
+        if (startAction) {
+            this.navigationState = { ...this.navigationState, currentLocationId: startAction.location.id };
+            this.persistHubNavigationState();
+            this.handleAction(startAction.action);
+            return;
+        }
 
         this.renderShell();
         EventBus.emit('current-scene-ready', this);
