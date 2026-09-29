@@ -1,6 +1,9 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
+import { ensureBackdrop } from '../../art/backdrop';
+import { bakeTerrain } from '../../art/terrain';
+import { PANEL_INK, pixelPanel } from '../../art/ui';
 import { isPortraitGameViewport } from '../../layout/gameViewport';
 import {
     CONTENT_CATALOG_CACHE_KEY,
