@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'bun:test';
 
 import contentCatalogJson from '../../../../public/data/content-catalog.json';
+import battleLoadoutJson from '../../../../public/data/config/battle-loadout.json';
+import pillsJson from '../../../../public/data/cards/pills.json';
+import skillsJson from '../../../../public/data/cards/skills.json';
 import type { BattleLaunchPayload } from '../../types/expedition';
 import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import {
     BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
     BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
+    BATTLE_LOADOUT_CONFIG_CACHE_KEY,
     createBattleDeckStartupPlan,
     getBattleDeckCacheKey,
     getBattleDeckFile,
@@ -16,6 +20,7 @@ import {
     normalizeBattleLaunchPayload,
     normalizeStoryBattleLaunchPayload,
     resolveBattleSharedRuntimeResources,
+    resolveBattleLoadout,
     resolveDefaultBattleRuntimeResources,
     resolveExpeditionBattleRuntimeResources,
     resolveStoryBattleRuntimeResources,
@@ -105,6 +110,24 @@ function createCatalogWithoutRuntimeGradeConfigs(): unknown {
 }
 
 describe('battleSceneLaunch', () => {
+    it('uses the configured pill and skill IDs, including candidate-added slots', () => {
+        const pills = pillsJson.pills as any;
+        const skills = skillsJson.skills as any;
+        const selected = resolveBattleLoadout(battleLoadoutJson, pills, skills);
+        expect(selected.pills.map(card => card.id)).toEqual(['PL_001', 'PL_002']);
+        expect(selected.skills.map(card => card.id)).toEqual(['SK_000']);
+
+        const candidate = resolveBattleLoadout(
+            { schemaVersion: 1, pillIds: ['PL_002', 'PL_NEW'], skillIds: ['SK_NEW', 'SK_000'] },
+            [...pills, { ...pills[0], id: 'PL_NEW' }],
+            [...skills, { ...skills[0], id: 'SK_NEW' }],
+        );
+        expect(candidate.pills.map(card => card.id)).toEqual(['PL_002', 'PL_NEW']);
+        expect(candidate.skills.map(card => card.id)).toEqual(['SK_NEW', 'SK_000']);
+        expect(() => resolveBattleLoadout({ schemaVersion: 1, pillIds: ['PL_MISSING'], skillIds: [] }, pills, skills)).toThrow('不存在的丹药');
+        expect(() => resolveBattleLoadout({ schemaVersion: 1, pillIds: ['PL_001', 'PL_001'], skillIds: [] }, pills, skills)).toThrow('丹药');
+    });
+
     it('normalizes a complete expedition battle launch payload', () => {
         expect(normalizeBattleLaunchPayload(payload)).toEqual(payload);
         expect(normalizeBattleLaunchPayload({})).toBeNull();
@@ -250,6 +273,11 @@ describe('battleSceneLaunch', () => {
                 cacheKey: 'skillCards',
                 resourceId: 'cards.skills',
                 publicPath: 'data/cards/skills.json',
+            },
+            battleLoadoutConfig: {
+                cacheKey: BATTLE_LOADOUT_CONFIG_CACHE_KEY,
+                resourceId: 'config.battle-loadout',
+                publicPath: 'data/config/battle-loadout.json',
             },
             gongfaList: {
                 cacheKey: 'gongfaList',

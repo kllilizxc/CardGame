@@ -33,6 +33,7 @@ export const DEFAULT_BATTLE_DECK_FILE = 'data/decks/starter-deck.json';
 export const BATTLE_STATUS_DEFINITIONS_CACHE_KEY = 'statusDefinitions';
 export const BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY = 'combatBaselineConfig';
 export const BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY = 'artifactGradeConfig';
+export const BATTLE_LOADOUT_CONFIG_CACHE_KEY = 'battleLoadoutConfig';
 
 export interface StarterDeckData {
     cards: ExpeditionCardStack[];
@@ -75,6 +76,7 @@ export type BattleRequiredSharedRuntimeResourceCacheKey =
     | 'fieldCards'
     | 'skillCards'
     | 'gongfaList'
+    | typeof BATTLE_LOADOUT_CONFIG_CACHE_KEY
     | typeof BATTLE_STATUS_DEFINITIONS_CACHE_KEY;
 
 export type BattleOptionalSharedRuntimeResourceCacheKey =
@@ -117,6 +119,37 @@ export interface BattleSharedFieldCardsData {
 
 export interface BattleSharedSkillCardsData {
     readonly skills: readonly SkillCard[];
+}
+
+export interface BattleLoadoutConfig {
+    schemaVersion: 1;
+    pillIds: string[];
+    skillIds: string[];
+}
+
+/** Resolve the exact battle slots from the same config changed by card candidates. */
+export function resolveBattleLoadout(
+    rawConfig: unknown,
+    pills: readonly PillCard[],
+    skills: readonly SkillCard[],
+): { pills: PillCard[]; skills: SkillCard[] } {
+    const config = rawConfig as Partial<BattleLoadoutConfig> | null;
+    if (!config || config.schemaVersion !== 1) throw new Error('战斗初始配置版本无效');
+    const select = <T extends { id: string }>(ids: unknown, cards: readonly T[], label: string): T[] => {
+        if (!Array.isArray(ids) || ids.length > 3
+            || ids.some(id => typeof id !== 'string' || !id.trim())
+            || new Set(ids).size !== ids.length) throw new Error(`战斗初始配置的 ${label} 无效`);
+        const byId = new Map(cards.map(card => [card.id, card]));
+        return ids.map(id => {
+            const card = byId.get(id);
+            if (!card) throw new Error(`战斗初始配置引用了不存在的${label}：${id}`);
+            return card;
+        });
+    };
+    return {
+        pills: select(config.pillIds, pills, '丹药'),
+        skills: select(config.skillIds, skills, '技能'),
+    };
 }
 
 export interface BattleSharedGongfaListData {
@@ -166,6 +199,12 @@ const BATTLE_SHARED_RUNTIME_RESOURCE_REQUESTS: BattleSharedRuntimeResourceReques
         resourceId: 'cards.skills',
         expectedKind: 'card',
         compatibilityPublicPath: 'data/cards/skills.json',
+    },
+    {
+        cacheKey: BATTLE_LOADOUT_CONFIG_CACHE_KEY,
+        resourceId: 'config.battle-loadout',
+        expectedKind: 'config',
+        compatibilityPublicPath: 'data/config/battle-loadout.json',
     },
     {
         cacheKey: 'gongfaList',

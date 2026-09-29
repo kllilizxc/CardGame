@@ -290,6 +290,12 @@
       "publicPath": "data/config/artifact-grade.json"
     },
     {
+      "resourceId": "config.battle-loadout",
+      "kind": "config",
+      "schemaVersion": 1,
+      "publicPath": "data/config/battle-loadout.json"
+    },
+    {
       "resourceId": "config.combat-baseline",
       "kind": "config",
       "schemaVersion": 1,

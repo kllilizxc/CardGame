@@ -55,6 +55,7 @@ import { createStoryBattleCompleteEvent } from '../story/storyBattleRoundTrip';
 import {
     BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
     BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
+    BATTLE_LOADOUT_CONFIG_CACHE_KEY,
     BATTLE_STATUS_DEFINITIONS_CACHE_KEY,
     createBattleDeckStartupPlan,
     getBattleDeckCacheKey,
@@ -72,6 +73,7 @@ import {
     type BattleSharedTalismanCardsData,
     type BattleSharedUnitCardsData,
     resolveBattleSharedRuntimeResources,
+    resolveBattleLoadout,
     resolveDefaultBattleRuntimeResources,
     resolveExpeditionBattleRuntimeResources,
     resolveStoryBattleRuntimeResources,
@@ -371,6 +373,11 @@ export class BattleScene extends Scene {
         const fieldCardsData = this.getRequiredSharedRuntimeJson<BattleSharedFieldCardsData>('fieldCards');
         const pillCardsData = this.getRequiredSharedRuntimeJson<BattleSharedPillCardsData>('pillCards');
         const skillCardsData = this.getRequiredSharedRuntimeJson<BattleSharedSkillCardsData>('skillCards');
+        const battleLoadout = resolveBattleLoadout(
+            this.getRequiredSharedRuntimeJson(BATTLE_LOADOUT_CONFIG_CACHE_KEY),
+            pillCardsData.pills,
+            skillCardsData.skills,
+        );
         const starterDeckData = this.getRequiredRuntimeJson<{ cards: Array<{ id: string; count: number }> }>(this.deckCacheKey);
         const deckStartupPlan = createBattleDeckStartupPlan(
             this.launchPayload,
@@ -431,10 +438,10 @@ export class BattleScene extends Scene {
         this.pillTooltipUI = new PillTooltipUI(this);
 
         // 初始化丹药系统
-        this.setupPillSystem(pillCardsData.pills);
+        this.setupPillSystem(battleLoadout.pills);
 
         // 初始化技能系统
-        this.setupSkillSystem(skillCardsData.skills);
+        this.setupSkillSystem(battleLoadout.skills);
 
         // 设置事件管理器的场地区域引用
         this.eventManager.setFieldZones(this.playerFieldZone, this.enemyFieldZone);
@@ -556,16 +563,7 @@ export class BattleScene extends Scene {
         // 初始化槽位显示
         this.pillSlotUI.createSlots(this.pillManager.getSlots());
 
-        // 给玩家添加初始丹药（测试：添加2个丹药）
-        if (pillsData.length > 0) {
-            // 添加第一个丹药
-            this.pillManager.addPill(pillsData[0]);
-            
-            // 添加第二个丹药（如果有）
-            if (pillsData.length > 1) {
-                this.pillManager.addPill(pillsData[1]);
-            }
-        }
+        for (const pill of pillsData) this.pillManager.addPill(pill);
     }
 
     /**
@@ -642,9 +640,7 @@ export class BattleScene extends Scene {
             }
         );
 
-        // 给玩家装备初始技能（只装备第一个技能：注定一抽）
-        const playerSkills: SkillCard[] = skillsData.slice(0, 1);
-        this.skillManager.initializeSkills(playerSkills);
+        this.skillManager.initializeSkills([...skillsData]);
         this.skillUI.createSkills(this.skillManager.getSkills());
     }
 

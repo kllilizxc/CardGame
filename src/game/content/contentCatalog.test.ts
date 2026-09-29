@@ -93,6 +93,7 @@ const expectedCheckedInResources = [
     ['status', 'data/config/status-definitions.json'],
     ['gongfa', 'data/gongfa/gongfa-list.json'],
     ['config', 'data/config/artifact-grade.json'],
+    ['config', 'data/config/battle-loadout.json'],
     ['config', 'data/config/combat-baseline.json'],
     ['config', 'data/config/realm-presets.json'],
     ['worldSeed', 'data/world/factions.json'],

@@ -354,7 +354,11 @@ export default {
         check('card-definition', Boolean(expected && actual && JSON.stringify(expected) === JSON.stringify(actual)), `${cardId} 定义与确切候选工作区一致`),
         check('card-themes', assetChecks.length === 2 && assetChecks.every(Boolean), '青玉、宣纸运行贴图可读取'),
         loadoutCard
-          ? check('playable-loadout', Boolean(entryResponse?.ok && servedEntry?.schemaVersion === 1 && servedEntry?.[context.options.cardKind === 'pill' ? 'pillIds' : 'skillIds']?.includes(cardId) && JSON.stringify(servedEntry) === JSON.stringify(sourceEntry)), `${cardId} 已进入候选战斗槽位`)
+          ? check('playable-loadout', Boolean(entryResponse?.ok && servedEntry?.schemaVersion === 1
+            && servedCatalog?.resources?.some(item => item.resourceId === 'config.battle-loadout'
+              && item.kind === 'config' && item.publicPath === 'data/config/battle-loadout.json')
+            && servedEntry?.[context.options.cardKind === 'pill' ? 'pillIds' : 'skillIds']?.includes(cardId)
+            && JSON.stringify(servedEntry) === JSON.stringify(sourceEntry)), `${cardId} 已进入候选战斗槽位`)
           : check('playable-deck', Boolean(entryResponse?.ok && servedEntry?.cards?.some(card => card.id === cardId && card.count > 0) && JSON.stringify(servedEntry) === JSON.stringify(sourceEntry)), `${cardId} 已进入候选默认卡组`),
       ] : []),
       ...(storyId ? [
