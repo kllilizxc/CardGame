@@ -34,54 +34,28 @@ export class MainMenu extends Scene {
         this.background = createBackdrop(this, 'mountain', 'night');
         this.events.once('shutdown', () => { this.background?.destroy(); this.background = null; });
 
-        this.logo = this.createFloatingSeal(width / 2, height * 0.23);
-        this.title = this.add.text(width / 2, height * 0.34, '青云问道', getSceneTextStyle('sceneTitle', {
-            fontSize: '60px',
+        this.logo = this.createFloatingSeal(width / 2, height * 0.2);
+        this.title = this.add.text(width / 2, height * 0.4, '青云问道', getSceneTextStyle('sceneTitle', {
+            fontSize: '72px',
         })).setOrigin(0.5);
 
-        this.add.text(width / 2, height * 0.395, '山麓初启，收好卡匣，择一条路迈入仙门。', getSceneTextStyle('sceneSubtitle')).setOrigin(0.5);
+        this.add.text(width / 2, height * 0.48, '山麓初启，收好卡匣，择一条路迈入仙门。', getSceneTextStyle('sceneSubtitle')).setOrigin(0.5);
 
-        const panelWidth = 760;
-        const panelHeight = 350;
-        const panelX = width / 2;
-        const panelY = height * 0.64;
-        const panelTop = panelY - panelHeight / 2;
-
-        createScenePanel(this, {
-            x: panelX,
-            y: panelY,
-            width: panelWidth,
-            height: panelHeight,
-        });
-
-        this.add.text(panelX, panelTop + 54, '山门第一程', getSceneTextStyle('panelTitle')).setOrigin(0.5);
-        this.add.text(
-            panelX,
-            panelTop + 116,
-            '城镇、宗门山门与试炼入口都已在青云山麓铺开。先入大地图，再决定去何处落脚、听闻或闯关。',
-            getSceneTextStyle('body', {
-                align: 'center',
-                wordWrap: { width: panelWidth - 140 },
-            }),
-        ).setOrigin(0.5, 0);
-
-        createStatusLine(this, {
-            x: panelX,
-            y: panelTop + 220,
-            width: panelWidth - 140,
-            text: '当前开放：青云镇、青云宗山门、集市茶棚，以及两处试炼入口。',
-            align: 'center',
-        });
-
+        const buttonY = height * 0.64;
         createSceneButton(this, {
-            x: panelX,
-            y: panelTop + 292,
-            width: 430,
-            height: 88,
+            x: width / 2,
+            y: buttonY,
+            width: 440,
+            height: 96,
             label: '进入大地图',
-            description: '前往青云山麓，选择城镇、山门或秘境入口',
             onClick: () => this.startWorldMapScene(),
         });
+        this.add.text(width / 2, buttonY + 78, '前往青云山麓，选择城镇、山门或秘境入口', {
+            fontFamily: FONT, fontSize: '12px', color: T.dim,
+        }).setOrigin(0.5);
+        this.add.text(width / 2, buttonY + 106, '山门第一程 · 当前开放：青云镇、青云宗山门、集市茶棚，以及两处试炼入口。', {
+            fontFamily: FONT, fontSize: '12px', color: T.dim,
+        }).setOrigin(0.5);
 
         this.add.text(width / 2, height - 36, '点击 · 拖拽卡牌 · 悬停查看详情', {
             fontFamily: FONT, fontSize: '12px', color: T.dim,

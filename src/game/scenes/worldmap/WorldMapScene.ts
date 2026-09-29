@@ -124,43 +124,38 @@ export class WorldMapScene extends Scene {
         this.cameras.main.setBackgroundColor(0x0b0714);
         ensureBackdrop(this, 'mountain', 'dusk');
 
-        container.add(this.add.text(width / 2, 82, this.worldMap.title, getSceneTextStyle('sceneTitle')).setOrigin(0.5));
-        container.add(this.add.text(width / 2, 138, this.worldMap.subtitle, getSceneTextStyle('sceneSubtitle')).setOrigin(0.5));
-
-        const panelWidth = Math.min(1560, width - 220);
-        const panelHeight = Math.min(812, height - 220);
+        const margin = 28;
         const panelX = width / 2;
-        const panelY = height / 2 + 70;
-        const panelLeft = panelX - panelWidth / 2;
-        const panelTop = panelY - panelHeight / 2;
-        const contentX = panelLeft + 64;
+        const panelY = height / 2;
+        const panelWidth = width - margin * 2;
+        const panelHeight = height - margin * 2;
         container.add(pixelPanel(this, panelX, panelY, panelWidth, panelHeight, { ...PANEL_INK, alpha: 0.93 }));
 
-        container.add(this.add.text(contentX, panelTop + 56, '山麓舆图', getSceneTextStyle('panelTitle')));
+        const left = margin + 28;
+        container.add(this.add.text(left, margin + 20, this.worldMap.title, getSceneTextStyle('sceneTitle', { fontSize: '48px' })));
+        container.add(this.add.text(left + 8, margin + 78, `${this.worldMap.subtitle} · ${WORLD_MAP_SUPPORT_COPY}`, getSceneTextStyle('support', {
+            wordWrap: { width: panelWidth - 420 },
+        })));
         if (savedQuestJournalEntries().length) {
-            container.add(createSceneButton(this, { x: panelX + panelWidth / 2 - 150, y: panelTop + 54,
+            container.add(createSceneButton(this, { x: width - margin - 28 - 110, y: margin + 52,
                 width: 220, height: 52, label: '任务日志', variant: 'secondary',
                 onClick: () => { this.mapDragState = undefined; this.questJournal.open(); } }).objects);
         }
-        container.add(this.add.text(contentX, panelTop + 108, WORLD_MAP_SUPPORT_COPY, getSceneTextStyle('body', {
-            wordWrap: { width: panelWidth - 128 },
-        })));
 
+        const mapViewport = {
+            left: margin + 20,
+            top: margin + 116,
+            width: panelWidth - 40,
+            height: panelHeight - 116 - 72,
+        };
         const statusLine = createStatusLine(this, {
             x: panelX,
-            y: panelTop + 224,
-            width: panelWidth - 140,
+            y: height - margin - 38,
+            width: panelWidth - 56,
             text: this.getDefaultStatusText(),
         });
         this.statusText = statusLine.text;
         container.add(statusLine.objects);
-
-        const mapViewport = {
-            left: panelLeft + 54,
-            top: panelTop + 286,
-            width: panelWidth - 108,
-            height: panelHeight - 340,
-        };
         this.mapViewport = mapViewport;
         this.renderMapSurface(container, mapViewport);
         this.registerMapInputHandlers();
