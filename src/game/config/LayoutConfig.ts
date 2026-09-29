@@ -1,3 +1,5 @@
+import { isPortraitGameViewport } from '../layout/gameViewport';
+
 /**
  * 战斗场景布局配置
  * 统一管理所有 UI 面板和游戏区域的位置、尺寸、深度
@@ -78,6 +80,30 @@ export interface BattleLayoutConfig {
  * 创建默认布局配置
  */
 export function createDefaultLayout(width: number, height: number): BattleLayoutConfig {
+    if (isPortraitGameViewport(width, height)) {
+        return {
+            cardPreview: { x: width / 2, y: height / 2, width: 420, height: 640 },
+            battleLog: { x: width / 2, y: height / 2, width: 420, height: 650 },
+            handZone: { x: width / 2, y: 932, width: width - 28, height: 130 },
+            playerFieldZone: { x: width / 2, y: 555, width: width - 28, height: 160 },
+            enemyFieldZone: { x: width / 2, y: 367, width: width - 28, height: 180 },
+            fieldCardZone: { x: width / 2, y: 638, width: 112, height: 42 },
+            deckButton: { x: 76, y: 246, width: 112, height: 54 },
+            discardPileButton: { x: width - 76, y: 246, width: 112, height: 54 },
+            pillSlots: { x: width / 2, y: 818 },
+            skillUI: { x: width / 2, y: 713 },
+            depth: {
+                fieldZoneVisuals: 0,
+                handCards: 10,
+                fieldCards: 50,
+                uiButtons: 100,
+                uiText: 200,
+                cardToDiscardAnimation: 2000,
+                cardPreview: 6100,
+                pillTooltip: 7000,
+            },
+        };
+    }
     return {
         // 卡牌预览面板 - 左上角
         cardPreview: {

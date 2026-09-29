@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "kind": "card-face-draft",
+  "cardId": "CR_001",
+  "source": "public/data/cards/units.json",
+  "artwork": "tools/card-prototype/assets/spirit-fox-v1.png",
+  "draft": {
+    "name": "青云山灵狐",
+    "attack": 4,
+    "health": 2,
+    "rules": "登场时：若本回合你已召唤过其他灵兽，则本回合内本卡攻击力+1。",
+    "flavor": "机敏多疑，擅长偷袭与撤退。",
+    "zoom": 1,
+    "focus": 0.5
+  },
+  "exportedAt": "2026-09-26T05:34:22.759Z",
+  "scope": "Presentation only; effect text does not update executable gameplay rules."
+}

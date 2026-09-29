@@ -9,6 +9,7 @@ import { StoryScene } from './scenes/story/StoryScene';
 import { WorldMapScene } from './scenes/worldmap/WorldMapScene';
 import { AUTO, Game } from 'phaser';
 import { Preloader } from './scenes/Preloader';
+import { gameViewportForBrowser } from './layout/gameViewport';
 
 //  Find out more information about the Game Config at:
 //  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
@@ -44,8 +45,9 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 const StartGame = (parent: string) => {
-
-    return new Game({ ...config, parent });
+    const viewport = gameViewportForBrowser(window.innerWidth, window.innerHeight);
+    return new Game({ ...config, parent, width: viewport.width, height: viewport.height,
+        scale: { ...config.scale, width: viewport.width, height: viewport.height } });
 
 }
 

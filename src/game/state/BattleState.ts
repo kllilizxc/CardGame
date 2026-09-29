@@ -6,6 +6,7 @@ import type { CardSprite } from '../objects/CardSprite';
 import type { ArtifactSprite } from '../objects/ArtifactSprite';
 import type { TalismanSprite } from '../objects/TalismanSprite';
 import type { FieldSprite } from '../objects/FieldSprite';
+import { MAX_RUN_PLAYER_HEALTH } from './RunHealth';
 
 /**
  * 战斗状态管理类
@@ -22,7 +23,7 @@ export class BattleState {
     public enemyField: CardSprite[] = [];
     
     // 玩家状态
-    public readonly maxPlayerHealth: number = 100;
+    public readonly maxPlayerHealth: number = MAX_RUN_PLAYER_HEALTH;
     public playerHealth: number = this.maxPlayerHealth;
     
     // 回合状态
@@ -146,7 +147,7 @@ export class BattleState {
     public healPlayer(amount: number): number {
         if (amount <= 0) return 0;
         const previous = this.playerHealth;
-        this.playerHealth = Math.min(this.maxPlayerHealth, previous + amount);
+        this.playerHealth = Math.min(this.maxPlayerHealth, this.playerHealth + amount);
         return this.playerHealth - previous;
     }
 

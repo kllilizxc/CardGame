@@ -22,6 +22,7 @@ export interface CardMetadata {
     kind?: CardKind;
     name?: string;
     description?: string;
+    iconAsset?: string;
     effectSummary?: string;
     rarity?: CardRarity;
     limitPerDeck?: number;

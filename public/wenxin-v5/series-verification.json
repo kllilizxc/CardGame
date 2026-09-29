@@ -1,0 +1,273 @@
+{
+  "loaded": 16,
+  "units": {
+    "fox": {
+      "uniqueFrames": 7,
+      "feet": [
+        91,
+        91,
+        91,
+        91,
+        91,
+        91,
+        91
+      ]
+    },
+    "mistfox": {
+      "uniqueFrames": 7,
+      "feet": [
+        91,
+        91,
+        91,
+        91,
+        91,
+        91,
+        91
+      ]
+    },
+    "eagle": {
+      "uniqueFrames": 7,
+      "feet": [
+        99,
+        102,
+        99,
+        99,
+        98,
+        101,
+        98
+      ]
+    },
+    "sage": {
+      "uniqueFrames": 7,
+      "feet": [
+        149,
+        149,
+        149,
+        149,
+        149,
+        149,
+        149
+      ]
+    },
+    "disc": {
+      "uniqueFrames": 7,
+      "feet": [
+        131,
+        131,
+        131,
+        131,
+        131,
+        131,
+        131
+      ]
+    },
+    "ghost": {
+      "uniqueFrames": 7,
+      "feet": [
+        135,
+        136,
+        137,
+        137,
+        135,
+        133,
+        134
+      ]
+    }
+  },
+  "portraits": {
+    "girl": [
+      {
+        "count": 1644,
+        "body": 0,
+        "bounds": {
+          "left": 80,
+          "top": 46,
+          "right": 111,
+          "bottom": 97
+        }
+      },
+      {
+        "count": 1640,
+        "body": 0,
+        "bounds": {
+          "left": 80,
+          "top": 46,
+          "right": 111,
+          "bottom": 97
+        }
+      },
+      {
+        "count": 0,
+        "body": 0,
+        "bounds": {
+          "left": 192,
+          "top": 264,
+          "right": -1,
+          "bottom": -1
+        }
+      },
+      {
+        "count": 1656,
+        "body": 0,
+        "bounds": {
+          "left": 80,
+          "top": 46,
+          "right": 111,
+          "bottom": 97
+        }
+      },
+      {
+        "count": 692,
+        "body": 0,
+        "bounds": {
+          "left": 80,
+          "top": 76,
+          "right": 111,
+          "bottom": 97
+        }
+      }
+    ],
+    "deacon": [
+      {
+        "count": 0,
+        "body": 0,
+        "bounds": {
+          "left": 192,
+          "top": 264,
+          "right": -1,
+          "bottom": -1
+        }
+      },
+      {
+        "count": 0,
+        "body": 0,
+        "bounds": {
+          "left": 192,
+          "top": 264,
+          "right": -1,
+          "bottom": -1
+        }
+      },
+      {
+        "count": 712,
+        "body": 0,
+        "bounds": {
+          "left": 84,
+          "top": 46,
+          "right": 107,
+          "bottom": 75
+        }
+      },
+      {
+        "count": 720,
+        "body": 0,
+        "bounds": {
+          "left": 84,
+          "top": 46,
+          "right": 107,
+          "bottom": 75
+        }
+      },
+      {
+        "count": 288,
+        "body": 0,
+        "bounds": {
+          "left": 84,
+          "top": 64,
+          "right": 107,
+          "bottom": 75
+        }
+      }
+    ]
+  },
+  "cards": [
+    {
+      "key": "fox",
+      "width": 112,
+      "height": 100,
+      "readable": true
+    },
+    {
+      "key": "eagle",
+      "width": 112,
+      "height": 100,
+      "readable": true
+    },
+    {
+      "key": "disc",
+      "width": 112,
+      "height": 100,
+      "readable": true
+    },
+    {
+      "key": "sage",
+      "width": 112,
+      "height": 100,
+      "readable": true
+    },
+    {
+      "key": "talis",
+      "width": 112,
+      "height": 100,
+      "readable": true
+    },
+    {
+      "key": "sword",
+      "width": 112,
+      "height": 100,
+      "readable": true
+    },
+    {
+      "key": "ghost",
+      "width": 112,
+      "height": 100,
+      "readable": true
+    },
+    {
+      "key": "mist",
+      "width": 112,
+      "height": 100,
+      "readable": true
+    }
+  ],
+  "errors": [],
+  "standalone": "pass",
+  "interactions": [
+    {
+      "text": "卡面鉴赏 · 青云山灵狐",
+      "pixels": 4
+    },
+    {
+      "text": "卡面鉴赏 · 雷鸣幼鹰",
+      "pixels": 4
+    },
+    {
+      "text": "卡面鉴赏 · 真传弟子·剑心通明",
+      "pixels": 4
+    },
+    {
+      "text": "卡面鉴赏 · 峰主·剑意凝形",
+      "pixels": 4
+    },
+    {
+      "text": "卡面鉴赏 · 雷击符",
+      "pixels": 4
+    },
+    {
+      "text": "卡面鉴赏 · 青云剑",
+      "pixels": 4
+    },
+    {
+      "flip": "completed",
+      "errors": []
+    }
+  ],
+  "storyControls": [
+    "happy",
+    "worried",
+    "bell",
+    "toll"
+  ],
+  "originalSourceUnchanged": true,
+  "exportMatchesWorkspace": true
+}

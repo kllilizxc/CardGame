@@ -9,19 +9,35 @@ import {
     createInitialStoryRuntime,
     createStoryChoiceTransition,
     createStoryFlowViewModel,
-    type StoryWorldState,
+    indexStoryGraph,
     type StoryGraphDefinition,
 } from './storyFlowViewModel';
-const createWorldStateSeed = (): StoryWorldState => ({
-    player: {
-        attributes: {
-            ...(initialWorldState.player?.attributes ?? {}),
-        },
-    },
-    flags: [...(initialWorldState.flags ?? [])],
-});
 
 describe('storyFlowViewModel', () => {
+    it('describes a settled one-time reward without promising another grant', () => {
+        const source = structuredClone(storyGraphJson) as any;
+        source.choices[0].effects = [{ kind: 'once', eventId: 'qa.reward.once', effects: [
+            { kind: 'grantItem', transactionId: 'qa.reward.herb', itemId: 'consumable.herb', itemType: 'consumable', count: 1 },
+        ] }];
+        const graph = validatePlayableStoryGraph(source);
+        const fresh = createInitialStoryRuntime(graph);
+        expect(createStoryFlowViewModel(graph, { storyState: fresh }).choices[0]?.effectSummary).toBe('获得道具 ×1 · 仅首次');
+        expect(createStoryFlowViewModel(graph, { storyState: { ...fresh, settledEventIds: ['qa.reward.once'] } }).choices[0]?.effectSummary).toBe('此前已完成');
+    });
+
+    it('explains the unmet item in a combined story condition', () => {
+        const source = structuredClone(storyGraphJson) as any;
+        source.choices[0].enabledWhen = { kind: 'all', conditions: [
+            { kind: 'actorAbility', actorId: 'npc.fox', ability: '医术', operator: '>=', value: 7 },
+            { kind: 'itemCount', itemId: 'consumable.spirit-salve', operator: '>=', value: 1 },
+        ] };
+        const graph = validatePlayableStoryGraph(source);
+        const state = { ...createInitialStoryRuntime(graph), actorAbilities: { 'npc.fox': { 医术: 8 } }, itemCounts: { 'consumable.spirit-salve': 0 } };
+        const view = createStoryFlowViewModel(graph, { storyState: state });
+        expect(view.choices[0]?.selectable).toBe(false);
+        expect(view.choices[0]?.disabledReason).toBe('条件未满足：持有 consumable.spirit-salve ×0 >= 1');
+    });
+
     it('creates an entry-node view with readable StoryState-backed story context and outgoing choices', () => {
         const graph = validatePlayableStoryGraph(storyGraphJson);
         const view = createStoryFlowViewModel(graph, {
@@ -48,23 +64,20 @@ describe('storyFlowViewModel', () => {
             },
         });
         expect(view.statusText).toBe('当前剧情：初到青云宗山门（第一章·入宗 · 青云宗山门 · 山门广场 · 白日）。可见选项 2 个，推荐 1 个。');
-        expect(view.stateLine).toBe('身在青云宗山门 · 山门广场（白日）');
+        expect(view.stateLine).toBe('当前位置：location.qingyun-gate / sublocation.qingyun.gate-plaza');
         expect(view.warnings).toEqual([]);
         expect(view.choices.map((choice) => choice.text)).toEqual([
             '老老实实排队等待入宗考核',
             '注意到队伍中有一名体弱少女，主动上前搭话。',
         ]);
-        expect(view.choices[0].conditionSummary).toBe('尚未触发相关前情');
-        expect(view.choices[0].effectSummary).toBe('推进剧情、心性变化、人际关系变化');
-        expect(view.choices[0].conditionSummary).not.toContain('story.sect_entry.disrupted_line');
-        expect(view.stateLine).not.toContain('location.qingyun-gate');
-        expect(view.stateLine).not.toContain('sublocation.qingyun.gate-plaza');
+        expect(view.choices[0].conditionSummary).toBe('未设置标记 story.sect_entry.disrupted_line');
+        expect(view.choices[0].effectSummary).toBe('剧情变化 · 心性+1 · 关系变化');
     });
 
     it('marks structured attribute-gated choices as recommended and disables them when unmet', () => {
         const graph = validatePlayableStoryGraph(storyGraphJson);
         const recommendedView = createStoryFlowViewModel(graph, {
-            worldState: createWorldStateSeed(),
+            worldState: structuredClone(initialWorldState),
         });
         const helpGirlChoice = recommendedView.choices.find((choice) => choice.id === 'sect_entry_001_choice_help_girl');
 
@@ -83,11 +96,11 @@ describe('storyFlowViewModel', () => {
         expect(notRecommendedChoice?.selectable).toBe(false);
         expect(notRecommendedChoice?.recommended).toBe(false);
         expect(notRecommendedChoice?.recommendationReason).toBe('未满足推荐条件：心性 40 ≥ 50。');
-        expect(notRecommendedChoice?.disabledReason).toBe('条件未满足：心性 40 ≥ 50');
+        expect(notRecommendedChoice?.disabledReason).toBe('条件未满足：心性 40 >= 50');
         expect(createStoryChoiceTransition(notRecommendedView, 'sect_entry_001_choice_help_girl')).toEqual({
             status: 'blocked',
             choiceId: 'sect_entry_001_choice_help_girl',
-            reason: '条件未满足：心性 40 ≥ 50',
+            reason: '条件未满足：心性 40 >= 50',
         });
     });
 
@@ -124,121 +137,24 @@ describe('storyFlowViewModel', () => {
             ],
         };
         const view = createStoryFlowViewModel(brokenGraph, {
-            worldState: createWorldStateSeed(),
+            worldState: structuredClone(initialWorldState),
         });
 
         expect(view.choices.every((choice) => choice.visible)).toBe(true);
         expect(view.choices.every((choice) => choice.selectable === false)).toBe(true);
         expect(view.choices.map((choice) => choice.disabledReason)).toEqual([
-            '这条后续剧情暂未开放。',
-            '这条后续剧情暂未开放。',
+            '后续剧情节点未配置：missing_story_node_1',
+            '后续剧情节点未配置：missing_story_node_2',
         ]);
-        expect(view.warnings).toEqual(['有一段后续剧情暂未开放。']);
+        expect(view.warnings).toEqual([
+            '选项 draft_choice_1 指向未配置节点 missing_story_node_1。',
+            '选项 draft_choice_2 指向未配置节点 missing_story_node_2。',
+        ]);
         expect(createStoryChoiceTransition(view, 'draft_choice_1')).toEqual({
             status: 'blocked',
             choiceId: 'draft_choice_1',
-            reason: '这条后续剧情暂未开放。',
+            reason: '后续剧情节点未配置：missing_story_node_1',
         });
-    });
-
-    it('在访问/对话条件提示中隐藏原始节点与对话 id，保留可读条件语义', () => {
-        const graph: StoryGraphDefinition = {
-            entryNodeId: 'start',
-            nodes: [
-                {
-                    id: 'start',
-                    type: 'story',
-                    title: '测试起点',
-                    summary: '用于验证条件文案。',
-                    detail: '起点节点。',
-                    tags: ['测试'],
-                    chapter: '测试',
-                },
-                {
-                    id: 'next',
-                    type: 'story',
-                    title: '测试目标',
-                    summary: '验证目标节点。',
-                    detail: '目标节点。',
-                    tags: ['测试'],
-                    chapter: '测试',
-                },
-            ],
-            choices: [
-                {
-                    id: 'start_to_hidden_node',
-                    from: 'start',
-                    to: 'next',
-                    text: '访问条件选项',
-                    visibleWhen: {
-                        kind: 'visitedNode',
-                        nodeId: 'internal.hidden.node',
-                        expected: true,
-                    },
-                },
-                {
-                    id: 'start_to_hidden_dialogue',
-                    from: 'start',
-                    to: 'next',
-                    text: '对话条件选项',
-                    enabledWhen: {
-                        kind: 'triggeredDialogue',
-                        dialogueId: 'dialogue.hidden.test',
-                        expected: true,
-                    },
-                },
-            ],
-        };
-
-        const view = createStoryFlowViewModel(graph, { worldState: createWorldStateSeed() });
-
-        const hiddenNodeChoice = view.choices.find((choice) => choice.id === 'start_to_hidden_node');
-        const hiddenDialogueChoice = view.choices.find((choice) => choice.id === 'start_to_hidden_dialogue');
-
-        expect(hiddenNodeChoice?.selectable).toBe(false);
-        expect(hiddenNodeChoice?.conditionSummary).toBe('先经历相关前情');
-        expect(hiddenNodeChoice?.disabledReason).toBe('条件未满足：先经历相关前情');
-        const nodeTransitionBlocked = createStoryChoiceTransition(view, 'start_to_hidden_node');
-        expect(nodeTransitionBlocked).toEqual({
-            status: 'blocked',
-            choiceId: 'start_to_hidden_node',
-            reason: '当前还无法触发这段行动。',
-        });
-
-        expect(hiddenDialogueChoice?.selectable).toBe(false);
-        expect(hiddenDialogueChoice?.conditionSummary).toBe('先听过相关消息');
-        expect(hiddenDialogueChoice?.disabledReason).toBe('条件未满足：先听过相关消息');
-        expect(createStoryChoiceTransition(view, 'start_to_hidden_dialogue')).toEqual({
-            status: 'blocked',
-            choiceId: 'start_to_hidden_dialogue',
-            reason: '条件未满足：先听过相关消息',
-        });
-        expect(view.warnings.every((warning) => !/internal\.|dialogue\.hidden\.test|missing_story_node_/.test(warning))).toBe(true);
-    });
-
-    it('回退到入口节点提示不显示具体节点 id，仅提示配置异常', () => {
-        const graph: StoryGraphDefinition = {
-            entryNodeId: 'entry',
-            nodes: [
-                {
-                    id: 'entry',
-                    type: 'story',
-                    title: '入口',
-                    summary: '入口故事节点。',
-                    detail: '可回退的节点。',
-                    tags: ['测试'],
-                },
-            ],
-            choices: [],
-        };
-
-        const view = createStoryFlowViewModel(graph, {
-            currentNodeId: 'nonexistent.current.node',
-        });
-
-        expect(view.currentNode.id).toBe('entry');
-        expect(view.warnings).toEqual(['当前剧情进度出现异常，已回到故事开端。']);
-        expect(view.warnings.join('').includes('nonexistent.current.node')).toBe(false);
     });
 
     it('uses runtime story state to render a resumed node and create a selectable transition', () => {
@@ -279,7 +195,7 @@ describe('storyFlowViewModel', () => {
             currentNodeId: 'start',
             visitedNodeIds: ['start'],
             selectedChoiceIds: [],
-            worldState: createWorldStateSeed(),
+            worldState: structuredClone(initialWorldState),
         });
 
         expect(view.currentNode.id).toBe('start');
@@ -369,7 +285,7 @@ describe('storyFlowViewModel', () => {
             currentNodeId: 'start',
             visitedNodeIds: ['start'],
             selectedChoiceIds: [],
-            worldState: createWorldStateSeed(),
+            worldState: structuredClone(initialWorldState),
         });
         const transition = createStoryChoiceTransition(view, 'start_to_duel');
 
@@ -459,17 +375,16 @@ describe('storyFlowViewModel', () => {
 
     it('unlocks a later choice after a prior dialogue or flag effect', () => {
         const graph = validatePlayableStoryGraph(storyGraphJson);
+        const index = indexStoryGraph(graph);
         const initialState = createInitialStoryRuntime(graph);
         const jumpedStateWithoutPriorDialogue = goToStoryNode(initialState, 'sect_entry_003_help_girl');
         const lockedView = createStoryFlowViewModel(graph, {
             storyState: jumpedStateWithoutPriorDialogue,
-        });
+        }, index);
         const lockedBellChoice = lockedView.choices.find((choice) => choice.id === 'sect_entry_003_choice_ask_bell');
 
         expect(lockedBellChoice?.selectable).toBe(false);
-        expect(lockedBellChoice?.disabledReason).toBe('条件未满足：需要满足以下任一条件：先完成相关铺垫；先听过相关消息');
-        expect(lockedBellChoice?.disabledReason).not.toContain('story.sect_entry.helped_frail_girl');
-        expect(lockedBellChoice?.disabledReason).not.toContain('dialogue.frail_girl.intro');
+        expect(lockedBellChoice?.disabledReason).toBe('条件未满足：需要满足其一：需要标记 story.sect_entry.helped_frail_girl；需要触发对话 dialogue.frail_girl.intro');
 
         const initialView = createStoryFlowViewModel(graph, {
             storyState: initialState,
@@ -488,7 +403,7 @@ describe('storyFlowViewModel', () => {
         const unlockedView = createStoryFlowViewModel(graph, {
             storyState: helpResult.nextStoryState,
             selectedChoiceIds: helpResult.nextSelectedChoiceIds,
-        });
+        }, index);
         const unlockedBellChoice = unlockedView.choices.find((choice) => choice.id === 'sect_entry_003_choice_ask_bell');
 
         expect(unlockedBellChoice?.selectable).toBe(true);

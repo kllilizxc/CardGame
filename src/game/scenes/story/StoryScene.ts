@@ -17,13 +17,12 @@ import { indexItemActionPolicies } from '../../state/ItemActionRules';
 import { loadPersistentStash } from '../../services/RunPersistence';
 import { createPersistentStashFromWorldStateSeed, type PersistentStashSeedSources } from '../../state/GameWorldStateSeed';
 import {
-    clearGameWorldStateStoryRuntimeSessionWithFallbackStorage,
-    writeGameWorldStateSharedNarrativeFactsWithFallbackStorage,
-    writeGameWorldStateStoryRuntimeSessionWithFallbackStorage,
-} from '../../state/GameWorldStateStoryHubSessionWrite';
-import {
     applySharedNarrativeFacts,
+    clearStoryRuntimeSession,
     loadSharedNarrativeFacts,
+    saveSharedNarrativeFacts,
+    saveStoryRuntimeSession,
+    saveStoryRuntimeSessionWithSharedFacts,
 } from '../../services/StoryHubSessionPersistence';
 import type { StoryState } from '../../types/story';
 import { applyStoryEffects, attachStoryActorAbilities, attachStoryEquipmentModifiers, createInitialStoryState } from '../../state/StoryState';
@@ -38,7 +37,6 @@ import {
 import type { StoryGraph } from './storyFlow';
 import { validateStoryGraphResource } from './storyContentAdapter';
 import { paginateReadableCopy } from '../shared/readableCopyPages';
-import { storyDialoguePage } from './storyDialoguePage';
 import {
     applyStoryBattleResultToRuntime,
     cloneStoryState,
@@ -270,9 +268,9 @@ export class StoryScene extends Scene {
         const { width, height } = this.scale;
         const portrait = isPortraitGameViewport(width, height);
         const panelWidth = portrait ? width - 32 : Math.min(1500, width - 220);
-        const panelHeight = portrait ? 480 : 300;
+        const panelHeight = portrait ? 480 : 240;
         const panelX = width / 2;
-        const panelY = portrait ? 430 : 795;
+        const panelY = portrait ? 430 : 830;
         const contentX = panelX - panelWidth / 2 + (portrait ? 26 : 60);
         const container = this.add.container(0, 0);
 
@@ -284,9 +282,17 @@ export class StoryScene extends Scene {
         }));
 
         const dialogues = view.currentNode.dialogues ?? [];
-        const dialoguePage = storyDialoguePage(dialogues, this.storyState.currentDialogueId);
-        const { startIndex: dialogueStart, endIndex: nextDialogueIndex, lines: pageLines } = dialoguePage;
-        const hasMoreDialogues = dialoguePage.nextDialogueId !== undefined;
+        const dialogueStart = Math.max(0, dialogues.findIndex(line => line.id === this.storyState.currentDialogueId));
+        const pageLines: typeof dialogues = [];
+        let nextDialogueIndex = dialogueStart;
+        let pageCharacters = 0;
+        while (nextDialogueIndex < dialogues.length && (pageLines.length === 0 || pageLines.length < 1 && pageCharacters + dialogues[nextDialogueIndex]!.text.length <= 320)) {
+            const line = dialogues[nextDialogueIndex]!;
+            pageLines.push(line);
+            pageCharacters += line.text.length;
+            nextDialogueIndex += 1;
+        }
+        const hasMoreDialogues = nextDialogueIndex < dialogues.length;
         const baseMetadataLine = (view.currentNode.tags.length > 0
             ? `${view.currentNode.subtitle} · ${view.currentNode.tags.join(' / ')}`
             : view.currentNode.subtitle) + (dialogues.length ? ` · 对话 ${dialogueStart + 1}–${nextDialogueIndex}/${dialogues.length}` : '');
@@ -295,7 +301,7 @@ export class StoryScene extends Scene {
             ? detail
             : `${summary}\n${detail}`;
         const displayedCopy = dialogues.length
-            ? `${summary}\n\n${pageLines.map(line => `${npcCatalogJson.npcs.find(npc => npc.id === line.speakerId)?.name ?? line.speakerName}${line.emotion ? `（${line.emotion}）` : ''}：${line.text}`).join('\n')}`
+            ? `${summary}\n\n${pageLines.map(line => `${npcCatalogJson.npcs.find(npc => npc.id === line.speakerId)?.name ?? line.speakerName}${line.emotion ? `（${line.emotion}）` : ''}：${line.text}`).join('\n\n')}`
             : storyCopy;
         const copyPages = paginateReadableCopy(displayedCopy, portrait ? 150 : 190);
         const readingPage = Math.min(this.storyState.currentReadingPage ?? 0, copyPages.length - 1);
@@ -356,7 +362,7 @@ export class StoryScene extends Scene {
                 label: '继续对话',
                 onClick: () => {
                     this.storyState = { ...this.storyState,
-                        currentDialogueId: dialoguePage.nextDialogueId, currentReadingPage: 0 };
+                        currentDialogueId: dialogues[nextDialogueIndex]!.id, currentReadingPage: 0 };
                     const statusText = this.persistStorySession(`已读至第 ${nextDialogueIndex + 1} 条对白。`);
                     this.renderCurrentNode(statusText);
                 },
@@ -648,7 +654,7 @@ export class StoryScene extends Scene {
         ].join('｜');
         if (!this.launchData.hubSession) {
             if (this.storyGraph.shareFactsAcrossStories) {
-                writeGameWorldStateSharedNarrativeFactsWithFallbackStorage({ storyState: cloneStoryState(this.storyState) });
+                saveSharedNarrativeFacts(this.storyState);
                 settleRewards();
             }
             return completedStatus();
@@ -661,11 +667,11 @@ export class StoryScene extends Scene {
             statusText,
             updatedAt: new Date().toISOString(),
         };
-        writeGameWorldStateStoryRuntimeSessionWithFallbackStorage({
-            snapshot,
-            shareFactsAcrossStories: this.storyGraph.shareFactsAcrossStories === true,
-        });
-        if (this.storyGraph.shareFactsAcrossStories) settleRewards();
+        if (this.storyGraph.shareFactsAcrossStories) {
+            saveStoryRuntimeSessionWithSharedFacts(snapshot);
+            settleRewards();
+        }
+        else saveStoryRuntimeSession(snapshot);
         return completedStatus();
     }
 
@@ -674,7 +680,7 @@ export class StoryScene extends Scene {
             return;
         }
 
-        clearGameWorldStateStoryRuntimeSessionWithFallbackStorage({ key: this.launchData.hubSession });
+        clearStoryRuntimeSession(this.launchData.hubSession);
     }
 
     private returnToHub(): void {

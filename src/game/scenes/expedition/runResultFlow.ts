@@ -3,6 +3,7 @@ import type {
     RunSnapshot,
     TerminalRunOutcome,
 } from '../../types/expedition';
+import { getRunPlayerHealth } from '../../state/RunHealth';
 
 export function isTerminalBattleOutcome(result: ExpeditionBattleCompleteEvent): boolean {
     return result.outcome === 'defeat' || result.outcome === 'boss-clear';
@@ -28,6 +29,7 @@ export function createRunAfterBattleVictory(
         ...activeRun,
         currentNodeId: result.nodeId,
         status: 'inProgress',
+        playerHealth: getRunPlayerHealth(result.playerHealth ?? activeRun.playerHealth),
         pendingEncounter: null,
         visitedNodeIds: activeRun.visitedNodeIds.includes(result.nodeId)
             ? [...activeRun.visitedNodeIds]

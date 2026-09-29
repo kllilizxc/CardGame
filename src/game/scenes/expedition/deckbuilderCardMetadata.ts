@@ -108,7 +108,7 @@ const DECKBUILDER_CARD_METADATA_RESOURCE_REQUESTS: readonly DeckbuilderCardMetad
 ] as const;
 
 const WORLD_ITEM_METADATA_RESOURCE_ID = 'world.seed.items-artifacts';
-const WORLD_ITEM_COLLECTION_KEYS = ['artifacts', 'tools', 'consumables', 'quests', 'questItems'] as const;
+const WORLD_ITEM_COLLECTION_KEYS = ['artifacts', 'tools', 'consumables', 'materials', 'quests', 'questItems'] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -436,6 +436,11 @@ export function buildDeckbuilderCardMetadataMap(
                 const description = normalizeOptionalText(entry.description);
                 if (description && !next.description) {
                     next.description = description;
+                }
+
+                const iconAsset = normalizeOptionalText(entry.iconAsset);
+                if (iconAsset && /^assets\/items\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+\.png$/.test(iconAsset)) {
+                    next.iconAsset = iconAsset;
                 }
 
                 const typeLabel = normalizeOptionalText(entry.type);

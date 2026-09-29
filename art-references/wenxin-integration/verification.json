@@ -1,0 +1,76 @@
+{
+  "idle": [
+    {
+      "id": "CR_001",
+      "anchored": true,
+      "animated": true
+    },
+    {
+      "id": "CR_003",
+      "anchored": true,
+      "animated": true
+    },
+    {
+      "id": "CR_009",
+      "anchored": true,
+      "animated": true
+    },
+    {
+      "id": "SX_JXTM_001",
+      "anchored": true,
+      "animated": true
+    },
+    {
+      "id": "CR_007",
+      "anchored": true,
+      "animated": true
+    },
+    {
+      "id": "CR_005",
+      "anchored": true,
+      "animated": true
+    }
+  ],
+  "aoe": {
+    "impacts": [
+      "SX_JXTM_001:7",
+      "CR_007:7",
+      "CR_005:7"
+    ],
+    "pending": 0,
+    "camera": {
+      "x": 0,
+      "z": 0
+    }
+  },
+  "hover": "disc",
+  "errors": [],
+  "afterUnitDestroyed": {
+    "remaining": 5,
+    "errors": []
+  },
+  "sceneCleanup": {
+    "unitTextures": [],
+    "arenaTextures": [],
+    "errors": []
+  },
+  "runtimeFlow": {
+    "route": [
+      "MainMenu",
+      "WorldMapScene",
+      "HubScene",
+      "StoryScene",
+      "BattleScene",
+      "StoryScene"
+    ],
+    "victoryNode": "sect_entry_005_trial_victory",
+    "realPointerDrag": true,
+    "errors": [],
+    "storageProfile": "qa (isolated PreviewStorage prefix)"
+  },
+  "singleAttacks": [
+    "SX_JXTM_001:4",
+    "CR_007:5",
+    "CR_005:12"
+  ]
+}

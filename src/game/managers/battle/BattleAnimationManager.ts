@@ -1,5 +1,5 @@
-import { Scene } from 'phaser';
 import { getWenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
+import { Scene } from 'phaser';
 import { CardSprite } from '../../objects/CardSprite';
 import type { ArtifactSprite } from '../../objects/ArtifactSprite';
 import type { TalismanSprite } from '../../objects/TalismanSprite';
@@ -334,8 +334,7 @@ export class BattleAnimationManager {
                 if (!attacker.active) return;
                 pose.run = 1;
                 this.addTweens({ targets: pose, ox: 420, oy: -40, duration: 350, ease: 'Quad.easeIn', onComplete: () => {
-                    onDamage(damage);
-                    this.playPlayerHitEffect(damage);
+                    onDamage(damage); this.playPlayerHitEffect(damage);
                     this.addTweens({ targets: pose, ox: 0, oy: 0, duration: 300, ease: 'Sine.easeInOut', onComplete: () => { pose.run = 0; } });
                 } });
             } });

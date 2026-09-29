@@ -50,6 +50,7 @@ import type {
     CardPreviewFallback,
     CardPreviewMetadata,
 } from '../../managers/common/cardPreviewProtocol';
+import { isPortraitGameViewport } from '../../layout/gameViewport';
 
 export interface DeckManagementPanelConfig {
     stash: PersistentStash;
@@ -1182,6 +1183,11 @@ function createReturnCtaState(summary: DeckStatusSummary): ReturnCtaState {
 }
 
 export class DeckManagementPanel extends GameObjects.Container implements EntryPanelFrameProvider {
+    private get isPortrait(): boolean {
+        return isPortraitGameViewport(this.scene.scale.width, this.scene.scale.height);
+    }
+
+    private portraitTab: 'editor' | 'browser' = 'editor';
     private stash: PersistentStash;
     private readonly config: DeckManagementPanelConfig;
     private readonly nativeTextEntry: NativeTextEntryOverlay;
@@ -1289,11 +1295,13 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
             this.refreshKeyboardGuide();
         };
         this.scene.events.on('cardPreviewVisibilityChanged', this.previewVisibilityChangeHandler);
-        this.syncKeyboardZoneSelection();
+        if (!this.isPortrait) this.syncKeyboardZoneSelection();
         scene.add.existing(this);
-        this.refreshDetailPane();
+        if (!this.isPortrait) this.refreshDetailPane();
 
-        this.keydownHandler = this.handleKeyDown.bind(this);
+        this.keydownHandler = this.isPortrait
+            ? this.handlePortraitKeyDown.bind(this)
+            : this.handleKeyDown.bind(this);
         scene.input.keyboard?.on('keydown', this.keydownHandler);
 
         this.wheelHandler = (pointer, _gameObjects, _deltaX, deltaY) => this.handleWheel(pointer, deltaY);
@@ -1539,7 +1547,8 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
             },
             onValueChange: (value) => {
                 this.renameBuffer = value;
-                this.refreshEditor();
+                if (this.isPortrait) this.updateNamingTextDisplay();
+                else this.refreshEditor();
             },
             onConfirm: (value) => {
                 this.renameBuffer = value;
@@ -1753,6 +1762,7 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     }
 
     private syncKeyboardZoneSelection(animate = false): void {
+        if (this.isPortrait) return;
         if (this.dialogMode || this.namingMode || this.searchFocus) {
             this.refreshKeyboardGuide();
             return;
@@ -1851,6 +1861,10 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     }
 
     private refreshDetailPane(_animate = false): void {
+        if (this.isPortrait && !this.detailPaneExpanded) {
+            this.scene.events.emit('clearCardPreviewContext', DECK_MANAGEMENT_CARD_PREVIEW_CONTEXT_ID);
+            return;
+        }
         if (!this.detailCardId) {
             this.scene.events.emit('clearCardPreviewContext', DECK_MANAGEMENT_CARD_PREVIEW_CONTEXT_ID);
             return;
@@ -1945,6 +1959,23 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         }
 
         return 'neutral';
+    }
+
+    private handlePortraitKeyDown(event: KeyboardEvent): void {
+        if (this.nativeTextEntry.isFocused(DECK_NAMING_TEXT_ENTRY_SESSION_ID)
+            || this.nativeTextEntry.isFocused(DECK_SEARCH_TEXT_ENTRY_SESSION_ID)) return;
+        if (this.dialogMode && event.key === 'Enter') {
+            event.preventDefault();
+            this.confirmDelete();
+            return;
+        }
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        if (this.dialogMode) this.hideDeleteConfirmation();
+        else if (this.namingMode) this.cancelRename();
+        else if (this.searchFocus) this.setSearchFocus(false);
+        else if (this.detailPaneExpanded) this.setDetailPaneExpanded(false);
+        else this.config.onClose();
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
@@ -2542,6 +2573,12 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     }
 
     private refreshDeckViews(): void {
+        if (this.isPortrait) {
+            this.renderPortraitPanel();
+            if (this.detailPaneExpanded) this.refreshDetailPane();
+            this.pendingSelectedDeckMotionId = null;
+            return;
+        }
         this.refreshDeckList();
         this.refreshEditor();
         this.refreshBrowser();
@@ -2558,6 +2595,14 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
 
     private createPanel(): void {
         const { width, height } = this.scene.scale;
+        if (this.isPortrait) {
+            this.panelFrame = {
+                panelX: width / 2, panelY: height / 2,
+                panelWidth: width - 40, panelHeight: height - 100,
+            };
+            this.renderPortraitPanel();
+            return;
+        }
         this.panelFrame = createDeckManagementPanelFrame(width, height);
         const layout = computeDeckManagementPanelLayout(this.panelFrame);
         const panelWidth = this.panelFrame.panelWidth;
@@ -2656,6 +2701,219 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
 
         this.setDepth(1200);
         this.refreshKeyboardGuide();
+    }
+
+    private renderPortraitPanel(): void {
+        const { width, height } = this.scene.scale;
+        const deck = this.getSelectedDeck();
+        const status = deck ? summarizeDeckStatus(deck, this.stash.cards) : null;
+        const deckIndex = deck ? this.stash.savedDecks.findIndex(candidate => candidate.id === deck.id) : -1;
+
+        this.removeAll(true);
+        this.namingInputBg = undefined;
+        this.namingInputText = undefined;
+        this.queryBg = undefined;
+        this.queryText = undefined;
+        this.queryClearBtn = undefined;
+        this.setDepth(1200);
+
+        const label = (x: number, y: number, value: string, size = 20, color = '#f3ead3',
+            maxWidth = width - 72, center = false): GameObjects.Text => {
+            const text = this.scene.add.text(x, y, value, {
+                fontFamily: expeditionUiTheme.fonts.ui,
+                fontSize: `${size}px`, color,
+                align: center ? 'center' : 'left',
+                wordWrap: { width: maxWidth },
+            }).setOrigin(center ? 0.5 : 0, 0.5);
+            this.add(text);
+            return text;
+        };
+        const button = (x: number, y: number, w: number, h: number, title: string,
+            onClick: () => void, disabled = false, selected = false, fontSize = '18px'): void => {
+            const parts = this.createButton(x, y, w, h, title,
+                selected ? BUTTON_PRIMARY_FILL : BUTTON_NEUTRAL_FILL,
+                onClick, disabled, {
+                    hoverFillColor: selected ? BUTTON_PRIMARY_HOVER_FILL : BUTTON_NEUTRAL_HOVER_FILL,
+                    strokeColor: selected ? SELECTED_ACCENT : SECTION_BORDER,
+                    fontSize,
+                });
+            this.add(parts);
+        };
+
+        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height,
+            expeditionUiTheme.colors.overlay, 0.88).setInteractive();
+        const panel = this.scene.add.rectangle(width / 2, height / 2, width - 40, height - 100,
+            PANEL_FILL, 0.98).setStrokeStyle(2, PANEL_ACCENT, 0.82);
+        this.add([overlay, panel]);
+
+        label(45, 86, '管理卡组', 30);
+        button(width - 104, 88, 126, 48, '返回准备', () => this.config.onClose());
+        label(48, 143, deck ? truncateLabel(deck.name, 18) : '尚无卡组', 25);
+        label(48, 183, status
+            ? `${status.count}/${DECK_CARD_MAX} 张 · ${status.statusLabel}`
+            : '新建一套卡组后，可从储物袋加入卡牌。', 18,
+            status?.isValid ? '#bfe7cf' : '#e8cca1');
+
+        button(100, 233, 116, 48, '上一套', () => this.focusNextDeck(-1), deckIndex <= 0);
+        label(width / 2, 233, `${deckIndex + 1}/${this.stash.savedDecks.length}`, 19, '#d9c6a2', 80, true);
+        button(width - 100, 233, 116, 48, '下一套', () => this.focusNextDeck(1),
+            deckIndex < 0 || deckIndex >= this.stash.savedDecks.length - 1);
+
+        button(96, 290, 116, 48, '新建', () => this.createDeck());
+        button(width / 2, 290, 116, 48, '重命名', () => this.beginRenameSelectedDeck(), !deck);
+        button(width - 96, 290, 116, 48, '删除', () => this.showDeleteConfirmation(),
+            !deck || this.stash.savedDecks.length <= 1);
+
+        if (this.namingMode) {
+            label(width / 2, 378, this.namingMode === 'create' ? '给新卡组起名' : '重命名卡组',
+                24, '#f3ead3', width - 76, true);
+            this.namingInputBg = this.scene.add.rectangle(width / 2, 441, width - 92, 56,
+                PANEL_INPUT_ACTIVE_FILL, 1).setStrokeStyle(2, PANEL_ACCENT, 0.95).setInteractive();
+            this.namingInputText = label(64, 441, this.renameBuffer || '输入卡组名称', 20,
+                '#f3ead3', width - 132);
+            this.addAt(this.namingInputBg, this.list.length - 1);
+            this.namingInputBg.on('pointerdown', () => this.nativeTextEntry.focus(DECK_NAMING_TEXT_ENTRY_SESSION_ID));
+            button(140, 520, 160, 54, '取消', () => this.cancelRename());
+            button(width - 140, 520, 160, 54, '保存名称', () => this.confirmRename(),
+                this.renameBuffer.trim().length === 0, true);
+            this.syncNamingTextEntry();
+            return;
+        }
+        this.nativeTextEntry.deactivate(DECK_NAMING_TEXT_ENTRY_SESSION_ID);
+
+        button(130, 355, 188, 50, '当前卡组', () => {
+            this.setDetailPaneExpanded(false);
+            this.portraitTab = 'editor';
+            this.setKeyboardZone('editor');
+            this.renderPortraitPanel();
+        }, false, this.portraitTab === 'editor');
+        button(width - 130, 355, 188, 50, '储物袋', () => {
+            this.setDetailPaneExpanded(false);
+            this.portraitTab = 'browser';
+            this.setKeyboardZone('browser');
+            this.renderPortraitPanel();
+        }, false, this.portraitTab === 'browser');
+
+        if (this.portraitTab === 'editor') {
+            const cardIds = this.getEditorDisplayCardIds(deck);
+            const pageCount = Math.max(1, Math.ceil(cardIds.length / 4));
+            this.editorScrollOffset = clampNumber(this.editorScrollOffset, 0, pageCount - 1);
+            label(64, 414, deck
+                ? `已收录 ${cardIds.length} 种 · 共 ${status?.count ?? 0} 张`
+                : '先新建卡组', 18, '#d9c6a2');
+            if (cardIds.length === 0) {
+                label(width / 2, 594, '当前卡组没有卡牌。切换到储物袋加入。',
+                    21, '#d9c6a2', width - 96, true);
+            }
+            cardIds.slice(this.editorScrollOffset * 4, (this.editorScrollOffset + 1) * 4)
+                .forEach((cardId, index) => {
+                    const stack = deck?.cards.find(candidate => candidate.id === cardId);
+                    if (!deck || !stack) return;
+                    const y = 478 + index * 78;
+                    const row = this.scene.add.rectangle(width / 2, y, width - 84, 68,
+                        SECTION_FILL, 0.96).setStrokeStyle(1, SECTION_BORDER, 0.76).setInteractive({ useHandCursor: true });
+                    row.on('pointerdown', () => {
+                        this.setKeyboardZone('editor');
+                        this.setDetailCardId(cardId);
+                        this.setDetailPaneExpanded(true);
+                    });
+                    this.add(row);
+                    label(70, y - 13, truncateLabel(getCardDisplayName(cardId, this.config.metadata), 12),
+                        20, '#f3ead3', 218);
+                    label(70, y + 17, `卡组 ${stack.count} · 库存 ${getStackCount(this.stash.cards, cardId)}`,
+                        16, '#d9c6a2', 218);
+                    button(332, y, 50, 50, '−1', () => this.updateDeckCards(deck.id,
+                        adjustDeckCardCount(deck.cards, cardId, -1)), false, false, '17px');
+                    button(397, y, 72, 50, '清空', () => this.updateDeckCards(deck.id,
+                        adjustDeckCardCount(deck.cards, cardId, -stack.count)), false, false, '16px');
+                });
+            this.renderPortraitPages(this.editorScrollOffset, pageCount, page => {
+                this.editorScrollOffset = page;
+                this.renderPortraitPanel();
+            }, label, button);
+        } else {
+            this.queryBg = this.scene.add.rectangle(width / 2, 414, width - 92, 46,
+                expeditionUiTheme.colors.panel, 1).setStrokeStyle(1, SECTION_BORDER, 0.9)
+                .setInteractive({ useHandCursor: true });
+            this.queryBg.on('pointerdown', () => this.setSearchFocus(true));
+            this.add(this.queryBg);
+            this.queryText = label(70, 414, this.filterQuery || '搜索卡牌、编号或名称', 18, '#d9c6a2', width - 156);
+            this.queryClearBtn = label(width - 82, 414, '清除', 17, '#d9c6a2', 64, true)
+                .setInteractive({ useHandCursor: true });
+            this.queryClearBtn.on('pointerdown', () => {
+                this.filterQuery = '';
+                this.setSearchFocus(false);
+                this.renderPortraitPanel();
+            });
+            this.updateSearchDisplay();
+
+            button(83, 469, 94, 40, `类 ${KIND_LABEL[String(this.filterKind)]}`,
+                () => this.cycleBrowserKindFilter(), false, this.filterKind !== undefined, '16px');
+            button(187, 469, 94, 40, this.filterHideZero ? '零隐藏' : '零显示',
+                () => this.toggleBrowserHideZero(), false, !this.filterHideZero, '16px');
+            button(291, 469, 94, 40, `序 ${SORT_FIELD_LABEL[this.sortField]}`,
+                () => this.cycleBrowserSortField(), false, this.sortField !== DEFAULT_BROWSER_SORT_FIELD, '16px');
+            button(395, 469, 94, 40, this.sortDirection === 'asc' ? '升序 ↑' : '降序 ↓',
+                () => this.toggleBrowserSortDirection(), false,
+                this.sortDirection !== DEFAULT_BROWSER_SORT_DIRECTION, '16px');
+
+            const rows = this.buildBrowserCollections().rows;
+            const pageCount = Math.max(1, Math.ceil(rows.length / 3));
+            this.browserScrollOffset = clampNumber(this.browserScrollOffset, 0, pageCount - 1);
+            if (rows.length === 0) label(width / 2, 605, '当前条件下没有可加入的卡牌。',
+                21, '#d9c6a2', width - 96, true);
+            rows.slice(this.browserScrollOffset * 3, (this.browserScrollOffset + 1) * 3)
+                .forEach((row, index) => {
+                    const y = 536 + index * 82;
+                    const selectedCount = getStackCount(deck?.cards ?? [], row.id);
+                    const available = deck ? computeAvailable(this.stash.cards, deck.cards, row.id) : 0;
+                    const slots = deck ? summarizeDeckCapacity(deck.cards).slotsRemainingToMax : 0;
+                    const quickAddCount = getQuickAddCount(available, slots);
+                    const rowBg = this.scene.add.rectangle(width / 2, y, width - 84, 70,
+                        SECTION_FILL, 0.96).setStrokeStyle(1, SECTION_BORDER, 0.76)
+                        .setInteractive({ useHandCursor: true });
+                    rowBg.on('pointerdown', () => {
+                        this.setKeyboardZone('browser');
+                        this.setDetailCardId(row.id);
+                        this.setDetailPaneExpanded(true);
+                    });
+                    this.add(rowBg);
+                    label(70, y - 13, truncateLabel(row.name || row.id, 12), 20, '#f3ead3', 218);
+                    label(70, y + 17, `库存 ${row.count} · 已入 ${selectedCount}`, 16,
+                        available > 0 ? '#d9c6a2' : '#bca785', 218);
+                    button(332, y, 50, 50, '补齐', () => {
+                        if (deck) this.updateDeckCards(deck.id,
+                            adjustDeckCardCount(deck.cards, row.id, quickAddCount));
+                    }, quickAddCount <= 1, false, '16px');
+                    button(397, y, 72, 50, '+1', () => {
+                        if (deck) this.updateDeckCards(deck.id,
+                            adjustDeckCardCount(deck.cards, row.id, 1));
+                    }, !deck || available <= 0 || slots <= 0, false, '17px');
+                });
+            this.renderPortraitPages(this.browserScrollOffset, pageCount, page => {
+                this.browserScrollOffset = page;
+                this.renderPortraitPanel();
+            }, label, button);
+        }
+
+        button(width / 2, 908, width - 116, 56, '返回远征准备', () => this.config.onClose(),
+            false, true, '21px');
+    }
+
+    private renderPortraitPages(
+        page: number,
+        pageCount: number,
+        onSelect: (page: number) => void,
+        label: (x: number, y: number, value: string, size?: number, color?: string,
+            maxWidth?: number, center?: boolean) => GameObjects.Text,
+        button: (x: number, y: number, w: number, h: number, title: string,
+            onClick: () => void, disabled?: boolean, selected?: boolean, fontSize?: string) => void,
+    ): void {
+        label(this.scene.scale.width / 2, 795, `第 ${page + 1}/${pageCount} 页`,
+            17, '#d9c6a2', 180, true);
+        button(140, 836, 170, 46, '上一页', () => onSelect(page - 1), page <= 0);
+        button(this.scene.scale.width - 140, 836, 170, 46, '下一页',
+            () => onSelect(page + 1), page >= pageCount - 1);
     }
 
     private createButton(
@@ -2866,6 +3124,10 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     }
 
     private refreshDeckList(): void {
+        if (this.isPortrait) {
+            this.renderPortraitPanel();
+            return;
+        }
         if (!this.deckListInner) return;
         this.deckListInner.removeAll(true);
 
@@ -3258,6 +3520,10 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     }
 
     private refreshEditor(): void {
+        if (this.isPortrait) {
+            this.renderPortraitPanel();
+            return;
+        }
         if (!this.editorContainer) return;
         this.editorContainer.removeAll(true);
         this.namingInputBg = undefined;
@@ -4357,6 +4623,10 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     }
 
     private refreshBrowser(): void {
+        if (this.isPortrait) {
+            this.renderPortraitPanel();
+            return;
+        }
         if (!this.browserInner) return;
 
         this.updateSearchDisplay();
@@ -4729,7 +4999,7 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
             .setInteractive()
             .setDepth(1500);
 
-        const boxW = 484;
+        const boxW = Math.min(484, width - 48);
         const boxH = 236;
         const box = this.scene.add.rectangle(width / 2, height / 2, boxW, boxH, expeditionUiTheme.colors.panelInner, 0.99)
             .setStrokeStyle(2, INVALID_ACCENT, 0.92)

@@ -1,0 +1,87 @@
+{
+  "mode": "built-in image_gen",
+  "targetProportions": "6–6.5 heads; target 6.25",
+  "assets": [
+    {
+      "asset": "assets/story-v6.png",
+      "referenceImages": [
+        "courtyard.png",
+        "disciple.png"
+      ],
+      "prompt": "Use case: style-transfer. Production artwork for a Chinese xianxia pixel-art game. RESTYLE the referenced design into genuinely COARSE low-resolution pixel art: large square pixel clusters, hard stair-step edges, 3 flat tones per material, restrained 28-color palette of blue-charcoal #202e35, dark jade #34575b, grey jade #628985, warm ivory #e5dcc1, old gold #b99a62, muted plum #775767. No anti-aliasing, gradients, bloom, dust/grain, painterly microdetails or tiny embroidery. Think designed at about 80x120 pixels per figure and then enlarged by nearest-neighbor. Mature serene wuxia mood, narrow adult eyes and defined nose, NOT baby/chibi faces. Reference 1 is the world materials/mood reference; reference 2 is costume/palette reference only. Asset: 16:9 wide background plate, no UI, no people, no text, no foreground characters. A serene old mountain sect gate courtyard at blue-grey dusk with warm amber lanterns, 320x180 logical-pixel look, LARGE crisp pixel blocks, low texture density. Front-facing symmetric composition for a visual novel: staircase begins broad at bottom center and converges to centered Chinese ceremonial gate. Critical anchors at 640x360 game coordinates: gate center x320, roof around y105, platform at y198, gate width165; stair path x142..498 at bottom to292..348 at y200. Two calm blue-green pines frame sides, distant jagged mountains and mist above gate. Gate subdued lacquer red, grey-jade ceramic roof, ivory worn steps, muted gold edging; no bright pink cartoon blossoms. Keep lower left/right unobtrusive for character overlays. Sky soft step-bands, no giant moon/sun, no flagpoles (animated flags added by game). Landscape plate full bleed. Match coarse block size and subdued palette of sprites, avoid detailed painterly rendering.",
+      "transparentBackground": false
+    },
+    {
+      "asset": "assets/floor-v6.png",
+      "referenceImages": [
+        "courtyard.png"
+      ],
+      "prompt": "Use case: style-transfer. Production artwork for a Chinese xianxia pixel-art game. RESTYLE the referenced design into genuinely COARSE low-resolution pixel art: large square pixel clusters, hard stair-step edges, 3 flat tones per material, restrained 28-color palette of blue-charcoal #202e35, dark jade #34575b, grey jade #628985, warm ivory #e5dcc1, old gold #b99a62, muted plum #775767. No anti-aliasing, gradients, bloom, dust/grain, painterly microdetails or tiny embroidery. Think designed at about 80x120 pixels per figure and then enlarged by nearest-neighbor. Mature serene wuxia mood, narrow adult eyes and defined nose, NOT baby/chibi faces. Reference image is architecture/stone palette only. Asset: square seamless-looking flat battle arena FLOOR TEXTURE viewed EXACTLY ORTHOGRAPHIC FROM DIRECTLY OVERHEAD, zero perspective, zero horizon, zero walls, no visible slab side faces, no standing objects. Fills whole square. Weathered grey-jade flagstones with large quiet blocks, thin deep blue-charcoal mortar, occasional moss in joints. Giant shallow engraved Daoist concentric circular medallion centered in square with subtle aged-brass ring and simplified eight-trigram geometry, a modest abstract yin-yang in center. Circular medallion occupies 84% width. Color values must be muted medium-dark, not luminous: teal slate #405b5d, #526c69, desaturated sage #78918a, fine old gold #9a8356. Render in deliberate coarse 200x200 logical-pixel art with uniform hard square grid, no microtexture. No perspective foreshortening: circle truly round. No raised border, no lanterns, no props, no characters, no text. Texture will be projected onto an existing 3D-perspective floor by code.",
+      "transparentBackground": false
+    },
+    {
+      "asset": "assets/sky-v6.png",
+      "referenceImages": [
+        "courtyard.png"
+      ],
+      "prompt": "Use case: style-transfer. Production artwork for a Chinese xianxia pixel-art game. RESTYLE the referenced design into genuinely COARSE low-resolution pixel art: large square pixel clusters, hard stair-step edges, 3 flat tones per material, restrained 28-color palette of blue-charcoal #202e35, dark jade #34575b, grey jade #628985, warm ivory #e5dcc1, old gold #b99a62, muted plum #775767. No anti-aliasing, gradients, bloom, dust/grain, painterly microdetails or tiny embroidery. Think designed at about 80x120 pixels per figure and then enlarged by nearest-neighbor. Mature serene wuxia mood, narrow adult eyes and defined nose, NOT baby/chibi faces. Reference is world architecture mood only. Background panoramic side-view matte for a fantasy battle arena: distant blue-grey mountain silhouettes floating above a dark jade cloud sea at subdued dusk. Very wide 3:1 composition. Large negative sky space upper 60%, low horizontal layers of fog and mountain tips on bottom 40%. Flat stratified colors and big crisp clusters, looks like 320x106 logical pixel art enlarged. Palette slate teal, grey jade, dusty ivory mist, tiny muted amber rim at horizon. No floor, no nearby platform, no trees/people/bell/lanterns, no text. Low contrast so foreground combat reads clearly, no pixel noise, gradient or excessive stars.",
+      "transparentBackground": false
+    },
+    {
+      "asset": "assets/fox-v6.png",
+      "referenceImages": [
+        "fox.png"
+      ],
+      "prompt": "Use case: style-transfer. Production artwork for a Chinese xianxia pixel-art game. RESTYLE the referenced design into genuinely COARSE low-resolution pixel art: large square pixel clusters, hard stair-step edges, 3 flat tones per material, restrained 28-color palette of blue-charcoal #202e35, dark jade #34575b, grey jade #628985, warm ivory #e5dcc1, old gold #b99a62, muted plum #775767. No anti-aliasing, gradients, bloom, dust/grain, painterly microdetails or tiny embroidery. Think designed at about 80x120 pixels per figure and then enlarged by nearest-neighbor. Mature serene wuxia mood, narrow adult eyes and defined nose, NOT baby/chibi faces. Restyle reference fox into a clean, coarse sprite built on about 60x48 logical pixels, enlarged with square pixels. Preserve identity: lean adult white fox with two sweeping tails curling to LEFT, jade-grey shadows, narrow green eye, burgundy cord and little old-gold bell. Animal faces RIGHT, all four paws within canvas, prowling poised stance, no cute round face. Use large readable fur masses, only 3 ivory fur tones and 2 jade shadow tones, remove fine jagged strands. Entire isolated full body with transparent alpha and generous margin. No text, shadows, aura or scenery.",
+      "transparentBackground": true
+    },
+    {
+      "asset": "assets/eagle-v6.png",
+      "referenceImages": [
+        "eagle.png"
+      ],
+      "prompt": "Use case: style-transfer. Production artwork for a Chinese xianxia pixel-art game. RESTYLE the referenced design into genuinely COARSE low-resolution pixel art: large square pixel clusters, hard stair-step edges, 3 flat tones per material, restrained 28-color palette of blue-charcoal #202e35, dark jade #34575b, grey jade #628985, warm ivory #e5dcc1, old gold #b99a62, muted plum #775767. No anti-aliasing, gradients, bloom, dust/grain, painterly microdetails or tiny embroidery. Think designed at about 80x120 pixels per figure and then enlarged by nearest-neighbor. Mature serene wuxia mood, narrow adult eyes and defined nose, NOT baby/chibi faces. Restyle reference thunder eagle into a clean coarse combat sprite designed on about 60x52 logical pixels, enlarged with square pixels. Same RIGHT-facing sharp golden beak and eye, warm-ivory crest, slate-blue and charcoal feathers, muted pale-jade lightning marks. Both wings raised wide in a strong readable silhouette, golden talons and full tail visible. Reduce hundreds of narrow feather details to ~9 major feather shapes per wing. No surrounding electricity aura, ground shadow, blur, text or scenery. Genuine transparent alpha, entire sprite centered with small margin.",
+      "transparentBackground": true
+    },
+    {
+      "asset": "assets/ghost-v6.png",
+      "referenceImages": [
+        "ghost.png"
+      ],
+      "prompt": "Use case: style-transfer. Production artwork for a Chinese xianxia pixel-art game. RESTYLE the referenced design into genuinely COARSE low-resolution pixel art: large square pixel clusters, hard stair-step edges, 3 flat tones per material, restrained 28-color palette of blue-charcoal #202e35, dark jade #34575b, grey jade #628985, warm ivory #e5dcc1, old gold #b99a62, muted plum #775767. No anti-aliasing, gradients, bloom, dust/grain, painterly microdetails or tiny embroidery. Think designed at about 80x120 pixels per figure and then enlarged by nearest-neighbor. Mature serene wuxia mood, narrow adult eyes and defined nose, NOT baby/chibi faces. Restyle reference into a dark adult 5.25-head proportion humanoid wraith, coarse combat sprite about64x72 logicalpixels. Preserve bone skull mask, curved black horns, heavy ragged slate-indigo cloak, old-gold ritual fasteners, one pale-jade smoke tongue, amber lantern. Face three-quarter RIGHT (reverse reference orientation), lantern held on right side of canvas, trailing cloak towards LEFT. Compact adult silhouette, skull excluding horns19%ofstandingheight. Very readable hard squares, huge simple cloak folds, reduce gold chains to three bold shapes, no microtexture or grain. Entire full body and lantern within frame, transparent alpha, no environment or shadows.",
+      "transparentBackground": true
+    },
+    {
+      "asset": "assets/world-props-v6.png",
+      "referenceImages": [
+        "courtyard.png"
+      ],
+      "prompt": "Use case: style-transfer. Production artwork for a Chinese xianxia pixel-art game. RESTYLE the referenced design into genuinely COARSE low-resolution pixel art: large square pixel clusters, hard stair-step edges, 3 flat tones per material, restrained 28-color palette of blue-charcoal #202e35, dark jade #34575b, grey jade #628985, warm ivory #e5dcc1, old gold #b99a62, muted plum #775767. No anti-aliasing, gradients, bloom, dust/grain, painterly microdetails or tiny embroidery. Think designed at about 80x120 pixels per figure and then enlarged by nearest-neighbor. Mature serene wuxia mood, narrow adult eyes and defined nose, NOT baby/chibi faces. Asset: EXACT 2x2 uniform square sprite atlas of FOUR isolated environment props, each wholly within its own quadrant separated by wide transparent gutters, all same pixel block size. Top-left: a large ancient Chinese bronze hanging temple bell, FRONT VIEW, tarnished dark jade bronze body, bold old-gold bands, small ring on top, centered simple silhouette, about48x44logicalpixels. Top-right: one small floating mountain island with jagged slate rock underside, dark jade pine, tiny ivory pavilion with jade roof and muted red columns on top, about40x40logicalpixels. Bottom-left: a wide horizontal drifting mist cloud, stylized angular wisps in 3 cool grey-jade shades, about75x25logicalpixels, mostly flat long profile, not bubbly cartoon. Bottom-right: a diagonal dark pine branch that enters from top-right and extends down-left, big angular desaturated sage needle clusters, about60x40logicalpixels. All isolated with transparentalpha, no ground plane, no text, labels, borders, scene backdrop, glows or shadows. Referenceimage is worldmaterials/palette only.",
+      "transparentBackground": true
+    },
+    {
+      "asset": "assets/girl-expressions-v6.png",
+      "referenceImages": [
+        "/mnt/c/Users/ruili/.codex/generated_images/01a0e080-7155-7ba2-ad9c-918a2ef268ac/exec-abd184ed-cc72-41f8-b138-8bea40b211bb.png"
+      ],
+      "prompt": "Use case: precise-object-edit. User revised the desired proportions to SIX to SIX-AND-A-HALF heads tall; target6.25 heads. Edit the input character artwork: anatomical skull-crown-to-chin height should be about16% of standing crown-to-sole height, NOT19-20%. Make the whole head INCLUDING face/ears/hair about15-18% SMALLER relative to body, with naturally longer adult torso and legs. Preserve mature narrow eyes, costume, character identity, facing direction and muted jade/ivory/old-gold coarse pixel art. Crisp enlarged square pixels, broad three-tone shapes, no microtexture, no antialiasing, gradient or haze. Transparent alpha, no background or text. Preserve the 2x2 equal FULL BODY expression atlas and exact same standingposeallcells. Woman facesLEFT. Top-left calm neutralclosedmouth; top-right warm slight smile; bottom-left worried slightly open mouth; bottom-right closed eyelids neutral mouth. Hair/ears/body/hands/garment outline MUST be pixel-identical in ALL four cells, only eyebrows/eyelids/lips may change. Equal cellmargins no cropping, feet visible. About6.25heads tall now, adult slim proportions but not fashionmodel7-8heads. No labels.",
+      "transparentBackground": true
+    },
+    {
+      "asset": "assets/elder-expressions-v6.png",
+      "referenceImages": [
+        "/mnt/c/Users/ruili/.codex/generated_images/01a0e080-7155-7ba2-ad9c-918a2ef268ac/exec-67cd07a8-93ec-49e5-b0f9-a6b39e7cd118.png"
+      ],
+      "prompt": "Use case: precise-object-edit. User revised the desired proportions to SIX to SIX-AND-A-HALF heads tall; target6.25 heads. Edit the input character artwork: anatomical skull-crown-to-chin height should be about16% of standing crown-to-sole height, NOT19-20%. Make the whole head INCLUDING face/ears/hair about15-18% SMALLER relative to body, with naturally longer adult torso and legs. Preserve mature narrow eyes, costume, character identity, facing direction and muted jade/ivory/old-gold coarse pixel art. Crisp enlarged square pixels, broad three-tone shapes, no microtexture, no antialiasing, gradient or haze. Transparent alpha, no background or text. Preserve the 2x2 equal FULL BODY expression atlas and exactsameposeallcells. Older male master facesRIGHT, whitehair andbeard,tealivoryrobe,oneuprighttwofingerswordsign,otherhandholdssword. Top-leftsternclosedmouth; top-rightraisedbrows/slightlywideeyes; bottom-leftspeakingmouth; bottom-rightclosedeyelids. Hair/hat/beard/ears/body/hands/garment outline MUST be pixel-identical inALLfourcells, onlybrows/eyelids/lipsmaychange. Equalcellmargins,no cropping,feetvisible. About6.25heads tall excluding hatandbeard, adult anatomical face16%ofstandingheight. Nolabels.",
+      "transparentBackground": true
+    },
+    {
+      "asset": "assets/disciple-v6.png",
+      "referenceImages": [
+        "/mnt/c/Users/ruili/.codex/generated_images/01a0e080-7155-7ba2-ad9c-918a2ef268ac/exec-4326129a-bcd3-4f6d-a03d-e1ee88e95d21.png"
+      ],
+      "prompt": "Use case: precise-object-edit. User revised the desired proportions to SIX to SIX-AND-A-HALF heads tall; target6.25 heads. Edit the input character artwork: anatomical skull-crown-to-chin height should be about16% of standing crown-to-sole height, NOT19-20%. Make the whole head INCLUDING face/ears/hair about15-18% SMALLER relative to body, with naturally longer adult torso and legs. Preserve mature narrow eyes, costume, character identity, facing direction and muted jade/ivory/old-gold coarse pixel art. Crisp enlarged square pixels, broad three-tone shapes, no microtexture, no antialiasing, gradient or haze. Transparent alpha, no background or text. Single FULL BODY male disciple, facesRIGHT. Keep exactposeandoutfit:charcoalponytail,tealandivoryrobes,tanhatbehindshoulder,handonswordhilt,boots. Make head15%smaller relativetobody,thefaceitselfnotjusttheponytail. Six-to-six-and-a-half headstall, adultclearproportions. Entirecenteredsilhouettewithsmalltransparentmargins,onefigureonly.",
+      "transparentBackground": true
+    }
+  ]
+}

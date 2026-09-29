@@ -1,6 +1,5 @@
 import { Scene } from 'phaser';
 import { ensureWenxinArt } from '../art/wenxin/WenxinArt';
-import { resolvePreviewHubActionLaunch } from '../services/PreviewEntry';
 
 import {
     CONTENT_CATALOG_CACHE_KEY,
@@ -45,13 +44,7 @@ export class Preloader extends Scene
         const label = this.add.text(this.scale.width / 2, this.scale.height / 2 + 60, '展开画卷……', { fontSize: '24px', color: '#dfc99f' }).setOrigin(.5);
         try {
             await ensureWenxinArt(this);
-            if (!this.sys.isActive()) return;
-            const previewLaunch = resolvePreviewHubActionLaunch(
-                typeof location === 'undefined' ? '' : location.search,
-                this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
-            );
-            if (previewLaunch) this.scene.start('HubScene', previewLaunch);
-            else this.scene.start('MainMenu');
+            if (this.sys.isActive()) this.scene.start('MainMenu');
         } catch (error) {
             label.setText('素材未能载入，点击重试').setInteractive({ useHandCursor: true });
             label.once('pointerdown', () => this.scene.restart());

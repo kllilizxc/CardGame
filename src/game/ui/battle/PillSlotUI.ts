@@ -1,6 +1,9 @@
 import { GameObjects, Scene } from 'phaser';
 import type { PillSlot } from '../../managers/battle/PillManager';
-import type { PillCard } from '@data/types/cards/pill';
+import type { PillCard } from '../../../data/types/cards/pill';
+import { getSceneTextStyle, sceneTheme } from '../../scenes/shared/sceneTheme';
+import { battleColorToHex, battleTheme, blendBattleColor } from './battleTheme';
+import { watchCardFace } from '../../objects/cardFaceAppearance';
 
 /**
  * 丹药槽位UI组件
@@ -12,6 +15,9 @@ export class PillSlotUI extends GameObjects.Container {
     private pillIcons: GameObjects.Text[] = [];
     private pillNames: GameObjects.Text[] = [];
     private emptyTexts: GameObjects.Text[] = [];
+    private releaseFaces: Array<() => void> = [];
+    
+    private slots: PillSlot[] = [];
     private onSlotClick: ((slotIndex: number) => void) | null = null;
 
     constructor(
@@ -24,7 +30,7 @@ export class PillSlotUI extends GameObjects.Container {
         this.onSlotClick = onSlotClick || null;
 
         scene.add.existing(this);
-        this.setDepth(100);
+        this.setDepth(140);
 
         // 监听槽位更新事件
         scene.events.on('pillSlotsUpdated', this.updateSlots, this);
@@ -34,11 +40,13 @@ export class PillSlotUI extends GameObjects.Container {
      * 创建槽位UI
      */
     public createSlots(slots: PillSlot[]): void {
+        this.slots = slots;
+
         // 清空现有UI
         this.clearSlots();
 
-        const slotSize = 70;
-        const slotSpacing = 10;
+        const slotSize = 90;
+        const slotSpacing = 16;
         const startX = -(slots.length * (slotSize + slotSpacing)) / 2 + slotSize / 2;
 
         slots.forEach((slot, index) => {
@@ -59,38 +67,71 @@ export class PillSlotUI extends GameObjects.Container {
         index: number
     ): GameObjects.Container {
         const container = this.scene.add.container(x, y);
-        const slotSize = 70;
+        const slotSize = 90;
+        const accent = slot.isEmpty ? sceneTheme.colors.parchmentSoft : battleTheme.colors.positiveSoft;
+        const fill = slot.isEmpty
+            ? blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.slate, 0.18)
+            : blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jade, 0.28);
+        const hoverFill = slot.isEmpty
+            ? blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.slate, 0.26)
+            : blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jadeBright, 0.34);
 
-        // 槽位背景
-        const bg = this.scene.add.rectangle(0, 0, slotSize, slotSize, 0x2f3a2f, 0.8);
-        bg.setStrokeStyle(2, slot.isEmpty ? 0x555555 : 0x27ae60);
+        const shadow = this.scene.add.rectangle(4, 6, slotSize, slotSize, sceneTheme.colors.shadow, 0.22);
+        container.add(shadow);
+
+        const bg = this.scene.add.rectangle(0, 0, slotSize, slotSize, fill, 0.96);
+        bg.setStrokeStyle(2, accent, slot.isEmpty ? 0.28 : 0.68);
         container.add(bg);
+
+        const sheen = this.scene.add.rectangle(
+            0,
+            -slotSize / 2 + 12,
+            slotSize - 12,
+            14,
+            blendBattleColor(sceneTheme.colors.banner, accent, 0.12),
+            0.72,
+        );
+        sheen.setStrokeStyle(1, accent, 0.22);
+        container.add(sheen);
         this.slotBackgrounds[index] = bg;
 
         // 空槽位提示
-        const emptyText = this.scene.add.text(0, 0, '空', {
-            fontSize: '14px',
-            color: '#666666'
-        }).setOrigin(0.5);
+        const emptyText = this.scene.add.text(0, 2, '空囊', getSceneTextStyle('panelEyebrow', {
+            fontSize: '18px',
+            color: battleTheme.colors.textMuted,
+        })).setOrigin(0.5);
         emptyText.setVisible(slot.isEmpty);
         container.add(emptyText);
         this.emptyTexts[index] = emptyText;
 
         // 丹药图标（如果有）
         if (!slot.isEmpty && slot.pill) {
-            const icon = this.scene.add.text(0, -5, '💊', {
-                fontSize: '32px'
+            const icon = this.scene.add.text(0, -10, '丹', {
+                fontFamily: sceneTheme.fonts.display,
+                fontSize: '30px',
+                color: battleTheme.colors.textPositive,
             }).setOrigin(0.5);
             container.add(icon);
             this.pillIcons[index] = icon;
 
             // 丹药名称（简短）
             const name = this.scene.add.text(0, 25, this.getShortName(slot.pill.name), {
-                fontSize: '10px',
-                color: '#2ecc71'
+                ...getSceneTextStyle('panelEyebrow', {
+                    fontSize: '18px',
+                    color: battleColorToHex(battleTheme.colors.positiveSoft),
+                }),
+                wordWrap: { width: slotSize - 18 },
             }).setOrigin(0.5);
             container.add(name);
             this.pillNames[index] = name;
+
+            let face: GameObjects.Image | undefined;
+            this.releaseFaces.push(watchCardFace(this.scene, slot.pill, key => {
+                face?.destroy();
+                face = key ? this.scene.add.image(0, -8, key).setDisplaySize(42, 61) : undefined;
+                if (face) container.addAt(face, 4);
+                icon.setVisible(!face);
+            }));
         }
 
         // 设置交互
@@ -106,8 +147,9 @@ export class PillSlotUI extends GameObjects.Container {
         // 悬停效果
         bg.on('pointerover', () => {
             if (!slot.isEmpty) {
-                bg.setStrokeStyle(3, 0xffd700);
-                container.setScale(1.1);
+                bg.setFillStyle(hoverFill, 1);
+                bg.setStrokeStyle(3, sceneTheme.colors.goldSoft, 0.92);
+                container.setScale(1.06);
                 
                 // 显示详细信息
                 if (slot.pill) {
@@ -117,7 +159,8 @@ export class PillSlotUI extends GameObjects.Container {
         });
 
         bg.on('pointerout', () => {
-            bg.setStrokeStyle(2, slot.isEmpty ? 0x555555 : 0x27ae60);
+            bg.setFillStyle(fill, 0.96);
+            bg.setStrokeStyle(2, accent, slot.isEmpty ? 0.28 : 0.68);
             container.setScale(1.0);
             this.hidePillTooltip();
         });
@@ -137,8 +180,8 @@ export class PillSlotUI extends GameObjects.Container {
      * 更新槽位显示
      */
     public updateSlots(slots: PillSlot[]): void {
-        // A consumed pill can destroy its hovered slot before pointerout fires.
-        this.hidePillTooltip();
+        this.slots = slots;
+        
         // 重新创建所有槽位
         this.createSlots(slots);
     }
@@ -147,6 +190,8 @@ export class PillSlotUI extends GameObjects.Container {
      * 清空槽位UI
      */
     private clearSlots(): void {
+        this.releaseFaces.forEach(release => release());
+        this.releaseFaces = [];
         this.slotContainers.forEach(container => container.destroy());
         this.slotContainers = [];
         this.slotBackgrounds = [];
@@ -160,7 +205,7 @@ export class PillSlotUI extends GameObjects.Container {
      */
     private showPillTooltip(pill: PillCard, x: number, y: number): void {
         // 发送事件到场景显示详细预览
-        this.scene.events.emit('showPillTooltip', pill, this.x + x, this.y + y - 100);
+        this.scene.events.emit('showPillTooltip', pill, this.x + x, this.y + y - 104);
     }
 
     /**
@@ -174,8 +219,8 @@ export class PillSlotUI extends GameObjects.Container {
      * 销毁时清理
      */
     public destroy(fromScene?: boolean): void {
-        this.hidePillTooltip();
         this.scene.events.off('pillSlotsUpdated', this.updateSlots, this);
+        this.clearSlots();
         super.destroy(fromScene);
     }
 }

@@ -28,7 +28,7 @@ export interface PrototypeExpeditionContentBundle {
 }
 
 const EXPEDITION_NODE_TYPES: ExpeditionNodeType[] = ['entrance', 'battle', 'event', 'shop', 'extract', 'boss'];
-const EXPEDITION_ITEM_TYPES: ExpeditionItemType[] = ['artifact', 'tool', 'consumable', 'quest'];
+const EXPEDITION_ITEM_TYPES: ExpeditionItemType[] = ['artifact', 'tool', 'consumable', 'material', 'quest'];
 const REQUIRED_PROTOTYPE_NODE_TYPES: ExpeditionNodeType[] = ['entrance', 'battle', 'event', 'shop', 'extract', 'boss'];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -234,13 +234,26 @@ function parseEventDefinition(value: unknown, label: string): PrototypeEventDefi
 function parseShopOffer(value: unknown, label: string): PrototypeShopOffer {
     const record = expectRecord(value, label);
     const cost = expectRecord(record.cost, `${label}.cost`);
+    const spiritStones = expectNumber(cost.spiritStones, `${label}.cost.spiritStones`);
+    if (!Number.isSafeInteger(spiritStones) || spiritStones < 0) {
+        throw new Error(`${label}.cost.spiritStones must be a nonnegative integer.`);
+    }
+    if (cost.items !== undefined && !Array.isArray(cost.items)) {
+        throw new Error(`${label}.cost.items must be an array.`);
+    }
+    const items = (cost.items ?? []) as unknown[];
+    const parsedItems = items.map((entry, index) => parseItemStack(entry, `${label}.cost.items[${index}]`));
+    if (parsedItems.some(item => !Number.isSafeInteger(item.count) || item.count < 1)) {
+        throw new Error(`${label}.cost.items counts must be positive integers.`);
+    }
 
     return {
         id: expectString(record.id, `${label}.id`),
         label: expectString(record.label, `${label}.label`),
         description: expectString(record.description, `${label}.description`),
         cost: {
-            spiritStones: expectNumber(cost.spiritStones, `${label}.cost.spiritStones`),
+            spiritStones,
+            ...(cost.items !== undefined ? { items: parsedItems } : {}),
         },
         rewards: parseRewardBundle(record.rewards, `${label}.rewards`),
     };

@@ -4,6 +4,7 @@ import type {
     ExpeditionTargetConfig,
     RunSnapshot,
 } from '../../types/expedition';
+import { getRunPlayerHealth } from '../../state/RunHealth';
 
 function cloneRunDeck(run: RunSnapshot): BattleLaunchPayload['runDeck'] {
     return run.carriedDeck.map((stack) => ({ ...stack }));
@@ -75,6 +76,7 @@ export function createBattleLaunchPayload(
         ...(node.payloadRef.encounterResourceId ? { encounterResourceId: node.payloadRef.encounterResourceId } : {}),
         encounterFile: node.payloadRef.encounterFile,
         runDeck,
+        playerHealth: getRunPlayerHealth(activeRun.playerHealth),
         ...(clonedTargetConfig ? { targetConfig: clonedTargetConfig } : {}),
     };
 }

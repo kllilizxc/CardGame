@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "sourceCardId": "CR_001",
+  "sourceCardFile": "public/data/cards/units.json",
+  "generationTool": "built-in imagegen",
+  "generationCount": 1,
+  "promptFile": "art-prompt.txt",
+  "artwork": "assets/spirit-fox-v1.png",
+  "artworkSha256": "23c36f863ee4243f920d90115804265f32f8b4bad8d6ee2809e92db0a11eb1cf",
+  "assembledPng": "output/CR_001-assembled.png",
+  "assembledPngSha256": "881d799de20050b2f72bdbbcfc00005e591d2ec6b012bdf061170ba8914d5f31",
+  "dimensions": {
+    "width": 540,
+    "height": 780
+  },
+  "draft": "output/CR_001-card-face-draft.json",
+  "renderer": "Phaser Canvas, IllustratedUnitCard extends BaseCardSprite",
+  "scope": "Single-card presentation experiment; no production game data or Worka workflow integration."
+}

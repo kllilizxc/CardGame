@@ -12,37 +12,11 @@ import {
     parseContentCatalogDefinition,
     validateContentCatalog,
 } from './contentCatalog';
-import { validateCatalogRouteReferences } from './contentCatalogRouteReferences';
-import {
-    registerGongfaIds,
-    validateCardGongfaReferences,
-    validateGongfaSchemaShapesAndReferences,
-    type GongfaIdRegistry,
-} from './contentCatalogGongfaDefinitions';
 import {
     loadContentCatalogValidationIndex,
     resolveCatalogResourceIdReference,
     validateResourceDomainId,
 } from './contentCatalogValidationIndex';
-import {
-    CANONICAL_GRADE_REGISTRY_PUBLIC_PATH,
-    CANONICAL_GRADE_REGISTRY_RESOURCE_ID,
-    CANONICAL_REALM_PRESETS_PUBLIC_PATH,
-    CANONICAL_REALM_PRESETS_RESOURCE_ID,
-    CANONICAL_REALM_REGISTRY_PUBLIC_PATH,
-    CANONICAL_REALM_REGISTRY_RESOURCE_ID,
-} from './contentCatalogCanonicalConfig';
-import {
-    CANONICAL_INITIAL_STATE_PUBLIC_PATH,
-    CANONICAL_INITIAL_STATE_RESOURCE_ID,
-    CANONICAL_WORLD_ITEM_REGISTRY_PUBLIC_PATH,
-    CANONICAL_WORLD_ITEM_REGISTRY_RESOURCE_ID,
-    registerWorldItemIds,
-    type WorldItemIdRegistry,
-    type WorldSeedCatalogResource,
-    validateCanonicalWorldSeedCatalogEntries,
-    validateCanonicalWorldSeedReferences,
-} from './contentCatalogWorldSeed';
 
 const expectedCheckedInResources = [
     ['worldMap', 'data/world/world-map.json'],
@@ -54,7 +28,6 @@ const expectedCheckedInResources = [
     ['story', 'data/story/qingyun-teahouse-rumors.json'],
     ['story', 'data/story/story-graph.compact.example.json'],
     ['story', 'data/story/story-graph.executable.json'],
-    ['story', 'data/story/tutorial-story-graph.json'],
     ['story', 'data/story/story-graph.json'],
     ['story', 'data/story/tutorial-qingyun-teahouse-rumor.json'],
     ['story', 'data/story/tutorial-qingyun-entry.json'],
@@ -67,23 +40,11 @@ const expectedCheckedInResources = [
     ['expeditionShop', 'data/mijing/tutorial-qingyun-shop.json'],
     ['deck', 'data/decks/starter-deck.json'],
     ['deck', 'data/decks/tutorial-qingyun-casket-starter.json'],
-    ['deck', 'data/decks/tutorial-stage1-deck.json'],
-    ['deck', 'data/decks/tutorial-stage2-deck.json'],
-    ['deck', 'data/decks/tutorial-stage3-deck.json'],
-    ['deck', 'data/decks/tutorial-stage4-deck.json'],
-    ['deck', 'data/decks/tutorial-stage5-deck.json'],
-    ['deck', 'data/decks/tutorial-stage6-deck.json'],
     ['encounter', 'data/encounters/medium-enemy.json'],
     ['encounter', 'data/encounters/mijing-boss.json'],
     ['encounter', 'data/encounters/test-enemy.json'],
     ['encounter', 'data/encounters/tutorial-qingyun-mind-echo.json'],
     ['encounter', 'data/encounters/tutorial-qingyun-mist-fox.json'],
-    ['encounter', 'data/encounters/tutorial-stage1.json'],
-    ['encounter', 'data/encounters/tutorial-stage2.json'],
-    ['encounter', 'data/encounters/tutorial-stage3.json'],
-    ['encounter', 'data/encounters/tutorial-stage4.json'],
-    ['encounter', 'data/encounters/tutorial-stage5.json'],
-    ['encounter', 'data/encounters/tutorial-stage6.json'],
     ['card', 'data/cards/artifacts.json'],
     ['card', 'data/cards/fields.json'],
     ['card', 'data/cards/pills.json'],
@@ -93,19 +54,19 @@ const expectedCheckedInResources = [
     ['status', 'data/config/status-definitions.json'],
     ['gongfa', 'data/gongfa/gongfa-list.json'],
     ['config', 'data/config/artifact-grade.json'],
-    ['config', 'data/config/battle-loadout.json'],
     ['config', 'data/config/combat-baseline.json'],
+    ['config', 'data/config/battle-loadout.json'],
     ['config', 'data/config/realm-presets.json'],
     ['worldSeed', 'data/world/factions.json'],
-    ['worldSeed', CANONICAL_INITIAL_STATE_PUBLIC_PATH],
+    ['worldSeed', 'data/world/initial-state.json'],
     ['worldSeed', 'data/world/tutorial-qingyun-initial-state.json'],
-    ['worldSeed', CANONICAL_WORLD_ITEM_REGISTRY_PUBLIC_PATH],
+    ['worldSeed', 'data/world/items.artifacts.json'],
     ['worldSeed', 'data/world/meta.json'],
     ['worldSeed', 'data/world/npcs.json'],
+    ['worldSeed', 'data/world/quests.json'],
     ['worldSeed', 'data/world/protagonist.json'],
     ['worldSeed', 'data/world/skills.techniques.json'],
     ['story', 'data/story/qa-fog-fox.json'],
-    ['worldSeed', 'data/world/quests.json'],
 ] as const;
 
 const expectedTutorialCatalogEntries = [
@@ -171,45 +132,25 @@ const expectedTutorialCatalogEntries = [
     },
 ] as const;
 
-function toMutableCheckedInResources(
-    resources: readonly (readonly [string, string])[],
-): Array<[string, string]> {
-    return resources.map(([kind, path]) => [kind, path]);
-}
-
 const canonicalCombatBaselineCatalogEntry = {
-    resourceId: CANONICAL_REALM_REGISTRY_RESOURCE_ID,
+    resourceId: 'config.combat-baseline',
     kind: 'config',
     schemaVersion: 1,
-    publicPath: CANONICAL_REALM_REGISTRY_PUBLIC_PATH,
+    publicPath: 'data/config/combat-baseline.json',
 } as const;
 
 const canonicalArtifactGradeCatalogEntry = {
-    resourceId: CANONICAL_GRADE_REGISTRY_RESOURCE_ID,
+    resourceId: 'config.artifact-grade',
     kind: 'config',
     schemaVersion: 1,
-    publicPath: CANONICAL_GRADE_REGISTRY_PUBLIC_PATH,
+    publicPath: 'data/config/artifact-grade.json',
 } as const;
 
 const canonicalRealmPresetsCatalogEntry = {
-    resourceId: CANONICAL_REALM_PRESETS_RESOURCE_ID,
+    resourceId: 'config.realm-presets',
     kind: 'config',
     schemaVersion: 1,
-    publicPath: CANONICAL_REALM_PRESETS_PUBLIC_PATH,
-} as const;
-
-const canonicalInitialStateCatalogEntry = {
-    resourceId: CANONICAL_INITIAL_STATE_RESOURCE_ID,
-    kind: 'worldSeed',
-    schemaVersion: 1,
-    publicPath: CANONICAL_INITIAL_STATE_PUBLIC_PATH,
-} as const;
-
-const canonicalWorldItemRegistryCatalogEntry = {
-    resourceId: CANONICAL_WORLD_ITEM_REGISTRY_RESOURCE_ID,
-    kind: 'worldSeed',
-    schemaVersion: 1,
-    publicPath: CANONICAL_WORLD_ITEM_REGISTRY_PUBLIC_PATH,
+    publicPath: 'data/config/realm-presets.json',
 } as const;
 
 const validRealmPresetsRegistry = {
@@ -852,7 +793,7 @@ describe('content catalog', () => {
 
         expect([
             resolver.resolveJsonResource({
-                resourceId: CANONICAL_INITIAL_STATE_RESOURCE_ID,
+                resourceId: 'world.seed.initial-state',
                 expectedKind: 'worldSeed',
             }),
             resolver.resolveJsonResource({
@@ -872,7 +813,12 @@ describe('content catalog', () => {
                 expectedKind: 'expeditionShop',
             }),
         ]).toEqual([
-            canonicalInitialStateCatalogEntry,
+            {
+                resourceId: 'world.seed.initial-state',
+                kind: 'worldSeed',
+                schemaVersion: 1,
+                publicPath: 'data/world/initial-state.json',
+            },
             {
                 resourceId: 'deck.starter',
                 kind: 'deck',
@@ -1058,12 +1004,8 @@ describe('content catalog', () => {
 
         const catalog = parseContentCatalogDefinition(readCatalogJson());
 
-        const checkedInResources: readonly (readonly [string, string])[] = catalog.resources.map(
-            (entry): readonly [string, string] => [entry.kind, entry.publicPath],
-        );
-
         expect(catalog.schemaVersion).toBe(1);
-        expect(checkedInResources).toEqual(toMutableCheckedInResources(expectedCheckedInResources));
+        expect(catalog.resources.map((entry) => [entry.kind, entry.publicPath])).toEqual(expectedCheckedInResources);
         expect(new Set(catalog.resources.map((entry) => entry.resourceId)).size).toBe(catalog.resources.length);
         expect(new Set(catalog.resources.map((entry) => entry.publicPath)).size).toBe(catalog.resources.length);
     });
@@ -1132,183 +1074,6 @@ describe('content catalog', () => {
         ]);
     });
 
-    it('keeps gongfa ID and schema validation helpers in a focused module', () => {
-        const failures: ContentCatalogValidationFailure[] = [];
-        const gongfaRegistry: GongfaIdRegistry = new Map();
-        const statusRegistry = new Map([
-            [
-                'status.valid',
-                {
-                    resourceId: 'status.definitions',
-                    publicPath: 'data/config/status-definitions.json',
-                    context: 'statuses[0]',
-                },
-            ],
-        ]);
-        const gongfaResource = {
-            entry: {
-                resourceId: 'gongfa.list',
-                kind: 'gongfa' as const,
-                schemaVersion: 1,
-                publicPath: 'data/gongfa/gongfa-list.json',
-            },
-            json: {
-                gongfa: [
-                    {
-                        id: 'gongfa.valid',
-                        schema: {
-                            event: {
-                                type: 'TurnStart',
-                            },
-                            actions: [
-                                {
-                                    type: 'ApplyStatus',
-                                    statusId: 'status.valid',
-                                    target: 'self',
-                                },
-                            ],
-                        },
-                    },
-                ],
-            },
-        };
-
-        registerGongfaIds(gongfaResource, gongfaRegistry, failures);
-        validateGongfaSchemaShapesAndReferences(gongfaResource, statusRegistry, failures);
-        validateCardGongfaReferences(
-            {
-                entry: {
-                    resourceId: 'cards.units',
-                    kind: 'card' as const,
-                    schemaVersion: 1,
-                    publicPath: 'data/cards/units.json',
-                },
-                json: {
-                    units: [
-                        {
-                            id: 'CARD_WITH_GONGFA',
-                            gongfaIds: ['gongfa.valid'],
-                        },
-                    ],
-                },
-            },
-            gongfaRegistry,
-            failures,
-        );
-
-        expect([...gongfaRegistry.keys()]).toEqual(['gongfa.valid']);
-        expect(failures).toEqual([]);
-    });
-
-    it('keeps route-reference validation helpers in a focused module', () => {
-        const catalog = parseContentCatalogDefinition({
-            schemaVersion: 1,
-            resources: [
-                {
-                    resourceId: 'worldmap.catalog-route',
-                    kind: 'worldMap',
-                    schemaVersion: 1,
-                    publicPath: 'data/world/catalog-route.json',
-                },
-                {
-                    resourceId: 'hub.catalog',
-                    kind: 'hub',
-                    schemaVersion: 1,
-                    publicPath: 'data/hub/catalog-hub.json',
-                },
-            ],
-        });
-        const failures: ContentCatalogValidationFailure[] = [];
-        const { index } = loadContentCatalogValidationIndex(
-            catalog,
-            createPublicFileSourceWithOverrides({
-                'data/world/catalog-route.json': createCatalogWorldMapWithDestination(createCatalogHubDestination()),
-                'data/hub/catalog-hub.json': catalogHubDefinition,
-            }),
-            {
-                worldMap(json: unknown): unknown {
-                    return json;
-                },
-                hub(json: unknown): unknown {
-                    return json;
-                },
-            },
-            failures,
-        );
-
-        validateCatalogRouteReferences(index, failures);
-
-        expect(failures).toEqual([]);
-    });
-
-    it('keeps world seed ID registry and starter stash validation helpers in a focused module', () => {
-        const resources: WorldSeedCatalogResource[] = [
-            {
-                entry: {
-                    resourceId: 'deck.starter',
-                    kind: 'deck',
-                    schemaVersion: 1,
-                    publicPath: 'data/decks/starter-deck.json',
-                },
-                json: {
-                    cards: [],
-                },
-            },
-            {
-                entry: canonicalInitialStateCatalogEntry,
-                json: {
-                    stash: {
-                        stashId: 'phase01.starter-stash',
-                        deckRef: 'starter-deck',
-                        items: [
-                            { id: 'tool.return-rope', itemType: 'tool', count: 1 },
-                        ],
-                        spiritStones: 36,
-                    },
-                },
-            },
-            {
-                entry: canonicalWorldItemRegistryCatalogEntry,
-                json: {
-                    tools: [{ id: 'tool.return-rope' }],
-                },
-            },
-        ];
-        const failures: ContentCatalogValidationFailure[] = [];
-        const invalidCanonicalWorldSeedResourceIds = validateCanonicalWorldSeedCatalogEntries(resources, failures);
-        const worldItems: WorldItemIdRegistry = new Map();
-
-        registerWorldItemIds(resources[2], worldItems, failures);
-        validateCanonicalWorldSeedReferences(resources[1], {
-            decks: new Map([
-                ['deck.starter', {
-                    resourceId: 'deck.starter',
-                    publicPath: 'data/decks/starter-deck.json',
-                    context: 'catalog resourceId',
-                }],
-                ['starter-deck', {
-                    resourceId: 'deck.starter',
-                    publicPath: 'data/decks/starter-deck.json',
-                    context: 'publicPath basename alias',
-                }],
-            ]),
-            worldItems,
-        }, failures);
-        validateCanonicalWorldSeedReferences(resources[2], {
-            decks: new Map(),
-            worldItems,
-        }, failures);
-
-        expect([...invalidCanonicalWorldSeedResourceIds]).toEqual([]);
-        expect(failures).toEqual([]);
-        expect(worldItems.get('tool.return-rope')).toEqual({
-            resourceId: CANONICAL_WORLD_ITEM_REGISTRY_RESOURCE_ID,
-            publicPath: CANONICAL_WORLD_ITEM_REGISTRY_PUBLIC_PATH,
-            context: 'tools[0]',
-            itemType: 'tool',
-        });
-    });
-
     it('validates checked-in resources plus route-critical and content ID references with pure validators', () => {
         const catalog = parseContentCatalogDefinition(readCatalogJson());
         const result = validateContentCatalog(catalog, createPublicFileSource());
@@ -1318,7 +1083,7 @@ describe('content catalog', () => {
         expect(result.registeredValidatorNames).toEqual([
             'worldMap:validateWorldMapDefinition',
             'hub:validateHubTownDefinition',
-            'story:validatePlayableStoryGraph|validateStoryContentGraph',
+            'story:validateStoryGraphResource',
             'expedition:validatePrototypeExpeditionContent',
         ]);
     });
@@ -1612,7 +1377,12 @@ describe('content catalog', () => {
                     schemaVersion: 1,
                     publicPath: 'data/world/catalog-route.json',
                 },
-                canonicalInitialStateCatalogEntry,
+                {
+                    resourceId: 'world.seed.initial-state',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/initial-state.json',
+                },
                 {
                     resourceId: 'deck.starter',
                     kind: 'deck',
@@ -2069,7 +1839,12 @@ describe('content catalog', () => {
                 },
                 canonicalCombatBaselineCatalogEntry,
                 canonicalArtifactGradeCatalogEntry,
-                canonicalWorldItemRegistryCatalogEntry,
+                {
+                    resourceId: 'world.seed.items-artifacts',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/items.artifacts.json',
+                },
             ],
         };
         const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
@@ -2516,45 +2291,6 @@ describe('content catalog', () => {
         ]);
     });
 
-    it('returns actionable failures when canonical world seed catalog kind or publicPath drifts', () => {
-        const catalog = {
-            schemaVersion: 1,
-            resources: [
-                {
-                    ...canonicalInitialStateCatalogEntry,
-                    kind: 'config',
-                    publicPath: 'data/world/initial-state-v2.json',
-                },
-                {
-                    ...canonicalWorldItemRegistryCatalogEntry,
-                    kind: 'deck',
-                    publicPath: 'data/world/items.artifacts-v2.json',
-                },
-            ],
-        };
-
-        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
-            'data/world/initial-state-v2.json': {
-                stash: {
-                    stashId: 'phase01.starter-stash',
-                    deckRef: 'starter-deck',
-                    items: [],
-                    spiritStones: 0,
-                },
-            },
-            'data/world/items.artifacts-v2.json': {
-                artifacts: [],
-            },
-        }));
-
-        expect(result.failures.map((failure) => failure.message)).toEqual([
-            'Catalog canonical world seed world.seed.initial-state must have kind worldSeed; found config.',
-            'Catalog canonical world seed world.seed.initial-state must use publicPath data/world/initial-state.json; found data/world/initial-state-v2.json.',
-            'Catalog canonical world seed world.seed.items-artifacts must have kind worldSeed; found deck.',
-            'Catalog canonical world seed world.seed.items-artifacts must use publicPath data/world/items.artifacts.json; found data/world/items.artifacts-v2.json.',
-        ]);
-    });
-
     it('returns actionable failures for non-string or unknown unit realmId and artifact gradeId references', () => {
         const catalog = {
             schemaVersion: 1,
@@ -2623,7 +2359,7 @@ describe('content catalog', () => {
         ]);
     });
 
-    it('returns actionable failures for missing deck, encounter, Expedition reward, gongfa, and legacy applyStatus status content IDs', () => {
+    it('returns actionable failures for missing deck, encounter, Expedition shop cost and reward, gongfa, and legacy applyStatus status content IDs', () => {
         const catalog = {
             schemaVersion: 1,
             resources: [
@@ -2646,7 +2382,12 @@ describe('content catalog', () => {
                     publicPath: 'data/config/status-definitions.json',
                 },
                 canonicalCombatBaselineCatalogEntry,
-                canonicalWorldItemRegistryCatalogEntry,
+                {
+                    resourceId: 'world.seed.items-artifacts',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/items.artifacts.json',
+                },
                 {
                     resourceId: 'deck.test',
                     kind: 'deck',
@@ -2767,6 +2508,7 @@ describe('content catalog', () => {
                         offers: [
                             {
                                 id: 'offer.test',
+                                cost: { spiritStones: 0, items: [{ id: 'item.missing.cost', itemType: 'artifact', count: 1 }] },
                                 rewards: {
                                     cards: [{ id: 'CARD_MISSING_FROM_SHOP', count: 1 }],
                                     items: [{ id: 'item.missing.shop', itemType: 'artifact', count: 1 }],
@@ -2788,6 +2530,7 @@ describe('content catalog', () => {
             'Encounter encounter.test enemies[0].cardId references card id CARD_MISSING_FROM_ENCOUNTER, but no catalog card resource declares that id.',
             'Expedition events events.test eventsByNodeId.event.test.pool[0].rewards.cards[0].id references card id CARD_MISSING_FROM_EVENT, but no catalog card resource declares that id.',
             'Expedition events events.test eventsByNodeId.event.test.pool[0].rewards.items[0].id references world item id item.missing.event, but no catalog world item resource declares that id.',
+            'Expedition shop shop.test shopsByNodeId.shop.test.offers[0].cost.items[0].id references world item id item.missing.cost, but no catalog world item resource declares that id.',
             'Expedition shop shop.test shopsByNodeId.shop.test.offers[0].rewards.cards[0].id references card id CARD_MISSING_FROM_SHOP, but no catalog card resource declares that id.',
             'Expedition shop shop.test shopsByNodeId.shop.test.offers[0].rewards.items[0].id references world item id item.missing.shop, but no catalog world item resource declares that id.',
         ]);
@@ -2803,8 +2546,18 @@ describe('content catalog', () => {
                     schemaVersion: 1,
                     publicPath: 'data/decks/starter-deck.json',
                 },
-                canonicalInitialStateCatalogEntry,
-                canonicalWorldItemRegistryCatalogEntry,
+                {
+                    resourceId: 'world.seed.initial-state',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/initial-state.json',
+                },
+                {
+                    resourceId: 'world.seed.items-artifacts',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/items.artifacts.json',
+                },
             ],
         };
         const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
@@ -2815,8 +2568,6 @@ describe('content catalog', () => {
                 artifacts: [{ id: 'artifact.valid' }],
                 tools: [{ id: 'tool.valid' }],
                 consumables: [{ id: 'consumable.valid' }],
-                quests: [{ id: '' }],
-                questItems: 'not-an-array',
             },
             'data/world/initial-state.json': {
                 stash: {
@@ -2855,7 +2606,7 @@ describe('content catalog', () => {
             'World seed world.seed.initial-state stash.items[3].id must be a non-empty string so the catalog can verify the content ID reference.',
         );
         expect(messages).toContain(
-            'World seed world.seed.initial-state stash.items[4].itemType must be one of: artifact, tool, consumable, quest.',
+            'World seed world.seed.initial-state stash.items[4].itemType must be one of: artifact, tool, consumable, material, quest.',
         );
         expect(messages).toContain(
             'World seed world.seed.initial-state stash.items[5] must be an object so the catalog can verify its starter stash item ID.',
@@ -2863,11 +2614,24 @@ describe('content catalog', () => {
         expect(messages).toContain(
             'World seed world.seed.initial-state stash.spiritStones must be a non-negative integer.',
         );
-        expect(messages).toContain(
-            'Catalog world item entry world.seed.items-artifacts quests[0] in data/world/items.artifacts.json must declare a non-empty string id.',
-        );
-        expect(messages).toContain(
-            'World item seed world.seed.items-artifacts questItems in data/world/items.artifacts.json must be an array when present.',
+    });
+
+    it('reports a crafting recipe that references an absent world material', () => {
+        const catalog = { schemaVersion: 1, resources: [{
+            resourceId: 'world.seed.items-artifacts', kind: 'worldSeed', schemaVersion: 1,
+            publicPath: 'data/world/items.artifacts.json',
+        }] };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/world/items.artifacts.json': {
+                materials: [{ id: 'material.jade' }], artifacts: [{ id: 'artifact.charm' }],
+                recipes: [{ id: 'recipe.jade-charm', name: '青玉护符',
+                    cost: { spiritStones: 0, items: [{ id: 'material.missing', itemType: 'material', count: 2 }] },
+                    rewards: { items: [{ id: 'artifact.charm', itemType: 'artifact', count: 1 }] },
+                }],
+            },
+        }));
+        expect(result.failures.map(item => item.message)).toContain(
+            'World item seed world.seed.items-artifacts crafting recipes are invalid: Invalid crafting recipe.jade-charm cost item: material.missing',
         );
     });
 
@@ -2881,8 +2645,18 @@ describe('content catalog', () => {
                     schemaVersion: 1,
                     publicPath: 'data/decks/starter-deck.json',
                 },
-                canonicalInitialStateCatalogEntry,
-                canonicalWorldItemRegistryCatalogEntry,
+                {
+                    resourceId: 'world.seed.initial-state',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/initial-state.json',
+                },
+                {
+                    resourceId: 'world.seed.items-artifacts',
+                    kind: 'worldSeed',
+                    schemaVersion: 1,
+                    publicPath: 'data/world/items.artifacts.json',
+                },
             ],
         };
         const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
@@ -2892,7 +2666,6 @@ describe('content catalog', () => {
             'data/world/items.artifacts.json': {
                 tools: [{ id: 'tool.return-rope' }],
                 consumables: [{ id: 'consumable.spirit-salve' }],
-                questItems: [{ id: 'quest.jade-token' }],
             },
             'data/world/initial-state.json': {
                 stash: {
@@ -2901,7 +2674,6 @@ describe('content catalog', () => {
                     items: [
                         { id: 'tool.return-rope', itemType: 'tool', count: 1 },
                         { id: 'consumable.spirit-salve', itemType: 'consumable', count: 2 },
-                        { id: 'quest.jade-token', itemType: 'quest', count: 1 },
                     ],
                     spiritStones: 36,
                 },

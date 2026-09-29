@@ -2,8 +2,17 @@ import {
     DEFAULT_EXPEDITION_ID,
     DEFAULT_EXPEDITION_MAP_ID,
 } from '../config/ExpeditionDefaults';
-import type { ExpeditionRouteIdentity, PersistentStash, RunSnapshot } from '../types/expedition';
 import { gameStorage } from './PreviewStorage';
+import { isEquipSlotId, isValidEquippedItems } from '../state/EquipmentState';
+import { getRunPlayerHealth, isRunPlayerHealth } from '../state/RunHealth';
+import type { EquippedItems, ExpeditionItemStack, ExpeditionRouteIdentity, PersistentStash, RunSnapshot } from '../types/expedition';
+import {
+    cloneDeckCardStacks,
+    cloneSavedDecks,
+    createSavedDeck,
+    DEFAULT_SAVED_DECK_ID,
+    resolveSelectedDeckId,
+} from '../state/PersistentStashDecks';
 
 export const STASH_STORAGE_KEY = 'cardgame.persistent-stash.v1';
 export const ACTIVE_RUN_STORAGE_KEY = 'cardgame.active-run.v1';
@@ -35,12 +44,6 @@ function getStorageAdapter(storage?: RunPersistenceStorageAdapter): RunPersisten
     };
 }
 
-export function resolveRunPersistenceStorageAdapter(
-    storage?: RunPersistenceStorageAdapter,
-): RunPersistenceStorageAdapter {
-    return getStorageAdapter(storage);
-}
-
 function readStoredJson<T>(key: string, storage = getStorageAdapter()): T | null {
     const rawValue = storage.getItem(key);
 
@@ -54,6 +57,194 @@ function readStoredJson<T>(key: string, storage = getStorageAdapter()): T | null
         storage.removeItem(key);
         return null;
     }
+}
+
+type JsonRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is JsonRecord {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+    return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isOptionalNullableString(value: unknown): value is string | null | undefined {
+    return value === undefined || value === null || typeof value === 'string';
+}
+
+function isNumber(value: unknown): value is number {
+    return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isCardStacks(value: unknown): value is PersistentStash['cards'] {
+    return Array.isArray(value)
+        && value.every((stack) => isRecord(stack) && isNonEmptyString(stack.id) && isNumber(stack.count));
+}
+
+function isItemStacks(value: unknown): value is PersistentStash['items'] {
+    return Array.isArray(value)
+        && value.every((stack) => isRecord(stack)
+            && isNonEmptyString(stack.id)
+            && typeof stack.itemType === 'string'
+            && isNumber(stack.count));
+}
+
+/** An obsolete equipment reference must not invalidate the player's inventory or run. */
+function normalizeEquippedItems(value: unknown, items: readonly ExpeditionItemStack[]): EquippedItems | undefined {
+    if (value === undefined) return undefined;
+    const normalized: EquippedItems = {};
+    if (!isRecord(value)) return normalized;
+    const seen = new Set<string>();
+    for (const [slot, itemId] of Object.entries(value)) {
+        if (!isEquipSlotId(slot) || !isNonEmptyString(itemId)
+            || seen.has(itemId) || !items.some(item => item.id === itemId && item.count > 0)) continue;
+        normalized[slot] = itemId;
+        seen.add(itemId);
+    }
+    return normalized;
+}
+
+function normalizeRunEquipment(run: RunSnapshot): RunSnapshot {
+    const withHealth = run.playerHealth !== undefined && !isRunPlayerHealth(run.playerHealth)
+        ? { ...run, playerHealth: getRunPlayerHealth(run.playerHealth) } : run;
+    const equippedItems = normalizeEquippedItems(withHealth.equippedItems, isItemStacks(withHealth.carriedItems) ? withHealth.carriedItems : []);
+    return equippedItems === undefined ? withHealth : { ...withHealth, equippedItems };
+}
+
+function isRewardBundle(value: unknown): boolean {
+    return isRecord(value)
+        && isCardStacks(value.cards)
+        && isItemStacks(value.items)
+        && isNumber(value.spiritStones);
+}
+
+function isRunResolutionSummary(value: unknown): boolean {
+    return value === null || (isRecord(value)
+        && isNonEmptyString(value.runId)
+        && (value.outcome === 'defeat' || value.outcome === 'extract' || value.outcome === 'boss-clear')
+        && isNonEmptyString(value.finalNodeId)
+        && isRewardBundle(value.kept)
+        && isRewardBundle(value.lost)
+        && isNonEmptyString(value.endedAt));
+}
+
+function normalizeLastRunSummary(value: unknown): PersistentStash['lastRunSummary'] {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    return isRunResolutionSummary(value) ? JSON.parse(JSON.stringify(value)) as PersistentStash['lastRunSummary'] : undefined;
+}
+
+function normalizeCurrentPersistentStash(value: JsonRecord): PersistentStash | null {
+    if (!isNonEmptyString(value.stashId)
+        || !isCardStacks(value.cards)
+        || !Array.isArray(value.savedDecks)
+        || !isItemStacks(value.items)
+        || !isNumber(value.spiritStones)
+        || !isOptionalNullableString(value.selectedDeckId)) {
+        return null;
+    }
+
+    const savedDecks = value.savedDecks
+        .filter((savedDeck): savedDeck is JsonRecord => isRecord(savedDeck))
+        .filter((savedDeck) => isNonEmptyString(savedDeck.id) && isNonEmptyString(savedDeck.name) && isCardStacks(savedDeck.cards))
+        .map((savedDeck) => ({
+            id: savedDeck.id as string,
+            name: savedDeck.name as string,
+            cards: cloneDeckCardStacks(savedDeck.cards as PersistentStash['cards']),
+        }));
+
+    if (savedDecks.length !== value.savedDecks.length) {
+        return null;
+    }
+
+    const normalizedStash: PersistentStash = {
+        stashId: value.stashId,
+        cards: cloneDeckCardStacks(value.cards),
+        savedDecks: cloneSavedDecks(savedDecks),
+        selectedDeckId: resolveSelectedDeckId(value.selectedDeckId, savedDecks),
+        items: JSON.parse(JSON.stringify(value.items)) as PersistentStash['items'],
+        ...(value.equippedItems !== undefined ? { equippedItems: normalizeEquippedItems(value.equippedItems, value.items) } : {}),
+        spiritStones: value.spiritStones,
+        ...(value.itemSlotCapacity !== undefined ? { itemSlotCapacity: value.itemSlotCapacity as number } : {}),
+    };
+    if (value.itemSlotCapacity !== undefined && (typeof value.itemSlotCapacity !== 'number' || !Number.isSafeInteger(value.itemSlotCapacity) || value.itemSlotCapacity < 1)) return null;
+    const lastRunSummary = normalizeLastRunSummary(value.lastRunSummary);
+
+    if (value.lastRunSummary !== undefined && lastRunSummary === undefined) {
+        return null;
+    }
+
+    if (lastRunSummary !== undefined) {
+        normalizedStash.lastRunSummary = lastRunSummary;
+    }
+
+    if (value.claimedStoryGrantIds !== undefined) {
+        if (!Array.isArray(value.claimedStoryGrantIds) || !value.claimedStoryGrantIds.every(isNonEmptyString)) return null;
+        normalizedStash.claimedStoryGrantIds = [...new Set(value.claimedStoryGrantIds)];
+    }
+    if (value.settledStoryItemTransactionIds !== undefined) {
+        if (!Array.isArray(value.settledStoryItemTransactionIds) || !value.settledStoryItemTransactionIds.every(isNonEmptyString)) return null;
+        normalizedStash.settledStoryItemTransactionIds = [...new Set(value.settledStoryItemTransactionIds)];
+    }
+
+    return normalizedStash;
+}
+
+function normalizeLegacyPersistentStash(value: JsonRecord): PersistentStash | null {
+    if (!isNonEmptyString(value.stashId)
+        || !isCardStacks(value.deck)
+        || !isItemStacks(value.items)
+        || !isNumber(value.spiritStones)) {
+        return null;
+    }
+
+    const starterSavedDeck = createSavedDeck(
+        isNonEmptyString(value.deckRef) ? value.deckRef : DEFAULT_SAVED_DECK_ID,
+        isNonEmptyString(value.deckRef) ? value.deckRef : undefined,
+        value.deck,
+    );
+    const normalizedStash: PersistentStash = {
+        stashId: value.stashId,
+        cards: cloneDeckCardStacks(value.deck),
+        savedDecks: [starterSavedDeck],
+        selectedDeckId: starterSavedDeck.id,
+        items: JSON.parse(JSON.stringify(value.items)) as PersistentStash['items'],
+        ...(value.equippedItems !== undefined ? { equippedItems: normalizeEquippedItems(value.equippedItems, value.items) } : {}),
+        spiritStones: value.spiritStones,
+        ...(value.itemSlotCapacity !== undefined ? { itemSlotCapacity: value.itemSlotCapacity as number } : {}),
+    };
+    if (value.itemSlotCapacity !== undefined && (typeof value.itemSlotCapacity !== 'number' || !Number.isSafeInteger(value.itemSlotCapacity) || value.itemSlotCapacity < 1)) return null;
+    const lastRunSummary = normalizeLastRunSummary(value.lastRunSummary);
+
+    if (value.lastRunSummary !== undefined && lastRunSummary === undefined) {
+        return null;
+    }
+
+    if (lastRunSummary !== undefined) {
+        normalizedStash.lastRunSummary = lastRunSummary;
+    }
+
+    if (value.claimedStoryGrantIds !== undefined) {
+        if (!Array.isArray(value.claimedStoryGrantIds) || !value.claimedStoryGrantIds.every(isNonEmptyString)) return null;
+        normalizedStash.claimedStoryGrantIds = [...new Set(value.claimedStoryGrantIds)];
+    }
+    if (value.settledStoryItemTransactionIds !== undefined) {
+        if (!Array.isArray(value.settledStoryItemTransactionIds) || !value.settledStoryItemTransactionIds.every(isNonEmptyString)) return null;
+        normalizedStash.settledStoryItemTransactionIds = [...new Set(value.settledStoryItemTransactionIds)];
+    }
+
+    return normalizedStash;
+}
+
+function normalizePersistentStashDocument(value: unknown): PersistentStash | null {
+    if (!isRecord(value)) {
+        return null;
+    }
+
+    return normalizeCurrentPersistentStash(value) ?? normalizeLegacyPersistentStash(value);
 }
 
 function normalizeIdentityValue(value: string | undefined, fallback: string): string {
@@ -186,7 +377,9 @@ function readStoredActiveRun(
         return null;
     }
 
-    return attachRouteKey(activeRun, routeKey);
+    const normalized = normalizeRunEquipment(activeRun);
+    if (JSON.stringify(normalized) !== JSON.stringify(activeRun)) storage.setItem(key, JSON.stringify(normalized));
+    return attachRouteKey(normalized, routeKey);
 }
 
 function migrateLegacyActiveRun(
@@ -199,7 +392,7 @@ function migrateLegacyActiveRun(
         return null;
     }
 
-    const migratedRun = saveActiveRunToStorage(legacyRun, identity, undefined, storage);
+    const migratedRun = saveActiveRunToStorage(normalizeRunEquipment(legacyRun), identity, undefined, storage);
     storage.removeItem(ACTIVE_RUN_STORAGE_KEY);
 
     return migratedRun;
@@ -223,7 +416,7 @@ function migrateLegacyRouteActiveRun(
         return null;
     }
 
-    const migratedRun = saveActiveRunToStorage(legacyRun, identity, undefined, storage);
+    const migratedRun = saveActiveRunToStorage(normalizeRunEquipment(legacyRun), identity, undefined, storage);
     storage.removeItem(legacyStorageKey);
 
     return migratedRun;
@@ -285,13 +478,45 @@ function removeAllActiveRunStorageKeys(): void {
 }
 
 export function loadPersistentStash(storage?: RunPersistenceStorageAdapter): PersistentStash | null {
-    return readStoredJson<PersistentStash>(STASH_STORAGE_KEY, getStorageAdapter(storage));
+    const storageAdapter = getStorageAdapter(storage);
+    const rawValue = storageAdapter.getItem(STASH_STORAGE_KEY);
+
+    if (!rawValue) {
+        return null;
+    }
+
+    let parsedValue: unknown;
+
+    try {
+        parsedValue = JSON.parse(rawValue);
+    } catch {
+        storageAdapter.removeItem(STASH_STORAGE_KEY);
+        return null;
+    }
+
+    const normalizedStash = normalizePersistentStashDocument(parsedValue);
+
+    if (!normalizedStash) {
+        storageAdapter.removeItem(STASH_STORAGE_KEY);
+        return null;
+    }
+
+    const normalizedRawValue = JSON.stringify(normalizedStash);
+
+    if (normalizedRawValue !== rawValue) {
+        storageAdapter.setItem(STASH_STORAGE_KEY, normalizedRawValue);
+    }
+
+    return normalizedStash;
 }
 
 export function savePersistentStash(
     stash: PersistentStash,
     storage?: RunPersistenceStorageAdapter,
 ): void {
+    if (stash.equippedItems !== undefined && !isValidEquippedItems(stash.equippedItems, stash.items)) {
+        throw new Error('Cannot save stash with invalid equipped items.');
+    }
     getStorageAdapter(storage).setItem(STASH_STORAGE_KEY, JSON.stringify(stash));
 }
 
@@ -330,6 +555,12 @@ function saveActiveRunToStorage(
     const storageKey = createActiveRunStorageKey(normalizedIdentity);
 
     assertRunMatchesIdentity(activeRun, normalizedIdentity);
+    if (activeRun.equippedItems !== undefined && !isValidEquippedItems(activeRun.equippedItems, activeRun.carriedItems)) {
+        throw new Error('Cannot save active run with invalid equipped items.');
+    }
+    if (activeRun.playerHealth !== undefined && !isRunPlayerHealth(activeRun.playerHealth)) {
+        throw new Error('Cannot save active run with invalid player health.');
+    }
     storageAdapter.setItem(storageKey, JSON.stringify(activeRun));
     removeLegacyActiveRunIfOwnedBy(normalizedIdentity, storageAdapter);
 

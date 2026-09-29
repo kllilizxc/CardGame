@@ -1,0 +1,43 @@
+{
+  "now": "卡面鉴赏 · 真传弟子·剑心通明",
+  "uniqueIdleFrames": 7,
+  "frames": [
+    {
+      "t": 0,
+      "hash": 18247085,
+      "opaquePixels": 5236
+    },
+    {
+      "t": 0.4,
+      "hash": 222428272,
+      "opaquePixels": 5223
+    },
+    {
+      "t": 0.8,
+      "hash": 2293734183,
+      "opaquePixels": 5223
+    },
+    {
+      "t": 1.2,
+      "hash": 2861479034,
+      "opaquePixels": 5225
+    },
+    {
+      "t": 1.6,
+      "hash": 197417143,
+      "opaquePixels": 5239
+    },
+    {
+      "t": 2,
+      "hash": 2615420265,
+      "opaquePixels": 5254
+    },
+    {
+      "t": 2.4,
+      "hash": 1428608333,
+      "opaquePixels": 5258
+    }
+  ],
+  "pixelReadback": true,
+  "loadedAssets": 10
+}

@@ -1,99 +1,19 @@
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
 
 import type { StoryState } from '../types/story';
+import { applyStoryEffects } from '../state/StoryState';
 import {
+    applySharedNarrativeFacts,
     clearStoryRuntimeSession,
-    createStoryRuntimeSessionStorageKey,
     loadHubSessionSnapshot,
     loadStoryRuntimeSession,
+    loadSharedNarrativeFacts,
     resetStoryHubSessionPersistenceForTests,
     saveHubSessionSnapshot,
     saveStoryRuntimeSession,
-    STORY_HUB_SESSION_SCHEMA_VERSION,
-    STORY_HUB_SESSION_STORAGE_KEY,
+    saveStoryRuntimeSessionWithSharedFacts,
     writeRawStoryHubSessionForTests,
 } from './StoryHubSessionPersistence';
-
-class MemoryStorage implements Storage {
-    private readonly values = new Map<string, string>();
-
-    get length(): number {
-        return this.values.size;
-    }
-
-    clear(): void {
-        this.values.clear();
-    }
-
-    getItem(key: string): string | null {
-        return this.values.get(key) ?? null;
-    }
-
-    key(index: number): string | null {
-        return [...this.values.keys()][index] ?? null;
-    }
-
-    removeItem(key: string): void {
-        this.values.delete(key);
-    }
-
-    setItem(key: string, value: string): void {
-        this.values.set(key, value);
-    }
-}
-
-let previousLocalStorageDescriptor: PropertyDescriptor | undefined;
-let localStorageOverrideActive = false;
-
-function overrideLocalStorage(descriptor: PropertyDescriptor): void {
-    if (!localStorageOverrideActive) {
-        previousLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
-        localStorageOverrideActive = true;
-    }
-
-    Object.defineProperty(globalThis, 'localStorage', {
-        configurable: true,
-        ...descriptor,
-    });
-}
-
-function installMemoryStorage(storage = new MemoryStorage()): MemoryStorage {
-    overrideLocalStorage({ value: storage });
-
-    return storage;
-}
-
-function installThrowingAmbientLocalStorage(message: string): void {
-    overrideLocalStorage({
-        get(): Storage {
-            throw new Error(message);
-        },
-    });
-}
-
-function removeAmbientLocalStorageForTest(): void {
-    if (!localStorageOverrideActive) {
-        previousLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
-        localStorageOverrideActive = true;
-    }
-
-    delete (globalThis as { localStorage?: Storage }).localStorage;
-}
-
-function restoreLocalStorage(): void {
-    if (!localStorageOverrideActive) {
-        return;
-    }
-
-    if (previousLocalStorageDescriptor) {
-        Object.defineProperty(globalThis, 'localStorage', previousLocalStorageDescriptor);
-    } else {
-        delete (globalThis as { localStorage?: Storage }).localStorage;
-    }
-
-    previousLocalStorageDescriptor = undefined;
-    localStorageOverrideActive = false;
-}
 
 function createStoryState(nodeId = 'sect_entry_003_help_girl'): StoryState {
     return {
@@ -120,9 +40,65 @@ describe('StoryHubSessionPersistence', () => {
         resetStoryHubSessionPersistenceForTests();
     });
 
-    afterEach(() => {
-        restoreLocalStorage();
-        resetStoryHubSessionPersistenceForTests();
+    it('round-trips narrative knowledge, quest stages and settlement records without aliasing arrays', () => {
+        const key = { hubId: 'hub.fox', actionId: 'story.fox', storyGraphFile: 'data/story/fox.json' };
+        const storyState: StoryState = {
+            ...createStoryState(),
+            knowledge: { player: ['fox.stolen-recipe'], 'npc.guard': [] },
+            questStages: { 'quest.heal-fox': 'completed' },
+            settledEventIds: ['quest.heal-fox.reward'],
+            cardGrants: [{ grantId: 'quest.heal-fox.card', cardId: 'CR_001', count: 1 }],
+            actorAbilities: { 'npc.fox': { 医术: 8 } },
+            itemTransactions: [{ transactionId: 'quest.fox.salve', itemId: 'consumable.spirit-salve', itemType: 'consumable', countDelta: -1 }],
+            itemCounts: { 'consumable.spirit-salve': 1 },
+            currentDialogueId: 'dlg.fox.042',
+            currentReadingPage: 2,
+        };
+        saveStoryRuntimeSession({ ...key, storyState, selectedChoiceIds: [], updatedAt: '2026-09-26T00:00:00.000Z' });
+        storyState.knowledge!.player!.push('later');
+        storyState.actorAbilities!['npc.fox']!.医术 = 1;
+        storyState.itemCounts!['consumable.spirit-salve'] = 9;
+        const loaded = loadStoryRuntimeSession(key);
+        expect(loaded?.storyState.knowledge?.player).toEqual(['fox.stolen-recipe']);
+        expect(loaded?.storyState.questStages?.['quest.heal-fox']).toBe('completed');
+        expect(loaded?.storyState.settledEventIds).toEqual(['quest.heal-fox.reward']);
+        expect(loaded?.storyState.cardGrants).toEqual([{ grantId: 'quest.heal-fox.card', cardId: 'CR_001', count: 1 }]);
+        expect(loaded?.storyState.actorAbilities?.['npc.fox']?.医术).toBe(8);
+        expect(loaded?.storyState.itemCounts?.['consumable.spirit-salve']).toBe(1);
+        expect(loaded?.storyState.itemTransactions).toHaveLength(1);
+        expect(loaded?.storyState.currentDialogueId).toBe('dlg.fox.042');
+        expect(loaded?.storyState.currentReadingPage).toBe(2);
+    });
+
+    it('shares opt-in story facts across Hub actions while preserving each reading position', () => {
+        const firstKey = { hubId: 'hub.fox', actionId: 'story.first', storyGraphFile: 'data/story/first.json' };
+        const secondKey = { hubId: 'hub.town', actionId: 'story.second', storyGraphFile: 'data/story/second.json' };
+        const firstState: StoryState = {
+            ...createStoryState('scene.fox'),
+            attributes: { 口才: 6 },
+            relations: { 'npc.fox->player': 30 },
+            knowledge: { player: ['fox.stolen-recipe'] },
+            questStages: { 'quest.heal-fox': 'completed' },
+            settledEventIds: ['quest.heal-fox.reward'],
+            cardGrants: [{ grantId: 'quest.heal-fox.card', cardId: 'CR_001', count: 1 }],
+            itemTransactions: [{ transactionId: 'quest.heal-fox.salve', itemId: 'consumable.spirit-salve', itemType: 'consumable', countDelta: -1 }],
+            currentDialogueId: 'dlg.fox.100',
+        };
+        saveStoryRuntimeSessionWithSharedFacts({ ...firstKey, storyState: firstState, selectedChoiceIds: [], updatedAt: '2026-09-26T00:00:00.000Z' });
+        const secondState = applySharedNarrativeFacts({ ...createStoryState('scene.town'), attributes: { 口才: 4 } }, loadSharedNarrativeFacts());
+        expect(secondState.currentNodeId).toBe('scene.town');
+        expect(secondState.currentDialogueId).toBeUndefined();
+        expect(secondState.attributes.口才).toBe(6);
+        expect(secondState.knowledge?.player).toEqual(['fox.stolen-recipe']);
+        expect(secondState.questStages?.['quest.heal-fox']).toBe('completed');
+        expect(secondState.settledEventIds).toContain('quest.heal-fox.reward');
+        expect(secondState.cardGrants).toEqual(firstState.cardGrants);
+        expect(secondState.itemTransactions).toEqual(firstState.itemTransactions);
+        const replay = applyStoryEffects(secondState, [{ kind: 'once', eventId: 'quest.heal-fox.reward', effects: [{ kind: 'adjustRelation', relationId: 'npc.fox->player', delta: 10 }] }]);
+        expect(replay.state.relations['npc.fox->player']).toBe(30);
+        saveStoryRuntimeSessionWithSharedFacts({ ...secondKey, storyState: secondState, selectedChoiceIds: [], updatedAt: '2026-09-26T00:01:00.000Z' });
+        expect(loadStoryRuntimeSession(firstKey)?.storyState.currentNodeId).toBe('scene.fox');
+        expect(loadStoryRuntimeSession(secondKey)?.storyState.currentNodeId).toBe('scene.town');
     });
 
     it('saves and loads versioned Hub location and per-action Story runtime snapshots without sharing mutable references', () => {
@@ -213,149 +189,5 @@ describe('StoryHubSessionPersistence', () => {
             storyGraphFile: 'data/story/story-graph.json',
         })).toBeNull();
         expect(loadHubSessionSnapshot('hub.qingyun-town')?.currentLocationId).toBe('location.qingyun-town.teahouse');
-    });
-
-    it('writes, reads, and clears Story/Hub sessions through an injected adapter without touching ambient localStorage', () => {
-        const injectedStorage = new MemoryStorage();
-        const otherStorage = new MemoryStorage();
-        const storyKey = {
-            hubId: 'hub.qingyun-town',
-            actionId: 'action.start-qingyun-entry-story',
-            storyGraphFile: 'data/story/story-graph.json',
-        };
-        const otherStoryKey = {
-            hubId: 'hub.qingyun-town',
-            actionId: 'action.revisit-qingyun-entry-story',
-            storyGraphFile: 'data/story/story-graph.json',
-        };
-        installThrowingAmbientLocalStorage('ambient localStorage must not be used by injected Story/Hub sessions');
-
-        saveHubSessionSnapshot({
-            hubId: 'hub.qingyun-town',
-            currentLocationId: 'location.qingyun-town.teahouse',
-            statusText: '注入式 Hub session',
-            updatedAt: '2026-05-09T06:00:00.000Z',
-        }, injectedStorage);
-        saveStoryRuntimeSession({
-            ...storyKey,
-            storyState: createStoryState('sect_entry_004_injected_storage'),
-            selectedChoiceIds: ['sect_entry_001_choice_help_girl'],
-            statusText: '注入式 Story session',
-            updatedAt: '2026-05-09T06:01:00.000Z',
-        }, injectedStorage);
-        saveStoryRuntimeSession({
-            ...otherStoryKey,
-            storyState: createStoryState('sect_entry_005_second_injected_storage'),
-            selectedChoiceIds: ['sect_entry_001_choice_help_girl', 'sect_entry_005_choice_wait'],
-            updatedAt: '2026-05-09T06:02:00.000Z',
-        }, injectedStorage);
-        saveHubSessionSnapshot({
-            hubId: 'hub.other-town',
-            currentLocationId: 'location.other-town.gate',
-            updatedAt: '2026-05-09T07:00:00.000Z',
-        }, otherStorage);
-
-        clearStoryRuntimeSession(storyKey, injectedStorage);
-
-        expect(loadHubSessionSnapshot('hub.qingyun-town', injectedStorage)).toEqual({
-            hubId: 'hub.qingyun-town',
-            currentLocationId: 'location.qingyun-town.teahouse',
-            statusText: '注入式 Hub session',
-            updatedAt: '2026-05-09T06:00:00.000Z',
-        });
-        expect(loadStoryRuntimeSession(storyKey, injectedStorage)).toBeNull();
-        expect(loadStoryRuntimeSession(otherStoryKey, injectedStorage)?.storyState.currentNodeId)
-            .toBe('sect_entry_005_second_injected_storage');
-        expect(loadHubSessionSnapshot('hub.qingyun-town', otherStorage)).toBeNull();
-        expect(loadHubSessionSnapshot('hub.other-town', otherStorage)?.currentLocationId)
-            .toBe('location.other-town.gate');
-
-        const storedDocument = JSON.parse(injectedStorage.getItem(STORY_HUB_SESSION_STORAGE_KEY) ?? 'null');
-        expect(storedDocument).toEqual({
-            schemaVersion: STORY_HUB_SESSION_SCHEMA_VERSION,
-            hubs: {
-                'hub.qingyun-town': {
-                    hubId: 'hub.qingyun-town',
-                    currentLocationId: 'location.qingyun-town.teahouse',
-                    statusText: '注入式 Hub session',
-                    updatedAt: '2026-05-09T06:00:00.000Z',
-                },
-            },
-            stories: {
-                [createStoryRuntimeSessionStorageKey(otherStoryKey)]: {
-                    ...otherStoryKey,
-                    storyState: createStoryState('sect_entry_005_second_injected_storage'),
-                    selectedChoiceIds: ['sect_entry_001_choice_help_girl', 'sect_entry_005_choice_wait'],
-                    updatedAt: '2026-05-09T06:02:00.000Z',
-                },
-            },
-        });
-    });
-
-    it('cleans corrupt and stale injected documents on read without leaking cleanup to another adapter', () => {
-        const corruptStorage = new MemoryStorage();
-        const staleStorage = new MemoryStorage();
-        const healthyStorage = new MemoryStorage();
-        installThrowingAmbientLocalStorage('ambient localStorage must not be used by injected Story/Hub cleanup');
-        writeRawStoryHubSessionForTests('{not valid json', corruptStorage);
-        writeRawStoryHubSessionForTests(JSON.stringify({
-            schemaVersion: 0,
-            hubs: {},
-            stories: {},
-        }), staleStorage);
-        saveHubSessionSnapshot({
-            hubId: 'hub.healthy',
-            currentLocationId: 'location.healthy',
-            updatedAt: '2026-05-09T08:00:00.000Z',
-        }, healthyStorage);
-
-        expect(loadHubSessionSnapshot('hub.qingyun-town', corruptStorage)).toBeNull();
-        expect(loadHubSessionSnapshot('hub.qingyun-town', staleStorage)).toBeNull();
-
-        expect(corruptStorage.getItem(STORY_HUB_SESSION_STORAGE_KEY)).toBeNull();
-        expect(staleStorage.getItem(STORY_HUB_SESSION_STORAGE_KEY)).toBeNull();
-        expect(loadHubSessionSnapshot('hub.healthy', healthyStorage)?.currentLocationId).toBe('location.healthy');
-        expect(healthyStorage.getItem(STORY_HUB_SESSION_STORAGE_KEY)).not.toBeNull();
-    });
-
-    it('keeps default Story/Hub localStorage behavior when no adapter is injected', () => {
-        const ambientStorage = installMemoryStorage();
-
-        saveHubSessionSnapshot({
-            hubId: 'hub.qingyun-town',
-            currentLocationId: 'location.qingyun-town.market',
-            updatedAt: '2026-05-09T09:00:00.000Z',
-        });
-
-        expect(JSON.parse(ambientStorage.getItem(STORY_HUB_SESSION_STORAGE_KEY) ?? 'null')).toEqual({
-            schemaVersion: STORY_HUB_SESSION_SCHEMA_VERSION,
-            hubs: {
-                'hub.qingyun-town': {
-                    hubId: 'hub.qingyun-town',
-                    currentLocationId: 'location.qingyun-town.market',
-                    updatedAt: '2026-05-09T09:00:00.000Z',
-                },
-            },
-            stories: {},
-        });
-        expect(loadHubSessionSnapshot('hub.qingyun-town')?.currentLocationId)
-            .toBe('location.qingyun-town.market');
-    });
-
-    it('keeps default Story/Hub memory fallback when localStorage is unavailable', () => {
-        removeAmbientLocalStorageForTest();
-        resetStoryHubSessionPersistenceForTests();
-
-        saveHubSessionSnapshot({
-            hubId: 'hub.memory-town',
-            currentLocationId: 'location.memory-town.gate',
-            updatedAt: '2026-05-09T10:00:00.000Z',
-        });
-
-        expect(loadHubSessionSnapshot('hub.memory-town')).toEqual({
-            hubId: 'hub.memory-town',
-            currentLocationId: 'location.memory-town.gate',
-            updatedAt: '2026-05-09T10:00:00.000Z',
-        });
     });
 });

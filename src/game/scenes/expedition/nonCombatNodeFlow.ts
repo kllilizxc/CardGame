@@ -1,3 +1,5 @@
+import { canAcceptItemRewards, countOccupiedItemSlots, resolveItemSlotCapacity } from '../../state/ItemCapacity';
+import { previewShopExchange } from '../../state/ShopExchange';
 import type {
     ExpeditionEventOutcomeSelection,
     PrototypeEventDefinition,
@@ -7,7 +9,6 @@ import type {
     RunRewardBundle,
     RunSnapshot,
 } from '../../types/expedition';
-import type { ContentDisplayNames } from '../../content/contentDisplayNames';
 
 export interface EventNodeView {
     title: string;
@@ -15,11 +16,12 @@ export interface EventNodeView {
     outcome: PrototypeEventOutcome;
     rewardSummary: string;
     claimed: boolean;
+    inventoryFull: boolean;
 }
 
 export interface CreateEventNodeViewOptions {
     outcomeSelection?: ExpeditionEventOutcomeSelection;
-    displayNames?: ContentDisplayNames;
+    rewardName?: (id: string) => string;
 }
 
 export class MissingFixedEventOutcomeError extends Error {
@@ -34,7 +36,7 @@ export class MissingFixedEventOutcomeError extends Error {
     }
 }
 
-export type ShopOfferViewState = 'available' | 'purchased' | 'unaffordable';
+export type ShopOfferViewState = 'available' | 'purchased' | 'unaffordable' | 'insufficientItems' | 'equippedItem' | 'inventoryFull';
 
 export interface ShopOfferView extends PrototypeShopOffer {
     offer: PrototypeShopOffer;
@@ -47,6 +49,8 @@ export interface ShopNodeView {
     title: string;
     description: string;
     spiritStones: number;
+    occupiedItemSlots: number;
+    itemSlotCapacity: number;
     offers: ShopOfferView[];
 }
 
@@ -55,10 +59,10 @@ export interface ExtractNodeView {
     recorded: boolean;
 }
 
-function countRewardEntries(rewards: RunRewardBundle, displayNames?: ContentDisplayNames): string[] {
+function countRewardEntries(rewards: RunRewardBundle, itemName: (id: string) => string): string[] {
     const entries = [
-        ...rewards.cards.filter((stack) => stack.count > 0).map((stack) => `${displayNames?.cardName(stack.id) ?? stack.id} +${stack.count}`),
-        ...rewards.items.filter((stack) => stack.count > 0).map((stack) => `${displayNames?.itemName(stack.id) ?? stack.id} +${stack.count}`),
+        ...rewards.cards.filter((stack) => stack.count > 0).map((stack) => `${itemName(stack.id)} +${stack.count}`),
+        ...rewards.items.filter((stack) => stack.count > 0).map((stack) => `${itemName(stack.id)} +${stack.count}`),
     ];
 
     if (rewards.spiritStones !== 0) {
@@ -68,8 +72,8 @@ function countRewardEntries(rewards: RunRewardBundle, displayNames?: ContentDisp
     return entries;
 }
 
-function createRewardSummary(rewards: RunRewardBundle, displayNames?: ContentDisplayNames): string {
-    const entries = countRewardEntries(rewards, displayNames);
+function createRewardSummary(rewards: RunRewardBundle, itemName: (id: string) => string = id => id): string {
+    const entries = countRewardEntries(rewards, itemName);
     return entries.length > 0 ? entries.join(' · ') : '无奖励';
 }
 
@@ -122,29 +126,40 @@ export function createEventNodeView(
         title: definition.title,
         description: definition.description,
         outcome,
-        rewardSummary: createRewardSummary(outcome.rewards, options.displayNames),
+        rewardSummary: createRewardSummary(outcome.rewards, options.rewardName),
         claimed: run.nodeStates[definition.nodeId]?.rewardClaimed === true,
+        inventoryFull: !canAcceptItemRewards(run.carriedItems, outcome.rewards.items, run.itemSlotCapacity),
     };
 }
 
-export function createShopNodeView(definition: PrototypeShopDefinition, run: RunSnapshot, displayNames?: ContentDisplayNames): ShopNodeView {
+export function createShopNodeView(
+    definition: PrototypeShopDefinition,
+    run: RunSnapshot,
+    itemName: (id: string) => string = id => id,
+): ShopNodeView {
     const purchasedOfferIds = run.nodeStates[definition.nodeId]?.purchasedOfferIds ?? [];
 
     return {
         title: definition.title,
         description: definition.description,
         spiritStones: run.spiritStones,
-        offers: definition.offers.map((offer) => ({
-            ...offer,
-            offer,
-            state: purchasedOfferIds.includes(offer.id)
-                ? 'purchased'
-                : run.spiritStones < offer.cost.spiritStones
-                    ? 'unaffordable'
-                    : 'available',
-            costText: `灵石 ${offer.cost.spiritStones}`,
-            rewardSummary: createRewardSummary(offer.rewards, displayNames),
-        })),
+        occupiedItemSlots: countOccupiedItemSlots(run.carriedItems),
+        itemSlotCapacity: resolveItemSlotCapacity(run.itemSlotCapacity),
+        offers: definition.offers.map((offer) => {
+            const exchange = previewShopExchange(run, offer.cost, offer.rewards);
+            const prices = [
+                ...(offer.cost.spiritStones ? [`灵石 ×${offer.cost.spiritStones}`] : []),
+                ...(offer.cost.items ?? []).map(item => `${itemName(item.id)} ×${item.count}`),
+            ];
+            return {
+                ...offer,
+                offer,
+                state: purchasedOfferIds.includes(offer.id) ? 'purchased'
+                    : exchange.status === 'insufficientFunds' ? 'unaffordable' : exchange.status,
+                costText: prices.join(' · ') || '免费',
+                rewardSummary: createRewardSummary(offer.rewards, itemName),
+            };
+        }),
     };
 }
 

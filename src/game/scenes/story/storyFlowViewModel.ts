@@ -325,24 +325,23 @@ function createEffectSummary(effects: StoryChoiceEffects | StoryEffect[] | undef
             switch (effect.kind) {
                 case 'once': return storyState.settledEventIds?.includes(effect.eventId)
                     ? ['此前已完成']
-                    : [...effect.effects.flatMap(nested => createEffectSummary([nested], storyState).split('、')).filter(label => label !== '无状态变化。'), '仅首次'];
+                    : [...effect.effects.flatMap(nested => createEffectSummary([nested], storyState).split(' · ')).filter(label => label !== '无状态变化。'), '仅首次'];
                 case 'grantCard': return [`获得卡牌 ×${effect.count}`];
                 case 'grantItem': return [`获得道具 ×${effect.count}`];
                 case 'consumeItem': return [`消耗道具 ×${effect.count}`];
                 case 'learnKnowledge': return ['获得线索'];
                 case 'setQuestStage': return ['任务推进'];
                 case 'startBattle': return ['进入战斗'];
-                case 'adjustAttribute':
-                case 'setAttribute': return [`${effect.attribute}变化`];
-                case 'adjustRelation':
-                case 'setRelation': return ['人际关系变化'];
-                case 'setFlag': return ['推进剧情'];
+                case 'adjustAttribute': return [`${effect.attribute}${effect.delta >= 0 ? '+' : ''}${effect.delta}`];
+                case 'setAttribute': return [`${effect.attribute}变为${effect.value}`];
+                case 'adjustRelation': return ['关系变化'];
+                case 'setRelation': return ['关系变化'];
                 case 'moveTo':
                 case 'goToNode': return ['前往新地点'];
                 default: return ['剧情变化'];
             }
         });
-        return labels.length > 0 ? [...new Set(labels)].join('、') : '无状态变化。';
+        return labels.length > 0 ? [...new Set(labels)].join(' · ') : '无状态变化。';
     }
 
     const parts = [effects?.worldChangeHint, effects?.relationChangeHint].filter((part): part is string => Boolean(part));
@@ -432,7 +431,7 @@ function createDisabledReason(params: {
     storyState: StoryState;
 }): string | null {
     if (!params.targetExists) {
-        return '这条后续剧情暂未开放。';
+        return `后续剧情节点未配置：${params.choice.to}`;
     }
 
     if (!params.visible && params.choice.visibleWhen) {
@@ -463,39 +462,39 @@ function describeStructuredCondition(condition: StoryCondition, storyState: Stor
         case 'attribute': {
             const actual = getEffectiveStoryAttribute(storyState, condition.attribute);
             return actual !== undefined
-                ? `${condition.attribute} ${actual} ${normalizeOperatorForCopy(condition.operator)} ${condition.value}`
+                ? `${condition.attribute} ${actual} ${condition.operator} ${condition.value}`
                 : `缺少属性 ${condition.attribute}`;
         }
         case 'relation':
-            return Object.prototype.hasOwnProperty.call(storyState.relations, condition.relationId)
-                ? `关系 ${condition.relationId} ${storyState.relations[condition.relationId]} ${normalizeOperatorForCopy(condition.operator)} ${condition.value}`
+            return Object.hasOwn(storyState.relations, condition.relationId)
+                ? `关系 ${condition.relationId} ${storyState.relations[condition.relationId]} ${condition.operator} ${condition.value}`
                 : `缺少关系 ${condition.relationId}`;
         case 'actorAbility': {
             const abilities = storyState.actorAbilities?.[condition.actorId];
-            return abilities && Object.prototype.hasOwnProperty.call(abilities, condition.ability)
-                ? `人物能力 ${condition.ability} ${abilities[condition.ability]} ${normalizeOperatorForCopy(condition.operator)} ${condition.value}`
-                : `缺少人物能力 ${condition.ability}`;
+            return abilities && Object.hasOwn(abilities, condition.ability)
+                ? `${condition.actorId} 的${condition.ability} ${abilities[condition.ability]} ${condition.operator} ${condition.value}`
+                : `缺少人物能力 ${condition.actorId} · ${condition.ability}`;
         }
         case 'itemCount':
-            return `持有 ${condition.itemId} ×${storyState.itemCounts?.[condition.itemId] ?? 0} ${normalizeOperatorForCopy(condition.operator)} ${condition.value}`;
+            return `持有 ${condition.itemId} ×${storyState.itemCounts?.[condition.itemId] ?? 0} ${condition.operator} ${condition.value}`;
         case 'knowledge':
             return condition.expected === false
-                ? '需要避开相关线索'
-                : '需要掌握相关线索';
+                ? `${condition.actorId} 尚不知道 ${condition.knowledgeId}`
+                : `${condition.actorId} 已知道 ${condition.knowledgeId}`;
         case 'questStage':
-            return '先推进相关任务';
+            return `任务 ${condition.questId} 处于 ${condition.stage}`;
         case 'flag':
             return condition.expected === false
-                ? '尚未触发相关前情'
-                : '先完成相关铺垫';
+                ? `未设置标记 ${condition.flag}`
+                : `需要标记 ${condition.flag}`;
         case 'visitedNode':
             return condition.expected === false
-                ? '尚未经历相关前情'
-                : '先经历相关前情';
+                ? `未访问节点 ${condition.nodeId}`
+                : `需要访问节点 ${condition.nodeId}`;
         case 'triggeredDialogue':
             return condition.expected === false
-                ? '尚未听过相关消息'
-                : '先听过相关消息';
+                ? `未触发对话 ${condition.dialogueId}`
+                : `需要触发对话 ${condition.dialogueId}`;
         case 'all':
             return condition.conditions.every(child => evaluateStoryCondition(storyState, child))
                 ? '所有条件已满足'
@@ -504,7 +503,7 @@ function describeStructuredCondition(condition: StoryCondition, storyState: Stor
         case 'any':
             return condition.conditions.some(child => evaluateStoryCondition(storyState, child))
                 ? '已有可行条件'
-                : `需要满足以下任一条件：${condition.conditions.map(child => describeStructuredCondition(child, storyState)).join('；')}`;
+                : `需要满足其一：${condition.conditions.map(child => describeStructuredCondition(child, storyState)).join('；')}`;
         case 'not':
             return `不能满足：${describeStructuredCondition(condition.condition, storyState)}`;
     }
@@ -632,10 +631,8 @@ function createStatusText(currentNode: StoryNodeView, choices: StoryChoiceView[]
     return `当前剧情：${currentNode.title}（${currentNode.subtitle}）。可见选项 ${visibleChoiceCount} 个，推荐 ${recommendedChoiceCount} 个。`;
 }
 
-function createStateLine(node: StoryNodeView): string {
-    const place = [node.location, node.sublocation].filter(Boolean).join(' · ');
-    if (!place) return '身在当前剧情';
-    return `身在${place}${node.timeHint ? `（${node.timeHint}）` : ''}`;
+function createStateLine(storyState: StoryState): string {
+    return `当前位置：${storyState.currentLocationId} / ${storyState.currentSublocationId}`;
 }
 
 export function createStoryFlowViewModel(
@@ -656,7 +653,7 @@ export function createStoryFlowViewModel(
 
     const warnings = requestedNode
         ? []
-        : ['当前剧情进度出现异常，已回到故事开端。'];
+        : [`当前剧情节点未配置：${requestedNodeId}，已回退到入口节点 ${currentNode.id}。`];
     const storyState = createRuntimeStoryState(graph, state, requestedNodeId);
     const currentStoryState = storyState.currentNodeId === currentNode.id
         ? storyState
@@ -666,7 +663,7 @@ export function createStoryFlowViewModel(
             const targetNode = nodesById.get(choice.to);
 
             if (!targetNode) {
-                if (!warnings.includes('有一段后续剧情暂未开放。')) warnings.push('有一段后续剧情暂未开放。');
+                warnings.push(`选项 ${choice.id} 指向未配置节点 ${choice.to}。`);
             }
 
             return createChoiceView(choice, targetNode, currentStoryState);
@@ -682,7 +679,7 @@ export function createStoryFlowViewModel(
         visitedNodeIds: currentStoryState.visitedNodeIds,
         selectedChoiceIds: state.selectedChoiceIds ? [...state.selectedChoiceIds] : [],
         storyState: currentStoryState,
-        stateLine: createStateLine(currentNodeView),
+        stateLine: createStateLine(currentStoryState),
     };
 }
 
@@ -704,7 +701,7 @@ export function createStoryChoiceTransition(
         return {
             status: 'blocked',
             choiceId,
-            reason: '当前还无法触发这段行动。',
+            reason: `选项当前不可见：${choiceId}`,
         };
     }
 

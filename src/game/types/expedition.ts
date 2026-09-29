@@ -7,7 +7,6 @@ export type TerminalRunOutcome = 'defeat' | 'extract' | 'boss-clear';
 export type RunStatus = 'inProgress' | TerminalRunOutcome;
 export type RunNodeStatus = 'hidden' | 'reachable' | 'cleared';
 export type ExpeditionItemType = 'artifact' | 'tool' | 'consumable' | 'material' | 'quest';
-export type EquippedItems = Record<string, string>;
 
 export interface ExpeditionCardStack {
     id: string;
@@ -19,6 +18,9 @@ export interface ExpeditionItemStack {
     itemType: ExpeditionItemType;
     count: number;
 }
+
+/** Equipment slot ID to an owned item ID. */
+export type EquippedItems = Record<string, string>;
 
 export interface SavedDeck {
     id: string;
@@ -57,12 +59,15 @@ export interface PersistentStash {
     savedDecks: SavedDeck[];
     selectedDeckId: string | null;
     items: ExpeditionItemStack[];
-    itemSlotCapacity?: number;
     equippedItems?: EquippedItems;
-    claimedStoryGrantIds?: string[];
-    settledStoryItemTransactionIds?: string[];
     spiritStones: number;
+    /** Maximum occupied item slots; old saves use the runtime default. */
+    itemSlotCapacity?: number;
     lastRunSummary?: RunResolutionSummary | null;
+    /** Reward IDs already projected from shared narrative facts. */
+    claimedStoryGrantIds?: string[];
+    /** Story item transaction IDs settled in the same write as the item stacks. */
+    settledStoryItemTransactionIds?: string[];
 }
 
 export interface RunNodeState {
@@ -89,8 +94,12 @@ export interface RunSnapshot {
     startingLoadout: RunRewardBundle;
     carriedDeck: ExpeditionCardStack[];
     carriedItems: ExpeditionItemStack[];
+    equippedItems?: EquippedItems;
+    itemSlotCapacity?: number;
     spiritStones: number;
     visitedNodeIds: string[];
+    /** Current health across encounters; absent in saves made before run health was tracked. */
+    playerHealth?: number;
     nodeStates: Record<string, RunNodeState>;
     pendingEncounter?: BattleLaunchPayload | null;
     pendingTerminalResolution?: RunTerminalResolutionIntent | null;
@@ -107,6 +116,7 @@ export interface BattleLaunchPayload {
     encounterFile: string;
     carriedDeck?: ExpeditionCardStack[];
     runDeck: ExpeditionCardStack[];
+    playerHealth?: number;
     rewardPreview?: RunRewardBundle;
     targetConfig?: ExpeditionTargetConfig;
     deterministicBattleSetup?: DeterministicBattleSetup;
@@ -123,6 +133,7 @@ export interface ExpeditionBattleCompleteEvent {
     encounterFile: string;
     victory: boolean;
     outcome: ExpeditionBattleOutcome;
+    playerHealth?: number;
     completedAt: string;
     targetConfig?: ExpeditionTargetConfig;
 }
@@ -240,6 +251,7 @@ export interface PrototypeShopOffer {
     description: string;
     cost: {
         spiritStones: number;
+        items?: ExpeditionItemStack[];
     };
     rewards: RunRewardBundle;
 }

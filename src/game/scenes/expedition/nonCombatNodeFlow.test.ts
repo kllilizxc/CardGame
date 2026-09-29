@@ -4,27 +4,20 @@ import prototypeEventsJson from '../../../../public/data/mijing/prototype-events
 import prototypeShopJson from '../../../../public/data/mijing/prototype-shop.json';
 import initialWorldState from '../../../../public/data/world/initial-state.json';
 import starterDeckJson from '../../../../public/data/decks/starter-deck.json';
-import artifactsJson from '../../../../public/data/cards/artifacts.json';
-import itemsJson from '../../../../public/data/world/items.artifacts.json';
 
+import { resetRunPersistenceForTests } from '../../services/RunPersistence';
+import type { ExpeditionWorldStateSeed } from '../../state/GameWorldStateSeed';
 import { ExpeditionState } from '../../state/ExpeditionState';
-import { createContentDisplayNames } from '../../content/contentDisplayNames';
-import type {
-    PrototypeEventDefinition,
-    PrototypeShopDefinition,
-} from '../../types/expedition';
-import { normalizeExpeditionWorldStateSeed } from '../../testing/fixtures/expeditionWorldStateFixtures';
+import type { PrototypeEventDefinition, PrototypeShopDefinition } from '../../types/expedition';
 import {
     createEventNodeView,
     createExtractNodeView,
     createShopNodeView,
 } from './nonCombatNodeFlow';
 
-const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
-
 function createStartedRun() {
     const state = ExpeditionState.bootstrap({
-        worldState: createWorldStateSeed(),
+        worldState: structuredClone(initialWorldState),
         starterDeck: structuredClone(starterDeckJson),
     });
 
@@ -40,7 +33,7 @@ function createStartedRun() {
 describe('nonCombatNodeFlow', () => {
     it('creates a concrete event view from the prototype event pool and marks claimed events', () => {
         const { state, run } = createStartedRun();
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
 
         const unclaimedView = createEventNodeView(event, run, () => 0);
 
@@ -59,7 +52,7 @@ describe('nonCombatNodeFlow', () => {
 
     it('keeps weighted random event outcome selection when no fixed outcome is requested', () => {
         const { run } = createStartedRun();
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
 
         const view = createEventNodeView(event, run, () => 0.76);
 
@@ -67,28 +60,9 @@ describe('nonCombatNodeFlow', () => {
         expect(view.rewardSummary).toBe('AR_001 +1 · artifact_fly_sword_basic +1');
     });
 
-    it('uses catalog names for event and shop rewards while keeping stable IDs in the reward data', () => {
-        const { run } = createStartedRun();
-        const displayNames = createContentDisplayNames([
-            { kind: 'card', data: artifactsJson },
-            { kind: 'item', data: itemsJson },
-        ]);
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
-        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'] as unknown as PrototypeShopDefinition;
-
-        const eventView = createEventNodeView(event, run, () => 0.76, { displayNames });
-        const shopView = createShopNodeView(shop, run, displayNames);
-
-        expect(eventView.rewardSummary).toBe('青云剑 +1 · 青云飞剑 +1');
-        expect(eventView.outcome.rewards.cards[0].id).toBe('AR_001');
-        expect(shopView.offers[0].costText).toBe('灵石 24');
-        expect(shopView.offers[0].rewardSummary).toBe('青云剑 +1');
-        expect(shopView.offers[2].rewardSummary).toBe('青云飞剑 +1');
-    });
-
     it('uses an opt-in fixed event outcome and keeps reward and claimed state derived from that outcome', () => {
         const { state, run } = createStartedRun();
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
 
         const unclaimedView = createEventNodeView(event, run, () => {
             throw new Error('fixed event outcome selection should not call random');
@@ -120,7 +94,7 @@ describe('nonCombatNodeFlow', () => {
 
     it('fails actionably instead of falling back to random when a fixed event outcome is missing', () => {
         const { run } = createStartedRun();
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
 
         expect(() => createEventNodeView(event, run, () => 0, {
             outcomeSelection: {
@@ -132,7 +106,7 @@ describe('nonCombatNodeFlow', () => {
 
     it('creates shop offer views that expose affordability and purchased state', () => {
         const { state } = createStartedRun();
-        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'] as unknown as PrototypeShopDefinition;
+        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'];
         const swordOffer = shop.offers[0];
         const charmOffer = shop.offers[2];
 
@@ -152,6 +126,70 @@ describe('nonCombatNodeFlow', () => {
 
         expect(afterPurchaseView.offers.find((offer) => offer.id === swordOffer.id)?.state).toBe('purchased');
         expect(afterPurchaseView.offers.find((offer) => offer.id === charmOffer.id)?.state).toBe('unaffordable');
+    });
+
+    it('uses catalog names in player-facing event rewards', () => {
+        const { run } = createStartedRun();
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+        const names: Record<string, string> = { AR_001: '青云剑', artifact_fly_sword_basic: '青云飞剑' };
+        const view = createEventNodeView(event, run, () => 0.76, {
+            rewardName: id => names[id] ?? id,
+        });
+        expect(view.rewardSummary).toBe('青云剑 +1 · 青云飞剑 +1');
+    });
+
+    it('shows a full bag on item rewards while keeping card-only and currency rewards available', () => {
+        resetRunPersistenceForTests();
+        const state = ExpeditionState.bootstrap({
+            worldState: { ...structuredClone(initialWorldState), stash: {
+                ...structuredClone(initialWorldState.stash), itemSlotCapacity: 2,
+            } } as unknown as ExpeditionWorldStateSeed,
+            starterDeck: structuredClone(starterDeckJson),
+        });
+        const run = state.createRunSnapshot({
+            expeditionId: 'phase01-first-playable-expedition',
+            mapId: 'phase01-prototype-map',
+            entryNodeId: 'entrance.mountain-gate',
+        });
+        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'] as unknown as PrototypeShopDefinition;
+        const shopView = createShopNodeView(shop, run);
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
+
+        expect(shopView.occupiedItemSlots).toBe(2);
+        expect(shopView.itemSlotCapacity).toBe(2);
+        expect(shopView.offers.find(offer => offer.id === 'offer.fly-sword-charm')?.state).toBe('inventoryFull');
+        expect(shopView.offers.find(offer => offer.id === 'offer.qingyun-sword')?.state).toBe('available');
+        expect(createEventNodeView(event, run, () => 0, {
+            outcomeSelection: { kind: 'fixedOutcome', outcomeId: 'cache.talisman-roll' },
+        }).inventoryFull).toBe(true);
+        expect(createEventNodeView(event, run, () => 0, {
+            outcomeSelection: { kind: 'fixedOutcome', outcomeId: 'cache.spirit-stones' },
+        }).inventoryFull).toBe(false);
+    });
+
+    it('shows material requirements and allows an exchange that frees a slot before rewarding', () => {
+        resetRunPersistenceForTests();
+        const state = ExpeditionState.bootstrap({
+            worldState: { ...structuredClone(initialWorldState), stash: {
+                ...structuredClone(initialWorldState.stash), itemSlotCapacity: 2,
+            } } as unknown as ExpeditionWorldStateSeed,
+            starterDeck: structuredClone(starterDeckJson),
+        });
+        state.createRunSnapshot({ expeditionId: 'phase01-first-playable-expedition', mapId: 'phase01-prototype-map', entryNodeId: 'entrance.mountain-gate' });
+        const shop: PrototypeShopDefinition = { nodeId: 'shop.exchange', title: '以物换物', description: '', offers: [{
+            id: 'offer.exchange', label: '飞剑挂坠', description: '',
+            cost: { spiritStones: 0, items: [{ id: 'consumable.spirit-salve', itemType: 'consumable', count: 2 }] },
+            rewards: { cards: [], items: [{ id: 'artifact_fly_sword_basic', itemType: 'artifact', count: 1 }], spiritStones: 0 },
+        }] };
+        const view = createShopNodeView(shop, state.activeRun!, id => ({
+            'consumable.spirit-salve': '凝气膏',
+            artifact_fly_sword_basic: '青云飞剑',
+        } as Record<string, string>)[id] ?? id);
+        expect(view.offers[0].state).toBe('available');
+        expect(view.offers[0].costText).toBe('凝气膏 ×2');
+        expect(view.offers[0].rewardSummary).toBe('青云飞剑 +1');
+        shop.offers[0].cost.items![0].count = 3;
+        expect(createShopNodeView(shop, state.activeRun!).offers[0].state).toBe('insufficientItems');
     });
 
     it('creates extract views that show whether terminal resolution intent is already recorded', () => {
