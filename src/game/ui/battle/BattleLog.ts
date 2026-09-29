@@ -17,6 +17,7 @@ export class BattleLog {
     private background: Phaser.GameObjects.Rectangle;
     private logEntries: LogEntry[] = [];
     private logTexts: Phaser.GameObjects.Text[] = [];
+    private logHitAreas: Phaser.GameObjects.Rectangle[] = [];
     private scrollOffset: number = 0;
     private maxScrollOffset: number = 0;
     private isVisible: boolean = true;
@@ -191,6 +192,7 @@ export class BattleLog {
             y: -targetOffset,
             duration: 200,
             ease: 'Quad.easeOut',
+            onUpdate: () => this.updateVisibleHitAreas(),
             onComplete: () => {
                 this.isScrolling = false;
                 this.updateScrollBar();
@@ -203,7 +205,18 @@ export class BattleLog {
         const targetOffset = this.maxScrollOffset * percent;
         this.scrollOffset = targetOffset;
         this.logContainer.y = -targetOffset;
+        this.updateVisibleHitAreas();
         this.updateBottomHint();
+    }
+
+    private updateVisibleHitAreas() {
+        const top = -this.LOG_HEIGHT / 2 + 50;
+        const bottom = this.LOG_HEIGHT / 2 - 30;
+        for (const hitArea of this.logHitAreas) {
+            if (!hitArea.input) continue;
+            const y = hitArea.y + this.logContainer.y;
+            hitArea.input.enabled = this.isVisible && y - hitArea.height / 2 >= top && y + hitArea.height / 2 <= bottom;
+        }
     }
 
     private updateScrollBar() {
@@ -297,9 +310,10 @@ export class BattleLog {
     }
 
     private refreshLog() {
-        // 清除旧的文本
-        this.logTexts.forEach(text => text.destroy());
+        // 日志行包含透明交互区和下划线，刷新时一并清除。
+        this.logContainer.removeAll(true);
         this.logTexts = [];
+        this.logHitAreas = [];
 
         const { height } = this.scene.scale;
         const fontSize = Math.floor(height * 0.014) + 'px';
@@ -354,6 +368,7 @@ export class BattleLog {
         // 自动滚动到底部（最新消息）
         this.scrollOffset = this.maxScrollOffset;
         this.logContainer.y = -this.scrollOffset;
+        this.updateVisibleHitAreas();
         
         // 更新滚动条
         this.updateScrollBar();
@@ -487,6 +502,7 @@ export class BattleLog {
                 hitArea.setInteractive({ useHandCursor: true });
                 hitArea.setOrigin(0.5, 0.5);
                 this.logContainer.add(hitArea);
+                this.logHitAreas.push(hitArea);
                 
                 // 下划线
                 const underline = this.scene.add.rectangle(
@@ -548,6 +564,7 @@ export class BattleLog {
                 hitArea.setInteractive({ useHandCursor: true });
                 hitArea.setOrigin(0.5, 0.5);
                 this.logContainer.add(hitArea);
+                this.logHitAreas.push(hitArea);
                 
                 // 下划线
                 const underline = this.scene.add.rectangle(
@@ -598,16 +615,19 @@ export class BattleLog {
     public toggle() {
         this.isVisible = !this.isVisible;
         this.container.setVisible(this.isVisible);
+        this.updateVisibleHitAreas();
     }
 
     public show() {
         this.isVisible = true;
         this.container.setVisible(true);
+        this.updateVisibleHitAreas();
     }
 
     public hide() {
         this.isVisible = false;
         this.container.setVisible(false);
+        this.updateVisibleHitAreas();
     }
 
     public destroy() {

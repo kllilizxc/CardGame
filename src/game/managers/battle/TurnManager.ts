@@ -137,6 +137,7 @@ export class TurnManager {
             state.enemyField,
             context.onPlayerDamaged,
             () => {
+                this.battleContext.effectResolver.clearTurnAttackMods();
                 this.battleContext.battleTickManager.tick();
                 if (state.enemyField.length === 0 || state.playerHealth <= 0) return;
                 // 切换到敌人回合
@@ -191,6 +192,7 @@ export class TurnManager {
             state.enemyField,
             context.onPlayerDamaged,
             () => {
+                this.battleContext.effectResolver.clearTurnAttackMods();
                 this.battleContext.battleTickManager.tick();
                 if (state.enemyField.length === 0 || state.playerHealth <= 0) return;
                 // 切换到玩家回合并增加回合数

@@ -10,6 +10,30 @@ const cardCollections = {
   skill: ['skills', 'skills.json'], pill: ['pills', 'pills.json'],
 };
 const cardCollection = kind => cardCollections[kind] ?? null;
+const record = value => !!value && typeof value === 'object' && !Array.isArray(value);
+const validLabels = value => value === undefined || Array.isArray(value)
+  && value.every(label => typeof label === 'string' && label.trim());
+const playerScopes = new Set(['ownerPlayer', 'none']);
+const unitScopes = new Set(['allyUnits', 'allAllies', 'enemyUnits', 'allEnemies', 'singleAlly', 'singleEnemy', 'allUnits']);
+const playerActions = new Set(['searchDeck', 'drawCards', 'healPlayer', 'damagePlayer']);
+const unitActions = new Set(['modifyAttack', 'modifyHealth', 'dealDamage', 'loseHealth', 'heal', 'applyStatus', 'removeDebuffs', 'destroyUnit']);
+const playableSkill = card => record(card) && ['perBattle', 'perTurn'].includes(card.cooldownType)
+  && (card.cooldownType !== 'perTurn' || card.cooldownValue === undefined
+    || Number.isSafeInteger(card.cooldownValue) && card.cooldownValue > 0)
+  && Array.isArray(card.effects) && card.effects.length > 0 && card.effects.every(effect =>
+    record(effect) && effect.schema === undefined && effect.timing === 'reaction'
+    && record(effect.target) && validLabels(effect.target.requiredLabelsAllOf)
+    && validLabels(effect.target.requiredLabelsAnyOf)
+    && Array.isArray(effect.actions) && effect.actions.length > 0
+    && (effect.conditions === undefined || Array.isArray(effect.conditions) && effect.conditions.length === 0)
+    && effect.actions.every(action => record(action) && typeof action.type === 'string'
+      && (playerActions.has(action.type) ? playerScopes.has(effect.target.scope)
+        : unitActions.has(action.type) && unitScopes.has(effect.target.scope))
+      && (action.duration === undefined || action.type === 'modifyAttack' && action.duration === 'turn')
+      && (action.value === undefined || typeof action.value === 'number' && Number.isFinite(action.value))
+      && (action.type !== 'searchDeck' || action.value === undefined || action.value === 1)
+      && (action.type !== 'drawCards' || action.value === undefined || Number.isSafeInteger(action.value) && action.value > 0)
+      && (action.type !== 'applyStatus' || typeof action.statusId === 'string' && action.statusId.trim())));
 const documentRevisionsValid = (root, revisions) => {
   if (!Array.isArray(revisions) || revisions.length < 1 || revisions.length > 64) return false;
   const seen = new Set();
@@ -358,6 +382,7 @@ export default {
             && servedCatalog?.resources?.some(item => item.resourceId === 'config.battle-loadout'
               && item.kind === 'config' && item.publicPath === 'data/config/battle-loadout.json')
             && servedEntry?.[context.options.cardKind === 'pill' ? 'pillIds' : 'skillIds']?.includes(cardId)
+            && (context.options.cardKind !== 'skill' || playableSkill(actual))
             && JSON.stringify(servedEntry) === JSON.stringify(sourceEntry)), `${cardId} 已进入候选战斗槽位`)
           : check('playable-deck', Boolean(entryResponse?.ok && servedEntry?.cards?.some(card => card.id === cardId && card.count > 0) && JSON.stringify(servedEntry) === JSON.stringify(sourceEntry)), `${cardId} 已进入候选默认卡组`),
       ] : []),

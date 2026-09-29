@@ -213,7 +213,6 @@ interface LegacyEffectActionBase {
 }
 
 type LegacyValueEffectActionType =
-  | 'modifyAttack'
   | 'modifyHealth'
   | 'dealDamage'
   | 'loseHealth'
@@ -226,6 +225,13 @@ type LegacyValueEffectActionType =
 export interface LegacyValueEffectAction extends LegacyEffectActionBase {
   type: LegacyValueEffectActionType;
   value?: number;
+}
+
+export interface LegacyModifyAttackEffectAction extends LegacyEffectActionBase {
+  type: 'modifyAttack';
+  value?: number;
+  /** Restore the modifier after the current side finishes combat. */
+  duration?: 'turn';
 }
 
 export interface LegacyApplyStatusEffectAction extends LegacyEffectActionBase {
@@ -251,6 +257,7 @@ export interface LegacyCustomEffectAction extends LegacyEffectActionBase {
 
 export type LegacyEffectAction =
   | LegacyValueEffectAction
+  | LegacyModifyAttackEffectAction
   | LegacyApplyStatusEffectAction
   | LegacyRemoveDebuffsEffectAction
   | LegacyDestroyUnitEffectAction

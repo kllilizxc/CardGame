@@ -623,7 +623,7 @@ export class BattleScene extends Scene {
             playerField: this.playerField,
             enemyField: this.enemyField,
             discardPile: this.discardPile
-        });
+        }, this.battleContext);
         
         // 将 GameActionHandler 注入到 TalismanManager
         this.talismanManager.setGameActionHandler(this.skillEffectHandler.getGameActionHandler());
@@ -653,6 +653,13 @@ export class BattleScene extends Scene {
             return;
         }
         this.notifyTutorialAction('use_skill');
+        this.skillEffectHandler.updateContext({
+            deck: this.deck,
+            hand: this.hand,
+            playerField: this.playerField,
+            enemyField: this.enemyField,
+            discardPile: this.discardPile,
+        });
         this.skillManager.useSkill(skillIndex, (skill, onCancel) => {
             // 使用技能效果处理器执行技能效果，传入取消回调
             this.skillEffectHandler.applySkillEffect(skill, onCancel);
@@ -1356,6 +1363,7 @@ export class BattleScene extends Scene {
         }
 
         this.battleEndHandled = true;
+        this.battleContext.effectResolver.clearTurnAttackMods();
 
         if (this.storyLaunchPayload) {
             const result = createStoryBattleCompleteEvent(this.storyLaunchPayload, victory);

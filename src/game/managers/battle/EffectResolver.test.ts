@@ -337,6 +337,46 @@ describe('EffectResolver — executeEffect', () => {
         expect(enemy.getCardData().attack).toBe(4); // 未受影响
     });
 
+    it('按目标标签筛选单位，单体目标可跳过不匹配的首位单位', () => {
+        const ordinary = createMockCardSprite('ordinary', '普通弟子', 5);
+        const beast = createMockCardSprite('beast', '青云山灵狐', 4);
+        ordinary.getCardData().labels = ['弟子'];
+        beast.getCardData().labels = ['灵兽', '青云'];
+        const context = makeContext({ playerField: [ordinary, beast] });
+        resolver.executeEffect({
+            target: { scope: 'allyUnits', requiredLabelsAllOf: ['灵兽'], requiredLabelsAnyOf: ['青云'] },
+            actions: [{ type: 'modifyAttack', value: 2 }],
+        }, context);
+        expect(ordinary.getCardData().attack).toBe(5);
+        expect(beast.getCardData().attack).toBe(6);
+        resolver.executeEffect({
+            target: { scope: 'singleAlly', requiredLabelsAllOf: ['灵兽'] },
+            actions: [{ type: 'modifyAttack', value: 1 }],
+        }, context);
+        expect(ordinary.getCardData().attack).toBe(5);
+        expect(beast.getCardData().attack).toBe(7);
+    });
+
+    it('本回合攻击加成叠加后在战斗阶段结束时完整回退', () => {
+        const beast = createMockCardSprite('beast', '青云山灵狐', 4);
+        beast.getCardData().labels = ['灵兽'];
+        (bc as any).battleState = new BattleState();
+        bc.battleState.playerField = [beast];
+        const effect: LegacyCardEffect = {
+            timing: 'reaction',
+            target: { scope: 'allyUnits', requiredLabelsAllOf: ['灵兽'] },
+            actions: [{ type: 'modifyAttack', value: 2, duration: 'turn' }],
+        };
+        const context = makeContext({ playerField: [beast] });
+        resolver.executeEffect(effect, context);
+        resolver.executeEffect(effect, context);
+        expect(beast.getCardData().attack).toBe(8);
+        resolver.clearTurnAttackMods();
+        expect(beast.getCardData().attack).toBe(4);
+        resolver.clearTurnAttackMods();
+        expect(beast.getCardData().attack).toBe(4);
+    });
+
     it('执行完整效果 — dealDamage 作用于 singleEnemy', () => {
         const effect: LegacyCardEffect = {
             timing: 'onDamaged',

@@ -4,6 +4,7 @@ import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 import type {
     LegacyCardEffect,
     LegacyEffectAction,
+    LegacyEffectTarget,
     LegacyEffectTargetScope,
 } from '@data/types/cards/effects';
 
@@ -43,6 +44,7 @@ export class EffectResolver {
     private battleContext: BattleContext;
     private activeFieldMods: Map<string, TrackedFieldMod> = new Map();
     private activeFieldTurnAttackMods: Map<CardSprite, number> = new Map();
+    private activeTurnAttackMods: Map<CardSprite, number> = new Map();
 
     constructor(battleContext: BattleContext) {
         this.battleContext = battleContext;
@@ -92,6 +94,24 @@ export class EffectResolver {
         }
     }
 
+    private resolveEffectTargets(target: LegacyEffectTarget, context: EffectExecutionContext): CardSprite[] {
+        const candidates = target.scope === 'singleAlly' ? context.playerField
+            : target.scope === 'singleEnemy' ? context.enemyField
+                : this.resolveTargets(target.scope, context);
+        const all = target.requiredLabelsAllOf ?? [];
+        const any = target.requiredLabelsAnyOf ?? [];
+        const matching = candidates.filter(unit => {
+            const labels = unit.getCardData().labels ?? [];
+            return all.every(label => labels.includes(label))
+                && (any.length === 0 || any.some(label => labels.includes(label)));
+        });
+        if (target.scope === 'singleAlly') {
+            const preferred = context.triggerUnit;
+            return preferred && matching.includes(preferred) ? [preferred] : matching.slice(0, 1);
+        }
+        return target.scope === 'singleEnemy' ? matching.slice(0, 1) : matching;
+    }
+
     // ==================== 动作执行 ====================
 
     executeAction(
@@ -120,6 +140,9 @@ export class EffectResolver {
                         effectManager.showBuffEffect(unit);
                     } else {
                         effectManager.showDebuffEffect(unit);
+                    }
+                    if (action.duration === 'turn') {
+                        this.activeTurnAttackMods.set(unit, (this.activeTurnAttackMods.get(unit) ?? 0) + value);
                     }
                 }
                 break;
@@ -285,7 +308,8 @@ export class EffectResolver {
     executeEffect(effect: LegacyCardEffect, context: EffectExecutionContext): void {
         if (!effect.actions || effect.actions.length === 0) return;
 
-        const scope = effect.target?.scope;
+        const target = effect.target;
+        const scope = target?.scope;
         if (!scope) return;
 
         // none / ownerPlayer 作用域不产生单位目标
@@ -293,10 +317,11 @@ export class EffectResolver {
             for (const action of effect.actions) {
                 this.executeAction(action, [], context);
             }
+            this.battleContext.battleTickManager.tick();
             return;
         }
 
-        const targets = this.resolveTargets(scope, context);
+        const targets = this.resolveEffectTargets(target, context);
         if (targets.length === 0) return;
 
         for (const action of effect.actions) {
@@ -308,6 +333,16 @@ export class EffectResolver {
         }
 
         this.battleContext.battleTickManager.tick();
+    }
+
+    /** Restore attack values after the current side completes combat. */
+    clearTurnAttackMods(): void {
+        for (const [unit, delta] of this.activeTurnAttackMods) {
+            unit.getCardData().attack -= delta;
+            const state = this.battleContext.battleState;
+            if (!state || state.playerField.includes(unit) || state.enemyField.includes(unit)) unit.updateStats();
+        }
+        this.activeTurnAttackMods.clear();
     }
 
     // ==================== 场地永续效果 ====================

@@ -115,7 +115,7 @@ describe('battleSceneLaunch', () => {
         const skills = skillsJson.skills as any;
         const selected = resolveBattleLoadout(battleLoadoutJson, pills, skills);
         expect(selected.pills.map(card => card.id)).toEqual(['PL_001', 'PL_002']);
-        expect(selected.skills.map(card => card.id)).toEqual(['SK_000']);
+        expect(selected.skills.map(card => card.id)).toEqual(['SK_000', 'SK_002']);
 
         const candidate = resolveBattleLoadout(
             { schemaVersion: 1, pillIds: ['PL_002', 'PL_NEW'], skillIds: ['SK_NEW', 'SK_000'] },
@@ -126,6 +126,20 @@ describe('battleSceneLaunch', () => {
         expect(candidate.skills.map(card => card.id)).toEqual(['SK_NEW', 'SK_000']);
         expect(() => resolveBattleLoadout({ schemaVersion: 1, pillIds: ['PL_MISSING'], skillIds: [] }, pills, skills)).toThrow('不存在的丹药');
         expect(() => resolveBattleLoadout({ schemaVersion: 1, pillIds: ['PL_001', 'PL_001'], skillIds: [] }, pills, skills)).toThrow('丹药');
+    });
+    it('rejects skill loadouts whose actions cannot run in battle', () => {
+        const pills = pillsJson.pills as any;
+        const skills = skillsJson.skills as any;
+        const selected = resolveBattleLoadout({ schemaVersion: 1, pillIds: [], skillIds: ['SK_002'] }, pills, skills);
+        expect(selected.skills[0].id).toBe('SK_002');
+        const custom = { ...skills[0], id: 'SK_CUSTOM', effects: [{ ...skills[0].effects[0], actions: [{ type: 'custom', scriptId: 'unavailable' }] }] };
+        expect(() => resolveBattleLoadout({ schemaVersion: 1, pillIds: [], skillIds: ['SK_CUSTOM'] }, pills, [...skills, custom])).toThrow('不可执行的技能');
+        const wrongScope = { ...skills[2], id: 'SK_WRONG_SCOPE', effects: [{ ...skills[2].effects[0], target: { scope: 'ownerPlayer' } }] };
+        expect(() => resolveBattleLoadout({ schemaVersion: 1, pillIds: [], skillIds: ['SK_WRONG_SCOPE'] }, pills, [...skills, wrongScope])).toThrow('modifyAttack');
+        const hiddenConditions = { ...skills[0], id: 'SK_HIDDEN_CONDITIONS', effects: [{ ...skills[0].effects[0], conditions: { hidden: true } }] };
+        expect(() => resolveBattleLoadout({ schemaVersion: 1, pillIds: [], skillIds: ['SK_HIDDEN_CONDITIONS'] }, pills, [...skills, hiddenConditions])).toThrow('尚不可执行');
+        const zeroDraw = { ...skills[1], id: 'SK_ZERO_DRAW', effects: [{ ...skills[1].effects[0], actions: [{ type: 'drawCards', value: 0 }] }] };
+        expect(() => resolveBattleLoadout({ schemaVersion: 1, pillIds: [], skillIds: ['SK_ZERO_DRAW'] }, pills, [...skills, zeroDraw])).toThrow('抽牌数量无效');
     });
 
     it('normalizes a complete expedition battle launch payload', () => {

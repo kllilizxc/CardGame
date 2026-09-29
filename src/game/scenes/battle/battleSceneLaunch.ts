@@ -15,6 +15,7 @@ import type { ArtifactCard } from '@data/types/cards/artifact';
 import type { FieldCard } from '@data/types/cards/field';
 import type { PillCard } from '@data/types/cards/pill';
 import type { SkillCard } from '@data/types/cards/skill';
+import { skillPlayabilityIssue } from '../../content/skillPlayability';
 import type { TalismanCard } from '@data/types/cards/talisman';
 import type { UnitCard } from '@data/types/cards/unit';
 import type { Gongfa } from '@data/types/gongfa';
@@ -146,9 +147,14 @@ export function resolveBattleLoadout(
             return card;
         });
     };
+    const selectedSkills = select(config.skillIds, skills, '技能');
+    for (const skill of selectedSkills) {
+        const issue = skillPlayabilityIssue(skill);
+        if (issue) throw new Error(`战斗初始配置引用了不可执行的技能：${issue}`);
+    }
     return {
         pills: select(config.pillIds, pills, '丹药'),
-        skills: select(config.skillIds, skills, '技能'),
+        skills: selectedSkills,
     };
 }
 

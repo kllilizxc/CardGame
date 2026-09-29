@@ -1,5 +1,8 @@
 import { GameActionHandler, type GameActionContext } from './GameActionHandler';
 import type { SkillCard } from '@data/types/cards/skill';
+import { isLegacyCardEffect, type LegacyCardEffect, type LegacyEffectAction, type LegacyValueEffectAction } from '@data/types/cards/effects';
+import type { BattleContext } from '../../context/BattleContext';
+import { skillPlayabilityIssue } from '../../content/skillPlayability';
 
 // 重用 GameActionContext 作为技能效果上下文
 export type SkillEffectContext = GameActionContext;
@@ -10,9 +13,11 @@ export type SkillEffectContext = GameActionContext;
  */
 export class SkillEffectHandler {
     private gameActionHandler: GameActionHandler;
+    private battleContext: BattleContext;
 
-    constructor(context: SkillEffectContext) {
+    constructor(context: SkillEffectContext, battleContext: BattleContext) {
         this.gameActionHandler = new GameActionHandler(context);
+        this.battleContext = battleContext;
     }
 
     /**
@@ -21,23 +26,23 @@ export class SkillEffectHandler {
      * @param onCancel 技能被取消时的回调（用于可取消的技能）
      */
     public applySkillEffect(skill: SkillCard, onCancel?: () => void): void {
-        if (!skill.effects || skill.effects.length === 0) {
-            return;
+        const issue = skillPlayabilityIssue(skill);
+        if (issue) throw new Error(issue);
+
+        for (const effect of skill.effects) {
+            if (!isLegacyCardEffect(effect) || effect.timing !== 'reaction' || !effect.target?.scope || !effect.actions?.length) {
+                throw new Error(`技能 ${skill.id} 含有无法在战斗中执行的效果`);
+            }
+            for (const action of effect.actions) {
+                this.handleAction(skill, effect, action, onCancel);
+            }
         }
-
-        skill.effects.forEach((effect: any) => {
-            if (!effect.actions) return;
-
-            effect.actions.forEach((action: any) => {
-                this.handleAction(action, onCancel);
-            });
-        });
     }
 
     /**
      * 处理单个技能动作
      */
-    private handleAction(action: any, onCancel?: () => void): void {
+    private handleAction(skill: SkillCard, effect: LegacyCardEffect, action: LegacyEffectAction, onCancel?: () => void): void {
         switch (action.type) {
             case 'searchDeck':
                 this.handleSearchDeck(action, onCancel);
@@ -48,23 +53,31 @@ export class SkillEffectHandler {
                 break;
 
             default:
-                console.log(`未知的技能效果类型: ${action.type}`);
+                if (action.type === 'custom') throw new Error(`技能 ${skill.id} 的自定义动作尚不可执行`);
+                this.battleContext.effectResolver.executeEffect(
+                    { ...effect, actions: [action], text: undefined },
+                    {
+                        playerField: this.battleContext.battleState.playerField,
+                        enemyField: this.battleContext.battleState.enemyField,
+                        sourceName: skill.name,
+                    },
+                );
         }
     }
 
     /**
      * 处理从卡组检索卡牌
      */
-    private handleSearchDeck(action: any, onCancel?: () => void): void {
-        const count = action.value || 1;
+    private handleSearchDeck(action: LegacyValueEffectAction, onCancel?: () => void): void {
+        const count = action.value ?? 1;
         this.gameActionHandler.searchDeck(count, undefined, onCancel);
     }
 
     /**
      * 处理抽卡效果
      */
-    private handleDrawCards(action: any): void {
-        const count = action.value || 1;
+    private handleDrawCards(action: LegacyValueEffectAction): void {
+        const count = action.value ?? 1;
         this.gameActionHandler.drawCards(count);
     }
 
