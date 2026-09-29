@@ -81,6 +81,12 @@ function isNumberRecord(value: unknown): value is Record<string, number> {
     return isRecord(value) && Object.values(value).every((entry) => typeof entry === 'number' && !Number.isNaN(entry));
 }
 
+export function resolveStoryHubSessionStorageAdapter(
+    storage?: StoryHubSessionStorageAdapter,
+): StoryHubSessionStorageAdapter {
+    return getStorageAdapter(storage);
+}
+
 function isActorAbilityRecord(value: unknown): value is Record<string, Record<string, number>> {
     return isRecord(value) && Object.values(value).every(isNumberRecord);
 }
@@ -383,8 +389,21 @@ function loadDocument(storageAdapter?: StoryHubSessionStorageAdapter): StoryHubS
     return createEmptyDocument();
 }
 
-function saveDocument(document: StoryHubSessionDocument): void {
-    getStorageAdapter().setItem(STORY_HUB_SESSION_STORAGE_KEY, JSON.stringify(document));
+function saveDocument(document: StoryHubSessionDocument, storage?: StoryHubSessionStorageAdapter): void {
+    getStorageAdapter(storage).setItem(STORY_HUB_SESSION_STORAGE_KEY, JSON.stringify(document));
+}
+
+export function cloneStoryHubSessionDocumentSnapshot(document: unknown): StoryHubSessionDocument {
+    const parsed = parseDocument(document);
+    if (!parsed) throw new Error('Invalid StoryHubSessionDocument: expected schemaVersion 1 with matching Hub and Story session identities.');
+    return parsed;
+}
+
+export function saveStoryHubSessionDocumentSnapshot(
+    document: StoryHubSessionDocument,
+    storage?: StoryHubSessionStorageAdapter,
+): void {
+    saveDocument(cloneStoryHubSessionDocumentSnapshot(document), storage);
 }
 
 export function createStoryRuntimeSessionStorageKey(key: StoryHubSessionKey): string {
@@ -397,55 +416,55 @@ export function loadStoryHubSessionDocumentSnapshot(storage?: StoryHubSessionSto
     return cloneStoryHubSessionDocument(loadDocument(storage));
 }
 
-export function loadHubSessionSnapshot(hubId: string): HubSessionSnapshot | null {
-    const snapshot = loadDocument().hubs[hubId];
+export function loadHubSessionSnapshot(hubId: string, storage?: StoryHubSessionStorageAdapter): HubSessionSnapshot | null {
+    const snapshot = loadDocument(storage).hubs[hubId];
 
     return snapshot ? cloneHubSessionSnapshot(snapshot) : null;
 }
 
-export function saveHubSessionSnapshot(snapshot: HubSessionSnapshot): void {
-    const document = loadDocument();
+export function saveHubSessionSnapshot(snapshot: HubSessionSnapshot, storage?: StoryHubSessionStorageAdapter): void {
+    const document = loadDocument(storage);
 
     document.hubs[snapshot.hubId] = cloneHubSessionSnapshot(snapshot);
-    saveDocument(document);
+    saveDocument(document, storage);
 }
 
-export function loadStoryRuntimeSession(key: StoryHubSessionKey): StoryRuntimeSessionSnapshot | null {
-    const snapshot = loadDocument().stories[createStoryRuntimeSessionStorageKey(key)];
+export function loadStoryRuntimeSession(key: StoryHubSessionKey, storage?: StoryHubSessionStorageAdapter): StoryRuntimeSessionSnapshot | null {
+    const snapshot = loadDocument(storage).stories[createStoryRuntimeSessionStorageKey(key)];
 
     return snapshot ? cloneStoryRuntimeSessionSnapshot(snapshot) : null;
 }
 
-export function loadSharedNarrativeFacts(): StorySharedFacts | null {
-    const facts = loadDocument().sharedNarrative;
+export function loadSharedNarrativeFacts(storage?: StoryHubSessionStorageAdapter): StorySharedFacts | null {
+    const facts = loadDocument(storage).sharedNarrative;
     return facts ? cloneSharedNarrativeFacts(facts) : null;
 }
 
-export function saveStoryRuntimeSessionWithSharedFacts(snapshot: StoryRuntimeSessionSnapshot): void {
-    const document = loadDocument();
+export function saveStoryRuntimeSessionWithSharedFacts(snapshot: StoryRuntimeSessionSnapshot, storage?: StoryHubSessionStorageAdapter): void {
+    const document = loadDocument(storage);
     document.stories[createStoryRuntimeSessionStorageKey(snapshot)] = cloneStoryRuntimeSessionSnapshot(snapshot);
     document.sharedNarrative = sharedNarrativeFactsFromStory(snapshot.storyState);
-    saveDocument(document);
+    saveDocument(document, storage);
 }
 
-export function saveSharedNarrativeFacts(state: StoryState): void {
-    const document = loadDocument();
+export function saveSharedNarrativeFacts(state: StoryState, storage?: StoryHubSessionStorageAdapter): void {
+    const document = loadDocument(storage);
     document.sharedNarrative = sharedNarrativeFactsFromStory(state);
-    saveDocument(document);
+    saveDocument(document, storage);
 }
 
-export function saveStoryRuntimeSession(snapshot: StoryRuntimeSessionSnapshot): void {
-    const document = loadDocument();
+export function saveStoryRuntimeSession(snapshot: StoryRuntimeSessionSnapshot, storage?: StoryHubSessionStorageAdapter): void {
+    const document = loadDocument(storage);
 
     document.stories[createStoryRuntimeSessionStorageKey(snapshot)] = cloneStoryRuntimeSessionSnapshot(snapshot);
-    saveDocument(document);
+    saveDocument(document, storage);
 }
 
-export function clearStoryRuntimeSession(key: StoryHubSessionKey): void {
-    const document = loadDocument();
+export function clearStoryRuntimeSession(key: StoryHubSessionKey, storage?: StoryHubSessionStorageAdapter): void {
+    const document = loadDocument(storage);
 
     delete document.stories[createStoryRuntimeSessionStorageKey(key)];
-    saveDocument(document);
+    saveDocument(document, storage);
 }
 
 export function resetStoryHubSessionPersistenceForTests(): void {
@@ -453,6 +472,6 @@ export function resetStoryHubSessionPersistenceForTests(): void {
     getStorageAdapter().removeItem(STORY_HUB_SESSION_STORAGE_KEY);
 }
 
-export function writeRawStoryHubSessionForTests(rawValue: string): void {
-    getStorageAdapter().setItem(STORY_HUB_SESSION_STORAGE_KEY, rawValue);
+export function writeRawStoryHubSessionForTests(rawValue: string, storage?: StoryHubSessionStorageAdapter): void {
+    getStorageAdapter(storage).setItem(STORY_HUB_SESSION_STORAGE_KEY, rawValue);
 }

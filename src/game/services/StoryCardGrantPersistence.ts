@@ -66,7 +66,7 @@ export function planStoryRewards(
     assertItemCapacityChange(stash.items, finalItems, stash.itemSlotCapacity);
     return {
         ...stash,
-        deck: mergeCardStacks(stash.deck, pending.map(grant => ({ id: grant.cardId, count: grant.count }))),
+        cards: mergeCardStacks(stash.cards, pending.map(grant => ({ id: grant.cardId, count: grant.count }))),
         items: finalItems,
         ...(stash.equippedItems ? { equippedItems: pruneUnavailableEquipment(stash.equippedItems, finalItems) } : {}),
         claimedStoryGrantIds: [...claimed, ...pending.map(grant => grant.grantId)],

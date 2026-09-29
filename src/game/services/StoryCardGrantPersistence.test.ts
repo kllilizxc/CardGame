@@ -25,11 +25,11 @@ describe('StoryCardGrantPersistence', () => {
         const cards = [{ grantId: 'quest.fox.card', cardId: 'CR_001', count: 1 }];
         const items = [{ transactionId: 'quest.fox.salve', itemId: 'consumable.spirit-salve', itemType: 'consumable' as const, countDelta: -1 }];
         const first = settleStoryRewards(cards, items, sources, storage);
-        expect(first.deck).toEqual([{ id: 'CR_001', count: 2 }]);
+        expect(first.cards).toEqual([{ id: 'CR_001', count: 2 }]);
         expect(first.items).toEqual([{ id: 'consumable.spirit-salve', itemType: 'consumable', count: 1 }]);
         expect(first.settledStoryItemTransactionIds).toEqual(['quest.fox.salve']);
         const repeated = settleStoryRewards(cards, items, sources, storage);
-        expect(repeated.deck).toEqual(first.deck);
+        expect(repeated.cards).toEqual(first.cards);
         expect(repeated.items).toEqual(first.items);
         expect(loadPersistentStash(storage)?.settledStoryItemTransactionIds).toEqual(['quest.fox.salve']);
         const state = createInitialStoryState({ storyId: 'story.fox', locationId: 'forest', sublocationId: 'bridge', nodeId: 'start' });
@@ -61,7 +61,7 @@ describe('StoryCardGrantPersistence', () => {
 
         const fitted = settleStoryRewards(grants, [transactions[0], { ...transactions[1], countDelta: 20 }], sources, storage);
         expect(fitted.items).toEqual([{ id: 'consumable.spirit-salve', itemType: 'consumable', count: 20 }]);
-        expect(fitted.deck).toEqual([{ id: 'CR_001', count: 2 }]);
+        expect(fitted.cards).toEqual([{ id: 'CR_001', count: 2 }]);
         expect(loadPersistentStash(storage)?.settledStoryItemTransactionIds).toEqual(['quest.consume.needle', 'quest.reward.salves']);
     });
 
@@ -69,10 +69,10 @@ describe('StoryCardGrantPersistence', () => {
         const { storage } = memoryStorage();
         const grant = [{ grantId: 'quest.fox.card', cardId: 'CR_001', count: 1 }];
         const first = settleStoryCardGrants(grant, seed, storage);
-        expect(first.deck).toEqual([{ id: 'CR_001', count: 2 }]);
+        expect(first.cards).toEqual([{ id: 'CR_001', count: 2 }]);
         expect(first.claimedStoryGrantIds).toEqual(['quest.fox.card']);
         const repeated = settleStoryCardGrants(grant, seed, storage);
-        expect(repeated.deck).toEqual(first.deck);
+        expect(repeated.cards).toEqual(first.cards);
         expect(loadPersistentStash(storage)?.claimedStoryGrantIds).toEqual(['quest.fox.card']);
     });
 
@@ -89,8 +89,8 @@ describe('StoryCardGrantPersistence', () => {
         const grants = [{ grantId: 'quest.fox.card', cardId: 'CR_001', count: 1 }];
         expect(() => settleStoryCardGrants(grants, seed, failing)).toThrow('disk full');
         expect(values.has(STASH_STORAGE_KEY)).toBe(false);
-        expect(settleStoryCardGrants(grants, seed, failing).deck).toEqual([{ id: 'CR_001', count: 2 }]);
-        expect(settleStoryCardGrants(grants, seed, failing).deck).toEqual([{ id: 'CR_001', count: 2 }]);
+        expect(settleStoryCardGrants(grants, seed, failing).cards).toEqual([{ id: 'CR_001', count: 2 }]);
+        expect(settleStoryCardGrants(grants, seed, failing).cards).toEqual([{ id: 'CR_001', count: 2 }]);
     });
 
     it('rejects conflicting grant definitions before writing a stash', () => {

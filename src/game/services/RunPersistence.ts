@@ -44,6 +44,12 @@ function getStorageAdapter(storage?: RunPersistenceStorageAdapter): RunPersisten
     };
 }
 
+export function resolveRunPersistenceStorageAdapter(
+    storage?: RunPersistenceStorageAdapter,
+): RunPersistenceStorageAdapter {
+    return getStorageAdapter(storage);
+}
+
 function readStoredJson<T>(key: string, storage = getStorageAdapter()): T | null {
     const rawValue = storage.getItem(key);
 
@@ -503,7 +509,7 @@ export function loadPersistentStash(storage?: RunPersistenceStorageAdapter): Per
 
     const normalizedRawValue = JSON.stringify(normalizedStash);
 
-    if (normalizedRawValue !== rawValue) {
+    if (storage === undefined && normalizedRawValue !== rawValue) {
         storageAdapter.setItem(STASH_STORAGE_KEY, normalizedRawValue);
     }
 

@@ -5,8 +5,9 @@ import {
 import { validateHubTownDefinition } from '../scenes/hub/hubTown';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
 import {
-    validateStoryGraphResource,
-} from '../scenes/story/storyContentAdapter';
+    validateStoryContentGraph,
+    type StoryContentGraph,
+} from '../types/storyContent';
 import { validateCatalogContentIdReferences } from './contentIdRegistry';
 import { validateCatalogRouteReferences } from './contentCatalogRouteReferences';
 import {
@@ -89,7 +90,7 @@ export interface ContentCatalogResolver {
 const REGISTERED_VALIDATOR_NAMES = [
     'worldMap:validateWorldMapDefinition',
     'hub:validateHubTownDefinition',
-    'story:validateStoryGraphResource',
+    'story:validatePlayableStoryGraph|validateStoryContentGraph',
     'expedition:validatePrototypeExpeditionContent',
 ] as const;
 
@@ -263,7 +264,7 @@ export function createContentCatalogResolver(
     };
 }
 
-function validateStoryResource(json: unknown): StoryGraph {
+function validateStoryResource(json: unknown): StoryGraph | StoryContentGraph {
     const record = readRecord(json, 'story resource');
 
     if (typeof record.storyId === 'string') {
@@ -271,7 +272,7 @@ function validateStoryResource(json: unknown): StoryGraph {
     }
 
     if (record.schemaVersion === 1 && typeof record.id === 'string') {
-        return validateStoryGraphResource(json);
+        return validateStoryContentGraph(json);
     }
 
     throw new Error('Story resources must declare either storyId for playable StoryState graphs or schemaVersion/id for executable story content graphs.');
