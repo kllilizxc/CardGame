@@ -137,6 +137,8 @@ export class PillSlotUI extends GameObjects.Container {
      * 更新槽位显示
      */
     public updateSlots(slots: PillSlot[]): void {
+        // A consumed pill can destroy its hovered slot before pointerout fires.
+        this.hidePillTooltip();
         // 重新创建所有槽位
         this.createSlots(slots);
     }
@@ -172,6 +174,7 @@ export class PillSlotUI extends GameObjects.Container {
      * 销毁时清理
      */
     public destroy(fromScene?: boolean): void {
+        this.hidePillTooltip();
         this.scene.events.off('pillSlotsUpdated', this.updateSlots, this);
         super.destroy(fromScene);
     }
