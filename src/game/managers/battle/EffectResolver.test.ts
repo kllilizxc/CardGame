@@ -381,6 +381,36 @@ describe('EffectResolver — executeEffect', () => {
 
 // ==================== 场地永续效果测试 ====================
 
+describe('EffectResolver — 场地回合开始的临时攻击修正', () => {
+    it('跨回合不叠加，并与永续修正分别回退', () => {
+        const bc = createMockBattleContext();
+        const resolver = new EffectResolver(bc);
+        const ally = createMockCardSprite('ally', '友方', 3);
+        const enemy = createMockCardSprite('enemy', '敌方', 4);
+        const ctx = makeContext({ playerField: [ally], enemyField: [enemy] });
+        const action: LegacyEffectAction = { type: 'modifyAttack', value: 1 };
+
+        resolver.applyFieldPermanentEffects([{
+            timing: 'permanent',
+            target: { scope: 'allUnits' },
+            actions: [{ type: 'modifyAttack', value: 2 }],
+        }], ctx);
+        resolver.applyFieldTurnStartAction(action, [ally, enemy], ctx);
+        expect(ally.getCardData().attack).toBe(6);
+        expect(enemy.getCardData().attack).toBe(7);
+
+        resolver.clearFieldTurnStartEffects();
+        resolver.applyFieldTurnStartAction(action, [ally, enemy], ctx);
+        expect(ally.getCardData().attack).toBe(6);
+        expect(enemy.getCardData().attack).toBe(7);
+
+        resolver.clearFieldTurnStartEffects();
+        resolver.removeFieldPermanentEffects(ctx);
+        expect(ally.getCardData().attack).toBe(3);
+        expect(enemy.getCardData().attack).toBe(4);
+    });
+});
+
 describe('EffectResolver — 场地永续效果', () => {
     let resolver: EffectResolver;
     let bc: BattleContext;

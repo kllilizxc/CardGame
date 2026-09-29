@@ -42,6 +42,7 @@ interface TrackedFieldMod {
 export class EffectResolver {
     private battleContext: BattleContext;
     private activeFieldMods: Map<string, TrackedFieldMod> = new Map();
+    private activeFieldTurnAttackMods: Map<CardSprite, number> = new Map();
 
     constructor(battleContext: BattleContext) {
         this.battleContext = battleContext;
@@ -298,6 +299,31 @@ export class EffectResolver {
     }
 
     // ==================== 场地永续效果 ====================
+
+    /** 回合开始的攻击修正只持续到下一次回合开始。 */
+    applyFieldTurnStartAction(
+        action: LegacyEffectAction,
+        targets: CardSprite[],
+        context: EffectExecutionContext,
+    ): void {
+        this.executeAction(action, targets, context);
+        if (action.type !== 'modifyAttack') return;
+        const delta = action.value ?? 0;
+        for (const unit of targets) {
+            this.activeFieldTurnAttackMods.set(
+                unit,
+                (this.activeFieldTurnAttackMods.get(unit) ?? 0) + delta,
+            );
+        }
+    }
+
+    clearFieldTurnStartEffects(): void {
+        for (const [unit, delta] of this.activeFieldTurnAttackMods) {
+            unit.getCardData().attack -= delta;
+            if (unit.active !== false) unit.updateStats();
+        }
+        this.activeFieldTurnAttackMods.clear();
+    }
 
     /**
      * 应用场地永续效果并记录修改以便回退

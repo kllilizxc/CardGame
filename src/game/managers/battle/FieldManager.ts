@@ -73,7 +73,8 @@ export class FieldManager {
      */
     public removeCurrentField(): void {
         if (this.currentField) {
-            // 移除永续效果（需要在实际效果系统中实现）
+            this.effectResolver.clearFieldTurnStartEffects();
+            // 移除永续效果
             this.removeFieldPermanentEffects();
 
             // 销毁精灵
@@ -167,6 +168,9 @@ export class FieldManager {
     ): void {
         if (!this.currentField) return;
 
+        // 上一个回合的攻击修正仍覆盖了战斗阶段，此时先回退再应用新回合效果。
+        this.effectResolver.clearFieldTurnStartEffects();
+
         const fieldData = this.currentField.getCardData();
         const turnStartEffects = fieldData.effects?.filter((e: CardEffect) => e.timing === 'turnStart') || [];
 
@@ -241,7 +245,11 @@ export class FieldManager {
 
         // 委托给 EffectResolver 执行每个动作
         effect.actions?.forEach((action: LegacyEffectAction) => {
-            this.effectResolver.executeAction(action, targetUnits, ctx);
+            if (effect.timing === 'turnStart') {
+                this.effectResolver.applyFieldTurnStartAction(action, targetUnits, ctx);
+            } else {
+                this.effectResolver.executeAction(action, targetUnits, ctx);
+            }
         });
     }
 }
