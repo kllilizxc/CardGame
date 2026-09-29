@@ -27,3 +27,4 @@ dist-ssr
 .hopi
 .sisyphus
 .bun-tmp
+.vite/
