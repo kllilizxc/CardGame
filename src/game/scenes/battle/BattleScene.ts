@@ -687,8 +687,7 @@ export class BattleScene extends Scene {
         });
 
         this.events.on('hideCardPreview', () => {
-            // 不再自动隐藏，保持显示直到下一张卡片
-            // this.cardPreviewManager.hide();
+            this.cardPreviewManager.hide();
         });
 
         // 使用新的 PillTooltipUI

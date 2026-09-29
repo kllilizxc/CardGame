@@ -122,6 +122,7 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         // 拖拽开始
         this.on('dragstart', () => {
             this.isDragging = true;
+            this.scene.events.emit('hideCardPreview');
             this.originalX = this.x;
             this.originalY = this.y;
             this.setScale(this.cardScale * 1.2);
@@ -147,6 +148,7 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         // 拖拽结束
         this.on('dragend', () => {
             this.isDragging = false;
+            this.scene.events.emit('hideCardPreview');
             this.setScale(this.cardScale);
             this.setDepth(0);
             
@@ -176,8 +178,7 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      */
     protected onPointerOut(): void {
         this.background.setStrokeStyle(3, this.getDefaultStrokeColor());
-        // 不再触发隐藏预览，让预览面板保持显示
-        // this.scene.events.emit('hideCardPreview');
+        this.scene.events.emit('hideCardPreview');
     }
 
     /**

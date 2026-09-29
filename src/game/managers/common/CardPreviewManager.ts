@@ -61,6 +61,8 @@ export class CardPreviewManager {
             return; // 不支持的卡牌类型
         }
 
+        previewCard.disableInteractive();
+
         // 设置为 hover 模式，显示完整信息包括描述
         previewCard.setDisplayMode('hover');
 
