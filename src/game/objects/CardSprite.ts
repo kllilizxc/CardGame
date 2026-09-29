@@ -1,5 +1,7 @@
 import { WenxinUnitView } from '../art/wenxin/WenxinUnitView';
 import { unitArt, UNIT_ART, type BattleSide } from '../art/wenxin/presentation';
+import { C, T } from '../art/palette';
+import { iconTexture, STATUS_ICON } from '../art/sprites';
 import { GameObjects } from 'phaser';
 import type { UnitCard } from '@data/types/cards/unit';
 import type { Gongfa } from '@data/types/gongfa';
@@ -16,7 +18,7 @@ import { sceneTheme } from '../scenes/shared/sceneTheme';
 import { GongfaTooltip } from '../ui/common/GongfaTooltip';
 import { describeGongfa } from '../utils/GongfaDescriptionBuilder';
 import { getUnitStar, getRealmConfig } from '../utils/RealmHelper';
-import { getStatusDisplayText, getStatusCategoryColor, getStatusFullDescription } from '../utils/StatusHelper';
+import { getStatusCategoryColor, getStatusFullDescription } from '../utils/StatusHelper';
 import { selectedCardFace, watchCardFace } from './cardFaceAppearance';
 import { isPortraitGameViewport } from '../layout/gameViewport';
 
@@ -398,30 +400,32 @@ export class CardSprite extends BaseCardSprite {
         }
 
         // 创建新的状态容器（显示在卡片左侧，避免与功法重合）
-        this.statusContainer = this.scene.add.container(-90, -80);
+        this.statusContainer = this.scene.add.container(-86, -40);
         this.add(this.statusContainer);
 
         // 显示每个状态
         statuses.forEach((status, index) => {
-            const displayText = getStatusDisplayText(status);
             const categoryColor = getStatusCategoryColor(status.statusId);
             
             const yPos = index * 28;
             
-            // 创建状态背景
-            const bg = this.scene.add.rectangle(0, yPos, 64, 24, categoryColor, 0.8);
-            bg.setStrokeStyle(1, blendBattleColor(categoryColor, sceneTheme.colors.parchment, 0.2));
+            // 像素状态徽章：图标 + 层数/回合数，避免长文案挤压卡面。
+            const bg = this.scene.add.rectangle(6, yPos, 78, 24, categoryColor, 0.85);
+            bg.setStrokeStyle(2, C.void);
             this.statusContainer!.add(bg);
-            
-            // 创建状态文本
-            const text = this.scene.add.text(0, yPos, displayText, {
-                fontFamily: sceneTheme.fonts.ui,
-                fontSize: '18px',
-                color: battleTheme.colors.textPrimary,
-                fontStyle: 'bold'
-            }).setOrigin(0.5);
+
+            const icon = this.scene.add.image(-24, yPos, iconTexture(this.scene, STATUS_ICON[status.statusId] ?? 'star')).setScale(1.5);
+            this.statusContainer!.add(icon);
+            const stackText = status.stacks > 1 ? `${status.stacks}` : '';
+            const durationText = status.duration && status.duration > 0 ? `${stackText ? '·' : ''}${status.duration}回` : '';
+            const text = this.scene.add.text(-8, yPos, `${stackText}${durationText}`, {
+                fontSize: '12px',
+                color: T.paper,
+                stroke: T.void,
+                strokeThickness: 3,
+            }).setOrigin(0, 0.5);
             this.statusContainer!.add(text);
-            
+
             // 添加交互（悬停显示详细信息）
             bg.setInteractive();
             bg.on('pointerover', () => {

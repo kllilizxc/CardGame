@@ -1,9 +1,11 @@
 import { GameObjects, Scene } from 'phaser';
 
 import { EventBus } from '../EventBus';
+import { createBackdrop, type Backdrop } from '../art/backdrop';
+import { C, FONT, T } from '../art/palette';
+import { pxBurst } from '../art/fx';
 import { isPortraitGameViewport } from '../layout/gameViewport';
 import {
-    createSceneBackdrop,
     createSceneButton,
     createScenePanel,
     createStatusLine,
@@ -12,7 +14,7 @@ import {
 } from './shared/sceneTheme';
 
 export class MainMenu extends Scene {
-    background!: GameObjects.Rectangle;
+    background: Backdrop | null = null;
     logo!: GameObjects.Container;
     title!: GameObjects.Text;
     logoTween: Phaser.Tweens.Tween | null = null;
@@ -28,8 +30,9 @@ export class MainMenu extends Scene {
             EventBus.emit('current-scene-ready', this);
             return;
         }
-        const backdropObjects = createSceneBackdrop(this);
-        this.background = backdropObjects[0] as GameObjects.Rectangle;
+        this.cameras.main.setBackgroundColor(C.void);
+        this.background = createBackdrop(this, 'mountain', 'night');
+        this.events.once('shutdown', () => { this.background?.destroy(); this.background = null; });
 
         this.logo = this.createFloatingSeal(width / 2, height * 0.23);
         this.title = this.add.text(width / 2, height * 0.34, '青云问道', getSceneTextStyle('sceneTitle', {
@@ -80,13 +83,26 @@ export class MainMenu extends Scene {
             onClick: () => this.startWorldMapScene(),
         });
 
+        this.add.text(width / 2, height - 36, '点击 · 拖拽卡牌 · 悬停查看详情', {
+            fontFamily: FONT, fontSize: '12px', color: T.dim,
+        }).setOrigin(0.5).setDepth(100);
+
+        // ambient sparks around the title
+        this.time.addEvent({
+            delay: 700, loop: true,
+            callback: () => pxBurst(this, width / 2 + (Math.random() - 0.5) * 520, height * 0.27 + 40, {
+                colors: [C.gold, C.glow, C.ember], count: 3, speed: 60, size: 6, gravity: -40, life: 900, depth: 102,
+            }),
+        });
+
         EventBus.emit('current-scene-ready', this);
     }
 
     private createPortraitMenu(): void {
         const { width } = this.scale;
-        const backdropObjects = createSceneBackdrop(this);
-        this.background = backdropObjects[0] as GameObjects.Rectangle;
+        this.cameras.main.setBackgroundColor(C.void);
+        this.background = createBackdrop(this, 'mountain', 'night');
+        this.events.once('shutdown', () => { this.background?.destroy(); this.background = null; });
         this.logo = this.createFloatingSeal(width / 2, 132);
         this.title = this.add.text(width / 2, 274, '青云问道', getSceneTextStyle('sceneTitle', {
             fontSize: '52px',

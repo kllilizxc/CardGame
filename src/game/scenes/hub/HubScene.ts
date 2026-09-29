@@ -1,3 +1,5 @@
+import { ensureBackdrop } from '../../art/backdrop';
+import { bakeTerrain } from '../../art/terrain';
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
@@ -39,7 +41,6 @@ import {
     type HubTownViewport,
 } from './hubTown';
 import {
-    createSceneBackdrop,
     createSceneButton,
     createScenePanel,
     createStatusLine,
@@ -163,6 +164,7 @@ export class HubScene extends Scene {
         this.statusText = undefined;
 
         const currentLocation = resolveHubLocation(this.town, this.navigationState.currentLocationId);
+        ensureBackdrop(this, 'hall');
         if (isPortraitGameViewport(this.scale.width, this.scale.height)) {
             this.renderPortraitShell(currentLocation);
             return;
@@ -171,7 +173,6 @@ export class HubScene extends Scene {
         const container = this.add.container(0, 0);
 
         this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
-        container.add(createSceneBackdrop(this));
 
         container.add(this.add.text(width / 2, 78, this.town.title, getSceneTextStyle('sceneTitle')).setOrigin(0.5));
         container.add(this.add.text(width / 2, 134, this.town.subtitle, getSceneTextStyle('sceneSubtitle')).setOrigin(0.5));
@@ -251,7 +252,6 @@ export class HubScene extends Scene {
         const { width } = this.scale;
         const container = this.add.container(0, 0);
         this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
-        container.add(createSceneBackdrop(this));
         container.add(this.add.text(width / 2, 78, this.town.title, getSceneTextStyle('sceneTitle', {
             fontSize: '42px', wordWrap: { width: width - 36 }, align: 'center',
         })).setOrigin(0.5));
@@ -365,7 +365,7 @@ export class HubScene extends Scene {
         });
 
         const maskShape = this.add.graphics();
-        maskShape.fillStyle(0xffffff, 1);
+        maskShape.fillStyle(0xf4ecd8, 1);
         maskShape.fillRect(viewport.left, viewport.top, viewport.width, viewport.height);
         maskShape.setVisible(false);
         surface.setMask(maskShape.createGeometryMask());
@@ -378,7 +378,7 @@ export class HubScene extends Scene {
             viewportCenterY,
             viewport.width,
             viewport.height,
-            0x000000,
+            0x0b0714,
             0,
         );
         frame.setStrokeStyle(4, sceneTheme.colors.gold, 0.54);
@@ -404,26 +404,10 @@ export class HubScene extends Scene {
         return backdrop;
     }
 
-    private createHubMapTerrainArtwork(): Phaser.GameObjects.Graphics {
+    private createHubMapTerrainArtwork(): Phaser.GameObjects.Image {
         const { mapWidth, mapHeight } = this.town.presentation;
-        const graphics = this.add.graphics();
-
-        graphics.fillStyle(sceneTheme.colors.jade, 0.28);
-        graphics.fillEllipse(mapWidth * 0.36, mapHeight * 0.68, mapWidth * 0.48, mapHeight * 0.34);
-        graphics.fillStyle(sceneTheme.colors.gold, 0.16);
-        graphics.fillEllipse(mapWidth * 0.62, mapHeight * 0.42, mapWidth * 0.52, mapHeight * 0.36);
-        graphics.fillStyle(sceneTheme.colors.ember, 0.18);
-        graphics.fillEllipse(mapWidth * 0.5, mapHeight * 0.54, mapWidth * 0.32, mapHeight * 0.24);
-
-        graphics.lineStyle(2, sceneTheme.colors.gold, 0.1);
-        for (let x = 100; x < mapWidth; x += 140) {
-            graphics.lineBetween(x, 0, x, mapHeight);
-        }
-        for (let y = 90; y < mapHeight; y += 120) {
-            graphics.lineBetween(0, y, mapWidth, y);
-        }
-
-        return graphics;
+        const key = bakeTerrain(this, `hubterrain_${mapWidth}x${mapHeight}`, mapWidth, mapHeight, [], 21);
+        return this.add.image(0, 0, key).setOrigin(0, 0).setScale(4);
     }
 
     private createHubMapRouteArtwork(): Phaser.GameObjects.Graphics {
@@ -458,9 +442,11 @@ export class HubScene extends Scene {
         const marker = this.add.container(position.x, position.y);
         const palette = this.getHubLocationMarkerPalette(location, selected);
 
-        const aura = this.add.circle(0, 0, selected ? 62 : 52, palette.fill, selected ? 0.24 : 0.16);
-        const pin = this.add.circle(0, 0, selected ? 36 : 31, palette.fill, 0.98);
-        pin.setStrokeStyle(selected ? 5 : 4, palette.stroke, 0.95);
+        const aura = this.add.rectangle(0, 0, selected ? 124 : 104, selected ? 124 : 104, palette.fill, selected ? 0.28 : 0.18);
+        this.tweens.add({ targets: aura, scale: 1.25, alpha: 0.04, duration: 1200, repeat: -1, ease: 'Stepped', easeParams: [4] });
+        const pin = this.add.rectangle(0, 0, selected ? 76 : 64, selected ? 76 : 64, palette.fill, 1);
+        (pin as unknown as { deco: boolean }).deco = true;
+        pin.setStrokeStyle(selected ? 6 : 4, palette.stroke, 1);
         pin.setInteractive({ useHandCursor: true });
 
         const glyph = this.add.text(0, -1, this.getHubLocationMarkerGlyph(location), {
@@ -523,7 +509,7 @@ export class HubScene extends Scene {
             }
         });
         pin.on('pointerout', () => {
-            pin.setFillStyle(palette.fill, 0.98);
+            pin.setFillStyle(palette.fill, 1);
             this.restoreDefaultStatusText();
         });
 

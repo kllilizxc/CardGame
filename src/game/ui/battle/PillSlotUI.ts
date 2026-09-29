@@ -1,6 +1,7 @@
+import { iconTexture } from '../../art/sprites';
 import { GameObjects, Scene } from 'phaser';
 import type { PillSlot } from '../../managers/battle/PillManager';
-import type { PillCard } from '../../../data/types/cards/pill';
+import type { PillCard } from '@data/types/cards/pill';
 import { getSceneTextStyle, sceneTheme } from '../../scenes/shared/sceneTheme';
 import { battleColorToHex, battleTheme, blendBattleColor } from './battleTheme';
 import { watchCardFace } from '../../objects/cardFaceAppearance';
@@ -12,12 +13,11 @@ import { watchCardFace } from '../../objects/cardFaceAppearance';
 export class PillSlotUI extends GameObjects.Container {
     private slotContainers: GameObjects.Container[] = [];
     private slotBackgrounds: GameObjects.Rectangle[] = [];
-    private pillIcons: GameObjects.Text[] = [];
+    private pillIcons: GameObjects.Image[] = [];
     private pillNames: GameObjects.Text[] = [];
     private emptyTexts: GameObjects.Text[] = [];
     private releaseFaces: Array<() => void> = [];
     
-    private slots: PillSlot[] = [];
     private onSlotClick: ((slotIndex: number) => void) | null = null;
 
     constructor(
@@ -40,8 +40,6 @@ export class PillSlotUI extends GameObjects.Container {
      * 创建槽位UI
      */
     public createSlots(slots: PillSlot[]): void {
-        this.slots = slots;
-
         // 清空现有UI
         this.clearSlots();
 
@@ -106,11 +104,7 @@ export class PillSlotUI extends GameObjects.Container {
 
         // 丹药图标（如果有）
         if (!slot.isEmpty && slot.pill) {
-            const icon = this.scene.add.text(0, -10, '丹', {
-                fontFamily: sceneTheme.fonts.display,
-                fontSize: '30px',
-                color: battleTheme.colors.textPositive,
-            }).setOrigin(0.5);
+            const icon = this.scene.add.image(0, -10, iconTexture(this.scene, 'pill')).setScale(2.5);
             container.add(icon);
             this.pillIcons[index] = icon;
 
@@ -180,8 +174,6 @@ export class PillSlotUI extends GameObjects.Container {
      * 更新槽位显示
      */
     public updateSlots(slots: PillSlot[]): void {
-        this.slots = slots;
-        
         // 重新创建所有槽位
         this.createSlots(slots);
     }

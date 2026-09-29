@@ -38,15 +38,7 @@ export class PillSprite extends BaseCardSprite {
         });
 
         // 丹药图标
-        const iconBox = scene.add.rectangle(0, -14, 122, 122, this.palette.iconFill, 0.92);
-        iconBox.setStrokeStyle(1, this.palette.accent, 0.24);
-        this.add(iconBox);
-        const iconText = scene.add.text(0, -14, '丹', getBattleCardTextStyle('name', {
-            fontSize: '38px',
-            color: battleColorToHex(this.palette.accentSoft),
-        })).setOrigin(0.5);
-        this.add(iconText);
-        this.iconObjects.push(iconBox, iconText);
+        this.iconObjects.push(...this.addIconPortrait('pill'));
 
         // 目标范围显示
         const targetLabel = this.getTargetLabel();
@@ -133,7 +125,7 @@ export class PillSprite extends BaseCardSprite {
     protected updateDisplayMode(): void {
         const showExpandedDescription = this.currentDisplayMode === 'hover';
         this.descriptionText.setVisible(showExpandedDescription);
-        this.iconObjects.forEach((object) => object.setVisible(!showExpandedDescription));
-        this.summaryObjects.forEach((object) => object.setVisible(!showExpandedDescription));
+        this.iconObjects.forEach((object) => (object as GameObjects.GameObject & { setVisible(visible: boolean): unknown }).setVisible(!showExpandedDescription));
+        this.summaryObjects.forEach((object) => (object as GameObjects.GameObject & { setVisible(visible: boolean): unknown }).setVisible(!showExpandedDescription));
     }
 }

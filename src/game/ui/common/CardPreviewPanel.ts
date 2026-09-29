@@ -38,14 +38,14 @@ export class CardPreviewPanel {
         this.container.setVisible(false);
 
         // 背景
-        this.background = scene.add.rectangle(0, 0, this.PANEL_WIDTH, this.PANEL_HEIGHT, 0x1a1a2e, 0.95);
-        this.background.setStrokeStyle(4, 0xffd700);
+        this.background = scene.add.rectangle(0, 0, this.PANEL_WIDTH, this.PANEL_HEIGHT, 0x160f26, 0.95);
+        this.background.setStrokeStyle(4, 0xffc040);
         this.container.add(this.background);
 
         // 标题
         this.titleText = scene.add.text(0, -this.PANEL_HEIGHT / 2 + 25, '卡牌详情', {
             fontSize: Math.floor(scene.scale.height * 0.022) + 'px',
-            color: '#ffd700',
+            color: '#ffc040',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.container.add(this.titleText);

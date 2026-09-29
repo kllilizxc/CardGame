@@ -1,5 +1,8 @@
 import type { Scene } from 'phaser';
 
+import { C, T, PX } from '../../art/palette';
+import { iconTexture } from '../../art/sprites';
+import { drawPixelBar, pixelPanel, PANEL_INK } from '../../art/ui';
 import type { BattleLayoutConfig } from '../../config/LayoutConfig';
 import { isPortraitGameViewport } from '../../layout/gameViewport';
 import type { BattleState } from '../../state/BattleState';
@@ -18,6 +21,12 @@ export class BattleUIManager {
     // UI 元素引用
     private deckButton?: Phaser.GameObjects.Rectangle;
     private discardPileButton?: Phaser.GameObjects.Rectangle;
+    private decor: Phaser.GameObjects.GameObject[] = [];
+    private hpBar?: Phaser.GameObjects.Graphics;
+    private hpText?: Phaser.GameObjects.Text;
+    private hpShown = -1;
+    private hpMax = 100;
+    private hpGhost = -1;
     private speedText?: Phaser.GameObjects.Text;
     private statsText?: Phaser.GameObjects.Text;
     private turnText?: Phaser.GameObjects.Text;
@@ -236,6 +245,8 @@ export class BattleUIManager {
         if (this.isPortrait) this.statsText.setFontSize(20);
         this.trackObjects(...statusLine.objects);
 
+        this.createHpHud();
+
         const turnBanner = this.scene.add.rectangle(
             width / 2,
             this.isPortrait ? 246 : height * 0.30,
@@ -254,6 +265,40 @@ export class BattleUIManager {
         this.setDepth(turnBanner, this.layout.depth.uiButtons);
         this.setDepth(this.turnText, this.layout.depth.uiText);
         this.trackObjects(turnBanner, this.turnText);
+    }
+
+    /** Player health HUD: heart medallion, chunky segmented bar with a trailing damage ghost. */
+    private createHpHud(): void {
+        const depth = this.layout.depth.uiText;
+        const x = 40; const y = 30;
+        const frame = pixelPanel(this.scene, x + 200, y + 34, 400, 68, PANEL_INK).setDepth(depth - 1);
+        const heart = this.scene.add.image(x + 34, y + 34, iconTexture(this.scene, 'heart')).setScale(4).setDepth(depth);
+        this.scene.tweens.add({ targets: heart, scale: 4.6, duration: 500, yoyo: true, repeat: -1, ease: 'Stepped', easeParams: [2] });
+        this.hpBar = this.scene.add.graphics().setDepth(depth).setPosition(x + 76, y + 22);
+        this.hpText = this.scene.add.text(x + 76 + 150, y + 34, '', {
+            fontSize: '24px', color: T.paper, stroke: T.void, strokeThickness: 6,
+        }).setOrigin(0.5).setDepth(depth + 1);
+        this.decor.push(frame, heart, this.hpBar, this.hpText);
+    }
+
+    private updateHpHud(): void {
+        if (!this.hpBar || !this.hpText || !this.hpBar.active) return;
+        const hp = this.battleState.playerHealth;
+        this.hpMax = Math.max(this.hpMax, hp);
+        if (this.hpShown < 0) { this.hpShown = hp; this.hpGhost = hp; }
+        if (hp < this.hpShown) { this.hpShown = hp; }
+        else if (hp > this.hpShown) this.hpShown = Math.min(hp, this.hpShown + Math.max(1, this.hpMax * 0.02));
+        if (this.hpGhost > this.hpShown) this.hpGhost = Math.max(this.hpShown, this.hpGhost - Math.max(0.4, this.hpMax * 0.006));
+        else this.hpGhost = this.hpShown;
+        const w = 300; const h = 24;
+        drawPixelBar(this.hpBar, w, h, this.hpGhost / this.hpMax, C.gold, C.blood, 20);
+        // overdraw the real value on top of the ghost trail
+        const inner = w - PX * 2;
+        this.hpBar.fillStyle(hp / this.hpMax < 0.3 ? C.cinnabar : C.jade, 1);
+        this.hpBar.fillRect(PX, PX, Math.round(inner * Math.min(1, this.hpShown / this.hpMax) / 4) * 4, h - PX * 2);
+        this.hpBar.fillStyle(C.paper, 0.35);
+        this.hpBar.fillRect(PX, PX, Math.round(inner * Math.min(1, this.hpShown / this.hpMax) / 4) * 4, PX / 2);
+        this.hpText.setText(`${Math.ceil(this.hpShown)} / ${this.hpMax}`);
     }
 
     /**
@@ -330,6 +375,7 @@ export class BattleUIManager {
      * 更新统计信息显示
      */
     private updateStats(): void {
+        this.updateHpHud();
         if (this.statsText && this.statsText.active) {
             this.statsText.setText(
                 this.isPortrait
@@ -385,6 +431,8 @@ export class BattleUIManager {
 
         this.hudObjects.forEach((object) => object.destroy());
         this.hudObjects = [];
+        this.decor.forEach((object) => object.destroy());
+        this.decor = [];
     }
 
     private registerButton(

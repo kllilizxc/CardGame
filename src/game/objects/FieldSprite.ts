@@ -1,3 +1,4 @@
+import { C, T } from '../art/palette';
 import { Scene } from 'phaser';
 import { BaseCardSprite } from './BaseCardSprite';
 import type { FieldCard } from '@data/types/cards/field';
@@ -22,32 +23,19 @@ export class FieldSprite extends BaseCardSprite {
 
     private createVisuals(): void {
         // 创建场地卡背景 - 使用金色边框表示环境
-        this.createBackground(0x1a1a2e, 0xf39c12); // 深蓝背景，金色边框
+        this.createBackground(C.night, C.gold); // 夜色背景，金色边框
 
         // 添加场地图标
-        const iconBg = this.scene.add.circle(0, -80, 30, 0xf39c12, 0.3);
-        this.add(iconBg);
-
-        const iconText = this.scene.add.text(0, -80, '🏞️', {
-            fontSize: '32px'
-        }).setOrigin(0.5);
-        this.add(iconText);
+        this.addIconPortrait('mountain');
 
         // 卡牌名称
-        this.nameText = this.scene.add.text(0, -40, this.cardData.name, {
-            fontSize: '18px',
-            color: '#f39c12',
-            fontStyle: 'bold',
-            align: 'center',
-            wordWrap: { width: 150 }
-        }).setOrigin(0.5);
-        this.add(this.nameText);
+        this.createNameText(this.cardData.name);
 
         // 对称性标识
         if (this.cardData.symmetric) {
-            this.symmetricIcon = this.scene.add.text(0, -10, '⚖️ 双方生效', {
+            this.symmetricIcon = this.scene.add.text(0, 38, '◆ 双方生效', {
                 fontSize: '12px',
-                color: '#95a5a6',
+                color: T.dim,
                 fontStyle: 'italic'
             }).setOrigin(0.5);
             this.add(this.symmetricIcon);
@@ -55,9 +43,9 @@ export class FieldSprite extends BaseCardSprite {
 
         // 效果描述
         const effectDescription = this.getEffectDescription();
-        this.effectText = this.scene.add.text(0, 40, effectDescription, {
-            fontSize: '13px',
-            color: '#ecf0f1',
+        this.effectText = this.scene.add.text(0, 78, effectDescription, {
+            fontSize: '12px',
+            color: T.fog,
             align: 'center',
             wordWrap: { width: 150 }
         }).setOrigin(0.5);
@@ -87,7 +75,7 @@ export class FieldSprite extends BaseCardSprite {
     }
 
     protected getDefaultStrokeColor(): number {
-        return 0xf39c12; // 金色
+        return C.gold; // 金色
     }
 
     /**

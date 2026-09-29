@@ -1,3 +1,4 @@
+import { iconTexture } from '../../art/sprites';
 import type { Scene } from 'phaser';
 import type { PillCard } from '../../../../public/data/types/cards/pill';
 import { battleTheme, blendBattleColor } from '../battle/battleTheme';
@@ -66,11 +67,7 @@ export class PillTooltipUI {
         this.tooltip.add([shadow, bg, inner, banner]);
 
         // 丹药图标
-        const icon = this.scene.add.text(0, -76, '丹', {
-            fontFamily: sceneTheme.fonts.display,
-            fontSize: '36px',
-            color: battleTheme.colors.textPositive,
-        }).setOrigin(0.5);
+        const icon = this.scene.add.image(0, -76, iconTexture(this.scene, 'pill')).setScale(3);
         this.tooltip.add(icon);
 
         // 丹药名称

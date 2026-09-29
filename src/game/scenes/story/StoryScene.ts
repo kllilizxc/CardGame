@@ -1,4 +1,5 @@
 import { WenxinStoryStage } from '../../art/wenxin/WenxinStoryStage';
+import { ensureBackdrop } from '../../art/backdrop';
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
@@ -51,7 +52,6 @@ import {
     type StorySceneLaunchData,
 } from './storySceneLaunch';
 import {
-    createSceneBackdrop,
     createSceneButton,
     createScenePanel,
     createStatusLine,
@@ -205,9 +205,7 @@ export class StoryScene extends Scene {
         const portrait = isPortraitGameViewport(width, height);
 
         this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
-        for (const layer of createSceneBackdrop(this)) {
-            (layer as Phaser.GameObjects.GameObject & { setDepth(depth: number): unknown }).setDepth(-20);
-        }
+        ensureBackdrop(this, 'mountain', 'ember');
 
         this.wenxinStage = new WenxinStoryStage(this);
         this.storyTitleText = this.add.text(width / 2, portrait ? 112 : 76, this.storyGraph.title ?? '主线故事', getSceneTextStyle('sceneTitle', {

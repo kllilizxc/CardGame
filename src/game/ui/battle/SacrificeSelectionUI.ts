@@ -177,7 +177,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
                 unit.y,
                 cardWidth,
                 cardHeight,
-                0xffffff,
+                0xf4ecd8,
                 0.001 // 几乎完全透明，但必须有一点alpha才能交互
             );
             overlay.setDepth(5002); // 在卡牌之上

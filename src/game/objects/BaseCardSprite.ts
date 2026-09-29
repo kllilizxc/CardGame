@@ -1,5 +1,6 @@
 import { GameObjects } from 'phaser';
 
+import { auraTexture, cardFrameTexture, iconTexture, CARD_ART_W, type IconName } from '../art/sprites';
 import type { CardPreviewMetadata } from '../managers/common/cardPreviewProtocol';
 import { sceneTheme } from '../scenes/shared/sceneTheme';
 import { blendBattleColor, getBattleCardTextStyle } from '../ui/battle/battleTheme';
@@ -70,6 +71,30 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         );
         banner.setStrokeStyle(1, strokeColor, 0.24);
         this.add(banner);
+
+        // The procedural frame sits below card content and keeps the 4px pixel grid
+        // visible without replacing the existing interactive background rectangle.
+        const frame = this.scene.add.image(0, 0, cardFrameTexture(this.scene, strokeColor, color));
+        frame.setScale(this.CARD_WIDTH / CARD_ART_W);
+        this.add(frame);
+    }
+
+    /** Add a small procedural pixel portrait to non-unit cards. */
+    protected addIconPortrait(icon: IconName): GameObjects.GameObject[] {
+        const y = -10;
+        const aura = this.scene.add.image(0, y, auraTexture(this.scene, this.getDefaultStrokeColor())).setScale(4);
+        const image = this.scene.add.image(0, y, iconTexture(this.scene, icon)).setScale(4);
+        this.add([aura, image]);
+        this.scene.tweens.add({
+            targets: image,
+            y: y - 4,
+            duration: 1100,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Stepped',
+            easeParams: [2],
+        });
+        return [aura, image];
     }
 
     /**

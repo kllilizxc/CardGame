@@ -1,3 +1,4 @@
+import { C, T } from '../art/palette';
 import { GameObjects } from 'phaser';
 import type { ArtifactCard } from '@data/types/cards/artifact';
 import { BaseCardSprite } from './BaseCardSprite';
@@ -21,7 +22,7 @@ export class ArtifactSprite extends BaseCardSprite {
         this.currentDurability = cardData.durability ?? Infinity;
 
         // 创建背景（法器卡用金色边框）
-        this.createBackground(0x3a2f2f, 0xdaa520);
+        this.createBackground(C.umber, C.gold);
 
         // 创建名称
         this.createNameText(cardData.name);
@@ -29,17 +30,17 @@ export class ArtifactSprite extends BaseCardSprite {
         // 星级（从右往左排列）
         const star = getArtifactStar(cardData);
         const stars = '★'.repeat(star);
-        this.starsText = scene.add.text(80, -90, stars, {
-            fontSize: '14px',
-            color: '#f1c40f'
+        this.starsText = scene.add.text(80, -87, stars, {
+            fontSize: '12px',
+            color: T.gold
         }).setOrigin(1, 0.5); // 设置原点为右侧中心，实现从右往左排列
         this.add(this.starsText);
 
         // 品级
         const gradeName = getGradeDisplayName(cardData.gradeId);
-        this.gradeText = scene.add.text(-60, -90, gradeName, {
+        this.gradeText = scene.add.text(-60, -87, gradeName, {
             fontSize: '12px',
-            color: '#daa520'
+            color: T.gold
         }).setOrigin(0.5);
         this.add(this.gradeText);
 
@@ -55,30 +56,24 @@ export class ArtifactSprite extends BaseCardSprite {
         }
 
         // 图标占位符（保持在中间位置）
-        const iconBox = scene.add.rectangle(0, -20, 120, 120, 0x4a3f3f);
-        this.add(iconBox);
-        const iconText = scene.add.text(0, -20, '⚙', {
-            fontSize: '48px',
-            color: '#c9a959'
-        }).setOrigin(0.5);
-        this.add(iconText);
+        this.addIconPortrait('artifact');
 
         // 加成数值（移到类型标签下方）
         if (cardData.attackBonus || cardData.healthBonus) {
             const bonusText = [];
-            if (cardData.attackBonus) bonusText.push(`⚔+${cardData.attackBonus}`);
-            if (cardData.healthBonus) bonusText.push(`❤+${cardData.healthBonus}`);
+            if (cardData.attackBonus) bonusText.push(`攻+${cardData.attackBonus}`);
+            if (cardData.healthBonus) bonusText.push(`命+${cardData.healthBonus}`);
             
             this.bonusText = scene.add.text(0, 70, bonusText.join('  '), {
-                fontSize: '14px',
-                color: '#f1c40f',
+                fontSize: '12px',
+                color: T.gold,
                 fontStyle: 'bold'
             }).setOrigin(0.5);
             this.add(this.bonusText);
         } else {
             this.bonusText = scene.add.text(0, 70, '', {
                 fontSize: '14px',
-                color: '#f1c40f'
+                color: '#ffc040'
             }).setOrigin(0.5);
             this.add(this.bonusText);
         }
@@ -86,7 +81,7 @@ export class ArtifactSprite extends BaseCardSprite {
         // 描述（不在小卡上显示，只在预览时显示）
         this.descriptionText = scene.add.text(0, 105, cardData.description, {
             fontSize: '10px',
-            color: '#bdc3c7',
+            color: '#cfc6dd',
             wordWrap: { width: 160 },
             align: 'center'
         }).setOrigin(0.5);
@@ -126,7 +121,7 @@ export class ArtifactSprite extends BaseCardSprite {
 
     // 重写：获取默认边框颜色
     protected getDefaultStrokeColor(): number {
-        return 0xdaa520; // 金色
+        return C.gold; // 金色
     }
 
     // 重写：更新显示模式

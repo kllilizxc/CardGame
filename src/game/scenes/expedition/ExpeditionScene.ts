@@ -1,3 +1,4 @@
+import { ensureBackdrop } from '../../art/backdrop';
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
@@ -289,8 +290,9 @@ export class ExpeditionScene extends Scene {
         const { width, height } = this.scale;
 
         this.cameras.main.setBackgroundColor(0x050b16);
+        ensureBackdrop(this, 'cave');
 
-        const base = this.add.rectangle(width / 2, height / 2, width, height, 0x0b1220, 1);
+        const base = this.add.rectangle(width / 2, height / 2, width, height, 0x0b1220, 0.28);
         const topGlow = this.add.ellipse(width / 2, 0, width * 1.2, height * 0.78, expeditionUiTheme.colors.jade, 0.26).setOrigin(0.5, 0);
         const leftGlow = this.add.circle(width * 0.18, height * 0.34, 260, expeditionUiTheme.colors.jadeBright, 0.16);
         const rightGlow = this.add.circle(width * 0.82, height * 0.28, 230, expeditionUiTheme.colors.gold, 0.14);

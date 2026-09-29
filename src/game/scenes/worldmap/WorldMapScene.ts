@@ -22,7 +22,6 @@ import {
     type WorldMapViewport,
 } from './worldMap';
 import {
-    createSceneBackdrop,
     createSceneButton,
     createScenePanel,
     createStatusLine,
@@ -119,8 +118,8 @@ export class WorldMapScene extends Scene {
         const { width, height } = this.scale;
         const container = this.add.container(0, 0);
 
-        this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
-        container.add(createSceneBackdrop(this));
+        this.cameras.main.setBackgroundColor(0x0b0714);
+        ensureBackdrop(this, 'mountain', 'dusk');
 
         container.add(this.add.text(width / 2, 82, this.worldMap.title, getSceneTextStyle('sceneTitle')).setOrigin(0.5));
         container.add(this.add.text(width / 2, 138, this.worldMap.subtitle, getSceneTextStyle('sceneSubtitle')).setOrigin(0.5));
@@ -132,12 +131,7 @@ export class WorldMapScene extends Scene {
         const panelLeft = panelX - panelWidth / 2;
         const panelTop = panelY - panelHeight / 2;
         const contentX = panelLeft + 64;
-        container.add(createScenePanel(this, {
-            x: panelX,
-            y: panelY,
-            width: panelWidth,
-            height: panelHeight,
-        }));
+        container.add(pixelPanel(this, panelX, panelY, panelWidth, panelHeight, { ...PANEL_INK, alpha: 0.93 }));
 
         container.add(this.add.text(contentX, panelTop + 56, '山麓舆图', getSceneTextStyle('panelTitle')));
         if (savedQuestJournalEntries().length) {
@@ -175,7 +169,7 @@ export class WorldMapScene extends Scene {
         const { width } = this.scale;
         const container = this.add.container(0, 0);
         this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
-        container.add(createSceneBackdrop(this));
+        ensureBackdrop(this, 'mountain', 'dusk');
         container.add(this.add.text(width / 2, 78, this.worldMap.title, getSceneTextStyle('sceneTitle', {
             fontSize: '43px', wordWrap: { width: width - 36 }, align: 'center',
         })).setOrigin(0.5));
@@ -245,7 +239,7 @@ export class WorldMapScene extends Scene {
         });
 
         const maskShape = this.add.graphics();
-        maskShape.fillStyle(0xffffff, 1);
+        maskShape.fillStyle(0xf4ecd8, 1);
         maskShape.fillRect(viewport.left, viewport.top, viewport.width, viewport.height);
         maskShape.setVisible(false);
         surface.setMask(maskShape.createGeometryMask());
@@ -258,7 +252,7 @@ export class WorldMapScene extends Scene {
             viewportCenterY,
             viewport.width,
             viewport.height,
-            0x000000,
+            0x0b0714,
             0,
         );
         frame.setStrokeStyle(4, sceneTheme.colors.gold, 0.54);
@@ -281,35 +275,17 @@ export class WorldMapScene extends Scene {
         return backdrop;
     }
 
-    private createMapTerrainArtwork(): Phaser.GameObjects.Graphics {
+    private createMapTerrainArtwork(): Phaser.GameObjects.Image {
         const { mapWidth, mapHeight } = this.worldMap.presentation;
-        const graphics = this.add.graphics();
-
-        graphics.fillStyle(sceneTheme.colors.jade, 0.24);
-        graphics.fillEllipse(mapWidth * 0.28, mapHeight * 0.66, 760, 340);
-        graphics.fillStyle(sceneTheme.colors.gold, 0.16);
-        graphics.fillEllipse(mapWidth * 0.58, mapHeight * 0.4, 780, 360);
-        graphics.fillStyle(sceneTheme.colors.ember, 0.18);
-        graphics.fillEllipse(mapWidth * 0.74, mapHeight * 0.74, 460, 250);
-
-        graphics.lineStyle(5, sceneTheme.colors.parchmentSoft, 0.18);
-        graphics.beginPath();
-        graphics.moveTo(mapWidth * 0.18, mapHeight * 0.74);
-        graphics.lineTo(mapWidth * 0.35, mapHeight * 0.62);
-        graphics.lineTo(mapWidth * 0.52, mapHeight * 0.38);
-        graphics.lineTo(mapWidth * 0.68, mapHeight * 0.52);
-        graphics.lineTo(mapWidth * 0.8, mapHeight * 0.74);
-        graphics.strokePath();
-
-        graphics.lineStyle(2, sceneTheme.colors.gold, 0.1);
-        for (let x = 120; x < mapWidth; x += 160) {
-            graphics.lineBetween(x, 0, x, mapHeight);
-        }
-        for (let y = 100; y < mapHeight; y += 140) {
-            graphics.lineBetween(0, y, mapWidth, y);
-        }
-
-        return graphics;
+        const route: Array<[number, number]> = [
+            [mapWidth * 0.18, mapHeight * 0.74],
+            [mapWidth * 0.35, mapHeight * 0.62],
+            [mapWidth * 0.52, mapHeight * 0.38],
+            [mapWidth * 0.68, mapHeight * 0.52],
+            [mapWidth * 0.8, mapHeight * 0.74],
+        ];
+        const key = bakeTerrain(this, `terrain_${mapWidth}x${mapHeight}`, mapWidth, mapHeight, route);
+        return this.add.image(0, 0, key).setOrigin(0, 0).setScale(4);
     }
 
     private createDestinationMarker(destination: WorldMapDestination): Phaser.GameObjects.Container {
@@ -318,9 +294,11 @@ export class WorldMapScene extends Scene {
         const palette = this.getDestinationMarkerPalette(destination);
         const markerLabel = destination.kind === 'hub' ? '驻地' : '秘境';
 
-        const aura = this.add.circle(0, 0, 56, palette.fill, 0.18);
-        const pin = this.add.circle(0, 0, 34, palette.fill, 0.98);
-        pin.setStrokeStyle(4, palette.stroke, 0.95);
+        const aura = this.add.rectangle(0, 0, 112, 112, palette.fill, 0.22);
+        this.tweens.add({ targets: aura, scale: 1.25, alpha: 0.05, duration: 1200, repeat: -1, ease: 'Stepped', easeParams: [4] });
+        const pin = this.add.rectangle(0, 0, 68, 68, palette.fill, 1);
+        (pin as unknown as { deco: boolean }).deco = true;
+        pin.setStrokeStyle(4, palette.stroke, 1);
         pin.setInteractive({ useHandCursor: true });
 
         const glyph = this.add.text(0, -1, this.getDestinationMarkerGlyph(destination), {

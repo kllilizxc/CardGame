@@ -5,6 +5,7 @@ import {
     CONTENT_CATALOG_CACHE_KEY,
     CONTENT_CATALOG_PUBLIC_PATH,
 } from '../content/contentCatalog';
+import { C, FONT, T } from '../art/palette';
 
 export class Preloader extends Scene
 {
@@ -16,11 +17,37 @@ export class Preloader extends Scene
     init ()
     {
         const { width, height } = this.scale;
-        this.cameras.main.setBackgroundColor('#20282e');
-        this.add.text(width / 2, height / 2 - 100, '青云问道', { fontFamily: 'serif', fontSize: '48px', color: '#dfc99f' }).setOrigin(.5);
-        this.add.rectangle(width / 2, height / 2, 604, 20).setStrokeStyle(2, 0xc6aa7a);
-        const bar = this.add.rectangle(width / 2 - 296, height / 2, 4, 12, 0x849a8d).setOrigin(0, .5);
-        this.load.on('progress', (progress: number) => { bar.width = 4 + 588 * progress; });
+        this.cameras.main.setBackgroundColor(C.void);
+        this.add.text(width / 2, height / 2 - 90, '青 云', {
+            fontFamily: FONT, fontSize: '72px', color: T.gold, stroke: T.void, strokeThickness: 8,
+        }).setOrigin(0.5);
+        const label = this.add.text(width / 2, height / 2 + 70, '点燃灵火…', {
+            fontFamily: FONT, fontSize: '24px', color: T.dim,
+        }).setOrigin(0.5);
+
+        const barWidth = 600;
+        const x0 = width / 2 - barWidth / 2;
+        const y0 = height / 2;
+        const graphics = this.add.graphics();
+        const drawProgress = (progress: number) => {
+            graphics.clear();
+            graphics.fillStyle(C.umber, 1);
+            graphics.fillRect(x0 - 8, y0 - 8, barWidth + 16, 40);
+            graphics.fillStyle(C.void, 1);
+            graphics.fillRect(x0 - 4, y0 - 4, barWidth + 8, 32);
+            const filled = Math.floor((barWidth * progress) / 8) * 8;
+            for (let x = 0; x < filled; x += 8) {
+                graphics.fillStyle(x % 16 === 0 ? C.ember : C.gold, 1);
+                graphics.fillRect(x0 + x, y0, 8, 24);
+                graphics.fillStyle(C.glow, 1);
+                graphics.fillRect(x0 + x, y0, 8, 4);
+            }
+        };
+        drawProgress(0);
+        this.load.on('progress', (progress: number) => {
+            drawProgress(progress);
+            label.setText(`点燃灵火… ${Math.floor(progress * 100)}%`);
+        });
     }
 
     preload ()
@@ -28,7 +55,6 @@ export class Preloader extends Scene
         //  Load runtime metadata before any gameplay scene needs catalog-backed resource resolution.
         this.load.json(CONTENT_CATALOG_CACHE_KEY, CONTENT_CATALOG_PUBLIC_PATH);
 
-        //  Load the assets for the game - Replace with your own assets
         this.load.setPath('assets');
 
         this.load.image('logo', 'logo.png');

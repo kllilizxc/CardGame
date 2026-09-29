@@ -1,5 +1,6 @@
 import { WenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
 import { ensureWenxinArt } from '../../art/wenxin/WenxinArt';
+import { ensureBackdrop } from '../../art/backdrop';
 import { Scene } from 'phaser';
 import { EventBus, EXPEDITION_BATTLE_COMPLETE_EVENT, STORY_BATTLE_COMPLETE_EVENT } from '../../EventBus';
 import { CardSprite } from '../../objects/CardSprite';
@@ -282,6 +283,7 @@ export class BattleScene extends Scene {
 
         this.cardScale = this.calculateCardScale();
         this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
+        ensureBackdrop(this, 'arena');
         await ensureWenxinArt(this);
         if (!this.sys.isActive()) return;
         new WenxinBattleStage(this);

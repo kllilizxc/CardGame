@@ -160,7 +160,7 @@ export class BattleLog {
 
     private setupMask() {
         const maskShape = this.scene.make.graphics({});
-        maskShape.fillStyle(0xffffff);
+        maskShape.fillStyle(0xf4ecd8);
         maskShape.fillRect(
             this.LOG_X - this.LOG_WIDTH / 2 + 10,
             this.LOG_Y - this.LOG_HEIGHT / 2 + 50,
