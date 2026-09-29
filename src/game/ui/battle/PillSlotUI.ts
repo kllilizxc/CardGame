@@ -1,3 +1,4 @@
+import { iconTexture } from '../../art/sprites';
 import { GameObjects, Scene } from 'phaser';
 import type { PillSlot } from '../../managers/battle/PillManager';
 import type { PillCard } from '@data/types/cards/pill';
@@ -9,7 +10,7 @@ import type { PillCard } from '@data/types/cards/pill';
 export class PillSlotUI extends GameObjects.Container {
     private slotContainers: GameObjects.Container[] = [];
     private slotBackgrounds: GameObjects.Rectangle[] = [];
-    private pillIcons: GameObjects.Text[] = [];
+    private pillIcons: GameObjects.Image[] = [];
     private pillNames: GameObjects.Text[] = [];
     private emptyTexts: GameObjects.Text[] = [];
     private onSlotClick: ((slotIndex: number) => void) | null = null;
@@ -78,9 +79,7 @@ export class PillSlotUI extends GameObjects.Container {
 
         // 丹药图标（如果有）
         if (!slot.isEmpty && slot.pill) {
-            const icon = this.scene.add.text(0, -5, '💊', {
-                fontSize: '32px'
-            }).setOrigin(0.5);
+            const icon = this.scene.add.image(0, -8, iconTexture(this.scene, 'pill')).setScale(3);
             container.add(icon);
             this.pillIcons[index] = icon;
 

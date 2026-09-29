@@ -90,7 +90,15 @@ function grid(p: Pix, rows: string[], map: Record<string, number>, ox = 0, oy = 
 }
 
 // ------------------------------------------------------------------ icons
-export type IconName = 'sword' | 'heart' | 'star' | 'pill' | 'talisman' | 'mountain' | 'artifact' | 'drop' | 'skull';
+export type IconName = 'sword' | 'heart' | 'star' | 'pill' | 'talisman' | 'mountain' | 'artifact' | 'drop' | 'skull'
+    | 'shield' | 'plus' | 'flame' | 'crack' | 'down' | 'snow' | 'ban' | 'bolt' | 'target' | 'ghost' | 'blood' | 'thorn';
+
+/** Status effect id → icon. */
+export const STATUS_ICON: Record<string, IconName> = {
+    armor: 'shield', defense_boost: 'shield', attack_boost: 'sword', regeneration: 'plus', immunity_poison: 'pill',
+    poison: 'skull', burn: 'flame', vulnerable: 'crack', weak: 'down', frozen: 'snow', sealed: 'ban',
+    sword_mark: 'bolt', taunt: 'target', stealth: 'ghost', bleed: 'blood', thorns: 'thorn',
+};
 
 export function iconTexture(scene: Phaser.Scene, name: IconName): string {
     return bake(scene, `ico_${name}`, 16, 16, (p) => {
@@ -149,6 +157,62 @@ export function iconTexture(scene: Phaser.Scene, name: IconName): string {
             case 'skull':
                 grid(p, ['.wwwww.', 'wwwwwww', 'wkwwwkw', 'wwwkwww', '.wwwww.', '.w.w.w.'], { w: C.paper, k: C.void }, 4, 5);
                 break;
+            case 'shield':
+                for (let y = 2; y <= 13; y++) {
+                    const half = y < 9 ? 5 : Math.max(0, 5 - (y - 8));
+                    for (let x = -half; x <= half; x++) p.px(8 + x, y, Math.abs(x) >= half - 0 ? C.fog : x < 0 ? C.sky : C.azure);
+                }
+                p.rect(7, 4, 2, 6, C.ice);
+                break;
+            case 'plus':
+                p.rect(6, 2, 4, 12, C.jade); p.rect(2, 6, 12, 4, C.jade);
+                p.rect(6, 2, 2, 12, C.lime); p.rect(2, 6, 12, 2, C.lime);
+                break;
+            case 'flame':
+                for (let y = 2; y <= 14; y++) {
+                    const t = (y - 2) / 12;
+                    const half = Math.round(Math.sin(Math.min(1, t * 1.15) * Math.PI * 0.62) * 5);
+                    for (let x = -half; x <= half; x++) p.px(8 + x, y, t > 0.65 ? C.gold : t > 0.35 ? C.ember : C.cinnabar);
+                }
+                p.disc(8, 11, 2, C.glow);
+                break;
+            case 'crack':
+                grid(p, ['.rr.rr.', 'rhrrrrr', 'rrrrrrr', '.rrrrr.', '..rrr..', '...r...'], { r: C.crimson, h: C.petal }, 4, 4);
+                p.line(8, 5, 7, 8, C.void); p.line(7, 8, 9, 10, C.void);
+                break;
+            case 'down':
+                for (let y = 3; y <= 9; y++) for (let x = -(9 - y); x <= 9 - y; x++) p.px(8 + x, y + 2, y < 6 ? C.cinnabar : C.crimson);
+                p.rect(6, 2, 4, 5, C.cinnabar);
+                break;
+            case 'snow':
+                p.line(8, 1, 8, 14, C.ice); p.line(2, 4, 14, 11, C.ice); p.line(2, 11, 14, 4, C.ice);
+                p.px(8, 1, C.paper); p.px(8, 14, C.paper); p.disc(8, 8, 1, C.paper);
+                break;
+            case 'ban':
+                for (let a = 0; a < 6.3; a += 0.12) for (const r of [6, 5]) p.px(Math.round(8 + Math.cos(a) * r), Math.round(8 + Math.sin(a) * r), C.cinnabar);
+                p.line(4, 12, 12, 4, C.cinnabar); p.line(4, 11, 11, 4, C.crimson);
+                break;
+            case 'bolt':
+                p.line(10, 1, 5, 8, C.gold); p.line(11, 1, 6, 8, C.gold); p.line(5, 8, 10, 8, C.gold); p.line(10, 8, 6, 15, C.gold); p.line(11, 8, 7, 15, C.ember);
+                p.px(10, 2, C.glow); p.px(9, 4, C.glow);
+                break;
+            case 'target':
+                p.disc(8, 8, 6, C.cinnabar); p.disc(8, 8, 4, C.paper); p.disc(8, 8, 3, C.cinnabar); p.disc(8, 8, 1, C.paper);
+                break;
+            case 'ghost':
+                p.rect(4, 3, 8, 10, C.paper); p.rect(5, 2, 6, 1, C.paper); p.rect(3, 6, 10, 6, C.paper);
+                for (let x = 3; x < 13; x += 2) p.rect(x, 13, 1, 2, C.paper);
+                p.rect(5, 6, 2, 2, C.void); p.rect(9, 6, 2, 2, C.void);
+                break;
+            case 'blood':
+                grid(p, ['...s...', '..sss..', '.ssiss.', 'ssiisss', 'sssssss', '.sssss.', '..sss..'], { s: C.cinnabar, i: C.petal }, 4, 4);
+                break;
+            case 'thorn':
+                p.rect(7, 4, 3, 10, C.jade); p.rect(7, 4, 1, 10, C.lime);
+                p.line(7, 8, 3, 5, C.jade); p.line(9, 10, 13, 7, C.jade); p.line(7, 12, 3, 10, C.jade);
+                p.px(3, 4, C.paper); p.px(13, 6, C.paper); p.px(3, 9, C.paper); p.px(8, 3, C.paper);
+                break;
+
         }
         p.outline();
     });

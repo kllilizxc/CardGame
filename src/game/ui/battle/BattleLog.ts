@@ -77,7 +77,7 @@ export class BattleLog {
         this.container.add(scrollHint);
 
         // 位置提示（右侧）
-        this.bottomHint = scene.add.text(this.LOG_WIDTH / 2 - 80, this.LOG_HEIGHT / 2 - 15, '✓ 已到最新', {
+        this.bottomHint = scene.add.text(this.LOG_WIDTH / 2 - 80, this.LOG_HEIGHT / 2 - 15, '◆ 已到最新', {
             fontSize: Math.floor(scene.scale.height * 0.012) + 'px',
             color: '#3fbf7a',
             fontStyle: 'bold'
@@ -236,10 +236,10 @@ export class BattleLog {
         
         // 更新提示文字
         if (isAtTop && this.maxScrollOffset > 0) {
-            this.bottomHint.setText('✓ 已到最早');
+            this.bottomHint.setText('◆ 已到最早');
             this.bottomHint.setColor('#9a8fbf');
         } else if (isAtBottom) {
-            this.bottomHint.setText('✓ 已到最新');
+            this.bottomHint.setText('◆ 已到最新');
             this.bottomHint.setColor('#3fbf7a');
         }
     }

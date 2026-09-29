@@ -1,3 +1,4 @@
+import { iconTexture } from '../../art/sprites';
 import type { Scene } from 'phaser';
 import type { PillCard } from '../../../../public/data/types/cards/pill';
 
@@ -45,9 +46,7 @@ export class PillTooltipUI {
         this.tooltip.add(bg);
 
         // 丹药图标
-        const icon = this.scene.add.text(0, -60, '💊', {
-            fontSize: '40px'
-        }).setOrigin(0.5);
+        const icon = this.scene.add.image(0, -60, iconTexture(this.scene, 'pill')).setScale(3);
         this.tooltip.add(icon);
 
         // 丹药名称

@@ -4,14 +4,14 @@ import type { Gongfa } from '@data/types/gongfa';
 import type { StatusInstance } from '@data/types/status';
 import { BaseCardSprite } from './BaseCardSprite';
 import { C, T } from '../art/palette';
-import { auraTexture, avatarTexture, iconTexture, type IconName } from '../art/sprites';
+import { auraTexture, avatarTexture, iconTexture, STATUS_ICON, type IconName } from '../art/sprites';
 
 const STAR_BORDER = [C.mist, C.jade, C.sky, C.orchid, C.ember, C.gold];
 const hashSeed = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; };
 import { GongfaTooltip } from '../ui/common/GongfaTooltip';
 import { describeGongfa } from '../utils/GongfaDescriptionBuilder';
 import { getUnitStar, getRealmConfig } from '../utils/RealmHelper';
-import { getStatusDisplayText, getStatusCategoryColor, getStatusFullDescription } from '../utils/StatusHelper';
+import { getStatusCategoryColor, getStatusFullDescription } from '../utils/StatusHelper';
 
 type BattleSceneCardDragBridge = Phaser.Scene & {
     swapPlayerFieldCards?: (card: CardSprite, x: number, y: number) => boolean;
@@ -335,29 +335,33 @@ export class CardSprite extends BaseCardSprite {
         }
 
         // 创建新的状态容器（显示在卡片左侧，避免与功法重合）
-        this.statusContainer = this.scene.add.container(-90, -80);
+        this.statusContainer = this.scene.add.container(-86, -40);
         this.add(this.statusContainer);
 
         // 显示每个状态
         statuses.forEach((status, index) => {
-            const displayText = getStatusDisplayText(status);
             const categoryColor = getStatusCategoryColor(status.statusId);
-            
-            const yPos = index * 22;
-            
-            // 创建状态背景
-            const bg = this.scene.add.rectangle(0, yPos, 50, 18, categoryColor, 0.8);
-            bg.setStrokeStyle(1, categoryColor);
+
+            const yPos = index * 28;
+
+            // 状态背景（像素徽章）
+            const bg = this.scene.add.rectangle(6, yPos, 78, 24, categoryColor, 0.85);
+            bg.setStrokeStyle(2, C.void);
             this.statusContainer!.add(bg);
-            
-            // 创建状态文本
-            const text = this.scene.add.text(0, yPos, displayText, {
+
+            // 状态图标 + 层数/回合数
+            const icon = this.scene.add.image(-24, yPos, iconTexture(this.scene, STATUS_ICON[status.statusId] ?? 'star')).setScale(1.5);
+            this.statusContainer!.add(icon);
+            const stackText = status.stacks > 1 ? `${status.stacks}` : '';
+            const durationText = status.duration && status.duration > 0 ? `${stackText ? '·' : ''}${status.duration}回` : '';
+            const text = this.scene.add.text(-8, yPos, `${stackText}${durationText}`, {
                 fontSize: '12px',
-                color: '#f4ecd8',
-                fontStyle: 'bold'
-            }).setOrigin(0.5);
+                color: T.paper,
+                stroke: T.void,
+                strokeThickness: 3
+            }).setOrigin(0, 0.5);
             this.statusContainer!.add(text);
-            
+
             // 添加交互（悬停显示详细信息）
             bg.setInteractive();
             bg.on('pointerover', () => {
