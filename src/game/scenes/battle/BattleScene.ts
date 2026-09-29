@@ -1,6 +1,5 @@
 import { WenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
 import { ensureWenxinArt } from '../../art/wenxin/WenxinArt';
-import { ensureBackdrop } from '../../art/backdrop';
 import { Scene } from 'phaser';
 import { EventBus, EXPEDITION_BATTLE_COMPLETE_EVENT, STORY_BATTLE_COMPLETE_EVENT } from '../../EventBus';
 import { CardSprite } from '../../objects/CardSprite';
@@ -40,6 +39,9 @@ import type { SkillCard } from '../../../../public/data/types/cards/skill';
 import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import { BattleState } from '../../state/BattleState';
 import { BattleUIManager } from '../../ui/battle/BattleUIManager';
+import { BattleHud } from '../../ui/battle/hud/BattleHud';
+import { HoverCard } from '../../ui/battle/hud/HoverCard';
+import { PillRail, SkillRail } from '../../ui/battle/hud/Rails';
 import { CardPreviewManager } from '../../managers/common/CardPreviewManager';
 import type { CardPreviewMetadata, PreviewCardData } from '../../managers/common/cardPreviewProtocol';
 import { PillTooltipUI } from '../../ui/common/PillTooltipUI';
@@ -89,7 +91,8 @@ export class BattleScene extends Scene {
     private cardScale: number = 1;
     
     // UI 管理器
-    private uiManager!: BattleUIManager;
+    private uiManager!: BattleUIManager | BattleHud;
+    private hoverCard?: HoverCard;
     private cardPreviewManager!: CardPreviewManager;
     private pillTooltipUI!: PillTooltipUI;
     
@@ -180,6 +183,10 @@ export class BattleScene extends Scene {
     
     private get isProcessingTurn() { return this.battleState.isProcessingTurn; }
     private set isProcessingTurn(value) { this.battleState.isProcessingTurn = value; }
+
+    private isLandscape(): boolean {
+        return !isPortraitGameViewport(this.scale.width, this.scale.height);
+    }
 
     private calculateCardScale(): number {
         // 响应式缩放系数，会与 CardSprite 的默认 scale 相乘
@@ -283,7 +290,6 @@ export class BattleScene extends Scene {
 
         this.cardScale = this.calculateCardScale();
         this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
-        ensureBackdrop(this, 'arena');
         await ensureWenxinArt(this);
         if (!this.sys.isActive()) return;
         new WenxinBattleStage(this);
@@ -383,7 +389,9 @@ export class BattleScene extends Scene {
         this.drawInitialHand();
 
         // 创建 UI（使用 UIManager）
-        this.uiManager = new BattleUIManager(this, this.layout, this.battleState);
+        this.uiManager = this.isLandscape()
+            ? new BattleHud(this, this.layout, this.battleState)
+            : new BattleUIManager(this, this.layout, this.battleState);
         this.uiManager.setCallbacks({
             onDrawCard: () => this.drawCard(),
             onEndTurn: () => this.endTurn(),
@@ -392,9 +400,11 @@ export class BattleScene extends Scene {
             onShowDiscardPile: () => new CardListView(this, '弃牌堆', [...this.discardPile]),
         });
         this.uiManager.createAll();
+        if (this.uiManager instanceof BattleHud) this.uiManager.attachLog(this.battleLog);
 
         // 初始化卡牌预览和丹药提示框
         this.cardPreviewManager = new CardPreviewManager(this);
+        if (this.isLandscape()) this.hoverCard = new HoverCard(this, this.layout.depth.cardPreview);
         this.battleLog.hide();
         this.pillTooltipUI = new PillTooltipUI(this);
 
@@ -484,15 +494,13 @@ export class BattleScene extends Scene {
         const pillConfig = this.layout.pillSlots;
         
         // 创建丹药槽位UI
-        this.pillSlotUI = new PillSlotUI(
-            this,
-            pillConfig.x,
-            pillConfig.y,
-            (slotIndex: number) => {
-                // 点击槽位使用丹药
-                this.usePillFromSlot(slotIndex);
-            }
-        );
+        const onPillClick = (slotIndex: number) => {
+            // 点击槽位使用丹药
+            this.usePillFromSlot(slotIndex);
+        };
+        this.pillSlotUI = (this.isLandscape()
+            ? new PillRail(this, pillConfig.x, pillConfig.y, onPillClick, this.layout.depth.uiButtons)
+            : new PillSlotUI(this, pillConfig.x, pillConfig.y, onPillClick)) as PillSlotUI;
 
         // 初始化槽位显示
         this.pillSlotUI.createSlots(this.pillManager.getSlots());
@@ -558,15 +566,13 @@ export class BattleScene extends Scene {
         
         // 创建技能UI（使用布局配置）
         const skillConfig = this.layout.skillUI;
-        this.skillUI = new SkillUI(
-            this,
-            skillConfig.x,
-            skillConfig.y,
-            (skillIndex: number) => {
-                // 点击技能按钮
-                this.useSkill(skillIndex);
-            }
-        );
+        const onSkillClick = (skillIndex: number) => {
+            // 点击技能按钮
+            this.useSkill(skillIndex);
+        };
+        this.skillUI = (this.isLandscape()
+            ? new SkillRail(this, skillConfig.x, skillConfig.y, onSkillClick, this.layout.depth.uiButtons)
+            : new SkillUI(this, skillConfig.x, skillConfig.y, onSkillClick)) as SkillUI;
 
         this.skillManager.initializeSkills(skillsData);
         this.skillUI.createSkills(this.skillManager.getSkills());
@@ -609,18 +615,26 @@ export class BattleScene extends Scene {
 
     private setupCardPreview() {
         this.events.on('showCardPreview', (card: BaseCardSprite, metadata?: CardPreviewMetadata) => {
+            if (this.hoverCard) {
+                // Hand cards raise themselves in the fan; only board units need the inspector.
+                if (!this.hand.includes(card as never)) this.hoverCard.showFromSprite(card, metadata);
+                return;
+            }
             this.cardPreviewManager.showFromSprite(card, metadata);
         });
 
         this.events.on('showCardPreviewFromData', (cardData: PreviewCardData, metadata?: CardPreviewMetadata) => {
+            if (this.hoverCard) { this.hoverCard.showFromData(cardData, metadata); return; }
             this.cardPreviewManager.showFromData(cardData, metadata);
         });
 
         this.events.on('hideCardPreview', () => {
+            this.hoverCard?.hide();
             this.cardPreviewManager.clear();
         });
 
         this.events.on('clearCardPreviewContext', (contextId: string) => {
+            this.hoverCard?.clearContext(contextId);
             this.cardPreviewManager.clearContext(contextId);
         });
 

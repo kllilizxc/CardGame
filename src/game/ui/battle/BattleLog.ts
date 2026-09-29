@@ -294,7 +294,20 @@ export class BattleLog {
         }
     }
 
+    private lineListeners: Array<(line: string) => void> = [];
+
+    /** Subscribe to every log line (used by the HUD toast feed). */
+    public onLine(listener: (line: string) => void): void {
+        this.lineListeners.push(listener);
+    }
+
+    /** The HUD provides its own toggle button. */
+    public setToggleVisible(visible: boolean): void {
+        this.toggleButton.setVisible(visible);
+    }
+
     public addLog(message: string, cards: BaseCardSprite[] = []) {
+        this.lineListeners.forEach(listener => listener(message));
         const entry: LogEntry = {
             text: message,
             cardRefs: cards.map(card => ({
@@ -651,6 +664,11 @@ export class BattleLog {
 
     public toggle() {
         this.isVisible = !this.isVisible;
+        if (this.isVisible) {
+            this.scene.tweens.killTweensOf(this.container);
+            this.container.setX(this.LOG_X + 60).setAlpha(0);
+            this.scene.tweens.add({ targets: this.container, x: this.LOG_X, alpha: 1, duration: 200, ease: 'Cubic.easeOut' });
+        }
         if (!this.isVisible) {
             this.scene.events.emit('clearCardPreviewContext', this.previewMetadata.contextId);
         }

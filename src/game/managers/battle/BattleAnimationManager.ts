@@ -45,6 +45,29 @@ export class BattleAnimationManager {
         return this.scene.tweens.add(config);
     }
 
+    /** Camera shake that shakes the diorama (not the HUD) when a battle stage exists. */
+    private shake(mag: number, ms: number): void {
+        const stage = getWenxinBattleStage(this.scene);
+        if (stage) stage.shake(mag / 3.2, ms);
+        else pxShake(this.scene, mag, ms);
+    }
+
+    private freeze(ms: number): void {
+        const stage = getWenxinBattleStage(this.scene);
+        if (stage) stage.fx.hitStop(ms);
+        else hitStop(this.scene, ms);
+    }
+
+    /** Visual centre of a unit: the sprite's body on the diorama, or the card itself. */
+    private anchor(target: CardSprite): { x: number; y: number } {
+        const stage = getWenxinBattleStage(this.scene);
+        if (stage && target.battleView) {
+            const p = stage.unitScreen(target);
+            return { x: p.x, y: p.y - 110 };
+        }
+        return { x: target.x, y: target.y };
+    }
+
     // 单位攻击单位动画
     public addAttackAnimation(
         attacker: CardSprite,
@@ -331,13 +354,28 @@ export class BattleAnimationManager {
         onDamage: (damage: number) => void
     ): void {
         if (attacker.battleView) {
-            const pose = attacker.battleView.pose;
+            const view = attacker.battleView;
+            const pose = view.pose;
+            const stage = getWenxinBattleStage(this.scene);
+            const { width, height } = this.scene.scale;
             this.addTweens({ targets: { t: 0 }, t: 1, duration: Math.max(1, delay), onComplete: () => {
                 if (!attacker.active) return;
                 pose.run = 1;
-                this.addTweens({ targets: pose, ox: 420, oy: -40, duration: 350, ease: 'Quad.easeIn', onComplete: () => {
-                    onDamage(damage); this.playPlayerHitEffect(damage);
-                    this.addTweens({ targets: pose, ox: 0, oy: 0, duration: 300, ease: 'Sine.easeInOut', onComplete: () => { pose.run = 0; } });
+                view.setFocused(true);
+                stage?.focus([attacker], { dolly: 6, pan: 0.6, ms: 300 });
+                const dirX = Math.sign(width * 0.6 - attacker.x) || 1;
+                this.addTweens({ targets: pose, ox: -dirX * 30, oy: -16, duration: 200, ease: 'Sine.easeOut', onComplete: () => {
+                    const trail = this.scene.time.addEvent({ delay: 38, loop: true, callback: () => {
+                        if (view.active && stage) stage.fx.afterimage(view, stage.unitScreen(attacker));
+                    } });
+                    if (stage) { const p = stage.unitScreen(attacker); stage.fx.speedLines(p.x, p.y - 110, dirX); }
+                    this.addTweens({ targets: pose, ox: width * 0.6 - attacker.x, oy: height * 0.72 - attacker.y, duration: 260, ease: 'Expo.easeIn', onComplete: () => {
+                        trail.remove();
+                        onDamage(damage); this.playPlayerHitEffect(damage);
+                        this.addTweens({ targets: pose, ox: 0, oy: 0, duration: 420, delay: 100, ease: 'Sine.easeInOut', onComplete: () => {
+                            pose.run = 0; view.setFocused(false); stage?.release(480);
+                        } });
+                    } });
                 } });
             } });
             return;
@@ -404,10 +442,17 @@ export class BattleAnimationManager {
 
     // 受击动画
     public playHitAnimation(target: CardSprite): void {
+        const stage = getWenxinBattleStage(this.scene);
+        const at = this.anchor(target);
+        if (stage && target.battleView) {
+            stage.impact(target, C.paper, false, 4);
+            const pose = target.battleView.pose;
+            this.scene.tweens.add({ targets: pose, ox: 18, duration: 60, yoyo: true, ease: 'Quad.easeOut' });
+            return;
+        }
         const originalX = target.x;
         const scale = target.scale || 1;
 
-        // 像素式震动：整像素左右抖动
         this.addTweens({
             targets: target,
             x: originalX + 8,
@@ -421,41 +466,49 @@ export class BattleAnimationManager {
             }
         });
 
-        // 白闪：整张卡牌罩一层纸白
-        const flash = this.scene.add.rectangle(target.x, target.y, 180 * scale, 260 * scale, C.paper, 0.85);
+        const flash = this.scene.add.rectangle(at.x, at.y, 180 * scale, 260 * scale, C.paper, 0.85);
         flash.setDepth(target.depth + 1);
         this.scene.tweens.add({ targets: flash, alpha: 0, duration: 200, ease: 'Stepped', easeParams: [3], onComplete: () => flash.destroy() });
 
-        // 斩击线 + 血色像素飞溅 + 冲击环
-        pxSlash(this.scene, target.x, target.y, C.paper, -0.6, 200 * scale + 60);
-        pxBurst(this.scene, target.x, target.y, { colors: [C.cinnabar, C.crimson, C.ember, C.paper], count: 16, speed: 240, size: 10 });
-        pxRing(this.scene, target.x, target.y, C.cinnabar, 110 * scale + 20);
-        pxShake(this.scene, 5, 160);
-        hitStop(this.scene, 70);
+        pxSlash(this.scene, at.x, at.y, C.paper, -0.6, 200 * scale + 60);
+        pxBurst(this.scene, at.x, at.y, { colors: [C.cinnabar, C.crimson, C.ember, C.paper], count: 16, speed: 240, size: 10 });
+        pxRing(this.scene, at.x, at.y, C.cinnabar, 110 * scale + 20);
+        this.shake(5, 160);
+        this.freeze(70);
     }
 
     // 治疗动画
     public playHealAnimation(target: CardSprite): void {
-        const scale = target.scale || 1;
-        pxRing(this.scene, target.x, target.y + 20, C.lime, 100 * scale + 20);
-        for (let i = 0; i < 3; i++) {
+        const at = this.anchor(target);
+        const stage = !!target.battleView;
+        const scale = stage ? 1.6 : target.scale || 1;
+        pxRing(this.scene, at.x, at.y + (stage ? 100 : 20), C.celadon, 100 * scale + 20);
+        for (let i = 0; i < 4; i++) {
             this.scene.time.delayedCall(i * 110, () => {
-                pxBurst(this.scene, target.x + (Math.random() - 0.5) * 100 * scale, target.y + 40 * scale, {
-                    colors: [C.lime, C.jade, C.glow], count: 6, speed: 90, size: 8, gravity: -160, life: 700, spread: 0.6, angle: -Math.PI / 2,
-                    depth: target.depth + 2,
+                pxBurst(this.scene, at.x + (Math.random() - 0.5) * 100 * scale, at.y + 40 * scale, {
+                    colors: [C.celadon, C.lime, C.glow], count: 6, speed: 90, size: 8, gravity: -160, life: 800, spread: 0.6, angle: -Math.PI / 2,
+                    depth: 3060,
                 });
             });
         }
-        // 绿色十字闪烁
-        const cross = this.scene.add.graphics().setDepth(target.depth + 2).setPosition(target.x, target.y);
-        cross.fillStyle(C.lime, 1);
-        cross.fillRect(-8, -28, 16, 56); cross.fillRect(-28, -8, 56, 16);
-        this.scene.tweens.add({ targets: cross, alpha: 0, y: target.y - 60, duration: 600, ease: 'Stepped', easeParams: [6], onComplete: () => cross.destroy() });
+        const cross = this.scene.add.graphics().setDepth(3060).setPosition(at.x, at.y).setBlendMode(Phaser.BlendModes.ADD);
+        cross.fillStyle(C.celadon, 1);
+        cross.fillRect(-10, -34, 20, 68); cross.fillRect(-34, -10, 68, 20);
+        this.scene.tweens.add({ targets: cross, alpha: 0, y: at.y - 70, duration: 700, ease: 'Stepped', easeParams: [7], onComplete: () => cross.destroy() });
+        if (target.battleView) target.battleView.refreshStats();
     }
 
     // 死亡动画
     public playDeathAnimation(target: CardSprite): void {
-        getWenxinBattleStage(this.scene)?.shatter(target);
+        const stage = getWenxinBattleStage(this.scene);
+        if (stage && target.battleView) {
+            // the fighter dissolves upward into ash; the card shell just fades
+            stage.shatter(target);
+            const view = target.battleView;
+            this.addTweens({ targets: view, alpha: 0, duration: 380, ease: 'Stepped', easeParams: [7] });
+            this.addTweens({ targets: view.pose, oy: view.pose.oy - 46, duration: 380, ease: 'Sine.easeOut' });
+            return;
+        }
         const baseScale = target.scale;
         const scale = baseScale || 1;
         pxDissolve(this.scene, target.x, target.y, 180 * scale, 260 * scale, [C.paper, C.mist, C.dusk, C.cinnabar, C.void], target.depth + 1);
@@ -473,13 +526,15 @@ export class BattleAnimationManager {
     // 玩家受击效果
     public playPlayerHitEffect(damage: number): void {
         const { width, height } = this.scene.scale;
+        const stage = getWenxinBattleStage(this.scene);
 
-        pxShake(this.scene, 16, 320);
-        pxFlash(this.scene, C.cinnabar, 0.45, 260);
-        hitStop(this.scene, 90);
+        this.shake(16, 360);
+        stage?.punch(4, 220);
+        stage?.flash('#b95a44', 0.55);
+        this.freeze(90);
 
-        // 屏幕边缘血色像素框
-        const vignette = this.scene.add.graphics().setDepth(2400).setScrollFactor(0);
+        // edge vignette in cinnabar, pixel-stepped
+        const vignette = this.scene.add.graphics().setDepth(2400);
         vignette.fillStyle(C.crimson, 0.9);
         const t = 24;
         for (let x = 0; x < width; x += 32) {
@@ -490,8 +545,10 @@ export class BattleAnimationManager {
         }
         this.scene.tweens.add({ targets: vignette, alpha: 0, duration: 700, onComplete: () => vignette.destroy() });
 
-        // 伤害数字
-        pxPop(this.scene, width / 2, height * 0.5, `-${damage}`, C.cinnabar, 96, 2401, 350);
+        // the damage number lands where the health plate is, so the eye follows the loss
+        const landscape = width > height;
+        pxPop(this.scene, landscape ? 340 : width / 2, landscape ? 178 : height * 0.5, `-${damage}`, C.cinnabar, 72, 2401, 500);
+        pxPop(this.scene, width / 2, height * 0.55, `-${damage}`, C.paper, 120, 2400, 250);
     }
 
     /**
@@ -655,7 +712,7 @@ export class BattleAnimationManager {
     }
 
     private shakeCamera(intensity: number = 1): void {
-        pxShake(this.scene, 12 * intensity, 400 * intensity);
+        this.shake(12 * intensity, 400 * intensity);
     }
 
     /**
@@ -793,17 +850,19 @@ export class BattleAnimationManager {
             ease: 'Stepped',
             easeParams: [1]
         });
-        pxBurst(this.scene, target.x, target.y, { colors: [color, C.paper, C.ember], count: 10, speed: 180, size: 8 });
+        const at = this.anchor(target);
+        pxBurst(this.scene, at.x, at.y, { colors: [color, C.paper, C.ember], count: 10, speed: 180, size: 8 });
     }
 
     /**
      * 显示增益特效
      */
     public showBuffEffect(target: CardSprite, color: number = C.gold): void {
-        pxRing(this.scene, target.x, target.y, color, 90);
+        const at = this.anchor(target);
+        pxRing(this.scene, at.x, at.y + (target.battleView ? 100 : 0), color, 110, 3040);
         for (let i = 0; i < 5; i++) {
             this.scene.time.delayedCall(i * 80, () => {
-                pxBurst(this.scene, target.x + (Math.random() - 0.5) * 100, target.y + 50, {
+                pxBurst(this.scene, at.x + (Math.random() - 0.5) * 100, at.y + 50, {
                     colors: [color, C.glow, C.paper], count: 3, speed: 70, size: 6, gravity: -180, life: 800, spread: 0.4,
                 });
             });
@@ -814,9 +873,10 @@ export class BattleAnimationManager {
      * 显示减益特效
      */
     public showDebuffEffect(target: CardSprite, color: number = C.orchid): void {
+        const at = this.anchor(target);
         for (let i = 0; i < 5; i++) {
             this.scene.time.delayedCall(i * 80, () => {
-                pxBurst(this.scene, target.x + (Math.random() - 0.5) * 100, target.y - 50, {
+                pxBurst(this.scene, at.x + (Math.random() - 0.5) * 100, at.y - 50, {
                     colors: [color, C.violet, C.void], count: 3, speed: 60, size: 6, gravity: 220, life: 800, spread: 0.4, angle: Math.PI / 2,
                 });
             });
@@ -836,8 +896,8 @@ export class BattleAnimationManager {
         pxRing(this.scene, x, y, C.paper, radius * 1.4);
         this.scene.time.delayedCall(60, () => pxRing(this.scene, x, y, color, radius * 1.9));
         pxBurst(this.scene, x, y, { colors: [C.glow, color, C.gold, C.cinnabar], count: 22, speed: radius * 4, size: 12 });
-        pxShake(this.scene, 8, 200);
-        hitStop(this.scene, 50);
+        this.shake(8, 200);
+        this.freeze(50);
     }
 
     /**
@@ -1030,6 +1090,8 @@ export class BattleAnimationManager {
             targets: card,
             x: targetX,
             y: targetY,
+            angle: card.getRestAngle?.() ?? 0,
+            scale: card.getCardBaseScale?.() ?? card.scale,
             duration: 300,
             ease: 'Back.easeOut',
             onComplete: onComplete

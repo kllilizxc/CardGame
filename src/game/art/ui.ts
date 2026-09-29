@@ -12,15 +12,16 @@ export interface PanelStyle {
     shadow?: boolean;
 }
 
-export const PANEL_INK: PanelStyle = { fill: C.ink, edge: C.void, border: C.twilight, hi: C.haze, lo: C.night, stud: C.gold };
-export const PANEL_PAPER: PanelStyle = { fill: C.parchment, edge: C.umber, border: C.wood, hi: C.paper, lo: C.bark, stud: C.crimson };
-export const PANEL_JADE: PanelStyle = { fill: C.pine, edge: C.void, border: C.moss, hi: C.jade, lo: C.ink, stud: C.lime };
-export const PANEL_BLOOD: PanelStyle = { fill: C.umber, edge: C.void, border: C.crimson, hi: C.cinnabar, lo: C.blood, stud: C.gold };
+export const PANEL_INK: PanelStyle = { fill: C.night, edge: C.void, border: C.dusk, hi: C.haze, lo: C.ink, stud: C.gold };
+export const PANEL_PAPER: PanelStyle = { fill: C.parchment, edge: C.umber, border: C.gold, hi: C.paper, lo: C.wood, stud: C.cinnabar };
+export const PANEL_JADE: PanelStyle = { fill: C.pine, edge: C.void, border: C.olive, hi: C.lime, lo: C.ink, stud: C.gold };
+export const PANEL_BLOOD: PanelStyle = { fill: C.blood, edge: C.void, border: C.cinnabar, hi: C.ember, lo: C.umber, stud: C.gold };
+export const PANEL_GOLD: PanelStyle = { fill: C.umber, edge: C.void, border: C.gold, hi: C.glow, lo: C.bark, stud: C.paper };
 
 /** Draw a stepped-corner pixel frame with bevel into `g` (top-left origin at 0,0). */
 export function drawPixelFrame(g: Phaser.GameObjects.Graphics, w: number, h: number, s: PanelStyle = PANEL_INK): void {
     const u = PX;
-    const { fill = C.ink, edge = C.void, border = C.twilight, hi = C.haze, lo = C.night, stud = C.gold, alpha = 1, shadow = true } = s;
+    const { fill = C.ink, edge = C.void, border = C.dusk, hi = C.haze, lo = C.ink, stud = C.gold, alpha = 1, shadow = true } = s;
     const rect = (x: number, y: number, ww: number, hh: number, c: number, a = 1) => {
         g.fillStyle(c, a);
         g.fillRect(x, y, ww, hh);

@@ -68,13 +68,96 @@ export class CardManager {
             return { deck, hand };
         }
         
+        if (this.isFanLayout() && this.layout) {
+            // cards peel off the top of the deck pile and fly into the hand
+            const from = this.layout.deckButton;
+            sprite.setPosition(from.x, from.y).setScale(0.28).setAngle(-12).setDepth(5000);
+            this.scene.tweens.add({ targets: sprite, angle: 0, duration: 260, ease: 'Sine.easeOut' });
+        }
         hand.push(sprite);
         return { deck, hand };
+    }
+
+    // ---- hand fan -----------------------------------------------------------------
+    private static readonly FAN_REST_SCALE = 0.72;
+    private fanHover: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite) | null = null;
+    private fanHand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[] = [];
+    private fanBound = new WeakSet<object>();
+    private fanTween = new WeakMap<object, Phaser.Tweens.Tween>();
+    private fanPose = new WeakMap<object, { x: number; y: number; angle: number; scale: number }>();
+
+    private isFanLayout(): boolean {
+        return !!this.layout?.handZone && !isPortraitGameViewport(this.scene.scale.width, this.scene.scale.height);
+    }
+
+    /** Resting pose of every hand card on the arc, then the hover pose layered on top. */
+    private arrangeFan(hand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[]): void {
+        const zone = this.layout!.handZone;
+        const rest = CardManager.FAN_REST_SCALE;
+        const n = hand.length;
+        this.fanHand = hand;
+        const cardW = 180 * rest;
+        const spacing = n <= 1 ? 0 : Math.min(cardW * 0.94, (zone.width - cardW) / (n - 1));
+        const mid = (n - 1) / 2;
+        hand.forEach((card, i) => {
+            const t = i - mid;
+            const x = zone.x + t * spacing;
+            const y = zone.y + 6 + t * t * (n > 6 ? 3 : 5);
+            const angle = t * (n > 6 ? 2.2 : 3.2);
+            card.setBaseScale(rest);
+            card.setRestAngle(angle);
+            card.setOriginalPosition(x, y);
+            this.fanPose.set(card, { x, y, angle, scale: rest });
+            if (!this.fanBound.has(card)) {
+                this.fanBound.add(card);
+                card.on('pointerover', () => { if (this.fanHand.includes(card)) this.setFanHover(card); });
+                card.on('pointerout', () => { if (this.fanHover === card) this.setFanHover(null); });
+                card.on('dragstart', () => { if (this.fanHover === card) this.fanHover = null; this.applyFan(false); });
+            }
+        });
+        if (this.fanHover && !hand.includes(this.fanHover)) this.fanHover = null;
+        this.applyFan(true);
+    }
+
+    private setFanHover(card: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite) | null): void {
+        if (this.fanHover === card) return;
+        this.fanHover = card;
+        this.applyFan(false);
+    }
+
+    private applyFan(count: boolean): void {
+        const zone = this.layout!.handZone;
+        const hover = this.fanHover;
+        const hoverIndex = hover ? this.fanHand.indexOf(hover) : -1;
+        const depthBase = this.layout?.depth?.handCards ?? 300;
+        this.fanHand.forEach((card, i) => {
+            const pose = this.fanPose.get(card);
+            if (!pose || (card as unknown as { isDragging?: boolean }).isDragging) return;
+            let { x, y, angle, scale } = pose;
+            let depth = depthBase + i;
+            if (hoverIndex >= 0) {
+                if (i === hoverIndex) {
+                    y = zone.y - 128; angle = 0; scale = 1.04; depth = depthBase + 200;
+                } else {
+                    x += (i < hoverIndex ? -1 : 1) * Math.max(0, 62 - Math.abs(i - hoverIndex) * 14);
+                }
+            }
+            card.setDepth(depth);
+            if (count && this.animationManager) {
+                // initial layout / re-layout: counted, so combat ticks wait for the hand to settle
+                this.animationManager.playCardMoveAnimation(card, x, y, () => { card.setOriginalPosition(pose.x, pose.y); });
+                this.scene.tweens.add({ targets: card, angle, scale, duration: 300, ease: 'Back.easeOut' });
+            } else {
+                this.fanTween.get(card)?.stop();
+                this.fanTween.set(card, this.scene.tweens.add({ targets: card, x, y, angle, scale, duration: 150, ease: 'Cubic.easeOut' }));
+            }
+        });
     }
 
     // 排列手牌
     public arrangeHand(hand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[]): void {
         hand.forEach(card => { if (card instanceof CardSprite) card.setBattlePresentation(); });
+        if (this.isFanLayout()) { this.arrangeFan(hand); return; }
         const layoutZone = this.layout?.handZone;
         if (layoutZone) {
             const y = layoutZone.y;

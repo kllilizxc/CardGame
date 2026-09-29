@@ -36,17 +36,16 @@ describe('startup scene flow', () => {
         expect(mainMenuScene).not.toContain("this.scene.start('Game')");
     });
 
-    it('mounts Phaser into a fixed-aspect viewport instead of an auto-growing shell container', () => {
+    it('mounts Phaser into a fixed-aspect viewport that fills the window instead of an auto-growing shell container', () => {
         const gameAppCss = read('src/GameApp.css');
         const gameContainerBlock = gameAppCss.match(/#game-container\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
-        const containerBeforeBlock = gameAppCss.match(/#game-container::before\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
 
-        expect(gameContainerBlock).toContain('width: min(1920px');
+        expect(gameContainerBlock).toContain('width: min(100vw');
         expect(gameContainerBlock).toContain('aspect-ratio: 16 / 9;');
-        expect(gameContainerBlock).toContain('isolation: isolate;');
         expect(gameContainerBlock).not.toContain('display: inline-flex;');
-        expect(gameContainerBlock).not.toContain('padding: 18px;');
-        expect(containerBeforeBlock).toContain('inset: -18px;');
+        expect(gameContainerBlock).not.toContain('padding');
+        // no decorative frame stealing screen space around the canvas
+        expect(gameAppCss).not.toContain('#game-container::before');
     });
 
     it('routes world map selections to the existing HubScene and ExpeditionScene without changing their loops', () => {

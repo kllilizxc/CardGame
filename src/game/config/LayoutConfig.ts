@@ -105,112 +105,45 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
         };
     }
     return {
-        // 卡牌预览面板 - 左上角
-        cardPreview: {
-            x: width * 0.14,
-            y: height * 0.5,
-            width: width * 0.24,
-            height: height * 0.56
-        },
-        
-        // 战斗日志 - 右侧
-        battleLog: {
-            x: width - width * 0.09,
-            y: height * 0.45,
-            width: width * 0.18,
-            height: height * 0.45
-        },
-        
-        // 手牌区域 - 底部中央
-        handZone: {
-            x: width * 0.5,
-            y: height * 0.865,
-            width: width * 0.6,
-            height: height * 0.16
-        },
-        
-        // 玩家场地区域 - 中下部
-        playerFieldZone: {
-            x: width * 0.76,
-            y: height * 0.50,
-            width: width * 0.43,
-            height: height * 0.44
-        },
-        
-        // 敌方场地区域 - 中上部
-        enemyFieldZone: {
-            x: width * 0.24,
-            y: height * 0.50,
-            width: width * 0.43,
-            height: height * 0.44
-        },
-        
-        // 场地卡区域 - 中央
-        fieldCardZone: {
-            x: width * 0.055,
-            y: height * 0.72,
-            width: width * 0.075,
-            height: height * 0.12
-        },
-        
-        // 卡组按钮 - 左下角
-        deckButton: {
-            x: width * 0.08,
-            y: height - height * 0.08,
-            width: 148,
-            height: 108
-        },
-        
-        // 弃牌堆按钮 - 右下角
-        discardPileButton: {
-            x: width - width * 0.08,
-            y: height - height * 0.08,
-            width: 148,
-            height: 108
-        },
+        // Hover card: appears beside whatever is hovered; this is only its fallback anchor.
+        cardPreview: { x: width * 0.5, y: height * 0.42, width: 400, height: 560 },
 
-        // 右侧操作按钮
-        drawButton: {
-            x: width * 0.93,
-            y: height * 0.03,
-            width: width * 0.075,
-            height: height * 0.045
-        },
-        endTurnButton: {
-            x: width * 0.93,
-            y: height * 0.09,
-            width: width * 0.075,
-            height: height * 0.045
-        },
-        speedButton: {
-            x: width * 0.93,
-            y: height * 0.15,
-            width: width * 0.075,
-            height: height * 0.045
-        },
-        
-        // 丹药槽位 - 左下角，卡组按钮上方
-        pillSlots: {
-            x: width * 0.105,
-            y: height - height * 0.18
-        },
-        
-        // 技能UI
-        skillUI: {
-            x: width * 0.5,
-            y: height * 0.72
-        },
-        
-        // 深度配置（从低到高）
+        // Battle log: a drawer that slides in from the right edge, closed by default.
+        battleLog: { x: width - 230, y: height * 0.46, width: 420, height: 640 },
+
+        // Hand fan: bottom centre.
+        handZone: { x: width * 0.5, y: height - 118, width: 1120, height: 230 },
+
+        // Drop zones sit on the diorama itself (allies right, foes left).
+        playerFieldZone: { x: width * 0.725, y: height * 0.47, width: width * 0.51, height: height * 0.62 },
+        enemyFieldZone: { x: width * 0.27, y: height * 0.47, width: width * 0.5, height: height * 0.62 },
+
+        // 天时 (field card) slot: small emblem under the turn ribbon.
+        fieldCardZone: { x: width * 0.5, y: 150, width: 210, height: 120 },
+
+        // Piles flank the hand.
+        deckButton: { x: 112, y: height - 138, width: 112, height: 150 },
+        discardPileButton: { x: width - 112, y: height - 138, width: 112, height: 150 },
+
+        // Right-hand action stack.
+        drawButton: { x: width - 128, y: height - 372, width: 140, height: 56 },
+        endTurnButton: { x: width - 128, y: height - 268, width: 148, height: 148 },
+        speedButton: { x: width - 148, y: 44, width: 72, height: 72 },
+
+        // Pills: left rail. Skills: right rail.
+        pillSlots: { x: 78, y: height * 0.34 },
+        skillUI: { x: width - 78, y: height * 0.34 },
+
+        // Depths, low to high.
         depth: {
-            fieldZoneVisuals: 0,      // 场地区域边框和标签
-            handCards: 10,             // 手牌
-            fieldCards: 50,            // 场上卡牌
-            uiButtons: 100,            // UI 按钮
-            uiText: 200,               // 统计信息文本
-            cardToDiscardAnimation: 2000,  // 卡牌飞向弃牌堆动画
-            cardPreview: 6000,         // 卡牌预览
-            pillTooltip: 7000          // 丹药提示框
+            fieldZoneVisuals: 0,
+            handCards: 300,
+            fieldCards: 50,
+            uiButtons: 200,
+            uiText: 260,
+            cardToDiscardAnimation: 2000,
+            cardPreview: 6000,
+            pillTooltip: 7000
         }
     };
 }

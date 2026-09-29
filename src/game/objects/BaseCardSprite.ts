@@ -25,6 +25,8 @@ export abstract class BaseCardSprite extends GameObjects.Container {
     protected originalY: number = 0;
     protected currentDisplayMode: CardDisplayMode = 'field';
     protected isDraggingDisabled: boolean = false;
+    protected restAngle = 0;
+    protected restDepth = 0;
     private previewMetadata: CardPreviewMetadata = {};
     private genericFaceImage?: GameObjects.Image;
     private genericFaceOriginal?: Array<{ object: VisibleCardPart; visible: boolean }>;
@@ -196,25 +198,35 @@ export abstract class BaseCardSprite extends GameObjects.Container {
             }
         });
 
-        // 拖拽开始
+        // 拖拽开始：卡牌被“拎起”——放大到接近完整尺寸、摆正，并抬到最上层
         this.on('dragstart', () => {
             this.isDragging = true;
             this.originalX = this.x;
             this.originalY = this.y;
-            this.setScale(this.cardScale * 1.2);
+            this.restDepth = this.depth;
+            this.scene.tweens.killTweensOf(this);
+            this.scene.tweens.add({
+                targets: this,
+                scale: Math.max(this.cardScale * 1.15, 0.96),
+                angle: 0,
+                duration: 140,
+                ease: 'Back.easeOut',
+            });
             this.setDepth(1000);
-            
+
             // 执行自定义钩子
             if (onDragStart) {
                 onDragStart();
             }
         });
 
-        // 拖拽中
+        // 拖拽中：跟手，并按水平速度倾斜，像真的拎着一张纸牌
         this.on('drag', (pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+            const vx = dragX - this.x;
             this.x = dragX;
             this.y = dragY;
-            
+            this.setAngle(Phaser.Math.Clamp(this.angle * 0.82 + vx * 0.28, -14, 14));
+
             // 执行自定义钩子
             if (onDragging) {
                 onDragging(pointer);
@@ -224,8 +236,9 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         // 拖拽结束
         this.on('dragend', () => {
             this.isDragging = false;
+            this.scene.tweens.killTweensOf(this);
             this.setScale(this.cardScale);
-            this.setDepth(0);
+            this.setDepth(this.restDepth);
             
             // 通知场景卡牌拖拽结束（用于场地卡等特殊处理）
             if (emitSceneEvents) {
@@ -285,6 +298,8 @@ export abstract class BaseCardSprite extends GameObjects.Container {
                 targets: this,
                 x: this.originalX,
                 y: this.originalY,
+                angle: this.restAngle,
+                scale: this.cardScale,
                 duration: 300,
                 ease: 'Back.easeOut'
             });
@@ -311,6 +326,19 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      */
     public getCardBaseScale(): number {
         return this.cardScale;
+    }
+
+    /** Resting scale (the hand fan shows cards smaller than the field does). */
+    public setBaseScale(scale: number): void {
+        this.cardScale = scale;
+    }
+
+    public setRestAngle(angle: number): void {
+        this.restAngle = angle;
+    }
+
+    public getRestAngle(): number {
+        return this.restAngle;
     }
 
     public setPreviewMetadata(metadata: CardPreviewMetadata): void {

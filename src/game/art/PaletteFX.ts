@@ -4,7 +4,7 @@ import { PALETTE } from './palette';
 const frag = `
 precision mediump float;
 uniform sampler2D uMainSampler;
-uniform vec3 uPal[32];
+uniform vec3 uPal[64];
 uniform vec2 uRes;
 uniform float uTime;
 varying vec2 outTexCoord;
@@ -24,17 +24,17 @@ void main() {
 
     // vignette + slow candle-flicker breathing
     vec2 d = uv - 0.5;
-    float vig = 1.0 - dot(d, d) * (0.95 + 0.03 * sin(uTime * 1.7));
+    float vig = 1.0 - dot(d, d) * (0.62 + 0.012 * sin(uTime * 1.3));
     c *= clamp(vig, 0.0, 1.0);
 
     // ordered dither so smooth gradients become pixel-art bands
     float t = bayer(gl_FragCoord.xy) - 0.5;
-    c += t * 0.075;
+    c += t * 0.028;
 
     // snap to nearest palette colour
     float best = 1e9;
     vec3 pick = uPal[0];
-    for (int i = 0; i < 32; i++) {
+    for (int i = 0; i < 64; i++) {
         vec3 p = uPal[i];
         vec3 df = (c - p) * vec3(0.9, 1.15, 0.8);
         float dist = dot(df, df);
@@ -49,8 +49,9 @@ export class PaletteFX extends Phaser.Renderer.WebGL.Pipelines.PostFXPipeline {
 
     constructor(game: Phaser.Game) {
         super({ game, name: 'PaletteFX', fragShader: frag });
-        this.palette = new Float32Array(PALETTE.length * 3);
-        PALETTE.forEach((c, i) => {
+        this.palette = new Float32Array(64 * 3);
+        const padded = Array.from({ length: 64 }, (_, i) => PALETTE[Math.min(i, PALETTE.length - 1)]);
+        padded.forEach((c, i) => {
             this.palette[i * 3] = ((c >> 16) & 0xff) / 255;
             this.palette[i * 3 + 1] = ((c >> 8) & 0xff) / 255;
             this.palette[i * 3 + 2] = (c & 0xff) / 255;
@@ -67,5 +68,6 @@ export class PaletteFX extends Phaser.Renderer.WebGL.Pipelines.PostFXPipeline {
 /** Attach the palette shader to a scene's main camera (no-op on Canvas renderer). */
 export function applyPaletteFX(scene: Phaser.Scene): void {
     if (scene.game.renderer.type !== Phaser.WEBGL) return;
+    if (typeof location !== 'undefined' && location.search.includes('nofx')) return; // dev: skip the palette pass
     scene.cameras.main.setPostPipeline(PaletteFX);
 }

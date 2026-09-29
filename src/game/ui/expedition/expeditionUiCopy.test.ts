@@ -114,64 +114,33 @@ describe('expedition UI Chinese copy', () => {
         expect(panel).not.toContain('spiritStones：');
     });
 
-    it('uses Chinese return-support labels in the deck management panel', () => {
+    it('uses Chinese labels in the deck workshop', () => {
         const panel = read('src/game/ui/deckbuilder/DeckManagementPanel.ts');
         const model = read('src/game/scenes/expedition/entryFlowModel.ts');
         const deckManagerCopy = `${panel}\n${model}`;
 
         expect(panel).toContain('返回远征准备');
-        expect(panel).toContain('已可直接返回');
-        expect(panel).toContain('键盘焦点：');
-        expect(panel).toContain('Tab 切换区域 · Esc 返回');
-        expect(panel).toContain('↑↓ 切换卡组');
-        expect(panel).toContain('Enter 加入 1');
-        expect(panel).toContain('Enter 直接返回远征准备');
-        expect(panel).toContain('先切换卡组，再从右侧加入或在中间移除');
-        expect(panel).toContain('从储物袋加入');
-        expect(panel).toContain('当前卡牌（在这里移除）');
-        expect(panel).toContain('一键加满');
-        expect(panel).toContain('+1');
-        expect(panel).toContain('加满');
-        expect(panel).toContain('清空');
-        expect(panel).toContain('支持输入法');
+        expect(panel).toContain('新建卡组');
+        expect(panel).toContain('重命名');
+        expect(panel).toContain('储 物 袋');
+        expect(panel).toContain('搜索名称或编号');
+        expect(panel).toContain('仅有库存');
+        expect(panel).toContain('含无库存');
+        expect(panel).toContain('左键加入 · 右键移出');
+        expect(panel).toContain('还差');
+        expect(panel).toContain('卡组合格，可以出发');
+        expect(panel).toContain('卡组已满');
+        expect(panel).toContain('同名卡最多带');
+        expect(panel).toContain('储物袋里没有更多了');
+        expect(panel).toContain('至少保留一套卡组');
+        expect(panel).toContain('库存不足');
         expect(deckManagerCopy).toContain('大地图 /');
         expect(deckManagerCopy).not.toContain('整理时留意');
         expect(deckManagerCopy).not.toContain('当前阶段：整理卡组并返回远征准备');
         expect(panel).not.toContain('路线：');
-        expect(panel).toContain('张出征线还差');
-        expect(panel).toContain('张上限还剩');
-        expect(panel).toContain('已耗尽');
-        expect(panel).toContain('卡组已满');
-        expect(panel).toContain('袋中');
         expect(panel).not.toContain('Return to Expedition Prep');
         expect(panel).not.toContain('Exit summary');
-    });
-
-    it('uses Chinese spotlight labels in the deck management panel', () => {
-        const panel = read('src/game/ui/deckbuilder/DeckManagementPanel.ts');
-
-        expect(panel).toContain('焦点牌面');
-        expect(panel).toContain('查看当前焦点');
-        expect(panel).toContain('悬停卡组或储物袋条目即可切换焦点牌面');
-        expect(panel).toContain('效果要点');
-        expect(panel).toContain('剩余');
-        expect(panel).toContain('缺口');
-        expect(panel).toContain('当前带入卡组');
-        expect(panel).toContain('待补');
-        expect(panel).toContain('失效');
-    });
-
-    it('uses Chinese browser-control labels in the deck management panel', () => {
-        const panel = read('src/game/ui/deckbuilder/DeckManagementPanel.ts');
-
-        expect(panel).toContain('浏览控制');
-        expect(panel).toContain('清空');
-        expect(panel).toContain('零：隐');
-        expect(panel).toContain('零：显');
-        expect(panel).toContain('恢复默认');
-        expect(panel).toContain('默认浏览');
-        expect(panel).toContain('命中条目都为零张');
-        expect(panel).toContain('当前浏览条件没有命中卡牌');
+        expect(panel).not.toContain('Extra Deck');
     });
 
     it('uses Chinese run HUD labels', () => {
