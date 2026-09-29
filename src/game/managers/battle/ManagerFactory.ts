@@ -129,7 +129,7 @@ export class ManagerFactory {
         const fieldManager = new FieldManager(scene, battleContext, effectResolver);
         battleContext.setFieldManager(fieldManager);
 
-        const pillManager = new PillManager(scene, battleContext, 3, effectResolver);
+        const pillManager = new PillManager(scene, battleContext, 3);
         battleContext.setPillManager(pillManager);
 
         const sacrificeManager = new SacrificeManager(battleContext);

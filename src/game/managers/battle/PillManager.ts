@@ -13,6 +13,11 @@ export interface PillSlot {
     isEmpty: boolean;        // 是否为空
 }
 
+interface ActivePillAttackModifier {
+    delta: number;
+    expiresAfterTurn: number;
+}
+
 /**
  * 丹药管理器
  * 管理丹药槽位系统（类似杀戮尖塔的药水瓶）
@@ -22,6 +27,7 @@ export class PillManager {
     private battleContext: BattleContext;
     private slots: PillSlot[] = [];     // 丹药槽位数组
     private maxSlots: number = 3;       // 默认最大槽位数
+    private activeAttackModifiers = new Map<CardSprite, ActivePillAttackModifier>();
 
     constructor(scene: Scene, battleContext: BattleContext, maxSlots: number = 3) {
         this.scene = scene;
@@ -148,6 +154,29 @@ export class PillManager {
     }
 
     /**
+     * 清理已到期的丹药攻击增益。
+     * TurnManager 在玩家回合结束和敌人回合结束时调用此方法；
+     * 以战斗状态的回合编号判断到期，避免玩家本回合使用的丹药在出手前被清掉。
+     */
+    public onTurnEnd(playerField: CardSprite[], enemyField: CardSprite[]): void {
+        const currentTurn = this.battleContext.battleState.turnNumber;
+        const activeUnits = new Set([...playerField, ...enemyField]);
+
+        for (const [unit, modifier] of this.activeAttackModifiers) {
+            if (currentTurn <= modifier.expiresAfterTurn) {
+                continue;
+            }
+
+            unit.getCardData().attack -= modifier.delta;
+            if (unit.active && activeUnits.has(unit)) {
+                unit.updateStats();
+            }
+            this.battleContext.battleLog.addLog(`【${unit.getCardData().name}】的丹药攻击增益已结束`);
+            this.activeAttackModifiers.delete(unit);
+        }
+    }
+
+    /**
      * 应用丹药效果
      */
     private applyPillEffects(
@@ -256,7 +285,16 @@ export class PillManager {
 
         unit.updateStats();
 
-        // TODO: 如果有duration，需要在回合结束后移除效果
+        if (duration > 0) {
+            const current = this.activeAttackModifiers.get(unit);
+            this.activeAttackModifiers.set(unit, {
+                delta: (current?.delta ?? 0) + value,
+                expiresAfterTurn: Math.max(
+                    current?.expiresAfterTurn ?? 0,
+                    this.battleContext.battleState.turnNumber + duration,
+                ),
+            });
+        }
     }
 
     /**

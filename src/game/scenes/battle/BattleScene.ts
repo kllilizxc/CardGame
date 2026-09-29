@@ -551,7 +551,7 @@ export class BattleScene extends Scene {
             playerField: this.playerField,
             enemyField: this.enemyField,
             discardPile: this.discardPile
-        });
+        }, this.battleContext);
         
         // 将 GameActionHandler 注入到 TalismanManager
         this.talismanManager.setGameActionHandler(this.skillEffectHandler.getGameActionHandler());
