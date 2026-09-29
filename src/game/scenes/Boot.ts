@@ -9,15 +9,21 @@ export class Boot extends Scene
 
     preload ()
     {
-        //  The Boot Scene is typically used to load in any assets you require for your Preloader, such as a game logo or background.
-        //  The smaller the file size of the assets, the better, as the Boot Scene itself has no preloader.
-
         this.load.image('background', 'assets/bg.png');
     }
 
     create ()
     {
-        // 进入标准预加载流程；预加载完成后由 MainMenu 承接可选入口。
-        this.scene.start('Preloader');
+        // The pixel font must be ready before any Text is rendered, or glyphs bake in a fallback face.
+        const start = () => this.scene.start('Preloader');
+        const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+        if (!fonts) {
+            start();
+            return;
+        }
+        Promise.race([
+            fonts.load('12px Zpix', '青云卡牌0123456789'),
+            new Promise((resolve) => window.setTimeout(resolve, 6000)),
+        ]).then(start, start);
     }
 }

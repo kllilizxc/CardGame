@@ -4,6 +4,7 @@ import {
     CONTENT_CATALOG_CACHE_KEY,
     CONTENT_CATALOG_PUBLIC_PATH,
 } from '../content/contentCatalog';
+import { C, FONT, T } from '../art/palette';
 
 export class Preloader extends Scene
 {
@@ -14,21 +15,36 @@ export class Preloader extends Scene
 
     init ()
     {
-        //  We loaded this image in our Boot Scene, so we can display it here
-        this.add.image(512, 384, 'background');
+        const { width, height } = this.scale;
+        this.cameras.main.setBackgroundColor(C.void);
 
-        //  A simple progress bar. This is the outline of the bar.
-        this.add.rectangle(512, 384, 468, 32).setStrokeStyle(1, 0xffffff);
+        // A pixel flame that fills as loading progresses.
+        this.add.text(width / 2, height / 2 - 90, '青 云', {
+            fontFamily: FONT, fontSize: '72px', color: T.gold, stroke: T.void, strokeThickness: 8,
+        }).setOrigin(0.5);
+        const label = this.add.text(width / 2, height / 2 + 70, '点燃灵火…', {
+            fontFamily: FONT, fontSize: '24px', color: T.dim,
+        }).setOrigin(0.5);
 
-        //  This is the progress bar itself. It will increase in size from the left based on the % of progress.
-        const bar = this.add.rectangle(512-230, 384, 4, 28, 0xffffff);
-
-        //  Use the 'progress' event emitted by the LoaderPlugin to update the loading bar
-        this.load.on('progress', (progress: number) => {
-
-            //  Update the progress bar (our bar is 464px wide, so 100% = 464px)
-            bar.width = 4 + (460 * progress);
-
+        const barW = 600;
+        const x0 = width / 2 - barW / 2;
+        const y0 = height / 2;
+        const g = this.add.graphics();
+        const draw = (p: number) => {
+            g.clear();
+            g.fillStyle(C.umber, 1); g.fillRect(x0 - 8, y0 - 8, barW + 16, 40);
+            g.fillStyle(C.void, 1); g.fillRect(x0 - 4, y0 - 4, barW + 8, 32);
+            const filled = Math.floor((barW * p) / 8) * 8;
+            for (let x = 0; x < filled; x += 8) {
+                g.fillStyle(x % 16 === 0 ? C.ember : C.gold, 1);
+                g.fillRect(x0 + x, y0, 8, 24);
+                g.fillStyle(C.glow, 1); g.fillRect(x0 + x, y0, 8, 4);
+            }
+        };
+        draw(0);
+        this.load.on('progress', (p: number) => {
+            draw(p);
+            label.setText(`点燃灵火… ${Math.floor(p * 100)}%`);
         });
     }
 
@@ -37,7 +53,6 @@ export class Preloader extends Scene
         //  Load runtime metadata before any gameplay scene needs catalog-backed resource resolution.
         this.load.json(CONTENT_CATALOG_CACHE_KEY, CONTENT_CATALOG_PUBLIC_PATH);
 
-        //  Load the assets for the game - Replace with your own assets
         this.load.setPath('assets');
 
         this.load.image('logo', 'logo.png');
@@ -46,10 +61,6 @@ export class Preloader extends Scene
 
     create ()
     {
-        //  When all the assets have loaded, it's often worth creating global objects here that the rest of the game can use.
-        //  For example, you can define global animations here, so we can use them in other scenes.
-
-        //  Move to the MainMenu. You could also swap this for a Scene Transition, such as a camera fade.
         this.scene.start('MainMenu');
     }
 }

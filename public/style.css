@@ -1,9 +1,20 @@
+@font-face {
+    font-family: 'Zpix';
+    src: url('./fonts/zpix.ttf') format('truetype');
+    font-display: block;
+}
+
 body {
     margin: 0;
     padding: 0;
     color: rgba(255, 255, 255, 0.87);
-    background-color: #000000; 
-    font-family: Arial, Helvetica, sans-serif;
+    background-color: #0b0714;
+    font-family: Zpix, monospace;
+}
+
+canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
 }
 
 #app {

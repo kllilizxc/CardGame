@@ -1,6 +1,8 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
+import { ensureBackdrop } from '../../art/backdrop';
+import { pixelPanel, PANEL_INK } from '../../art/ui';
 import {
     CONTENT_CATALOG_CACHE_KEY,
     CONTENT_CATALOG_PUBLIC_PATH,
@@ -102,10 +104,8 @@ export class WorldMapScene extends Scene {
         const { width, height } = this.scale;
         const container = this.add.container(0, 0);
 
-        this.cameras.main.setBackgroundColor(0x07111f);
-        container.add(this.add.rectangle(width / 2, height / 2, width, height, 0x0f172a, 1));
-        container.add(this.add.circle(width * 0.22, height * 0.24, 360, 0x0ea5e9, 0.13));
-        container.add(this.add.circle(width * 0.78, height * 0.72, 420, 0x22c55e, 0.11));
+        this.cameras.main.setBackgroundColor(0x0b0714);
+        ensureBackdrop(this, 'mountain', 'dusk');
 
         container.add(this.add.text(width / 2, 78, this.worldMap.title, {
             fontFamily: 'Arial Black',
@@ -128,9 +128,7 @@ export class WorldMapScene extends Scene {
         const panelLeft = panelX - panelWidth / 2;
         const panelTop = panelY - panelHeight / 2;
         const contentX = panelLeft + 60;
-        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x111827, 0.96);
-        panel.setStrokeStyle(3, 0x38bdf8, 0.82);
-        container.add(panel);
+        container.add(pixelPanel(this, panelX, panelY, panelWidth, panelHeight, { ...PANEL_INK, alpha: 0.93 }));
 
         container.add(this.add.text(contentX, panelTop + 54, '可前往地点', {
             fontFamily: 'Arial',
