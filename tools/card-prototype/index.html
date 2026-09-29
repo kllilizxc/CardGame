@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>青云山灵狐 · 卡面试作</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <div class="workshop">
+      <header class="page-header">
+        <div><p class="eyebrow">青云 · 卡面工坊 <span>试作 01</span></p><h1>先做好一张牌。</h1><p class="intro">插画、排版与数值分开调整。找到喜欢的样子，再固定成配方。</p></div>
+        <button id="theme" class="quiet" type="button">切换浅色</button>
+      </header>
+      <main>
+        <section class="preview" aria-label="卡面预览">
+          <div class="preview-toolbar"><div class="segmented" role="group" aria-label="牌面版本"><button id="assembled" aria-pressed="true" type="button">本次组装</button><button id="original" aria-pressed="false" type="button">游戏原版</button></div><span id="preview-label">大图 · 180 × 260 比例</span></div>
+          <div class="display-area"><div id="card-stage" role="img" aria-label="青云山灵狐卡面，正在加载"></div></div>
+          <div class="preview-footer"><span><i></i><span id="save-state">正在读取卡牌…</span></span><button id="size" class="quiet" type="button">查看实尺寸</button></div>
+        </section>
+        <aside class="editor" aria-label="样卡调试">
+          <div class="section-heading"><div><p class="eyebrow">牌面内容</p><h2>青云山灵狐</h2></div><span class="small-tag">CR_001</span></div>
+          <label>名称<input id="name" maxlength="24" autocomplete="off" /></label>
+          <div class="stat-inputs"><label>攻击<input id="attack" type="number" min="0" max="999" step="1" /></label><label>生命<input id="health" type="number" min="0" max="999" step="1" /></label></div>
+          <label>效果文案<textarea id="rules" rows="3" maxlength="240"></textarea><small>只调整牌面显示，战斗规则保持原数据。</small></label>
+          <label>风味短句<input id="flavor" maxlength="80" autocomplete="off" /></label>
+          <div class="section-heading art-heading"><div><p class="eyebrow">插画构图</p><h2>把主体放在合适的位置</h2></div><a href="./assets/spirit-fox-v1.png" target="_blank" rel="noreferrer">查看原图 ↗</a></div>
+          <label class="slider-label"><span>画面放大 <output id="zoom-value"></output></span><input id="zoom" type="range" min="1" max="1.8" step="0.01" /></label>
+          <label class="slider-label"><span>上下取景 <output id="focus-value"></output></span><input id="focus" type="range" min="0" max="1" step="0.01" /></label>
+          <div class="demo"><span>试一下动态数值</span><div><button id="buff" type="button">攻击 +1</button><button id="damage" type="button">受到 1 点伤害</button><button id="reset-stats" type="button">还原数值</button></div></div>
+          <div class="demo"><span>Worka 主题 · 游戏组件</span><div><button id="face-jade" type="button">青玉卡面</button><button id="face-scroll" type="button">宣纸卡面</button></div></div>
+          <p id="checks" class="checks" role="status" aria-live="polite">正在加载素材与字体…</p>
+          <div class="export-actions"><button id="export" class="primary" type="button" disabled>导出卡面 PNG</button><button id="export-draft" type="button" disabled>导出调试参数</button></div>
+          <button id="reset" class="quiet reset" type="button">恢复初始样卡</button>
+          <p class="scope">样卡已接入 Worka 卡牌工作流。这里的编辑仍是浏览器草稿；“青玉卡面 / 宣纸卡面”使用实际游戏组件与已组装资源，攻防可动态变化。</p>
+        </aside>
+      </main>
+      <footer class="page-footer"><span>AI 插画 × 程序排版</span><span>素材只生成一次 · 调数值和排版不调用生成服务</span></footer>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

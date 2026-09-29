@@ -1,0 +1,151 @@
+{
+  "sourceFile": "/mnt/e/Downloads/Claude-export-本地整理备份/整理后/交互作品/卡匣问心/v4-卡匣问心.html",
+  "sourceSha256": "0527a496ac03e97775fc3d3ddb3413a5538ddd5273825a884917d1a32646cbef",
+  "verification": "Reversing all 28 explicit material/copy/preview substitutions restores the original HTML byte-for-byte.",
+  "protectedSections": [
+    {
+      "name": "combat sequences",
+      "sha256": "c621447b6a73aa437d52c435248f53752de84bdd28747387b5723561ca4001ed",
+      "unchanged": true
+    },
+    {
+      "name": "battle state and camera updates",
+      "sha256": "e8795370c8315eecd7d11fd599f386bf27fd79fe447696ef931982e17cc2444e",
+      "unchanged": true
+    },
+    {
+      "name": "projection and slot positions",
+      "sha256": "1b830918147dc19050d6b917146693f9bbeca86675c5bb10565d9a68f41ce323",
+      "unchanged": true
+    },
+    {
+      "name": "card layout, tilt and flip",
+      "sha256": "12819d59d28795b11c7d99752d4dc014880ce3d53edc119fe9889ce7edb0102a",
+      "unchanged": true
+    },
+    {
+      "name": "story interactions",
+      "sha256": "e215a31c1cb0e006a43c3ca7d34cdf2b300044a9479ee807b758181459dcd4f2",
+      "unchanged": true
+    },
+    {
+      "name": "casket timing and flight",
+      "sha256": "ac6f1538f388931e6b5e57e4151c50cbad043595e6cc4cf2e488db13065b7126",
+      "unchanged": true
+    }
+  ],
+  "patches": [
+    {
+      "before": "<script>\n(()=>{\n'use strict';",
+      "after": "<script src=\"materials-series.js\"></script>\n<script>\n(async()=>{\n'use strict';\nconst MATERIALS = await window.WenxinMaterials.ready;"
+    },
+    {
+      "before": "const out=P.px.run(x=>(girl?drawGirl:drawDeacon)(x,{t,br,sw,bell:P.bell,expr:P.expr,blink:P.blink>0&&P.expr.eyes!=='smile',mouth},girl?GIRL.c:DEA.c),girl?GIRL:DEA,PL);",
+      "after": "const out=MATERIALS.portrait(P.px,P.kind,{t,br,sw,bell:P.bell,expr:P.expr,blink:P.blink>0&&P.expr.eyes!=='smile',mouth});"
+    },
+    {
+      "before": "function renderMon(px,key,a,L){const M=MON[key];return px.run(x=>M.draw(x,a,M.ms.c),M.ms,L);}",
+      "after": "function renderMon(px,key,a,L){return MATERIALS.monster(px,key,a);}"
+    },
+    {
+      "before": "function buildArt(cd){",
+      "after": "function buildArt(cd){return MATERIALS.cardArt(cd);"
+    },
+    {
+      "before": "const[c,x]=mk(128,184);x.drawImage(o,0,0);x.drawImage(cd.art,8,30);",
+      "after": "const[c,x]=mk(128,184);x.drawImage(MATERIALS.native(o),0,0);x.drawImage(cd.art,8,30);"
+    },
+    {
+      "before": "},M,FLATL);const[c,x]=mk(128,184);x.drawImage(o,0,0);return c;}",
+      "after": "},M,FLATL);const[c,x]=mk(128,184);x.drawImage(MATERIALS.native(o),0,0);return c;}"
+    },
+    {
+      "before": "function buildStoryBG(){",
+      "after": "function buildStoryBG(){return MATERIALS.background('story',W,H);"
+    },
+    {
+      "before": "function buildBattleSky(){",
+      "after": "function buildBattleSky(){return MATERIALS.background('sky',W,120);"
+    },
+    {
+      "before": "function buildSea(){",
+      "after": "function buildSea(){return MATERIALS.sea(W*2,100);"
+    },
+    {
+      "before": "function buildFloor(){",
+      "after": "function buildFloor(){return MATERIALS.floor(SLOTS);"
+    },
+    {
+      "before": "function buildBell(){",
+      "after": "function buildBell(){return MATERIALS.prop('bell',96,88);"
+    },
+    {
+      "before": "function isleSprite(w,seed){",
+      "after": "function isleSprite(w,seed){return MATERIALS.prop('island',w,Math.round(w*.9),seed);"
+    },
+    {
+      "before": "function cloudSprite(w,h,seed){",
+      "after": "function cloudSprite(w,h,seed){return MATERIALS.prop('cloud',w,h,seed);"
+    },
+    {
+      "before": "function buildGalleryBG(){",
+      "after": "function buildGalleryBG(){return MATERIALS.background('gallery',W,H);"
+    },
+    {
+      "before": "  for(const m of CROWD){const s=m.h,bob=Math.sin(t*1.5+m.ph)>.6?1:0,x=Math.round(m.x),y=Math.round(m.y)-bob,bw=Math.max(4,Math.round(s*.46)),bh=Math.round(s*.7);\n    c.globalAlpha=.35;c.fillStyle='#1e1a40';c.fillRect(x-bw-Math.round(s*.4),y-1,Math.round(s*.7),2);c.globalAlpha=1;\n    c.fillStyle=m.pal[0];c.fillRect(x-(bw>>1),y-bh,bw,bh);c.fillRect(x-(bw>>1)-1,y-3,bw+2,3);c.fillStyle=m.pal[1];c.fillRect(x+(bw>>1)-Math.max(1,bw>>2),y-bh,Math.max(1,bw>>2),bh);c.fillStyle=m.pal[2];c.fillRect(x-(bw>>1),y-bh,1,bh);c.fillRect(x-(bw>>1),y-Math.round(bh*.55),bw,1);\n    const hr=Math.max(2,Math.round(s*.15));c.fillStyle='#231d30';c.fillRect(x-hr,y-bh-hr*2,hr*2,hr*2);c.fillRect(x-1,y-bh-hr*2-2,3,2);c.fillStyle='#4a3e5e';c.fillRect(x+hr-1,y-bh-hr*2,1,hr);}\n",
+      "after": "  for(const m of CROWD){const bob=Math.sin(t*1.5+m.ph)>.6?1:0;MATERIALS.crowd(c,m,bob);}\n"
+    },
+    {
+      "before": "const g=c.createRadialGradient(320,200,8,320,200,420);g.addColorStop(0,'#3a2a5e');g.addColorStop(1,'#07050e');c.fillStyle=g;c.fillRect(0,0,W,H);",
+      "after": "c.drawImage(GAL_BG,0,0);c.fillStyle='rgba(24,33,34,.25)';c.fillRect(0,0,W,H);"
+    },
+    {
+      "before": "const o=CK.px.run(x=>drawCasket(x,easeOut(open),CKM.c),CKM,FLATL);",
+      "after": "const o=MATERIALS.casket(CK.px,easeOut(open));"
+    },
+    {
+      "before": "c.fillStyle='#302662';c.fillRect(0,Math.round(cam.hy),W,H);",
+      "after": "c.fillStyle='#72857d';c.fillRect(0,Math.round(cam.hy),W,H);"
+    },
+    {
+      "before": "const bx=x+114*S,by=y+(178+Math.cos(PORT.girl.bell)*10)*S",
+      "after": "const bx=x+108*S,by=y+(208+Math.cos(PORT.girl.bell)*10)*S"
+    },
+    {
+      "before": "pellipse(c,320,200,q*380,q*240,'#8a6ab8',1-q)",
+      "after": "pellipse(c,320,200,q*380,q*240,'#849a8d',1-q)"
+    },
+    {
+      "before": "c.fillStyle='#fff6d0';c.fillRect(x-1,y-18,2,18);c.fillStyle='#f2c24a';c.fillRect(x-2,y-18,1,14);c.fillRect(x+1,y-18,1,14);c.fillStyle='#d8b050';c.fillRect(x-4,y-20,9,2);c.fillStyle='#6a4ab8';c.fillRect(x-1,y-26,2,6);",
+      "after": "MATERIALS.flyingSword(c,x,y);"
+    },
+    {
+      "before": "c.fillStyle='#f2d45a';c.fillRect(x-(w>>1),y-6,w,12);c.fillStyle='#c0342a';c.fillRect(x,y-4,1,2);c.fillRect(x,y,1,4);",
+      "after": "c.drawImage(MATERIALS.prop('talisman',6,12),x-(w>>1),y-6,w,12);"
+    },
+    {
+      "before": "  for(const u of B.units)if(u.vis&&u.key==='ghost'){const[sx,sy]=uScreen(u),oy=Math.round(Math.sin(u.t*2)*4),M=MON.ghost;c.fillStyle='#ff5a8a';c.fillRect(Math.round(sx)-M.ax+44,Math.round(sy)-M.ay+37+oy,3,2);c.fillRect(Math.round(sx)-M.ax+53,Math.round(sy)-M.ay+37+oy,3,2);}\n",
+      "after": "  for(const u of B.units)if(u.vis&&u.key==='ghost'){const[sx,sy]=uScreen(u);MATERIALS.ghostEyes(c,sx,sy,u.t);}\n"
+    },
+    {
+      "before": "--bg:#12101a;--panel:#1a1725;--panel2:#231f31;--line:#352f47;--ink:#efe8d8;--muted:#9f97b0;",
+      "after": "--bg:#1c2427;--panel:#252f31;--panel2:#303a3c;--line:#52615e;--ink:#e8dfcf;--muted:#a1aaa0;"
+    },
+    {
+      "before": "--gold:#f0c35a;--gold-ink:#1f1606;--jade:#6fd6c0;--rose:#ef6a7a;--violet:#b48aff;",
+      "after": "--gold:#bfa071;--gold-ink:#1f211e;--jade:#91b3a2;--rose:#b6797b;--violet:#899d96;"
+    },
+    {
+      "before": "第四版：去掉全部后期光照，人物、卡面与怪物按参考图重新造型。",
+      "after": "整套素材重绘：人物、卡图、背景与场景物件统一为粗像素画风，沿用第四版的交互、战斗视角、运镜与演出时序。"
+    },
+    {
+      "before": "192 × 264 px 半身；大眼星形高光、腮红、成片发束、呆毛与披帛",
+      "after": "192 × 264 px 半身；约 6–6.5 头身，粗像素立绘；固定身体底图，局部切换表情"
+    },
+    {
+      "before": "resize();setView('story');requestAnimationFrame(frame);",
+      "after": "resize();setView('story');if(new URLSearchParams(location.search).get('card')==='disc'){G.auto=false;$('auto').checked=false;setView('cards');GAL.i=GAL.list.findIndex(cd=>cd.key==='disc');G.now='卡面鉴赏 · '+GAL.list[GAL.i].name;}requestAnimationFrame(frame);"
+    }
+  ]
+}
