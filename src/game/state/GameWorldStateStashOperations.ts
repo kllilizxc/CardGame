@@ -5,6 +5,7 @@ import type {
     RunRewardBundle,
     RunSnapshot,
 } from '../types/expedition';
+import { assertItemCapacityChange } from './ItemCapacity';
 import {
     getSelectedDeckCards,
     syncSelectedSavedDeckCards,
@@ -177,13 +178,16 @@ export function subtractStartingLoadoutFromStash(
 export function addCarriedBundleToStash(
     stash: PersistentStash,
     carried: RunRewardBundle,
+    capacityBaseline: readonly ExpeditionItemStack[] = stash.items,
 ): PersistentStash {
     const nextCards = mergeCardStacks(stash.cards, carried.cards);
+    const nextItems = mergeItemStacks(stash.items, carried.items);
+    assertItemCapacityChange(capacityBaseline, nextItems, stash.itemSlotCapacity);
 
     return syncSelectedSavedDeckCards({
         ...stash,
         cards: nextCards,
-        items: mergeItemStacks(stash.items, carried.items),
+        items: nextItems,
         spiritStones: stash.spiritStones + carried.spiritStones,
     }, nextCards);
 }

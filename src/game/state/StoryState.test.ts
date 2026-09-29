@@ -3,13 +3,19 @@ import { describe, expect, it } from 'bun:test';
 import {
     applyStoryChoice,
     applyStoryEffects,
+    attachStoryActorAbilities,
+    attachStoryEquipmentModifiers,
     createInitialStoryState,
     evaluateStoryCondition,
+    getEffectiveStoryAttribute,
     markDialogueTriggered,
     markStoryNodeVisited,
     setStoryFlag,
 } from './StoryState';
 import type { StoryCondition, StoryEffect, StoryState } from '../types/story';
+import type { PersistentStash } from '../types/expedition';
+import { indexItemActionPolicies } from './ItemActionRules';
+import { sharedNarrativeFactsFromStory } from '../services/StoryHubSessionPersistence';
 
 function createTestState(): StoryState {
     return createInitialStoryState({
@@ -29,6 +35,94 @@ function createTestState(): StoryState {
 }
 
 describe('StoryState', () => {
+    it('applies equipment only to effective attributes and removes the bonus on unequip', () => {
+        const base = createTestState();
+        const stash: PersistentStash = {
+            stashId: 'story-test', cards: [], savedDecks: [], selectedDeckId: null,
+            items: [{ id: 'artifact.fox-charm', itemType: 'artifact', count: 1 }], spiritStones: 0,
+            equippedItems: { charm: 'artifact.fox-charm' },
+        };
+        const policies = indexItemActionPolicies({ artifacts: [
+            { id: 'artifact.fox-charm', equipSlot: 'charm', attributeModifiers: { compassion: 5 } },
+        ] });
+        const gate = { kind: 'attribute', attribute: 'compassion', operator: '>=', value: 60 } as const;
+        const equipped = attachStoryEquipmentModifiers(base, stash, policies);
+        expect(evaluateStoryCondition(base, gate)).toBe(false);
+        expect(evaluateStoryCondition(equipped, gate)).toBe(true);
+        expect(getEffectiveStoryAttribute(equipped, 'compassion')).toBe(60);
+        expect(equipped.attributes.compassion).toBe(55);
+        expect(sharedNarrativeFactsFromStory(equipped).attributes.compassion).toBe(55);
+        const unequipped = attachStoryEquipmentModifiers(equipped, { ...stash, equippedItems: {} }, policies);
+        expect(evaluateStoryCondition(unequipped, gate)).toBe(false);
+        expect(getEffectiveStoryAttribute(unequipped, 'compassion')).toBe(55);
+        expect(unequipped.attributes.compassion).toBe(55);
+    });
+    it('uses real item counts and keeps an insufficient choice atomic', () => {
+        const state = { ...createTestState(), itemCounts: { 'tool.return-rope': 1, 'consumable.spirit-salve': 2 } };
+        expect(evaluateStoryCondition(state, { kind: 'itemCount', itemId: 'tool.return-rope', operator: '>=', value: 1 })).toBe(true);
+        expect(evaluateStoryCondition(state, { kind: 'itemCount', itemId: 'tool.missing', operator: '>=', value: 1 })).toBe(false);
+        const effects: StoryEffect[] = [{ kind: 'once', eventId: 'quest.fox.treat', effects: [
+            { kind: 'consumeItem', transactionId: 'quest.fox.salve', itemId: 'consumable.spirit-salve', itemType: 'consumable', count: 1 },
+            { kind: 'setQuestStage', questId: 'quest.fox', stage: 'completed' },
+        ] }];
+        const first = applyStoryEffects(state, effects).state;
+        expect(first.itemCounts?.['consumable.spirit-salve']).toBe(1);
+        expect(first.itemTransactions).toEqual([{ transactionId: 'quest.fox.salve', itemId: 'consumable.spirit-salve', itemType: 'consumable', countDelta: -1 }]);
+        expect(applyStoryEffects(first, effects).state.itemCounts?.['consumable.spirit-salve']).toBe(1);
+        expect(() => applyStoryEffects({ ...state, itemCounts: { 'consumable.spirit-salve': 0 } }, effects)).toThrow('Not enough story item');
+        expect(state.questStages).toBeUndefined();
+    });
+
+    it('reads a named NPC ability from the catalog and keeps a saved override', () => {
+        const catalog = [{ id: 'npc.fox', abilities: { 医术: 8 } }];
+        const first = attachStoryActorAbilities(createTestState(), catalog);
+        const gate = { kind: 'actorAbility', actorId: 'npc.fox', ability: '医术', operator: '>=', value: 7 } as const;
+        expect(evaluateStoryCondition(first, gate)).toBe(true);
+        expect(evaluateStoryCondition(first, { ...gate, ability: '口才' })).toBe(false);
+        expect(evaluateStoryCondition(first, { ...gate, actorId: 'npc.guard' })).toBe(false);
+        const resumed = attachStoryActorAbilities({ ...first, actorAbilities: { 'npc.fox': { 医术: 3 } } }, catalog);
+        expect(evaluateStoryCondition(resumed, gate)).toBe(false);
+        expect(first.actorAbilities?.['npc.fox']?.医术).toBe(8);
+    });
+
+    it('records one stable card grant and rejects a conflicting reuse of its ID', () => {
+        const initial = createTestState();
+        const reward: StoryEffect = { kind: 'grantCard', grantId: 'quest.fox.reward', cardId: 'CR_001', count: 1 };
+        const first = applyStoryEffects(initial, [reward]).state;
+        const repeated = applyStoryEffects(first, [reward]).state;
+        expect(first.cardGrants).toEqual([{ grantId: 'quest.fox.reward', cardId: 'CR_001', count: 1 }]);
+        expect(repeated.cardGrants).toEqual(first.cardGrants);
+        expect(initial.cardGrants).toBeUndefined();
+        expect(() => applyStoryEffects(first, [{ ...reward, cardId: 'OTHER' }])).toThrow('Conflicting story card grant');
+    });
+
+    it('uses actor-specific knowledge, relation and quest gates and settles a reward only once', () => {
+        const initial = createInitialStoryState({
+            storyId: 'story.fox', locationId: 'forest', sublocationId: 'apothecary', nodeId: 'first-meeting',
+            attributes: { 口才: 4 }, relations: { 'npc.fox->player': 20 },
+            questStages: { 'quest.heal-fox': 'available' },
+        });
+        const secret = { kind: 'knowledge', actorId: 'player', knowledgeId: 'fox.stolen-recipe' } as const;
+        expect(evaluateStoryCondition(initial, secret)).toBe(false);
+        expect(evaluateStoryCondition(initial, { kind: 'attribute', attribute: 'unknown', operator: '<=', value: 0 })).toBe(false);
+        expect(evaluateStoryCondition(initial, { kind: 'relation', relationId: 'npc.fox->player', operator: '>=', value: 30 })).toBe(false);
+        const learned = applyStoryEffects(initial, [{ kind: 'learnKnowledge', actorId: 'player', knowledgeId: 'fox.stolen-recipe' }]).state;
+        expect(evaluateStoryCondition(learned, secret)).toBe(true);
+        expect(evaluateStoryCondition(learned, { ...secret, actorId: 'npc.guard' })).toBe(false);
+        expect(evaluateStoryCondition(learned, { kind: 'questStage', questId: 'quest.heal-fox', stage: 'available' })).toBe(true);
+        const once: StoryEffect = { kind: 'once', eventId: 'quest.heal-fox.reward', effects: [
+            { kind: 'adjustRelation', relationId: 'npc.fox->player', delta: 10 },
+            { kind: 'setQuestStage', questId: 'quest.heal-fox', stage: 'completed' },
+        ] };
+        const first = applyStoryEffects(learned, [once]).state;
+        const repeated = applyStoryEffects(first, [once]).state;
+        expect(first.relations['npc.fox->player']).toBe(30);
+        expect(repeated.relations['npc.fox->player']).toBe(30);
+        expect(repeated.questStages?.['quest.heal-fox']).toBe('completed');
+        expect(repeated.settledEventIds).toEqual(['quest.heal-fox.reward']);
+        expect(initial.knowledge).toBeUndefined();
+    });
+
     it('creates a deterministic initial story runtime snapshot', () => {
         const state = createTestState();
 

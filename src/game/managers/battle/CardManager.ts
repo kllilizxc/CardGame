@@ -1,3 +1,4 @@
+import { getWenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
 import { Scene } from 'phaser';
 import { CardSprite } from '../../objects/CardSprite';
 import { ArtifactSprite } from '../../objects/ArtifactSprite';
@@ -10,6 +11,7 @@ import type { FieldCard } from '../../../../public/data/types/cards/field';
 import type { BattleLayoutConfig } from '../../config/LayoutConfig';
 import type { BattleLog } from '../../ui/battle/BattleLog';
 import type { BattleAnimationManager } from './BattleAnimationManager';
+import { isPortraitGameViewport } from '../../layout/gameViewport';
 
 export class CardManager {
     private scene: Scene;
@@ -72,10 +74,12 @@ export class CardManager {
 
     // 排列手牌
     public arrangeHand(hand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[]): void {
+        hand.forEach(card => { if (card instanceof CardSprite) card.setBattlePresentation(); });
         const layoutZone = this.layout?.handZone;
         if (layoutZone) {
             const y = layoutZone.y;
-            const availableWidth = Math.max(layoutZone.width - this.LAYOUT_WIDTH_PADDING, 1);
+            const portrait = isPortraitGameViewport(this.scene.scale.width, this.scene.scale.height);
+            const availableWidth = Math.max(layoutZone.width - (portrait ? 180 * this.cardScale + 22 : this.LAYOUT_WIDTH_PADDING), 1);
             const spacing = this.calculateSpacing(hand.length, availableWidth);
             const startX = layoutZone.x - spacing * (Math.max(hand.length - 1, 0)) / 2;
 
@@ -122,6 +126,8 @@ export class CardManager {
 
     // 排列玩家场地
     public arrangePlayerField(playerField: CardSprite[]): void {
+        const stage = getWenxinBattleStage(this.scene);
+        if (stage) { stage.arrange(playerField, 'me'); return; }
         const layoutZone = this.layout?.playerFieldZone;
         if (layoutZone) {
             const y = layoutZone.y;
@@ -172,6 +178,8 @@ export class CardManager {
 
     // 排列敌方场地
     public arrangeEnemyField(enemyField: CardSprite[]): void {
+        const stage = getWenxinBattleStage(this.scene);
+        if (stage) { stage.arrange(enemyField, 'foe'); return; }
         const layoutZone = this.layout?.enemyFieldZone;
         if (layoutZone) {
             const y = layoutZone.y;

@@ -490,6 +490,13 @@ describe('entryFlowModel', () => {
         expect(createRunResolutionSummaryView({ ...baseSummary, outcome: 'boss-clear' }).subtitle).toBe(
             'Boss 通关：当前携带与搜刮的资产已存入永久仓库。',
         );
+        const namedView = createRunResolutionSummaryView({ ...baseSummary, outcome: 'extract' }, {
+            displayName: id => ({ AR_001: '青云剑', artifact_fly_sword_basic: '青云飞剑' } as Record<string, string>)[id] ?? id,
+            finalNodeLabel: '洞壁绳梯',
+        });
+        expect(namedView.finalNodeLabel).toBe('洞壁绳梯');
+        expect(namedView.keptCards).toEqual(['青云剑 ×1']);
+        expect(namedView.keptItems).toEqual(['青云飞剑 ×1']);
     });
 
     it('summarizes the entrance state after acknowledging a terminal run result', () => {

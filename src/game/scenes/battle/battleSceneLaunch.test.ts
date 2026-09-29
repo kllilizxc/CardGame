@@ -6,6 +6,7 @@ import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import {
     BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
     BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
+    BATTLE_LOADOUT_CONFIG_CACHE_KEY,
     createBattleDeckStartupPlan,
     getBattleDeckCacheKey,
     getBattleDeckFile,
@@ -100,6 +101,7 @@ function createCatalogWithoutRuntimeGradeConfigs(): unknown {
         resources: contentCatalogJson.resources.filter((entry) => (
             entry.resourceId !== 'config.combat-baseline'
             && entry.resourceId !== 'config.artifact-grade'
+            && entry.resourceId !== 'config.battle-loadout'
         )),
     };
 }
@@ -271,6 +273,11 @@ describe('battleSceneLaunch', () => {
                 resourceId: 'config.artifact-grade',
                 publicPath: 'data/config/artifact-grade.json',
             },
+            battleLoadoutConfig: {
+                cacheKey: BATTLE_LOADOUT_CONFIG_CACHE_KEY,
+                resourceId: 'config.battle-loadout',
+                publicPath: 'data/config/battle-loadout.json',
+            },
         });
     });
 
@@ -279,6 +286,7 @@ describe('battleSceneLaunch', () => {
 
         expect(runtimeResources.combatBaselineConfig).toBeUndefined();
         expect(runtimeResources.artifactGradeConfig).toBeUndefined();
+        expect(runtimeResources.battleLoadoutConfig).toBeUndefined();
         expect(runtimeResources.unitCards).toEqual({
             cacheKey: 'unitCards',
             resourceId: 'cards.units',

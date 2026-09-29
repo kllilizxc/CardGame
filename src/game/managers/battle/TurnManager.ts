@@ -1,3 +1,4 @@
+import { createScenePanel, getSceneTextStyle } from '../../scenes/shared/sceneTheme';
 import type { Scene } from 'phaser';
 import type { BattleContext } from '../../context/BattleContext';
 import type { CardSprite } from '../../objects/CardSprite';
@@ -45,19 +46,13 @@ export class TurnManager {
         const overlayDepth = 10000;
 
         // 纯黑底遮罩，盖住所有 UI
-        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 1);
+        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x20282e, .78);
         overlay.setDepth(overlayDepth).setInteractive();
+        createScenePanel(this.scene, { x: width / 2, y: height / 2 + 30, width: 680, height: 260 }).forEach(object => (object as Phaser.GameObjects.Rectangle).setDepth(overlayDepth + 1));
 
-        this.scene.add.text(width / 2, height / 2, '胜利！', {
-            fontSize: '64px',
-            color: '#2ecc71',
-            fontStyle: 'bold'
-        }).setOrigin(0.5).setDepth(overlayDepth + 1);
+        this.scene.add.text(width / 2, height / 2, '斗法告捷', getSceneTextStyle('sceneTitle', { fontSize: '56px', color: '#dfc99f' })).setOrigin(0.5).setDepth(overlayDepth + 1);
 
-        this.scene.add.text(width / 2, height / 2 + 80, '点击任意位置继续', {
-            fontSize: '20px',
-            color: '#ffffff'
-        }).setOrigin(0.5).setDepth(overlayDepth + 1);
+        this.scene.add.text(width / 2, height / 2 + 80, '点击任意位置继续', getSceneTextStyle('support', { fontSize: '22px', color: '#eee4d3' })).setOrigin(0.5).setDepth(overlayDepth + 1);
 
         this.scene.input.once('pointerdown', onContinue);
     }
@@ -75,10 +70,7 @@ export class TurnManager {
             fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(2000);
 
-        this.scene.add.text(width / 2, height / 2 + 80, '点击任意位置继续', {
-            fontSize: '20px',
-            color: '#ffffff'
-        }).setOrigin(0.5).setDepth(2000);
+        this.scene.add.text(width / 2, height / 2 + 80, '点击任意位置继续', getSceneTextStyle('support', { fontSize: '22px', color: '#eee4d3' })).setOrigin(0.5).setDepth(2000);
 
         this.scene.input.once('pointerdown', onContinue);
     }

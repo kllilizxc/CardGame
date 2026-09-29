@@ -1,4 +1,5 @@
-import type { StoryHubSessionKey, StoryState } from '../types/story';
+import type { StoryCardGrant, StoryHubSessionKey, StoryItemTransaction, StorySharedFacts, StoryState } from '../types/story';
+import { gameStorage } from './PreviewStorage';
 
 export const STORY_HUB_SESSION_STORAGE_KEY = 'cardgame.story-hub-session.v1';
 export const STORY_HUB_SESSION_SCHEMA_VERSION = 1;
@@ -23,6 +24,7 @@ export interface StoryHubSessionDocument {
     schemaVersion: typeof STORY_HUB_SESSION_SCHEMA_VERSION;
     hubs: Record<string, HubSessionSnapshot>;
     stories: Record<string, StoryRuntimeSessionSnapshot>;
+    sharedNarrative?: StorySharedFacts;
 }
 
 const memoryStorage = new Map<string, string>();
@@ -33,7 +35,7 @@ function getStorageAdapter(storage?: StoryHubSessionStorageAdapter): StoryHubSes
     }
 
     if (typeof globalThis.localStorage !== 'undefined') {
-        return globalThis.localStorage;
+        return gameStorage(globalThis.localStorage);
     }
 
     return {
@@ -79,6 +81,55 @@ function isNumberRecord(value: unknown): value is Record<string, number> {
     return isRecord(value) && Object.values(value).every((entry) => typeof entry === 'number' && !Number.isNaN(entry));
 }
 
+function isActorAbilityRecord(value: unknown): value is Record<string, Record<string, number>> {
+    return isRecord(value) && Object.values(value).every(isNumberRecord);
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+    return isRecord(value) && Object.values(value).every((entry) => typeof entry === 'string');
+}
+
+function isStringArrayRecord(value: unknown): value is Record<string, string[]> {
+    return isRecord(value) && Object.values(value).every(isStringArray);
+}
+
+function isCardGrantArray(value: unknown): value is StoryCardGrant[] {
+    return Array.isArray(value) && value.every((entry) => isRecord(entry)
+        && isNonEmptyString(entry.grantId) && isNonEmptyString(entry.cardId)
+        && Number.isSafeInteger(entry.count) && (entry.count as number) > 0)
+        && new Set(value.map((entry: StoryCardGrant) => entry.grantId)).size === value.length;
+}
+
+function isItemTransactionArray(value: unknown): value is StoryItemTransaction[] {
+    return Array.isArray(value) && value.every((entry) => isRecord(entry)
+        && isNonEmptyString(entry.transactionId) && isNonEmptyString(entry.itemId)
+        && ['artifact', 'tool', 'consumable', 'material', 'quest'].includes(String(entry.itemType))
+        && Number.isSafeInteger(entry.countDelta) && entry.countDelta !== 0)
+        && new Set(value.map((entry: StoryItemTransaction) => entry.transactionId)).size === value.length;
+}
+
+function mergeItemTransactions(left: StoryItemTransaction[] = [], right: StoryItemTransaction[] = []): StoryItemTransaction[] {
+    const merged = new Map(left.map(item => [item.transactionId, { ...item }]));
+    for (const item of right) {
+        const prior = merged.get(item.transactionId);
+        if (prior && (prior.itemId !== item.itemId || prior.itemType !== item.itemType || prior.countDelta !== item.countDelta)) {
+            throw new Error(`Conflicting story item transaction: ${item.transactionId}`);
+        }
+        merged.set(item.transactionId, { ...item });
+    }
+    return [...merged.values()];
+}
+
+function mergeCardGrants(left: StoryCardGrant[] = [], right: StoryCardGrant[] = []): StoryCardGrant[] {
+    const merged = new Map(left.map(grant => [grant.grantId, { ...grant }]));
+    for (const grant of right) {
+        const prior = merged.get(grant.grantId);
+        if (prior && (prior.cardId !== grant.cardId || prior.count !== grant.count)) throw new Error(`Conflicting story card grant: ${grant.grantId}`);
+        merged.set(grant.grantId, { ...grant });
+    }
+    return [...merged.values()];
+}
+
 function isStoryState(value: unknown): value is StoryState {
     if (!isRecord(value)) {
         return false;
@@ -92,7 +143,80 @@ function isStoryState(value: unknown): value is StoryState {
         && isStringArray(value.triggeredDialogueIds)
         && isBooleanRecord(value.flags)
         && isNumberRecord(value.attributes)
-        && isNumberRecord(value.relations);
+        && (value.equipmentModifiers === undefined || isNumberRecord(value.equipmentModifiers))
+        && isNumberRecord(value.relations)
+        && (value.actorAbilities === undefined || isActorAbilityRecord(value.actorAbilities))
+        && isOptionalString(value.currentLocationLabel)
+        && isOptionalString(value.currentDialogueId)
+        && (value.currentReadingPage === undefined
+            || (typeof value.currentReadingPage === 'number'
+                && Number.isInteger(value.currentReadingPage)
+                && value.currentReadingPage >= 0))
+        && (value.knowledge === undefined || isStringArrayRecord(value.knowledge))
+        && (value.questStages === undefined || isStringRecord(value.questStages))
+        && (value.settledEventIds === undefined || isStringArray(value.settledEventIds))
+        && (value.cardGrants === undefined || isCardGrantArray(value.cardGrants))
+        && (value.itemTransactions === undefined || isItemTransactionArray(value.itemTransactions))
+        && (value.itemCounts === undefined || isNumberRecord(value.itemCounts));
+}
+
+function isSharedNarrativeFacts(value: unknown): value is StorySharedFacts {
+    return isRecord(value)
+        && isBooleanRecord(value.flags)
+        && isNumberRecord(value.attributes)
+        && isNumberRecord(value.relations)
+        && isStringArrayRecord(value.knowledge)
+        && isStringRecord(value.questStages)
+        && isStringArray(value.settledEventIds)
+        && (value.cardGrants === undefined || isCardGrantArray(value.cardGrants))
+        && (value.itemTransactions === undefined || isItemTransactionArray(value.itemTransactions));
+}
+
+function cloneSharedNarrativeFacts(facts: StorySharedFacts): StorySharedFacts {
+    return {
+        flags: { ...facts.flags },
+        attributes: { ...facts.attributes },
+        relations: { ...facts.relations },
+        knowledge: Object.fromEntries(Object.entries(facts.knowledge).map(([actorId, ids]) => [actorId, [...ids]])),
+        questStages: { ...facts.questStages },
+        settledEventIds: [...facts.settledEventIds],
+        ...(facts.cardGrants ? { cardGrants: facts.cardGrants.map(grant => ({ ...grant })) } : {}),
+        ...(facts.itemTransactions ? { itemTransactions: facts.itemTransactions.map(item => ({ ...item })) } : {}),
+    };
+}
+
+export function sharedNarrativeFactsFromStory(state: StoryState): StorySharedFacts {
+    return cloneSharedNarrativeFacts({
+        flags: state.flags,
+        attributes: state.attributes,
+        relations: state.relations,
+        knowledge: state.knowledge ?? {},
+        questStages: state.questStages ?? {},
+        settledEventIds: state.settledEventIds ?? [],
+        ...(state.cardGrants ? { cardGrants: state.cardGrants } : {}),
+        ...(state.itemTransactions ? { itemTransactions: state.itemTransactions } : {}),
+    });
+}
+
+export function applySharedNarrativeFacts(state: StoryState, facts: StorySharedFacts | null): StoryState {
+    if (!facts) return cloneStoryState(state);
+    const knowledge = Object.fromEntries(
+        [...new Set([...Object.keys(state.knowledge ?? {}), ...Object.keys(facts.knowledge)])].map((actorId) => [
+            actorId,
+            [...new Set([...(state.knowledge?.[actorId] ?? []), ...(facts.knowledge[actorId] ?? [])])],
+        ]),
+    );
+    return {
+        ...cloneStoryState(state),
+        flags: { ...state.flags, ...facts.flags },
+        attributes: { ...state.attributes, ...facts.attributes },
+        relations: { ...state.relations, ...facts.relations },
+        knowledge,
+        questStages: { ...state.questStages, ...facts.questStages },
+        settledEventIds: [...new Set([...(state.settledEventIds ?? []), ...facts.settledEventIds])],
+        cardGrants: mergeCardGrants(state.cardGrants, facts.cardGrants),
+        itemTransactions: mergeItemTransactions(state.itemTransactions, facts.itemTransactions),
+    };
 }
 
 function isHubSessionSnapshot(value: unknown): value is HubSessionSnapshot {
@@ -127,7 +251,15 @@ function cloneStoryState(state: StoryState): StoryState {
         triggeredDialogueIds: [...state.triggeredDialogueIds],
         flags: { ...state.flags },
         attributes: { ...state.attributes },
+        ...(state.equipmentModifiers ? { equipmentModifiers: { ...state.equipmentModifiers } } : {}),
         relations: { ...state.relations },
+        ...(state.actorAbilities ? { actorAbilities: Object.fromEntries(Object.entries(state.actorAbilities).map(([actorId, abilities]) => [actorId, { ...abilities }])) } : {}),
+        ...(state.knowledge ? { knowledge: Object.fromEntries(Object.entries(state.knowledge).map(([actorId, ids]) => [actorId, [...ids]])) } : {}),
+        ...(state.questStages ? { questStages: { ...state.questStages } } : {}),
+        ...(state.settledEventIds ? { settledEventIds: [...state.settledEventIds] } : {}),
+        ...(state.cardGrants ? { cardGrants: state.cardGrants.map(grant => ({ ...grant })) } : {}),
+        ...(state.itemTransactions ? { itemTransactions: state.itemTransactions.map(item => ({ ...item })) } : {}),
+        ...(state.itemCounts ? { itemCounts: { ...state.itemCounts } } : {}),
     };
 }
 
@@ -167,6 +299,7 @@ function cloneStoryHubSessionDocument(document: StoryHubSessionDocument): StoryH
                 cloneStoryRuntimeSessionSnapshot(snapshot),
             ]),
         ),
+        ...(document.sharedNarrative ? { sharedNarrative: cloneSharedNarrativeFacts(document.sharedNarrative) } : {}),
     };
 }
 
@@ -218,10 +351,13 @@ function parseDocument(value: unknown): StoryHubSessionDocument | null {
         return null;
     }
 
+    if (value.sharedNarrative !== undefined && !isSharedNarrativeFacts(value.sharedNarrative)) return null;
+
     return {
         schemaVersion: STORY_HUB_SESSION_SCHEMA_VERSION,
         hubs,
         stories,
+        ...(value.sharedNarrative ? { sharedNarrative: cloneSharedNarrativeFacts(value.sharedNarrative) } : {}),
     };
 }
 
@@ -278,6 +414,24 @@ export function loadStoryRuntimeSession(key: StoryHubSessionKey): StoryRuntimeSe
     const snapshot = loadDocument().stories[createStoryRuntimeSessionStorageKey(key)];
 
     return snapshot ? cloneStoryRuntimeSessionSnapshot(snapshot) : null;
+}
+
+export function loadSharedNarrativeFacts(): StorySharedFacts | null {
+    const facts = loadDocument().sharedNarrative;
+    return facts ? cloneSharedNarrativeFacts(facts) : null;
+}
+
+export function saveStoryRuntimeSessionWithSharedFacts(snapshot: StoryRuntimeSessionSnapshot): void {
+    const document = loadDocument();
+    document.stories[createStoryRuntimeSessionStorageKey(snapshot)] = cloneStoryRuntimeSessionSnapshot(snapshot);
+    document.sharedNarrative = sharedNarrativeFactsFromStory(snapshot.storyState);
+    saveDocument(document);
+}
+
+export function saveSharedNarrativeFacts(state: StoryState): void {
+    const document = loadDocument();
+    document.sharedNarrative = sharedNarrativeFactsFromStory(state);
+    saveDocument(document);
 }
 
 export function saveStoryRuntimeSession(snapshot: StoryRuntimeSessionSnapshot): void {

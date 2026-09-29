@@ -3,6 +3,7 @@ import type { PillSlot } from '../../managers/battle/PillManager';
 import type { PillCard } from '../../../data/types/cards/pill';
 import { getSceneTextStyle, sceneTheme } from '../../scenes/shared/sceneTheme';
 import { battleColorToHex, battleTheme, blendBattleColor } from './battleTheme';
+import { watchCardFace } from '../../objects/cardFaceAppearance';
 
 /**
  * 丹药槽位UI组件
@@ -14,6 +15,7 @@ export class PillSlotUI extends GameObjects.Container {
     private pillIcons: GameObjects.Text[] = [];
     private pillNames: GameObjects.Text[] = [];
     private emptyTexts: GameObjects.Text[] = [];
+    private releaseFaces: Array<() => void> = [];
     
     private slots: PillSlot[] = [];
     private onSlotClick: ((slotIndex: number) => void) | null = null;
@@ -122,6 +124,14 @@ export class PillSlotUI extends GameObjects.Container {
             }).setOrigin(0.5);
             container.add(name);
             this.pillNames[index] = name;
+
+            let face: GameObjects.Image | undefined;
+            this.releaseFaces.push(watchCardFace(this.scene, slot.pill, key => {
+                face?.destroy();
+                face = key ? this.scene.add.image(0, -8, key).setDisplaySize(42, 61) : undefined;
+                if (face) container.addAt(face, 4);
+                icon.setVisible(!face);
+            }));
         }
 
         // 设置交互
@@ -180,6 +190,8 @@ export class PillSlotUI extends GameObjects.Container {
      * 清空槽位UI
      */
     private clearSlots(): void {
+        this.releaseFaces.forEach(release => release());
+        this.releaseFaces = [];
         this.slotContainers.forEach(container => container.destroy());
         this.slotContainers = [];
         this.slotBackgrounds = [];
@@ -208,6 +220,7 @@ export class PillSlotUI extends GameObjects.Container {
      */
     public destroy(fromScene?: boolean): void {
         this.scene.events.off('pillSlotsUpdated', this.updateSlots, this);
+        this.clearSlots();
         super.destroy(fromScene);
     }
 }

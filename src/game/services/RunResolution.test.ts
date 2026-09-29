@@ -4,6 +4,7 @@ import initialWorldState from '../../../public/data/world/initial-state.json';
 import starterDeckJson from '../../../public/data/decks/starter-deck.json';
 import worldMapJson from '../../../public/data/world/world-map.json';
 
+import type { ExpeditionWorldStateSeed } from '../state/GameWorldStateSeed';
 import { ExpeditionState } from '../state/ExpeditionState';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
 import {
@@ -163,6 +164,20 @@ describe('RunResolution', () => {
         expect(summary.kept.spiritStones).toBe(54);
         expect(summary.lost).toEqual({ cards: [], items: [], spiritStones: 0 });
         expect(updatedStash?.lastRunSummary).toEqual(summary);
+    });
+
+    it('lets an older overfull stash finish a run without adding more item slots', () => {
+        const state = ExpeditionState.bootstrap({
+            worldState: { ...structuredClone(initialWorldState), stash: {
+                ...structuredClone(initialWorldState.stash), itemSlotCapacity: 1,
+            } } as unknown as ExpeditionWorldStateSeed,
+            starterDeck: structuredClone(starterDeckJson),
+        });
+        state.createRunSnapshot({ ...DEFAULT_TARGET, entryNodeId: 'entrance.mountain-gate' });
+
+        expect(resolveExtract({ finalNodeId: 'extract.cliff-rope' }).outcome).toBe('extract');
+        expect(loadActiveRun()).toBeNull();
+        expect(loadPersistentStash()?.items).toEqual(initialWorldState.stash.items);
     });
 
     it('boss clear uses the boss-clear terminal label and allows a fresh run immediately after resolution', () => {

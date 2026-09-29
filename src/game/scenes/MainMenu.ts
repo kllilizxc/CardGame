@@ -1,6 +1,7 @@
 import { GameObjects, Scene } from 'phaser';
 
 import { EventBus } from '../EventBus';
+import { isPortraitGameViewport } from '../layout/gameViewport';
 import {
     createSceneBackdrop,
     createSceneButton,
@@ -22,6 +23,11 @@ export class MainMenu extends Scene {
 
     create() {
         const { width, height } = this.scale;
+        if (isPortraitGameViewport(width, height)) {
+            this.createPortraitMenu();
+            EventBus.emit('current-scene-ready', this);
+            return;
+        }
         const backdropObjects = createSceneBackdrop(this);
         this.background = backdropObjects[0] as GameObjects.Rectangle;
 
@@ -77,6 +83,36 @@ export class MainMenu extends Scene {
         EventBus.emit('current-scene-ready', this);
     }
 
+    private createPortraitMenu(): void {
+        const { width } = this.scale;
+        const backdropObjects = createSceneBackdrop(this);
+        this.background = backdropObjects[0] as GameObjects.Rectangle;
+        this.logo = this.createFloatingSeal(width / 2, 132);
+        this.title = this.add.text(width / 2, 274, '青云问道', getSceneTextStyle('sceneTitle', {
+            fontSize: '52px',
+        })).setOrigin(0.5);
+        this.add.text(width / 2, 334, '山麓初启，择一条路迈入仙门。', getSceneTextStyle('sceneSubtitle', {
+            fontSize: '20px', align: 'center', wordWrap: { width: width - 64 },
+        })).setOrigin(0.5);
+
+        const panelWidth = width - 40;
+        const panelTop = 380;
+        createScenePanel(this, { x: width / 2, y: 622, width: panelWidth, height: 484 });
+        this.add.text(width / 2, panelTop + 50, '山门第一程', getSceneTextStyle('panelTitle', {
+            fontSize: '31px',
+        })).setOrigin(0.5);
+        this.add.text(width / 2, panelTop + 117,
+            '城镇、宗门山门与试炼入口都已在青云山麓铺开。先入大地图，再决定去何处落脚、听闻或闯关。',
+            getSceneTextStyle('body', { fontSize: '21px', align: 'center',
+                wordWrap: { width: panelWidth - 62 } }),
+        ).setOrigin(0.5, 0);
+        createStatusLine(this, { x: width / 2, y: 665, width: panelWidth - 42,
+            text: '当前开放：青云镇、青云宗山门、集市茶棚及试炼入口。', align: 'center' });
+        createSceneButton(this, { x: width / 2, y: 792, width: panelWidth - 56, height: 86,
+            label: '进入大地图', description: '选择城镇、山门或秘境入口',
+            onClick: () => this.startWorldMapScene() });
+    }
+
     changeScene() {
         this.startWorldMapScene();
     }
@@ -92,6 +128,11 @@ export class MainMenu extends Scene {
 
     private createFloatingSeal(x: number, y: number): GameObjects.Container {
         const seal = this.add.container(x, y);
+        if (this.textures.exists('wenxin:casket')) {
+            seal.add(this.add.image(0, -12, 'wenxin:casket').setDisplaySize(220, 220));
+            this.logoTween = this.tweens.add({ targets: seal, y: y - 8, duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+            return seal;
+        }
         const outerGlow = this.add.circle(0, 0, 90, sceneTheme.colors.jade, 0.16);
         const outerRing = this.add.circle(0, 0, 64, sceneTheme.colors.ink, 0.88);
         outerRing.setStrokeStyle(4, sceneTheme.colors.gold, 0.72);

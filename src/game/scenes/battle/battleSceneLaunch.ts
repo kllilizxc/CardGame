@@ -18,6 +18,7 @@ import type {
     StoryState,
 } from '../../types/story';
 import { createActiveRunRouteKey } from '../../services/RunPersistence';
+import { isRunPlayerHealth } from '../../state/RunHealth';
 
 export const DEFAULT_BATTLE_ENCOUNTER_RESOURCE_ID = 'test_encounter_02';
 export const DEFAULT_BATTLE_ENCOUNTER_FILE = 'data/encounters/medium-enemy.json';
@@ -26,6 +27,7 @@ export const DEFAULT_BATTLE_DECK_FILE = 'data/decks/starter-deck.json';
 export const BATTLE_STATUS_DEFINITIONS_CACHE_KEY = 'statusDefinitions';
 export const BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY = 'combatBaselineConfig';
 export const BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY = 'artifactGradeConfig';
+export const BATTLE_LOADOUT_CONFIG_CACHE_KEY = 'battleLoadoutConfig';
 
 export interface StarterDeckData {
     cards: ExpeditionCardStack[];
@@ -72,7 +74,8 @@ export type BattleRequiredSharedRuntimeResourceCacheKey =
 
 export type BattleOptionalSharedRuntimeResourceCacheKey =
     | typeof BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY
-    | typeof BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY;
+    | typeof BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY
+    | typeof BATTLE_LOADOUT_CONFIG_CACHE_KEY;
 
 export type BattleSharedRuntimeResourceCacheKey =
     | BattleRequiredSharedRuntimeResourceCacheKey
@@ -159,9 +162,15 @@ const BATTLE_OPTIONAL_SHARED_RUNTIME_CONFIG_REQUESTS: BattleSharedRuntimeResourc
         expectedKind: 'config',
         compatibilityPublicPath: 'data/config/artifact-grade.json',
     },
+    {
+        cacheKey: BATTLE_LOADOUT_CONFIG_CACHE_KEY,
+        resourceId: 'config.battle-loadout',
+        expectedKind: 'config',
+        compatibilityPublicPath: 'data/config/battle-loadout.json',
+    },
 ];
 
-const EXPEDITION_ITEM_TYPES: ExpeditionItemStack['itemType'][] = ['artifact', 'tool', 'consumable', 'quest'];
+const EXPEDITION_ITEM_TYPES: ExpeditionItemStack['itemType'][] = ['artifact', 'tool', 'consumable', 'material', 'quest'];
 
 function isRunDeck(value: unknown): value is ExpeditionCardStack[] {
     return Array.isArray(value)
@@ -223,6 +232,7 @@ function isBattleLaunchPayload(value: unknown): value is BattleLaunchPayload {
         && typeof candidate.encounterId === 'string'
         && (candidate.encounterResourceId === undefined || typeof candidate.encounterResourceId === 'string')
         && typeof candidate.encounterFile === 'string'
+        && (candidate.playerHealth === undefined || isRunPlayerHealth(candidate.playerHealth))
         && (candidate.carriedDeck === undefined || isRunDeck(candidate.carriedDeck))
         && isRunDeck(candidate.runDeck)
         && (candidate.rewardPreview === undefined || isRunRewardBundle(candidate.rewardPreview))
@@ -423,6 +433,7 @@ export function normalizeBattleLaunchPayload(data: unknown): BattleLaunchPayload
         encounterId: data.encounterId,
         ...(data.encounterResourceId ? { encounterResourceId: data.encounterResourceId } : {}),
         encounterFile: data.encounterFile,
+        ...(data.playerHealth !== undefined ? { playerHealth: data.playerHealth } : {}),
         ...(carriedDeck ? { carriedDeck } : {}),
         runDeck: data.runDeck.map((stack) => ({ ...stack })),
         ...(rewardPreview ? { rewardPreview } : {}),

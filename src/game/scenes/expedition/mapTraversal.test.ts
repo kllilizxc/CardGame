@@ -142,6 +142,7 @@ describe('mapTraversal', () => {
             encounterId: 'test_encounter_01',
             encounterResourceId: 'test_encounter_01',
             encounterFile: 'data/encounters/test-enemy.json',
+            playerHealth: 100,
             runDeck: battleRun?.carriedDeck,
         });
         expect(persistedBattleRun?.pendingEncounter?.nodeId).toBe('battle.mist-foxes');
@@ -158,6 +159,23 @@ describe('mapTraversal', () => {
             encounterResourceId: 'mijing_boss_01',
             encounterFile: 'data/encounters/mijing-boss.json',
         });
+    });
+
+    it('keeps a reloaded pending encounter and prevents travel past its unresolved battle', () => {
+        const expeditionState = createStartedRun();
+        const battleRun = expeditionState.enterReachableNode(prototypeMap, 'battle.mist-foxes');
+        const resumed = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+        });
+
+        expect(resumed.activeRun?.pendingEncounter).toEqual(battleRun?.pendingEncounter);
+        expect(resumed.activeRun?.currentNodeId).toBe('battle.mist-foxes');
+        expect(isReachableNode(prototypeMap, resumed.activeRun!, 'shop.wandering-peddler')).toBe(false);
+        expect(getVisibleNodes(prototypeMap, resumed.activeRun!).find(node => node.id === 'shop.wandering-peddler'))
+            .toMatchObject({ visibility: 'silhouette', selectable: false });
+        expect(resumed.enterReachableNode(prototypeMap, 'shop.wandering-peddler')).toBeNull();
+        expect(loadActiveRun()).toEqual(battleRun);
     });
 
     it('ignores unreachable node entry attempts without mutating the active run', () => {
@@ -268,7 +286,7 @@ describe('mapTraversal', () => {
             storage,
         );
 
-        expect(fixedEventView.rewardSummary).toBe('TL_002 +1 · tool_talisman_basic +1 · spiritStones +12');
+        expect(fixedEventView.rewardSummary).toBe('TL_002 +1 · tool_talisman_basic +1 · 灵石 +12');
 
         const claimed = eventState.claimEventNodeReward(eventDefinition.nodeId, fixedEventView.outcome.rewards);
 

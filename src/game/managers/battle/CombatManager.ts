@@ -1,3 +1,4 @@
+import { getWenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
 import type { CardSprite } from '../../objects/CardSprite';
 import type { ArtifactSprite } from '../../objects/ArtifactSprite';
 import type { BattleContext } from '../../context/BattleContext';
@@ -24,6 +25,7 @@ export class CombatManager {
 
         // 创建攻击动画序列
         let delay = 0;
+        const attackStep = getWenxinBattleStage(this.battleContext.scene) ? 1000 : 600;
         
         // 创建防御者的临时生命值映射，用于预判死亡
         const tempHealth = new Map<CardSprite, number>();
@@ -54,7 +56,7 @@ export class CombatManager {
                 
                 // 复用 performSingleAttack
                 this.performSingleAttack(attacker, target, attackValue, delay, false);
-                delay += 600; // 每个攻击间隔600ms
+                delay += attackStep; // 每个攻击间隔600ms
             } else {
                 // 没有存活的防御单位，直接攻击玩家本体（如果是敌人回合）
                 if (!isPlayerTurn) {
@@ -73,7 +75,7 @@ export class CombatManager {
                         delay,
                         onPlayerDamaged
                     );
-                    delay += 600;
+                    delay += attackStep;
                 }
                 // 玩家方无目标时不造成伤害（敌人没有本体生命）
             }

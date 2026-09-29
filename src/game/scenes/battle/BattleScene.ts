@@ -1,3 +1,5 @@
+import { WenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
+import { ensureWenxinArt } from '../../art/wenxin/WenxinArt';
 import { Scene } from 'phaser';
 import { EventBus, EXPEDITION_BATTLE_COMPLETE_EVENT, STORY_BATTLE_COMPLETE_EVENT } from '../../EventBus';
 import { CardSprite } from '../../objects/CardSprite';
@@ -28,6 +30,7 @@ import { SkillEffectHandler } from '../../handlers/battle/SkillEffectHandler';
 import { UnitEffectManager } from '../../managers/battle/UnitEffectManager';
 // CardPreviewPanel 已被 CardPreviewManager 替代
 import { createDefaultLayout, type BattleLayoutConfig } from '../../config/LayoutConfig';
+import { isPortraitGameViewport } from '../../layout/gameViewport';
 import { ManagerFactory } from '../../managers/battle/ManagerFactory';
 import { UsageManager } from '../../managers/battle/UsageManager';
 import { BattleContext } from '../../context/BattleContext';
@@ -43,10 +46,12 @@ import type { BattleLaunchPayload } from '../../types/expedition';
 import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import { createExpeditionBattleCompleteEvent } from './battleCompletion';
 import { createStoryBattleCompleteEvent } from '../story/storyBattleRoundTrip';
-import { createSceneBackdrop, sceneTheme } from '../shared/sceneTheme';
+import { resolveBattleLoadout } from './battleLoadout';
+import { sceneTheme } from '../shared/sceneTheme';
 import {
     BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
     BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
+    BATTLE_LOADOUT_CONFIG_CACHE_KEY,
     BATTLE_STATUS_DEFINITIONS_CACHE_KEY,
     createBattleDeckStartupPlan,
     getBattleDeckCacheKey,
@@ -178,7 +183,8 @@ export class BattleScene extends Scene {
     private calculateCardScale(): number {
         // 响应式缩放系数，会与 CardSprite 的默认 scale 相乘
         // 例如：1080p 屏幕返回 1.0，720p 返回 0.67
-        const { height } = this.scale;
+        const { width, height } = this.scale;
+        if (isPortraitGameViewport(width, height)) return 0.5;
         return height / 1080;
     }
 
@@ -276,19 +282,21 @@ export class BattleScene extends Scene {
 
         this.cardScale = this.calculateCardScale();
         this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
-        createSceneBackdrop(this);
-        this.add
-            .rectangle(width / 2, height / 2, width - 140, height - 180, sceneTheme.colors.ink, 0.14)
-            .setStrokeStyle(2, sceneTheme.colors.gold, 0.12);
+        await ensureWenxinArt(this);
+        if (!this.sys.isActive()) return;
+        new WenxinBattleStage(this);
         
         // 初始化游戏状态
         this.battleState = new BattleState();
+        if (this.launchPayload?.playerHealth !== undefined) {
+            this.battleState.playerHealth = this.launchPayload.playerHealth;
+        }
         
         // 初始化布局配置
         this.layout = createDefaultLayout(width, height);
 
         // 初始化战斗上下文
-        this.battleContext = new BattleContext(this);
+        this.battleContext = new BattleContext(this, this.battleState);
 
         // 注入运行时目录加载的境界 / 法器品级配置；缺省时 helper 保持 static fallback。
         this.installRuntimeHelperConfigs();
@@ -327,6 +335,7 @@ export class BattleScene extends Scene {
         const fieldCardsData = this.getRequiredSharedRuntimeJson('fieldCards') as { fields: any[] };
         const pillCardsData = this.getRequiredSharedRuntimeJson('pillCards') as { pills: any[] };
         const skillCardsData = this.getRequiredSharedRuntimeJson('skillCards') as { skills: SkillCard[] };
+        const initialLoadout = resolveBattleLoadout(this.getOptionalSharedRuntimeJson(BATTLE_LOADOUT_CONFIG_CACHE_KEY), pillCardsData.pills as PillCard[], skillCardsData.skills);
         const starterDeckData = this.cache.json.get(this.deckCacheKey) as { cards: Array<{ id: string; count: number }> };
         const deckStartupPlan = createBattleDeckStartupPlan(
             this.launchPayload,
@@ -384,13 +393,14 @@ export class BattleScene extends Scene {
 
         // 初始化卡牌预览和丹药提示框
         this.cardPreviewManager = new CardPreviewManager(this);
+        this.battleLog.hide();
         this.pillTooltipUI = new PillTooltipUI(this);
 
         // 初始化丹药系统
-        this.setupPillSystem(pillCardsData.pills);
+        this.setupPillSystem(initialLoadout.pills);
 
         // 初始化技能系统
-        this.setupSkillSystem(skillCardsData.skills);
+        this.setupSkillSystem(initialLoadout.skills);
 
         // 设置事件管理器的场地区域引用
         this.eventManager.setFieldZones(this.playerFieldZone, this.enemyFieldZone);
@@ -468,7 +478,7 @@ export class BattleScene extends Scene {
     /**
      * 初始化丹药系统
      */
-    private setupPillSystem(pillsData: PillCard[]): void {
+    private setupPillSystem(initialPills: PillCard[]): void {
         const pillConfig = this.layout.pillSlots;
         
         // 创建丹药槽位UI
@@ -485,16 +495,7 @@ export class BattleScene extends Scene {
         // 初始化槽位显示
         this.pillSlotUI.createSlots(this.pillManager.getSlots());
 
-        // 给玩家添加初始丹药（测试：添加2个丹药）
-        if (pillsData.length > 0) {
-            // 添加第一个丹药
-            this.pillManager.addPill(pillsData[0]);
-            
-            // 添加第二个丹药（如果有）
-            if (pillsData.length > 1) {
-                this.pillManager.addPill(pillsData[1]);
-            }
-        }
+        for (const pill of initialPills) this.pillManager.addPill(pill);
     }
 
     /**
@@ -565,9 +566,7 @@ export class BattleScene extends Scene {
             }
         );
 
-        // 给玩家装备初始技能（只装备第一个技能：注定一抽）
-        const playerSkills = skillsData.slice(0, 1);
-        this.skillManager.initializeSkills(playerSkills);
+        this.skillManager.initializeSkills(skillsData);
         this.skillUI.createSkills(this.skillManager.getSkills());
     }
 
@@ -1099,7 +1098,7 @@ export class BattleScene extends Scene {
             return;
         }
 
-        const result = createExpeditionBattleCompleteEvent(this.launchPayload, victory);
+        const result = createExpeditionBattleCompleteEvent(this.launchPayload, victory, new Date().toISOString(), this.playerHealth);
         EventBus.emit(EXPEDITION_BATTLE_COMPLETE_EVENT, result);
         this.scene.start('ExpeditionScene', { battleResult: result });
     }

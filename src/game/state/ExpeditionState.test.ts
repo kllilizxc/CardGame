@@ -14,8 +14,12 @@ import {
     savePersistentStash,
     STASH_STORAGE_KEY,
 } from '../services/RunPersistence';
+import { resolveBattleDefeat, resolveExtract } from '../services/RunResolution';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
 import { getSelectedDeckCards } from './PersistentStashDecks';
+import { indexItemActionPolicies } from './ItemActionRules';
+import type { RunRewardBundle } from '../types/expedition';
+import type { ExpeditionWorldStateSeed } from './GameWorldStateSeed';
 import { ExpeditionState } from './ExpeditionState';
 
 const DEFAULT_TARGET = {
@@ -335,6 +339,138 @@ describe('ExpeditionState', () => {
         expect(state.persistentStash.spiritStones).toBe(36);
     });
 
+    it('exchanges materials atomically at bag capacity and cannot spend them twice', () => {
+        const state = ExpeditionState.bootstrap({
+            worldState: { ...structuredClone(initialWorldState), stash: {
+                ...structuredClone(initialWorldState.stash), itemSlotCapacity: 2,
+            } } as unknown as ExpeditionWorldStateSeed,
+            starterDeck: structuredClone(starterDeckJson),
+        });
+        state.createRunSnapshot({ ...DEFAULT_TARGET, entryNodeId: 'entrance.mountain-gate' });
+        const nodeId = 'shop.material-exchange';
+        const rewards: RunRewardBundle = { cards: [], items: [
+            { id: 'artifact_fly_sword_basic', itemType: 'artifact', count: 1 },
+        ], spiritStones: 0 };
+        const insufficientCost = { spiritStones: 4, items: [
+            { id: 'consumable.spirit-salve', itemType: 'consumable' as const, count: 3 },
+        ] };
+        const before = structuredClone(state.activeRun!);
+
+        expect(state.purchaseShopOffer(nodeId, 'offer.exchange', insufficientCost, rewards).status).toBe('insufficientItems');
+        expect(state.activeRun).toEqual(before);
+        expect(loadActiveRun()).toEqual(before);
+
+        const overfullCost = { ...insufficientCost, items: [{ ...insufficientCost.items[0], count: 1 }] };
+        expect(state.purchaseShopOffer(nodeId, 'offer.exchange', overfullCost, rewards).status).toBe('inventoryFull');
+        expect(state.activeRun).toEqual(before);
+
+        const cost = { ...insufficientCost, items: [{ ...insufficientCost.items[0], count: 2 }] };
+        expect(state.purchaseShopOffer(nodeId, 'offer.exchange', cost, rewards).status).toBe('purchased');
+        expect(state.activeRun?.spiritStones).toBe(before.spiritStones - 4);
+        expect(state.activeRun?.carriedItems).toEqual([
+            { id: 'tool.return-rope', itemType: 'tool', count: 1 },
+            { id: 'artifact_fly_sword_basic', itemType: 'artifact', count: 1 },
+        ]);
+        expect(state.activeRun?.nodeStates[nodeId].purchasedOfferIds).toEqual(['offer.exchange']);
+        expect(loadActiveRun()?.carriedItems).toEqual(state.activeRun?.carriedItems);
+        expect(state.purchaseShopOffer(nodeId, 'offer.exchange', cost, rewards).status).toBe('alreadyPurchased');
+    });
+
+    it('requires an equipped material to be unequipped before exchange', () => {
+        const state = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            itemPolicies: indexItemActionPolicies({ tools: [
+                { id: 'tool.return-rope', equipSlot: 'tool' },
+            ] }),
+        });
+        state.createRunSnapshot({ ...DEFAULT_TARGET, entryNodeId: 'entrance.mountain-gate' });
+        expect(state.equipCarriedItem('tool', 'tool.return-rope').status).toBe('equipped');
+        const cost = { spiritStones: 0, items: [{ id: 'tool.return-rope', itemType: 'tool' as const, count: 1 }] };
+        const rewards: RunRewardBundle = { cards: [], items: [
+            { id: 'artifact_fly_sword_basic', itemType: 'artifact', count: 1 },
+        ], spiritStones: 0 };
+        const before = structuredClone(state.activeRun!);
+
+        expect(state.purchaseShopOffer('shop.exchange', 'offer.rope', cost, rewards).status).toBe('equippedItem');
+        expect(state.activeRun).toEqual(before);
+        expect(state.unequipCarriedSlot('tool').status).toBe('unequipped');
+        expect(state.purchaseShopOffer('shop.exchange', 'offer.rope', cost, rewards).status).toBe('purchased');
+        expect(state.activeRun?.carriedItems.some(item => item.id === 'tool.return-rope')).toBe(false);
+    });
+
+    it('keeps the entire run unchanged when an event or purchase would overfill the bag', () => {
+        const state = ExpeditionState.bootstrap({
+            worldState: { ...structuredClone(initialWorldState), stash: {
+                ...structuredClone(initialWorldState.stash), itemSlotCapacity: 2,
+            } } as unknown as ExpeditionWorldStateSeed,
+            starterDeck: structuredClone(starterDeckJson),
+        });
+        state.createRunSnapshot({ ...DEFAULT_TARGET, entryNodeId: 'entrance.mountain-gate' });
+        const before = structuredClone(state.activeRun!);
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+        const eventReward = event.pool.find(outcome => outcome.id === 'cache.talisman-roll')!.rewards;
+        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'];
+        const itemOffer = shop.offers.find(offer => offer.id === 'offer.fly-sword-charm')!;
+
+        expect(state.claimEventNodeReward(event.nodeId, structuredClone(eventReward) as RunRewardBundle).status).toBe('inventoryFull');
+        expect(state.purchaseShopOffer(shop.nodeId, itemOffer.id, itemOffer.cost, structuredClone(itemOffer.rewards) as RunRewardBundle).status).toBe('inventoryFull');
+        expect(state.activeRun).toEqual(before);
+        expect(loadActiveRun()).toEqual(before);
+        expect(state.persistentStash.spiritStones).toBe(36);
+
+        const cardOnlyOffer = shop.offers.find(offer => offer.id === 'offer.qingyun-sword')!;
+        expect(state.purchaseShopOffer(shop.nodeId, cardOnlyOffer.id, cardOnlyOffer.cost, structuredClone(cardOnlyOffer.rewards) as RunRewardBundle).status).toBe('purchased');
+        expect(state.activeRun?.spiritStones).toBe(12);
+    });
+
+    it('persists a deliberate discard and allows the previously blocked purchase', () => {
+        const state = ExpeditionState.bootstrap({
+            worldState: { ...structuredClone(initialWorldState), stash: {
+                ...structuredClone(initialWorldState.stash), itemSlotCapacity: 2,
+            } } as unknown as ExpeditionWorldStateSeed,
+            starterDeck: structuredClone(starterDeckJson),
+        });
+        state.createRunSnapshot({ ...DEFAULT_TARGET, entryNodeId: 'entrance.mountain-gate' });
+        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'];
+        const offer = shop.offers.find(item => item.id === 'offer.fly-sword-charm')!;
+        const buy = () => state.purchaseShopOffer(shop.nodeId, offer.id, offer.cost, structuredClone(offer.rewards) as RunRewardBundle);
+
+        expect(buy().status).toBe('inventoryFull');
+        expect(state.dropCarriedItem('tool', 'tool.return-rope', 1).status).toBe('restricted');
+        expect(state.dropCarriedItem('consumable', 'consumable.spirit-salve', 3).status).toBe('notOwned');
+        expect(state.dropCarriedItem('consumable', 'consumable.spirit-salve', 1).status).toBe('dropped');
+        expect(buy().status).toBe('inventoryFull');
+        expect(state.dropCarriedItem('consumable', 'consumable.spirit-salve', 1).status).toBe('dropped');
+        expect(loadActiveRun()?.carriedItems).toEqual([{ id: 'tool.return-rope', itemType: 'tool', count: 1 }]);
+
+        expect(buy().status).toBe('purchased');
+        expect(state.activeRun?.spiritStones).toBe(18);
+        expect(state.activeRun?.carriedItems).toContainEqual({ id: 'artifact_fly_sword_basic', itemType: 'artifact', count: 1 });
+        expect(loadActiveRun()?.nodeStates[shop.nodeId].purchasedOfferIds).toEqual([offer.id]);
+        resolveExtract({ finalNodeId: 'extract.cliff-rope' });
+        expect(loadPersistentStash()?.items).toEqual([
+            { id: 'tool.return-rope', itemType: 'tool', count: 1 },
+            { id: 'artifact_fly_sword_basic', itemType: 'artifact', count: 1 },
+        ]);
+    });
+
+    it('applies an explicit candidate item policy to a normally protected tool', () => {
+        const policies = indexItemActionPolicies({ tools: [
+            { id: 'tool.return-rope', name: '归返绳', droppable: true },
+        ] });
+        const state = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+            itemPolicies: policies,
+        });
+        state.createRunSnapshot({ ...DEFAULT_TARGET, entryNodeId: 'entrance.mountain-gate' });
+
+        expect(state.dropCarriedItem('tool', 'tool.return-rope', 1).status).toBe('dropped');
+        expect(loadActiveRun()?.carriedItems).toEqual([{ id: 'consumable.spirit-salve', itemType: 'consumable', count: 2 }]);
+        expect(state.dropCarriedItem('tool', 'tool.return-rope', 1).status).toBe('notOwned');
+    });
+
     it('records an extract intent for terminal resolution without resolving the run immediately', () => {
         const state = ExpeditionState.bootstrap({
             worldState: structuredClone(initialWorldState),
@@ -491,5 +627,74 @@ describe('ExpeditionState', () => {
         expect(loadActiveRun(DEFAULT_TARGET)).toBeNull();
         expect(loadActiveRun(SYNTHETIC_TARGET)?.runId).toBe(syntheticRun.runId);
         expect(defaultRun.runId).not.toBe(syntheticRun.runId);
+    });
+});
+
+describe('Expedition equipment persistence', () => {
+    const itemPolicies = indexItemActionPolicies({ artifacts: [
+        { id: 'artifact.fox-charm', equipSlot: 'charm', attributeModifiers: { 心性: 5 } },
+    ] });
+    const worldState: ExpeditionWorldStateSeed = { stash: {
+        stashId: 'equipment-test', items: [{ id: 'artifact.fox-charm', itemType: 'artifact', count: 1 }], spiritStones: 0,
+    } };
+
+    it('persists preparation equipment without starting a run', () => {
+        const storage = new MemoryStorage();
+        const state = ExpeditionState.bootstrap({ worldState, starterDeck: structuredClone(starterDeckJson),
+            targetIdentity: SYNTHETIC_TARGET, itemPolicies, storage });
+        expect(state.equipStashItem('artifact', 'artifact.fox-charm').status).toBe('equipped');
+        expect(loadPersistentStash(storage)?.equippedItems).toEqual({ charm: 'artifact.fox-charm' });
+        expect(state.unequipStashSlot('charm').status).toBe('unequipped');
+        expect(loadPersistentStash(storage)?.equippedItems).toEqual({});
+        expect(loadActiveRun(SYNTHETIC_TARGET, undefined, storage)).toBeNull();
+    });
+
+    it('repairs a stale run equipment slot and preserves the active run', () => {
+        const storage = new MemoryStorage();
+        const state = ExpeditionState.bootstrap({ worldState, starterDeck: structuredClone(starterDeckJson),
+            targetIdentity: SYNTHETIC_TARGET, itemPolicies, storage });
+        const run = state.createRunSnapshot({ ...SYNTHETIC_TARGET, entryNodeId: 'entrance.synthetic' });
+        const key = createActiveRunStorageKey(SYNTHETIC_TARGET);
+        storage.setItem(key, JSON.stringify({ ...run, equippedItems: { charm: 'artifact.missing' } }));
+        const restored = loadActiveRun(SYNTHETIC_TARGET, undefined, storage);
+        expect(restored?.runId).toBe(run.runId);
+        expect(restored?.carriedItems).toEqual(run.carriedItems);
+        expect(restored?.equippedItems).toEqual({});
+        expect(storage.getItem(key)).not.toBeNull();
+    });
+
+    it('saves equip and unequip, and prevents dropping the equipped final copy', () => {
+        const storage = new MemoryStorage();
+        const state = ExpeditionState.bootstrap({ worldState, starterDeck: structuredClone(starterDeckJson),
+            targetIdentity: SYNTHETIC_TARGET, itemPolicies, storage });
+        state.createRunSnapshot({ ...SYNTHETIC_TARGET, entryNodeId: 'entrance.synthetic' });
+        expect(state.equipCarriedItem('artifact', 'artifact.fox-charm').status).toBe('equipped');
+        expect(loadActiveRun(SYNTHETIC_TARGET, undefined, storage)?.equippedItems).toEqual({ charm: 'artifact.fox-charm' });
+        expect(state.dropCarriedItem('artifact', 'artifact.fox-charm', 1).status).toBe('restricted');
+        const restored = ExpeditionState.bootstrap({ worldState, starterDeck: structuredClone(starterDeckJson),
+            targetIdentity: SYNTHETIC_TARGET, itemPolicies, storage });
+        expect(restored.unequipCarriedSlot('charm').status).toBe('unequipped');
+        expect(loadActiveRun(SYNTHETIC_TARGET, undefined, storage)?.equippedItems).toEqual({});
+        expect(restored.dropCarriedItem('artifact', 'artifact.fox-charm', 1).status).toBe('dropped');
+    });
+
+    it('banks the equipped item on extraction and removes its slot on defeat', () => {
+        const storage = new MemoryStorage();
+        const start = () => {
+            const state = ExpeditionState.bootstrap({ worldState, starterDeck: structuredClone(starterDeckJson),
+                targetIdentity: SYNTHETIC_TARGET, itemPolicies, storage });
+            state.createRunSnapshot({ ...SYNTHETIC_TARGET, entryNodeId: 'entrance.synthetic' });
+            expect(state.equipCarriedItem('artifact', 'artifact.fox-charm').status).toBe('equipped');
+        };
+        start();
+        resolveExtract({ targetIdentity: SYNTHETIC_TARGET, storage });
+        expect(loadPersistentStash(storage)?.equippedItems).toEqual({ charm: 'artifact.fox-charm' });
+        const resumed = ExpeditionState.bootstrap({ worldState, starterDeck: structuredClone(starterDeckJson),
+            targetIdentity: SYNTHETIC_TARGET, itemPolicies, storage });
+        expect(resumed.createRunSnapshot({ ...SYNTHETIC_TARGET, entryNodeId: 'entrance.synthetic' }).equippedItems)
+            .toEqual({ charm: 'artifact.fox-charm' });
+        resolveBattleDefeat({ targetIdentity: SYNTHETIC_TARGET, storage });
+        expect(loadPersistentStash(storage)?.items).not.toContainEqual({ id: 'artifact.fox-charm', itemType: 'artifact', count: 1 });
+        expect(loadPersistentStash(storage)?.equippedItems).toEqual({});
     });
 });

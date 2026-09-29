@@ -94,6 +94,7 @@ export class TalismanSprite extends BaseCardSprite {
             },
             emitSceneEvents: false,
         });
+        this.attachCardFace(cardData);
     }
 
     private getEffectDescription(): string {

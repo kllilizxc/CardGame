@@ -1,6 +1,8 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
+import { isPortraitGameViewport } from '../../layout/gameViewport';
+import { paginateReadableCopy } from '../shared/readableCopyPages';
 import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import {
     loadHubSessionSnapshot,
@@ -44,6 +46,7 @@ import {
     getSceneTextStyle,
     sceneTheme,
 } from '../shared/sceneTheme';
+import { QuestJournalOverlay, savedQuestJournalEntries } from '../shared/questJournalOverlay';
 
 const HUB_MAP_TITLE = '城镇地图';
 const HUB_MAP_INSTRUCTION = '拖拽查看地图，点击标记切换想去的地点。';
@@ -57,6 +60,9 @@ export class HubScene extends Scene {
     private shellContainer?: Phaser.GameObjects.Container;
     private mapSurfaceContainer?: Phaser.GameObjects.Container;
     private mapViewport?: HubTownViewport;
+    private questJournal!: QuestJournalOverlay;
+    private portraitDetailsOpen = false;
+    private portraitDetailsPage = 0;
     private mapDragState?: {
         startPointerX: number;
         startPointerY: number;
@@ -85,6 +91,8 @@ export class HubScene extends Scene {
     }
 
     create(): void {
+        this.portraitDetailsOpen = false;
+        this.portraitDetailsPage = 0;
         this.town = this.readValidatedHubTownDefinition();
         assertHubSceneCatalogResourceMatchesLoadedHub(
             this.town,
@@ -107,6 +115,8 @@ export class HubScene extends Scene {
             };
         }
         this.persistHubNavigationState();
+
+        this.questJournal = new QuestJournalOverlay(this);
 
         this.renderShell();
         EventBus.emit('current-scene-ready', this);
@@ -145,6 +155,7 @@ export class HubScene extends Scene {
     }
 
     private renderShell(): void {
+        this.questJournal.close();
         this.shellContainer?.destroy();
         this.mapSurfaceContainer = undefined;
         this.mapViewport = undefined;
@@ -152,6 +163,10 @@ export class HubScene extends Scene {
         this.statusText = undefined;
 
         const currentLocation = resolveHubLocation(this.town, this.navigationState.currentLocationId);
+        if (isPortraitGameViewport(this.scale.width, this.scale.height)) {
+            this.renderPortraitShell(currentLocation);
+            return;
+        }
         const { width, height } = this.scale;
         const container = this.add.container(0, 0);
 
@@ -223,7 +238,98 @@ export class HubScene extends Scene {
             ));
         });
         container.add(this.createWorldMapReturnButton(panelX + panelWidth / 2 - 150, panelTop + 48));
+        if (savedQuestJournalEntries().length) {
+            container.add(createSceneButton(this, { x: panelX + panelWidth / 2 - 390, y: panelTop + 48,
+                width: 220, height: 52, label: '任务日志', variant: 'secondary',
+                onClick: () => { this.mapDragState = undefined; this.questJournal.open(); } }).objects);
+        }
 
+        this.shellContainer = container;
+    }
+
+    private renderPortraitShell(currentLocation: HubTownLocation): void {
+        const { width } = this.scale;
+        const container = this.add.container(0, 0);
+        this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
+        container.add(createSceneBackdrop(this));
+        container.add(this.add.text(width / 2, 78, this.town.title, getSceneTextStyle('sceneTitle', {
+            fontSize: '42px', wordWrap: { width: width - 36 }, align: 'center',
+        })).setOrigin(0.5));
+        container.add(this.add.text(width / 2, 137, this.town.subtitle, getSceneTextStyle('sceneSubtitle', {
+            fontSize: '19px', wordWrap: { width: width - 52 }, align: 'center',
+        })).setOrigin(0.5));
+        container.add(createScenePanel(this, { x: width / 2, y: 560, width: width - 32, height: 790 }));
+        container.add(createSceneButton(this, { x: 136, y: 219, width: 190, height: 52,
+            label: '返回大地图', variant: 'secondary', onClick: () => this.returnToWorldMap() }).objects);
+        if (savedQuestJournalEntries().length) {
+            container.add(createSceneButton(this, { x: width - 113, y: 219, width: 174, height: 52,
+                label: '任务日志', variant: 'secondary', onClick: () => this.questJournal.open() }).objects);
+        }
+        container.add(this.add.text(47, 277, currentLocation.presentation.regionLabel,
+            getSceneTextStyle('panelEyebrow', { fontSize: '18px' })));
+        container.add(this.add.text(47, 314, currentLocation.title, getSceneTextStyle('panelTitle', {
+            fontSize: '30px', wordWrap: { width: width - 94 },
+        })));
+        if (this.portraitDetailsOpen) {
+            const copy = `${currentLocation.summary}\n\n${currentLocation.detail}\n\n${this.navigationState.statusText ?? HUB_DEFAULT_STATUS_TEXT}`;
+            const pages = paginateReadableCopy(copy, 85);
+            this.portraitDetailsPage = Math.min(this.portraitDetailsPage, pages.length - 1);
+            container.add(this.add.text(47, 378, pages[this.portraitDetailsPage]!,
+                getSceneTextStyle('body', { fontSize: '21px', wordWrap: { width: width - 94 } })));
+            container.add(this.add.text(width / 2, 712,
+                `阅读 ${this.portraitDetailsPage + 1}/${pages.length}`, getSceneTextStyle('support', {
+                    fontSize: '18px', align: 'center',
+                })).setOrigin(0.5));
+            if (this.portraitDetailsPage > 0) {
+                container.add(createSceneButton(this, { x: 131, y: 782, width: 172, height: 54,
+                    label: '上一段', variant: 'secondary', onClick: () => {
+                        this.portraitDetailsPage -= 1; this.renderShell();
+                    } }).objects);
+            }
+            if (this.portraitDetailsPage < pages.length - 1) {
+                container.add(createSceneButton(this, { x: width - 131, y: 782, width: 172, height: 54,
+                    label: '下一段', variant: 'secondary', onClick: () => {
+                        this.portraitDetailsPage += 1; this.renderShell();
+                    } }).objects);
+            }
+            container.add(createSceneButton(this, { x: width / 2, y: 878, width: width - 94, height: 72,
+                label: '返回地点操作', variant: 'primary', onClick: () => {
+                    this.portraitDetailsOpen = false; this.renderShell();
+                } }).objects);
+            this.shellContainer = container;
+            return;
+        }
+        container.add(this.add.text(47, 376, currentLocation.summary,
+            getSceneTextStyle('body', { fontSize: '20px', wordWrap: { width: width - 94 } })));
+        container.add(createSceneButton(this, { x: width / 2, y: 514, width: width - 94, height: 58,
+            label: '查看地点详情', variant: 'secondary', onClick: () => {
+                this.portraitDetailsOpen = true;
+                this.portraitDetailsPage = 0;
+                this.renderShell();
+            } }).objects);
+        const fullStatus = this.navigationState.statusText ?? HUB_DEFAULT_STATUS_TEXT;
+        const shortStatus = paginateReadableCopy(fullStatus, 36)[0]!;
+        const status = createStatusLine(this, { x: width / 2, y: 607, width: width - 94,
+            text: `${shortStatus}${shortStatus.length < fullStatus.length ? '…' : ''}`, align: 'center' });
+        this.statusText = status.text;
+        container.add(status.objects);
+
+        if (this.town.locations.length > 1) {
+            const currentIndex = this.town.locations.findIndex(location => location.id === currentLocation.id);
+            const next = this.town.locations[(currentIndex + 1) % this.town.locations.length]!;
+            container.add(createSceneButton(this, { x: width / 2, y: 689, width: width - 94, height: 55,
+                label: `切换地点：${next.title}`, variant: 'secondary',
+                onClick: () => this.handleHubMarkerSelected(next.id),
+            }).objects);
+        }
+        currentLocation.actions.forEach((action, index) => {
+            container.add(createSceneButton(this, { x: width / 2,
+                y: (this.town.locations.length > 1 ? 781 : 730) + index * 100,
+                width: width - 94, height: 80, label: action.label,
+                variant: action.kind === 'startStory' ? 'primary' : 'option',
+                onClick: () => this.handleAction(action),
+            }).objects);
+        });
         this.shellContainer = container;
     }
 
@@ -511,7 +617,7 @@ export class HubScene extends Scene {
     }
 
     private handleHubMapPointerDown(pointer: Phaser.Input.Pointer): void {
-        if (!this.mapSurfaceContainer || !this.isPointerInsideHubMapViewport(pointer)) {
+        if (this.questJournal.isOpen() || !this.mapSurfaceContainer || !this.isPointerInsideHubMapViewport(pointer)) {
             return;
         }
 
@@ -524,7 +630,7 @@ export class HubScene extends Scene {
     }
 
     private handleHubMapPointerMove(pointer: Phaser.Input.Pointer): void {
-        if (!this.mapDragState || !this.mapSurfaceContainer || !this.mapViewport || !pointer.isDown) {
+        if (this.questJournal.isOpen() || !this.mapDragState || !this.mapSurfaceContainer || !this.mapViewport || !pointer.isDown) {
             return;
         }
 

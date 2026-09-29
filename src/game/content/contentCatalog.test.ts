@@ -55,6 +55,7 @@ const expectedCheckedInResources = [
     ['gongfa', 'data/gongfa/gongfa-list.json'],
     ['config', 'data/config/artifact-grade.json'],
     ['config', 'data/config/combat-baseline.json'],
+    ['config', 'data/config/battle-loadout.json'],
     ['config', 'data/config/realm-presets.json'],
     ['worldSeed', 'data/world/factions.json'],
     ['worldSeed', 'data/world/initial-state.json'],
@@ -62,8 +63,10 @@ const expectedCheckedInResources = [
     ['worldSeed', 'data/world/items.artifacts.json'],
     ['worldSeed', 'data/world/meta.json'],
     ['worldSeed', 'data/world/npcs.json'],
+    ['worldSeed', 'data/world/quests.json'],
     ['worldSeed', 'data/world/protagonist.json'],
     ['worldSeed', 'data/world/skills.techniques.json'],
+    ['story', 'data/story/qa-fog-fox.json'],
 ] as const;
 
 const expectedTutorialCatalogEntries = [
@@ -1080,7 +1083,7 @@ describe('content catalog', () => {
         expect(result.registeredValidatorNames).toEqual([
             'worldMap:validateWorldMapDefinition',
             'hub:validateHubTownDefinition',
-            'story:validatePlayableStoryGraph|validateStoryContentGraph',
+            'story:validateStoryGraphResource',
             'expedition:validatePrototypeExpeditionContent',
         ]);
     });
@@ -2356,7 +2359,7 @@ describe('content catalog', () => {
         ]);
     });
 
-    it('returns actionable failures for missing deck, encounter, Expedition reward, gongfa, and legacy applyStatus status content IDs', () => {
+    it('returns actionable failures for missing deck, encounter, Expedition shop cost and reward, gongfa, and legacy applyStatus status content IDs', () => {
         const catalog = {
             schemaVersion: 1,
             resources: [
@@ -2505,6 +2508,7 @@ describe('content catalog', () => {
                         offers: [
                             {
                                 id: 'offer.test',
+                                cost: { spiritStones: 0, items: [{ id: 'item.missing.cost', itemType: 'artifact', count: 1 }] },
                                 rewards: {
                                     cards: [{ id: 'CARD_MISSING_FROM_SHOP', count: 1 }],
                                     items: [{ id: 'item.missing.shop', itemType: 'artifact', count: 1 }],
@@ -2526,6 +2530,7 @@ describe('content catalog', () => {
             'Encounter encounter.test enemies[0].cardId references card id CARD_MISSING_FROM_ENCOUNTER, but no catalog card resource declares that id.',
             'Expedition events events.test eventsByNodeId.event.test.pool[0].rewards.cards[0].id references card id CARD_MISSING_FROM_EVENT, but no catalog card resource declares that id.',
             'Expedition events events.test eventsByNodeId.event.test.pool[0].rewards.items[0].id references world item id item.missing.event, but no catalog world item resource declares that id.',
+            'Expedition shop shop.test shopsByNodeId.shop.test.offers[0].cost.items[0].id references world item id item.missing.cost, but no catalog world item resource declares that id.',
             'Expedition shop shop.test shopsByNodeId.shop.test.offers[0].rewards.cards[0].id references card id CARD_MISSING_FROM_SHOP, but no catalog card resource declares that id.',
             'Expedition shop shop.test shopsByNodeId.shop.test.offers[0].rewards.items[0].id references world item id item.missing.shop, but no catalog world item resource declares that id.',
         ]);
@@ -2601,13 +2606,32 @@ describe('content catalog', () => {
             'World seed world.seed.initial-state stash.items[3].id must be a non-empty string so the catalog can verify the content ID reference.',
         );
         expect(messages).toContain(
-            'World seed world.seed.initial-state stash.items[4].itemType must be one of: artifact, tool, consumable, quest.',
+            'World seed world.seed.initial-state stash.items[4].itemType must be one of: artifact, tool, consumable, material, quest.',
         );
         expect(messages).toContain(
             'World seed world.seed.initial-state stash.items[5] must be an object so the catalog can verify its starter stash item ID.',
         );
         expect(messages).toContain(
             'World seed world.seed.initial-state stash.spiritStones must be a non-negative integer.',
+        );
+    });
+
+    it('reports a crafting recipe that references an absent world material', () => {
+        const catalog = { schemaVersion: 1, resources: [{
+            resourceId: 'world.seed.items-artifacts', kind: 'worldSeed', schemaVersion: 1,
+            publicPath: 'data/world/items.artifacts.json',
+        }] };
+        const result = validateContentCatalog(catalog, createPublicFileSourceWithOverrides({
+            'data/world/items.artifacts.json': {
+                materials: [{ id: 'material.jade' }], artifacts: [{ id: 'artifact.charm' }],
+                recipes: [{ id: 'recipe.jade-charm', name: '青玉护符',
+                    cost: { spiritStones: 0, items: [{ id: 'material.missing', itemType: 'material', count: 2 }] },
+                    rewards: { items: [{ id: 'artifact.charm', itemType: 'artifact', count: 1 }] },
+                }],
+            },
+        }));
+        expect(result.failures.map(item => item.message)).toContain(
+            'World item seed world.seed.items-artifacts crafting recipes are invalid: Invalid crafting recipe.jade-charm cost item: material.missing',
         );
     });
 

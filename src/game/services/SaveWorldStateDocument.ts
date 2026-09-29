@@ -20,6 +20,7 @@ import {
 } from './StoryHubSessionPersistence';
 import type { SaveWorldStateSnapshot } from './SaveWorldStateSnapshot';
 import type { PersistentStash, RunSnapshot, TerminalRunOutcome } from '../types/expedition';
+import { isValidEquippedItems } from '../state/EquipmentState';
 
 export const SAVE_WORLD_STATE_DOCUMENT_SCHEMA_VERSION = 1;
 export const SAVE_WORLD_STATE_DOCUMENT_CONTENT_TYPE = 'application/vnd.cardgame.save-world-state-document+json';
@@ -119,6 +120,29 @@ function isBooleanRecord(value: unknown): value is Record<string, boolean> {
 
 function isNumberRecord(value: unknown): value is Record<string, number> {
     return isRecord(value) && Object.values(value).every(isNumber);
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+    return isRecord(value) && Object.values(value).every((entry) => typeof entry === 'string');
+}
+
+function isStringArrayRecord(value: unknown): value is Record<string, string[]> {
+    return isRecord(value) && Object.values(value).every(isStringArray);
+}
+
+function isCardGrantArray(value: unknown): boolean {
+    return Array.isArray(value) && value.every((entry) => isRecord(entry)
+        && isNonEmptyString(entry.grantId) && isNonEmptyString(entry.cardId)
+        && Number.isSafeInteger(entry.count) && (entry.count as number) > 0)
+        && new Set(value.map((entry: { grantId: string }) => entry.grantId)).size === value.length;
+}
+
+function isItemTransactionArray(value: unknown): boolean {
+    return Array.isArray(value) && value.every((entry) => isRecord(entry)
+        && isNonEmptyString(entry.transactionId) && isNonEmptyString(entry.itemId)
+        && ['artifact', 'tool', 'consumable', 'material', 'quest'].includes(String(entry.itemType))
+        && Number.isSafeInteger(entry.countDelta) && entry.countDelta !== 0)
+        && new Set(value.map((entry: { transactionId: string }) => entry.transactionId)).size === value.length;
 }
 
 function fail(reason: string): never {
@@ -313,7 +337,16 @@ function validateStoryStateShape(value: unknown): boolean {
         && isStringArray(value.triggeredDialogueIds)
         && isBooleanRecord(value.flags)
         && isNumberRecord(value.attributes)
-        && isNumberRecord(value.relations);
+        && isNumberRecord(value.relations)
+        && (value.actorAbilities === undefined || (isRecord(value.actorAbilities) && Object.values(value.actorAbilities).every(isNumberRecord)))
+        && isOptionalString(value.currentLocationLabel)
+        && isOptionalString(value.currentDialogueId)
+        && (value.knowledge === undefined || isStringArrayRecord(value.knowledge))
+        && (value.questStages === undefined || isStringRecord(value.questStages))
+        && (value.settledEventIds === undefined || isStringArray(value.settledEventIds))
+        && (value.cardGrants === undefined || isCardGrantArray(value.cardGrants))
+        && (value.itemTransactions === undefined || isItemTransactionArray(value.itemTransactions))
+        && (value.itemCounts === undefined || isNumberRecord(value.itemCounts));
 }
 
 function validateStoryHubDocument(value: unknown): StoryHubSessionDocument {
@@ -353,6 +386,21 @@ function validateStoryHubDocument(value: unknown): StoryHubSessionDocument {
         }
     }
 
+    if (value.sharedNarrative !== undefined) {
+        const shared = value.sharedNarrative;
+        if (!isRecord(shared)
+            || !isBooleanRecord(shared.flags)
+            || !isNumberRecord(shared.attributes)
+            || !isNumberRecord(shared.relations)
+            || !isStringArrayRecord(shared.knowledge)
+            || !isStringRecord(shared.questStages)
+            || !isStringArray(shared.settledEventIds)
+            || (shared.cardGrants !== undefined && !isCardGrantArray(shared.cardGrants))
+            || (shared.itemTransactions !== undefined && !isItemTransactionArray(shared.itemTransactions))) {
+            fail('storyHubSession shared narrative facts are malformed.');
+        }
+    }
+
     return value as unknown as StoryHubSessionDocument;
 }
 
@@ -367,6 +415,10 @@ function validateItemStacks(value: unknown): boolean {
             && isNonEmptyString(stack.id)
             && typeof stack.itemType === 'string'
             && isNumber(stack.count));
+}
+
+function validateEquippedItems(value: unknown, items: unknown): boolean {
+    return validateItemStacks(items) && isValidEquippedItems(value, items as PersistentStash['items']);
 }
 
 function validateRewardBundle(value: unknown): boolean {
@@ -405,8 +457,12 @@ function validatePersistentStash(value: unknown): PersistentStash | null {
         || !validateSavedDecks(value.savedDecks)
         || !(value.selectedDeckId === null || isNonEmptyString(value.selectedDeckId))
         || !validateItemStacks(value.items)
+        || (value.equippedItems !== undefined && !validateEquippedItems(value.equippedItems, value.items))
         || !isNumber(value.spiritStones)
-        || (value.lastRunSummary !== undefined && !validateRunResolutionSummary(value.lastRunSummary))) {
+        || (value.itemSlotCapacity !== undefined && (typeof value.itemSlotCapacity !== 'number' || !Number.isSafeInteger(value.itemSlotCapacity) || value.itemSlotCapacity < 1))
+        || (value.lastRunSummary !== undefined && !validateRunResolutionSummary(value.lastRunSummary))
+        || (value.claimedStoryGrantIds !== undefined && !isStringArray(value.claimedStoryGrantIds))
+        || (value.settledStoryItemTransactionIds !== undefined && !isStringArray(value.settledStoryItemTransactionIds))) {
         fail('persistentStash document is malformed.');
     }
 
@@ -444,6 +500,8 @@ function validateRunSnapshot(value: unknown): RunSnapshot | null {
         || !validateRewardBundle(value.startingLoadout)
         || !validateCardStacks(value.carriedDeck)
         || !validateItemStacks(value.carriedItems)
+        || (value.equippedItems !== undefined && !validateEquippedItems(value.equippedItems, value.carriedItems))
+        || (value.itemSlotCapacity !== undefined && (typeof value.itemSlotCapacity !== 'number' || !Number.isSafeInteger(value.itemSlotCapacity) || value.itemSlotCapacity < 1))
         || !isNumber(value.spiritStones)
         || !isStringArray(value.visitedNodeIds)
         || !validateRunNodeStates(value.nodeStates)

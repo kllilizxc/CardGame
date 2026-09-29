@@ -9,6 +9,8 @@ import type {
     StatusTiming,
 } from '@data/types/status';
 import type { ArtifactWeaponType } from '@data/types/cards/artifact';
+import { indexItemActionPolicies } from '../state/ItemActionRules';
+import { indexCraftingRecipes } from '../state/Crafting';
 
 type CatalogIdRegistryName = 'card' | 'deck' | 'gongfa' | 'status' | 'world item' | 'realm' | 'grade';
 
@@ -24,11 +26,12 @@ const CANONICAL_REALM_REGISTRY_PUBLIC_PATH = 'data/config/combat-baseline.json';
 const CANONICAL_GRADE_REGISTRY_RESOURCE_ID = 'config.artifact-grade';
 const CANONICAL_GRADE_REGISTRY_PUBLIC_PATH = 'data/config/artifact-grade.json';
 const MAX_ARTIFACT_STAR = 12;
-const STASH_ITEM_TYPE_VALUES = ['artifact', 'tool', 'consumable', 'quest'] as const;
+const STASH_ITEM_TYPE_VALUES = ['artifact', 'tool', 'consumable', 'material', 'quest'] as const;
 const WORLD_ITEM_COLLECTIONS = [
     { collectionName: 'artifacts', itemType: 'artifact' },
     { collectionName: 'tools', itemType: 'tool' },
     { collectionName: 'consumables', itemType: 'consumable' },
+    { collectionName: 'materials', itemType: 'material' },
     { collectionName: 'quests', itemType: 'quest' },
     { collectionName: 'questItems', itemType: 'quest' },
 ] as const;
@@ -1974,6 +1977,14 @@ function validateCanonicalWorldSeedReferences(
 
     if (resource.entry.resourceId === CANONICAL_WORLD_ITEM_REGISTRY_RESOURCE_ID) {
         validateCanonicalWorldItemRegistryShape(resource, failures);
+        if (isRecord(resource.json) && resource.json.recipes !== undefined) {
+            try {
+                indexCraftingRecipes(resource.json, indexItemActionPolicies(resource.json));
+            } catch (error) {
+                addFailure(failures, resource.entry,
+                    `World item seed ${resource.entry.resourceId} crafting recipes are invalid: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        }
     }
 }
 
@@ -2642,6 +2653,16 @@ function validateExpeditionShopRewardReferences(
         definition.offers.forEach((offer, offerIndex) => {
             if (!isRecord(offer)) {
                 return;
+            }
+
+            if (isRecord(offer.cost)) {
+                validateRewardItemReferences(
+                    resource.entry,
+                    offer.cost.items,
+                    `Expedition shop ${resource.entry.resourceId} shopsByNodeId.${nodeId}.offers[${offerIndex}].cost.items`,
+                    registries,
+                    failures,
+                );
             }
 
             validateRewardBundleReferences(

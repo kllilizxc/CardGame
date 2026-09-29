@@ -1,3 +1,5 @@
+import { WenxinUnitView } from '../art/wenxin/WenxinUnitView';
+import { unitArt, UNIT_ART, type BattleSide } from '../art/wenxin/presentation';
 import { GameObjects } from 'phaser';
 import type { UnitCard } from '@data/types/cards/unit';
 import type { Gongfa } from '@data/types/gongfa';
@@ -15,8 +17,12 @@ import { GongfaTooltip } from '../ui/common/GongfaTooltip';
 import { describeGongfa } from '../utils/GongfaDescriptionBuilder';
 import { getUnitStar, getRealmConfig } from '../utils/RealmHelper';
 import { getStatusDisplayText, getStatusCategoryColor, getStatusFullDescription } from '../utils/StatusHelper';
+import { selectedCardFace, watchCardFace } from './cardFaceAppearance';
+import { isPortraitGameViewport } from '../layout/gameViewport';
 
 export class CardSprite extends BaseCardSprite {
+    public battleView?: WenxinUnitView;
+    private cardVisibility = new Map<GameObjects.GameObject, boolean>();
     private readonly palette = getBattleCardPalette('unit');
     private cardData: UnitCard;
     private attackText: GameObjects.Text;
@@ -30,6 +36,9 @@ export class CardSprite extends BaseCardSprite {
     private gongfaData: Map<string, Gongfa> = new Map();
     private statusContainer?: GameObjects.Container;
     private statusTooltip?: GameObjects.Container;
+    private faceImage?: GameObjects.Image;
+    private faceRealmText?: GameObjects.Text;
+    private releaseFace?: () => void;
 
     constructor(scene: Phaser.Scene, x: number, y: number, cardData: UnitCard, scale: number = 1) {
         super(scene, x, y, scale);
@@ -88,6 +97,7 @@ export class CardSprite extends BaseCardSprite {
             `攻 ${cardData.attack}`,
             getBattleCardTextStyle('stat', {
                 fontSize: '18px',
+                resolution: 3,
                 color: battleTheme.colors.textDanger,
             }),
         ).text;
@@ -103,6 +113,7 @@ export class CardSprite extends BaseCardSprite {
             `命 ${cardData.health}`,
             getBattleCardTextStyle('stat', {
                 fontSize: '18px',
+                resolution: 3,
                 color: battleTheme.colors.textPositive,
             }),
         ).text;
@@ -149,6 +160,61 @@ export class CardSprite extends BaseCardSprite {
                 }
             }
         });
+        const original = this.list.map(object => ({ object: object as any, visible: (object as any).visible }));
+        this.releaseFace = watchCardFace(scene, cardData, key => {
+            if (!this.active) return;
+            this.faceImage?.destroy();
+            this.faceRealmText?.destroy();
+            this.faceImage = undefined;
+            this.faceRealmText = undefined;
+            for (const { object, visible } of original) if (object.active) object.setVisible(visible);
+            this.background.setFillStyle(this.palette.shell, .98);
+            if (key) {
+                this.faceImage = scene.add.image(0, 0, key).setDisplaySize(180, 260);
+                this.addAt(this.faceImage, 0);
+                for (const { object } of original) if (object !== this.attackText && object !== this.healthText) object.setVisible(false);
+                this.background.setVisible(true).setFillStyle(this.palette.shell, 0);
+                const scroll = selectedCardFace(cardData.id, cardData.cardFace) === 'scroll';
+                const realm = getRealmConfig(cardData.realmId);
+                this.faceRealmText = scene.add.text(0, scroll ? -92 : -103, `${realm?.stage ?? ''}${realm?.phase ?? ''} ${'★'.repeat(getUnitStar(cardData))}`, {
+                    fontFamily: sceneTheme.fonts.ui, fontSize: '9px', resolution: 3, color: scroll ? '#655f4c' : '#d8cba5',
+                }).setOrigin(.5);
+                this.add(this.faceRealmText);
+                // Keep the original interactive gongfa names/tooltips available.
+                this.gongfaContainer.setScale(.5).setPosition(0, 83);
+                this.gongfaTexts.forEach(text => text.setColor('#425d57'));
+                this.attackText.setPosition(-67, 112).setFontSize(12).setStroke('', 0);
+                this.healthText.setPosition(67, 112).setFontSize(12).setStroke('', 0);
+            } else {
+                this.gongfaTexts.forEach(text => text.setColor(battleColorToHex(sceneTheme.colors.goldSoft)));
+                this.gongfaContainer.setScale(1).setPosition(0, 0);
+                this.attackText.setPosition(-48, 104).setFontSize(18);
+                this.healthText.setPosition(48, 104).setFontSize(18);
+            }
+            this.updateDisplayMode();
+            this.updateStats();
+        });
+    }
+
+    public setBattlePresentation(side?: BattleSide): void {
+        if (side && this.battleView?.side === side) return;
+        if (this.battleView) {
+            this.battleView.destroy(); this.battleView = undefined;
+            for (const [object, visible] of this.cardVisibility) if (object.active && 'setVisible' in object) (object as GameObjects.Image).setVisible(visible);
+            this.cardVisibility.clear();
+            if (this.input) this.input.hitArea.setTo(0, 0, 180, 260);
+        }
+        const key = unitArt(this.cardData.id);
+        if (!side || !key) { this.updateDisplayMode(); return; }
+        for (const object of this.list) if ('visible' in object) {
+            this.cardVisibility.set(object, (object as GameObjects.Image).visible);
+            (object as GameObjects.Image).setVisible(false);
+        }
+        this.battleView = new WenxinUnitView(this.scene, this, key, side);
+        this.add(this.battleView);
+        const m = UNIT_ART[key];
+        const artScale = isPortraitGameViewport(this.scene.scale.width, this.scene.scale.height) ? 1.6 : 3;
+        if (this.input) this.input.hitArea.setTo(90 - (side === 'me' ? m.w - m.ax : m.ax) * artScale, 130 - m.ay * artScale, m.w * artScale, m.h * artScale + 70);
     }
 
     public getCardData(): UnitCard {
@@ -163,10 +229,12 @@ export class CardSprite extends BaseCardSprite {
         }
         
         // 更新攻击力
+        this.battleView?.refreshStats();
         this.attackText.setText(`攻 ${this.cardData.attack}`);
         
         // 更新生命值
         this.healthText.setText(`命 ${this.cardData.health}`);
+        this.attackText.setColor(this.faceImage ? '#673b39' : battleTheme.colors.textDanger);
         
         // 如果生命值过低，改变颜色提示
         if (this.cardData.health <= 0) {
@@ -174,7 +242,7 @@ export class CardSprite extends BaseCardSprite {
         } else if (this.cardData.health <= this.getOriginalHealth() * 0.3) {
             this.healthText.setColor(battleTheme.colors.textDanger); // 低血量红色
         } else {
-            this.healthText.setColor(battleTheme.colors.textPositive); // 正常绿色
+            this.healthText.setColor(this.faceImage ? '#2b4440' : battleTheme.colors.textPositive);
         }
     }
 
@@ -192,6 +260,18 @@ export class CardSprite extends BaseCardSprite {
 
     // 重写：更新显示模式
     protected updateDisplayMode(): void {
+        if (this.battleView) {
+            for (const object of this.list) if (object !== this.battleView && 'setVisible' in object) (object as GameObjects.Image).setVisible(false);
+            this.battleView.setVisible(true);
+            return;
+        }
+        if (this.faceImage) {
+            this.descriptionText.setVisible(false);
+            this.gongfaContainer.setVisible(true);
+            this.raceBox.setVisible(false);
+            this.raceText.setVisible(false);
+            return;
+        }
         const showExpandedDescription = this.currentDisplayMode === 'hover';
         this.descriptionText.setVisible(showExpandedDescription);
         this.gongfaContainer.setVisible(!showExpandedDescription);
@@ -442,6 +522,7 @@ export class CardSprite extends BaseCardSprite {
      * 销毁时清理功法提示框和状态显示
      */
     public destroy(fromScene?: boolean): void {
+        this.releaseFace?.();
         this.gongfaTooltip.destroy();
         this.clearStatusDisplay();
         super.destroy(fromScene);

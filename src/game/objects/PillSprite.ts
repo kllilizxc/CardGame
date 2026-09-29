@@ -98,6 +98,7 @@ export class PillSprite extends BaseCardSprite {
             },
             emitSceneEvents: false,
         });
+        this.attachCardFace(cardData);
     }
 
     private getGradeLabel(grade: number): string {

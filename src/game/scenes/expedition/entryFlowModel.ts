@@ -116,12 +116,18 @@ export interface RunResolutionSummaryView {
     title: string;
     subtitle: string;
     finalNodeId: string;
+    finalNodeLabel?: string;
     keptCards: string[];
     keptItems: string[];
     keptSpiritStones: string;
     lostCards: string[];
     lostItems: string[];
     lostSpiritStones: string;
+}
+
+export interface RunResolutionSummaryViewOptions {
+    displayName?: (id: string) => string;
+    finalNodeLabel?: string;
 }
 
 export type RunSummaryMode = 'started' | 'resumed';
@@ -1098,8 +1104,10 @@ export function createRunSummary(run: RunSnapshot, options: RunSummaryOptions = 
     };
 }
 
-function formatStacks<T extends { id: string; count: number }>(stacks: T[]): string[] {
-    return stacks.length > 0 ? stacks.map((stack) => `${stack.id} ×${stack.count}`) : ['无'];
+function formatStacks<T extends { id: string; count: number }>(
+    stacks: T[], displayName: (id: string) => string = id => id,
+): string[] {
+    return stacks.length > 0 ? stacks.map((stack) => `${displayName(stack.id)} ×${stack.count}`) : ['无'];
 }
 
 function getResolutionCopy(outcome: RunResolutionSummary['outcome']): { title: string; subtitle: string } {
@@ -1136,13 +1144,18 @@ function getEntranceOutcomeLabel(outcome: RunResolutionSummary['outcome']): stri
 export function createPostRunEntranceStatus(
     stash: PersistentStash,
     summary: RunResolutionSummary,
+    finalNodeLabel = summary.finalNodeId,
 ): string {
     return `${createPreparationSummary(stash).statusText}\n` +
-        `上次结果：${getEntranceOutcomeLabel(summary.outcome)}（${summary.finalNodeId}）。可立即开始新的秘境探索。`;
+        `上次结果：${getEntranceOutcomeLabel(summary.outcome)}（${finalNodeLabel}）。可立即开始新的秘境探索。`;
 }
 
-export function createRunResolutionSummaryView(summary: RunResolutionSummary): RunResolutionSummaryView {
+export function createRunResolutionSummaryView(
+    summary: RunResolutionSummary,
+    options: RunResolutionSummaryViewOptions = {},
+): RunResolutionSummaryView {
     const copy = getResolutionCopy(summary.outcome);
+    const displayName = options.displayName ?? (id => id);
     const kept = summary.outcome === 'defeat'
         ? { cards: [], items: [], spiritStones: 0 }
         : summary.kept;
@@ -1152,11 +1165,12 @@ export function createRunResolutionSummaryView(summary: RunResolutionSummary): R
         title: copy.title,
         subtitle: copy.subtitle,
         finalNodeId: summary.finalNodeId,
-        keptCards: formatStacks(kept.cards),
-        keptItems: formatStacks(kept.items),
+        ...(options.finalNodeLabel ? { finalNodeLabel: options.finalNodeLabel } : {}),
+        keptCards: formatStacks(kept.cards, displayName),
+        keptItems: formatStacks(kept.items, displayName),
         keptSpiritStones: String(kept.spiritStones),
-        lostCards: formatStacks(summary.lost.cards),
-        lostItems: formatStacks(summary.lost.items),
+        lostCards: formatStacks(summary.lost.cards, displayName),
+        lostItems: formatStacks(summary.lost.items, displayName),
         lostSpiritStones: String(summary.lost.spiritStones),
     };
 }

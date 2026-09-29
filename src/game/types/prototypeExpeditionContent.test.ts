@@ -25,6 +25,21 @@ describe('validatePrototypeExpeditionContent', () => {
         expect(Object.keys(content.shops.shopsByNodeId)).toContain('shop.wandering-peddler');
     });
 
+    it('parses material costs and rejects fractional or negative shop prices', () => {
+        const shops = structuredClone(prototypeShopJson) as any;
+        const offer = shops.shopsByNodeId['shop.wandering-peddler'].offers[0];
+        offer.cost.items = [{ id: 'consumable.spirit-salve', itemType: 'consumable', count: 2 }];
+        const parse = () => validatePrototypeExpeditionContent({ map: prototypeMapJson, events: prototypeEventsJson, shops });
+
+        expect(parse().shops.shopsByNodeId['shop.wandering-peddler'].offers[0].cost.items)
+            .toEqual(offer.cost.items);
+        offer.cost.items[0].count = 1.5;
+        expect(parse).toThrow('positive integers');
+        offer.cost.items[0].count = 2;
+        offer.cost.spiritStones = -1;
+        expect(parse).toThrow('nonnegative integer');
+    });
+
     it('rejects event nodes whose payload ref does not exist in the event content file', () => {
         const brokenMap = structuredClone(prototypeMapJson);
         const eventNode = brokenMap.nodes.find((node) => node.type === 'event');

@@ -1,3 +1,5 @@
+import { isPortraitGameViewport } from '../layout/gameViewport';
+
 /**
  * 战斗场景布局配置
  * 统一管理所有 UI 面板和游戏区域的位置、尺寸、深度
@@ -73,6 +75,30 @@ export interface BattleLayoutConfig {
  * 创建默认布局配置
  */
 export function createDefaultLayout(width: number, height: number): BattleLayoutConfig {
+    if (isPortraitGameViewport(width, height)) {
+        return {
+            cardPreview: { x: width / 2, y: height / 2, width: 420, height: 640 },
+            battleLog: { x: width / 2, y: height / 2, width: 420, height: 650 },
+            handZone: { x: width / 2, y: 932, width: width - 28, height: 130 },
+            playerFieldZone: { x: width / 2, y: 555, width: width - 28, height: 160 },
+            enemyFieldZone: { x: width / 2, y: 367, width: width - 28, height: 180 },
+            fieldCardZone: { x: width / 2, y: 638, width: 112, height: 42 },
+            deckButton: { x: 76, y: 246, width: 112, height: 54 },
+            discardPileButton: { x: width - 76, y: 246, width: 112, height: 54 },
+            pillSlots: { x: width / 2, y: 818 },
+            skillUI: { x: width / 2, y: 713 },
+            depth: {
+                fieldZoneVisuals: 0,
+                handCards: 10,
+                fieldCards: 50,
+                uiButtons: 100,
+                uiText: 200,
+                cardToDiscardAnimation: 2000,
+                cardPreview: 6100,
+                pillTooltip: 7000,
+            },
+        };
+    }
     return {
         // 卡牌预览面板 - 左上角
         cardPreview: {
@@ -93,33 +119,33 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
         // 手牌区域 - 底部中央
         handZone: {
             x: width * 0.5,
-            y: height * 0.9,
+            y: height * 0.865,
             width: width * 0.6,
             height: height * 0.16
         },
         
         // 玩家场地区域 - 中下部
         playerFieldZone: {
-            x: width * 0.5,
-            y: height * 0.65,
-            width: width * 0.6,
-            height: height * 0.3
+            x: width * 0.76,
+            y: height * 0.50,
+            width: width * 0.43,
+            height: height * 0.44
         },
         
         // 敌方场地区域 - 中上部
         enemyFieldZone: {
-            x: width * 0.5,
-            y: height * 0.25,
-            width: width * 0.6,
-            height: height * 0.3
+            x: width * 0.24,
+            y: height * 0.50,
+            width: width * 0.43,
+            height: height * 0.44
         },
         
         // 场地卡区域 - 中央
         fieldCardZone: {
-            x: width * 0.25,
-            y: height * 0.45,
-            width: width * 0.1,
-            height: height * 0.2
+            x: width * 0.055,
+            y: height * 0.72,
+            width: width * 0.075,
+            height: height * 0.12
         },
         
         // 卡组按钮 - 左下角
@@ -140,14 +166,14 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
         
         // 丹药槽位 - 左下角，卡组按钮上方
         pillSlots: {
-            x: width * 0.08,
+            x: width * 0.105,
             y: height - height * 0.18
         },
         
         // 技能UI
         skillUI: {
-            x: width * 0.75,
-            y: height * 0.45
+            x: width * 0.5,
+            y: height * 0.72
         },
         
         // 深度配置（从低到高）

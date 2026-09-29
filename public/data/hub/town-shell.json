@@ -2,20 +2,20 @@
   "hubId": "hub.qingyun-town",
   "title": "青云镇",
   "subtitle": "山门脚下的临时落脚点",
-  "description": "一座依附青云宗山门而生的小镇。当前版本证明 Hub 可以由数据声明多个小地点，将当前位置保存到本地 Story/Hub session，并从不同 Hub action 启动主线或茶棚支线故事图。",
+  "description": "青云宗山脚的落脚小镇。赶路的散修、商贩和候考弟子都在这里歇脚。",
   "defaultLocationId": "location.qingyun-town.gate-market",
   "locations": [
     {
       "id": "location.qingyun-town.gate-market",
       "title": "山门集市",
       "summary": "凡人、散修和商贩在此等待青云宗入门试炼。",
-      "detail": "茶棚旁贴着今日试炼告示，远处山门云雾翻涌。你可以从这里前往现有主线故事图。",
+      "detail": "茶棚旁贴着今日试炼告示，远处山门云雾翻涌。你可以沿石阶上山，也可以先打听消息。",
       "actions": [
         {
           "id": "action.start-qingyun-entry-story",
           "kind": "startStory",
           "label": "前往青云宗山门",
-          "description": "启动 public/data/story/story-graph.json 中的青云宗入门主线。",
+          "description": "沿青石路前往山门，看看今日的试炼。",
           "storyResourceId": "story.qingyun-entry",
           "storyGraphFile": "data/story/story-graph.json",
           "statusText": "从青云镇出发，主线故事已开启。"
@@ -24,7 +24,7 @@
           "id": "action.visit-town-teahouse",
           "kind": "navigate",
           "label": "去茶棚打听消息",
-          "description": "在同一个 HubScene 内切换到集市旁的茶棚；当前位置会保存到本地 Story/Hub session。",
+          "description": "到集市茶棚听听往来的修士在说什么。",
           "targetLocationId": "location.qingyun-town.teahouse",
           "statusText": "你穿过集市，来到茶棚边听散修议论今日试炼。"
         }
@@ -42,7 +42,7 @@
       "id": "location.qingyun-town.teahouse",
       "title": "集市茶棚",
       "summary": "竹棚下坐满等待试炼的散修，掌柜一边续水一边留意山门动静。",
-      "detail": "这里承担 Hub 小地点导航和第二个故事图入口示例：玩家可以从山门集市来到茶棚，再从这里启动一段极短茶棚传闻支线。后续若要加入商店、修炼或奖励操作，应继续通过新的数据合同扩展，而不是写死在 HubScene。",
+      "detail": "竹棚里茶香未散，几名散修正在低声议论今日试炼。坐下歇一歇，也许能听到山门的新消息。",
       "actions": [
         {
           "id": "action.return-gate-market",
@@ -56,7 +56,7 @@
           "id": "action.start-teahouse-rumors-story",
           "kind": "startStory",
           "label": "听茶棚传闻",
-          "description": "启动 public/data/story/qingyun-teahouse-rumors.json 中的茶棚支线；它与山门主线使用不同 actionId 和 storyGraphFile 保存进度。",
+          "description": "坐下喝碗热茶，听散修说起山门传闻。",
           "storyResourceId": "story.qingyun-teahouse-rumors",
           "storyGraphFile": "data/story/qingyun-teahouse-rumors.json",
           "statusText": "茶棚里传来新的试炼传闻。"

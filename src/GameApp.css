@@ -37,6 +37,8 @@
   position: relative;
   flex: 0 0 auto;
   width: min(1920px, calc(100vw - 112px), calc((100vh - 160px) * 16 / 9));
+  height: min(1080px, calc((100vw - 112px) * 9 / 16), calc(100vh - 160px));
+  min-height: 0;
   aspect-ratio: 16 / 9;
   border-radius: 18px;
   isolation: isolate;
@@ -92,6 +94,7 @@
 
   #game-container {
     width: min(1920px, calc(100vw - 56px), calc((100vh - 112px) * 16 / 9));
+    height: min(1080px, calc((100vw - 56px) * 9 / 16), calc(100vh - 112px));
   }
 
   #game-container::before {
@@ -102,5 +105,33 @@
   #game-container::after {
     inset: -6px;
     border-radius: 18px;
+  }
+}
+
+@media (max-width: 700px) and (orientation: portrait) {
+  #game-app {
+    min-height: 100dvh;
+    align-items: flex-start;
+    padding: 40px 8px 8px;
+  }
+
+  #game-container {
+    width: min(calc(100vw - 16px), 44dvh);
+    height: auto;
+    aspect-ratio: 12 / 25;
+  }
+
+  #game-container::before {
+    inset: -5px;
+    border-radius: 12px;
+  }
+
+  #game-container::after {
+    inset: -2px;
+    border-radius: 10px;
+  }
+
+  #game-container canvas {
+    border-radius: 8px;
   }
 }

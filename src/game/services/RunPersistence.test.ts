@@ -112,6 +112,38 @@ describe('RunPersistence', () => {
         expect(loadPersistentStash()).toEqual(TEST_STASH);
     });
 
+    it('preserves a configured bag capacity and rejects a malformed saved capacity', () => {
+        const ambientStorage = globalThis.localStorage as MemoryStorage;
+        const stash = { ...TEST_STASH, itemSlotCapacity: 2 };
+        savePersistentStash(stash);
+        expect(loadPersistentStash()).toEqual(stash);
+
+        ambientStorage.setItem(STASH_STORAGE_KEY, JSON.stringify({ ...stash, itemSlotCapacity: 0 }));
+        expect(loadPersistentStash()).toBeNull();
+        expect(ambientStorage.getItem(STASH_STORAGE_KEY)).toBeNull();
+    });
+
+    it('repairs a stale equipment reference without deleting the saved inventory', () => {
+        const ambientStorage = globalThis.localStorage as MemoryStorage;
+        ambientStorage.setItem(STASH_STORAGE_KEY, JSON.stringify({
+            ...TEST_STASH,
+            equippedItems: { charm: 'item.missing' },
+        }));
+        const restored = loadPersistentStash();
+        expect(restored?.items).toEqual(TEST_STASH.items);
+        expect(restored?.cards).toEqual(TEST_STASH.cards);
+        expect(restored?.equippedItems).toEqual({});
+        expect(ambientStorage.getItem(STASH_STORAGE_KEY)).not.toBeNull();
+        expect(() => savePersistentStash({ ...TEST_STASH, equippedItems: { charm: 'item.missing' } })).toThrow('invalid equipped items');
+
+        ambientStorage.setItem(STASH_STORAGE_KEY, JSON.stringify({
+            ...TEST_STASH,
+            equippedItems: JSON.parse('{"__proto__":"item.rope"}'),
+        }));
+        expect(loadPersistentStash()?.equippedItems).toEqual({});
+        expect(ambientStorage.getItem(STASH_STORAGE_KEY)).not.toBeNull();
+    });
+
     it('keeps default persistent stash memory fallback when localStorage is unavailable', () => {
         restoreLocalStorage();
         resetRunPersistenceForTests();

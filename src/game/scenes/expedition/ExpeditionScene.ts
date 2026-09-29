@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
+import { isPortraitGameViewport } from '../../layout/gameViewport';
 import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import {
     ExpeditionState,
@@ -8,6 +9,11 @@ import {
     type ExpeditionWorldStateSeed,
 } from '../../state/ExpeditionState';
 import { selectDeckInStash } from '../../state/PersistentStashDecks';
+import { mergeItemStacks } from '../../state/GameWorldStateStashOperations';
+import { canDropInventoryItem, indexItemActionPolicies, type ItemActionPolicy } from '../../state/ItemActionRules';
+import { indexCraftingRecipes, previewCraftingRecipe, type CraftingRecipe } from '../../state/Crafting';
+import { countOccupiedItemSlots, resolveItemSlotCapacity } from '../../state/ItemCapacity';
+import { wrapQuestJournalText } from '../../state/QuestJournal';
 import {
     resolveBattleDefeat,
     resolveBattleVictory,
@@ -16,6 +22,7 @@ import {
 } from '../../services/RunResolution';
 import type {
     ExpeditionBattleCompleteEvent,
+    ExpeditionItemType,
     EventMapNode,
     ExpeditionMapDefinition,
     ExpeditionMapNode,
@@ -32,13 +39,13 @@ import { MapNodeView } from '../../ui/expedition/MapNodeView';
 import { DeckManagementPanel } from '../../ui/deckbuilder/DeckManagementPanel';
 import { PreparationPanel } from '../../ui/expedition/PreparationPanel';
 import {
-    getEntryPanelTop,
     getEntryShellCenterY,
     type EntryPanelFrame,
     type EntryPanelFrameProvider,
 } from '../../ui/expedition/EntryPanelFrame';
 import { RunHud } from '../../ui/expedition/RunHud';
 import { expeditionUiTheme } from '../../ui/common/expeditionUiTheme';
+import { getRunPlayerHealth, MAX_RUN_PLAYER_HEALTH } from '../../state/RunHealth';
 import { createWorldMapReturnIntent } from '../worldmap/worldMap';
 import {
     createExpeditionArrivalCueSummary,
@@ -129,13 +136,21 @@ export class ExpeditionScene extends Scene {
     private statusText!: Phaser.GameObjects.Text;
     private nodeMenu?: Phaser.GameObjects.Container;
     private activeNodePanel?: Phaser.GameObjects.Container;
+    private inventoryPage = 0;
+    private readonly loadingItemIcons = new Set<string>();
     private mapGraphics?: Phaser.GameObjects.Graphics;
     private mapNodeViews: MapNodeView[] = [];
+    private portraitMapContainer?: Phaser.GameObjects.Container;
+    private portraitMapPage = 0;
+    private portraitMapNodeId?: string;
     private pendingBattleResult: ExpeditionBattleCompleteEvent | null = null;
     private deckManagerEntryContext?: PreparationDeckContext;
     private pendingPreparationDeckHandoff?: PreparationDeckHandoffSummary;
     private deckbuilderCardMetadataResources?: DeckbuilderCardMetadataResources;
     private deckbuilderCardMetadata: CardMetadataMap = {};
+    private itemActionPolicies: Readonly<Record<string, ItemActionPolicy>> = {};
+    private craftingRecipes: readonly CraftingRecipe[] = [];
+    private craftingPage = 0;
     private deckManagementCardPreviewResolver?: DeckManagementCardPreviewResolver;
     private cardPreviewManager?: CardPreviewManager;
     private entryShell?: EntryShellVisuals;
@@ -155,8 +170,15 @@ export class ExpeditionScene extends Scene {
         this.pendingBattleResult = this.launchData.battleResult ?? null;
         this.deckbuilderCardMetadataResources = undefined;
         this.deckbuilderCardMetadata = {};
+        this.itemActionPolicies = {};
+        this.craftingRecipes = [];
+        this.craftingPage = 0;
         this.deckManagementCardPreviewResolver = undefined;
         this.cardPreviewManager = undefined;
+        this.inventoryPage = 0;
+        this.loadingItemIcons.clear();
+        this.portraitMapPage = 0;
+        this.portraitMapNodeId = undefined;
     }
 
     preload(): void {
@@ -185,17 +207,16 @@ export class ExpeditionScene extends Scene {
         this.mapDefinition = this.cache.json.get(expeditionResources.map.cacheKey) as ExpeditionMapDefinition;
         this.eventCollection = this.cache.json.get(expeditionResources.events.cacheKey) as PrototypeEventCollection;
         this.shopCollection = this.cache.json.get(expeditionResources.shop.cacheKey) as PrototypeShopCollection;
+        const worldItemSource = this.cache.json.get(
+            resolveDeckbuilderWorldItemMetadataResource(this.cache.json.get(CONTENT_CATALOG_CACHE_KEY)).cacheKey,
+        );
         this.deckbuilderCardMetadata = buildDeckbuilderCardMetadataMap(
             this.getDeckbuilderCardMetadataResources(),
             (cacheKey) => this.cache.json.get(cacheKey),
-            {
-                worldItemSource: this.cache.json.get(
-                    resolveDeckbuilderWorldItemMetadataResource(
-                        this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
-                    ).cacheKey,
-                ),
-            },
+            { worldItemSource },
         );
+        this.itemActionPolicies = indexItemActionPolicies(worldItemSource);
+        this.craftingRecipes = indexCraftingRecipes(worldItemSource, this.itemActionPolicies);
         this.deckManagementCardPreviewResolver = buildDeckManagementCardPreviewResolver(
             this.getDeckbuilderCardMetadataResources(),
             (cacheKey) => this.cache.json.get(cacheKey),
@@ -204,6 +225,7 @@ export class ExpeditionScene extends Scene {
         this.expeditionState = ExpeditionState.bootstrap({
             worldState,
             starterDeck,
+            itemPolicies: this.itemActionPolicies,
             activeRunRouteKey: this.launchData.routeKey,
             activeRunIdentity: {
                 expeditionId: this.launchData.expeditionId,
@@ -216,6 +238,10 @@ export class ExpeditionScene extends Scene {
         this.setupCardPreview();
 
         this.runHud = new RunHud(this);
+        this.runHud.setInventoryOpenHandler(() => {
+            this.inventoryPage = 0;
+            this.showInventoryPanel();
+        });
         this.runHud.setVisible(false);
         const statusPlateWidth = Math.max(360, Math.min(width - 360, 720));
         const statusTextWidth = Math.max(280, statusPlateWidth - 52);
@@ -424,7 +450,8 @@ export class ExpeditionScene extends Scene {
 
         this.currentEntryShellMode = mode;
         const routeBriefing = this.getEntryRouteBriefing(mode);
-        this.entryShell.supportText.setText(routeBriefing.shellSupportLabel);
+        this.entryShell.supportText.setText(isPortraitGameViewport(this.scale.width, this.scale.height)
+            ? '返回大地图' : routeBriefing.shellSupportLabel);
         this.entryShell.supportText.setStyle({
             fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '18px',
@@ -463,7 +490,6 @@ export class ExpeditionScene extends Scene {
         }
 
         const resolvedFrame = panelFrame ?? this.getFallbackEntryPanelFrame(mode);
-        const panelTop = getEntryPanelTop(resolvedFrame);
         const horizontalInset = mode === 'deckManager' ? 72 : 36;
         const breadcrumbWidth = Math.max(
             360,
@@ -493,7 +519,7 @@ export class ExpeditionScene extends Scene {
 
         this.entryShell.plate.setSize(plateWidth, plateHeight);
         this.entryShell.accent.setSize(accentWidth, Math.max(10, plateHeight - 12));
-        const targets: Array<[Phaser.GameObjects.GameObject, number, number]> = [
+        const targets: Array<[Phaser.GameObjects.Rectangle | Phaser.GameObjects.Text, number, number]> = [
             [this.entryShell.plate, breadcrumbX, breadcrumbY],
             [this.entryShell.accent, accentX, breadcrumbY],
             [this.entryShell.supportText, supportTextX, breadcrumbY],
@@ -727,7 +753,7 @@ export class ExpeditionScene extends Scene {
             fillColor: expeditionUiTheme.colors.jade,
             onClick: () => acknowledge(),
         });
-        const footer = this.add.text(panelX, continueButton[0].y + 30, footerCopy, {
+        const footer = this.add.text(panelX, continueButton[0].y + 28 + 10 + footerHeight / 2, footerCopy, {
             fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '18px',
             color: '#d9c6a2',
@@ -961,6 +987,7 @@ export class ExpeditionScene extends Scene {
             onConfirm: () => this.startFreshRun(),
             onDeckSelect: (deckId) => this.handleDeckSelect(deckId),
             onOpenDeckManager: () => this.showDeckManagementPanel(),
+            onOpenInventory: () => { this.inventoryPage = 0; this.showInventoryPanel(); },
             deckHandoffSummary: this.pendingPreparationDeckHandoff,
         });
         this.preparationPanel = nextPanel;
@@ -1034,12 +1061,14 @@ export class ExpeditionScene extends Scene {
         this.events.removeAllListeners('hideCardPreview');
         this.events.removeAllListeners('clearCardPreviewContext');
 
-        const previewX = Math.max(276, Math.min(this.scale.width - 276, this.scale.width * 0.18));
+        const portrait = isPortraitGameViewport(this.scale.width, this.scale.height);
+        const previewX = portrait ? this.scale.width / 2
+            : Math.max(276, Math.min(this.scale.width - 276, this.scale.width * 0.18));
         this.cardPreviewManager = new CardPreviewManager(this, {
             layout: {
                 x: previewX,
                 y: this.scale.height * 0.5,
-                width: 412,
+                width: portrait ? this.scale.width - 52 : 412,
                 height: 648,
                 depth: 1400,
             },
@@ -1119,6 +1148,15 @@ export class ExpeditionScene extends Scene {
             this.setEntryShellVisible(false, false);
         }
 
+        if (isPortraitGameViewport(this.scale.width, this.scale.height)) {
+            this.runHud.hideArrivalCue();
+            this.runHud.setVisible(false);
+            this.updateStatusPlate(options?.statusTextOverride ?? summary.statusText, false);
+            this.renderMap(activeRun);
+            this.renderNodeMenu(activeRun);
+            return;
+        }
+
         this.runHud.setVisible(true);
         this.runHud.updateFromRun(activeRun, currentNodeLabel);
         if (options?.arrivalCueSummary) {
@@ -1139,6 +1177,8 @@ export class ExpeditionScene extends Scene {
     private clearMapViews(): void {
         this.mapGraphics?.destroy();
         this.mapGraphics = undefined;
+        this.portraitMapContainer?.destroy();
+        this.portraitMapContainer = undefined;
 
         for (const mapNodeView of this.mapNodeViews) {
             mapNodeView.destroy();
@@ -1149,6 +1189,11 @@ export class ExpeditionScene extends Scene {
 
     private renderMap(activeRun: RunSnapshot): void {
         this.clearMapViews();
+
+        if (isPortraitGameViewport(this.scale.width, this.scale.height)) {
+            this.renderPortraitMap(activeRun);
+            return;
+        }
 
         const visibleNodes = getVisibleNodes(this.mapDefinition, activeRun);
         const nodePositions = this.createNodePositions(this.mapDefinition.nodes);
@@ -1199,6 +1244,93 @@ export class ExpeditionScene extends Scene {
         }
     }
 
+    private renderPortraitMap(activeRun: RunSnapshot): void {
+        const { width } = this.scale;
+        const visibleNodes = getVisibleNodes(this.mapDefinition, activeRun);
+        const pageSize = 2;
+        const pageCount = Math.max(1, Math.ceil(visibleNodes.length / pageSize));
+        if (this.portraitMapNodeId !== activeRun.currentNodeId) {
+            const nextIndex = visibleNodes.findIndex(node => node.visibility === 'reachable');
+            const currentIndex = visibleNodes.findIndex(node => node.id === activeRun.currentNodeId);
+            this.portraitMapPage = Math.floor(Math.max(0, nextIndex >= 0 ? nextIndex : currentIndex) / pageSize);
+            this.portraitMapNodeId = activeRun.currentNodeId;
+        }
+        this.portraitMapPage = Math.min(this.portraitMapPage, pageCount - 1);
+
+        const container = this.add.container(0, 0);
+        const panel = this.add.rectangle(width / 2, 490, width - 40, 800,
+            expeditionUiTheme.colors.panel, 0.96);
+        panel.setStrokeStyle(2, expeditionUiTheme.colors.goldSoft, 0.76);
+        const title = this.add.text(width / 2, 134, this.mapDefinition.name, {
+            fontFamily: expeditionUiTheme.fonts.display, fontSize: '32px', color: '#f3ead3',
+            align: 'center', wordWrap: { width: width - 76 },
+        }).setOrigin(0.5);
+        const current = this.add.text(width / 2, 190,
+            `当前位置：${this.getNodeLabel(activeRun.currentNodeId)}`, {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '19px', color: '#d9c6a2',
+                align: 'center', wordWrap: { width: width - 76 },
+            }).setOrigin(0.5);
+        const back = this.createButton({ x: 140, y: 253, width: 172, height: 56,
+            label: '返回大地图', fillColor: expeditionUiTheme.colors.slate,
+            onClick: () => this.returnToWorldMap() });
+        const inventory = this.createButton({ x: width - 140, y: 253, width: 172, height: 56,
+            label: '整理道具', fillColor: expeditionUiTheme.colors.slate,
+            onClick: () => { this.inventoryPage = 0; this.showInventoryPanel(); } });
+        container.add([panel, title, current, ...back, ...inventory]);
+
+        visibleNodes.slice(this.portraitMapPage * pageSize, (this.portraitMapPage + 1) * pageSize)
+            .forEach((node, index) => {
+                const y = 351 + index * 113;
+                const currentNode = node.id === activeRun.currentNodeId;
+                const pendingBattle = activeRun.pendingEncounter?.nodeId === node.id;
+                const fillColor = node.visibility === 'reachable'
+                    ? this.getNodeColor(node)
+                    : currentNode ? expeditionUiTheme.colors.jade
+                        : expeditionUiTheme.colors.panelInner;
+                const background = this.add.rectangle(width / 2, y, width - 84, 92, fillColor,
+                    node.visibility === 'silhouette' ? 0.58 : 0.93);
+                background.setStrokeStyle(1,
+                    node.visibility === 'reachable' ? expeditionUiTheme.colors.goldSoft : expeditionUiTheme.colors.slate,
+                    node.visibility === 'reachable' ? 0.95 : 0.5);
+                if (pendingBattle || (node.selectable && !activeRun.pendingEncounter)) {
+                    background.setInteractive({ useHandCursor: true });
+                    background.on('pointerdown', () => this.handleMapNodeSelected(node.id));
+                }
+                const label = this.add.text(78, y - 19, node.label, {
+                    fontFamily: expeditionUiTheme.fonts.ui, fontSize: '22px', fontStyle: 'bold',
+                    color: node.visibility === 'silhouette' ? '#a8aaa5' : '#f3ead3',
+                    wordWrap: { width: width - 146 },
+                }).setOrigin(0, 0.5);
+                const state = pendingBattle ? '继续战斗'
+                    : currentNode ? '当前位置'
+                        : node.visibility === 'cleared' ? '已到访'
+                            : activeRun.pendingEncounter ? '战斗后继续'
+                                : node.visibility === 'reachable' ? '可前往' : '尚未连通';
+                const description = this.add.text(78, y + 23,
+                    `${this.getNodeTypeLabel(node)} · ${state}`, {
+                        fontFamily: expeditionUiTheme.fonts.ui, fontSize: '17px',
+                        color: node.visibility === 'silhouette' ? '#9f8c6c' : '#d9c6a2',
+                    }).setOrigin(0, 0.5);
+                container.add([background, label, description]);
+            });
+
+        const position = this.add.text(width / 2, 782,
+            `路线节点 ${this.portraitMapPage + 1}/${pageCount}`, {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#d9c6a2',
+            }).setOrigin(0.5);
+        const previous = this.createButton({ x: 140, y: 838, width: 172, height: 54,
+            label: '上一页', fillColor: expeditionUiTheme.colors.slate,
+            disabled: this.portraitMapPage === 0,
+            onClick: () => { this.portraitMapPage -= 1; this.renderMap(activeRun); } });
+        const next = this.createButton({ x: width - 140, y: 838, width: 172, height: 54,
+            label: '下一页', fillColor: expeditionUiTheme.colors.slate,
+            disabled: this.portraitMapPage >= pageCount - 1,
+            onClick: () => { this.portraitMapPage += 1; this.renderMap(activeRun); } });
+        container.add([position, ...previous, ...next]);
+        container.setDepth(50);
+        this.portraitMapContainer = container;
+    }
+
     private createNodePositions(nodes: ExpeditionMapNode[]): Map<string, { x: number; y: number }> {
         const { width, height } = this.scale;
         const minLayer = Math.min(...nodes.map((node) => node.layer));
@@ -1238,6 +1370,14 @@ export class ExpeditionScene extends Scene {
         this.setStatusPlateVisible(true);
         const activeRun = this.expeditionState.activeRun;
         const node = this.mapDefinition.nodes.find((candidate) => candidate.id === nodeId);
+        if (activeRun?.pendingEncounter) {
+            if (activeRun.pendingEncounter.nodeId === nodeId) {
+                this.scene.start('BattleScene', createBattleSceneStartPayload(activeRun.pendingEncounter));
+            } else {
+                this.updateStatusPlate('先完成当前战斗，再前往下一处。', true);
+            }
+            return;
+        }
         const canReopenNode = !!node && this.canReopenNonCombatNode(activeRun, node);
 
         if (!activeRun || (!isReachableNode(this.mapDefinition, activeRun, nodeId) && !canReopenNode)) {
@@ -1283,6 +1423,7 @@ export class ExpeditionScene extends Scene {
 
     private renderNodeMenu(activeRun: RunSnapshot): void {
         this.destroyNodeMenu();
+        if (isPortraitGameViewport(this.scale.width, this.scale.height)) return;
 
         const nonCombatNodes = this.mapDefinition.nodes.filter((node): node is NonCombatMapNode =>
             this.isNonCombatNode(node)
@@ -1415,6 +1556,428 @@ export class ExpeditionScene extends Scene {
         return shopDefinition;
     }
 
+    private addInventoryItemIcon(
+        container: Phaser.GameObjects.Container,
+        path: string | undefined,
+        x: number,
+        y: number,
+        size: number,
+        message?: string,
+    ): boolean {
+        if (!path || !/^assets\/items\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+\.png$/.test(path)) return false;
+        const key = `item-icon:${path}`;
+        if (!this.textures.exists(key)) {
+            if (!this.loadingItemIcons.has(key)) {
+                this.loadingItemIcons.add(key);
+                this.load.image(key, `/${path}`);
+                this.load.once(`filecomplete-image-${key}`, () => {
+                    this.loadingItemIcons.delete(key);
+                    if (this.activeNodePanel === container) this.showInventoryPanel(message);
+                });
+                this.load.once('complete', () => this.loadingItemIcons.delete(key));
+                this.load.start();
+            }
+            return true;
+        }
+        const source = this.textures.get(key).getSourceImage();
+        const scale = Math.min(size / source.width, size / source.height);
+        container.add(this.add.image(x, y, key).setScale(scale));
+        return true;
+    }
+
+    private showInventoryPanel(message?: string): void {
+        const run = this.expeditionState.activeRun;
+        const stash = this.expeditionState.persistentStash;
+        this.destroyActiveNodePanel();
+
+        const items = mergeItemStacks(run?.carriedItems ?? stash.items, []);
+        const portrait = isPortraitGameViewport(this.scale.width, this.scale.height);
+        const pageSize = portrait ? 2 : 4;
+        const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
+        this.inventoryPage = Math.min(this.inventoryPage, pageCount - 1);
+        const occupied = countOccupiedItemSlots(items);
+        const capacity = resolveItemSlotCapacity(run?.itemSlotCapacity ?? stash.itemSlotCapacity);
+        const { container, contentX, panelY, panelHeight } = this.createModalPanel(
+            '整理背包', `${occupied}/${capacity} 格 · 共 ${items.reduce((sum, item) => sum + item.count, 0)} 件道具${run ? ` · 生命 ${getRunPlayerHealth(run.playerHealth)}/${MAX_RUN_PLAYER_HEALTH}` : ''}`,
+        );
+        if (portrait) {
+            const width = this.scale.width;
+            const info = this.add.text(contentX, 193,
+                wrapQuestJournalText(message ?? (run ? '使用补给、装备或整理随行道具。' : '出发前可装备或卸下道具。'),
+                    this.craftingRecipes.length ? 26 : 38), {
+                    fontFamily: expeditionUiTheme.fonts.ui, fontSize: '17px', color: '#e8d5ab',
+                    wordWrap: { width: this.craftingRecipes.length ? 250 : width - contentX * 2 },
+                });
+            container.add(info);
+            if (this.craftingRecipes.length > 0) container.add(this.createButton({
+                x: width - 107, y: 206, width: 118, height: 46,
+                label: '制作', fillColor: expeditionUiTheme.colors.jade,
+                onClick: () => { this.craftingPage = 0; this.showCraftingPanel(); },
+            }));
+            if (items.length === 0) container.add(this.add.text(contentX, 304, '背包里没有道具。', {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '21px', color: '#d9c6a2',
+            }));
+            items.slice(this.inventoryPage * pageSize, (this.inventoryPage + 1) * pageSize)
+                .forEach((item, index) => {
+                    const rowTop = 265 + index * 246;
+                    const metadata = this.deckbuilderCardMetadata[item.id];
+                    const policy = this.itemActionPolicies[item.id];
+                    const equippedItems = run?.equippedItems ?? stash.equippedItems;
+                    const equipped = policy?.equipSlot !== undefined && equippedItems?.[policy.equipSlot] === item.id;
+                    const droppable = canDropInventoryItem(item, policy);
+                    const frame = this.add.rectangle(width / 2, rowTop + 108, width - 78, 218,
+                        expeditionUiTheme.colors.panel, 1);
+                    frame.setStrokeStyle(1, expeditionUiTheme.colors.goldSoft, 0.55);
+                    container.add(frame);
+                    const hasIcon = this.addInventoryItemIcon(container, metadata?.iconAsset,
+                        width - contentX - 44, rowTop + 44, 70, message);
+                    const title = this.add.text(contentX + 10, rowTop + 14,
+                        `${metadata?.name ?? item.id} ×${item.count}${equipped ? ' · 已装备' : ''}`, {
+                            fontFamily: expeditionUiTheme.fonts.ui, fontSize: '21px',
+                            color: '#f3ead3', fontStyle: 'bold', wordWrap: { width: width - contentX * 2 - (hasIcon ? 106 : 20) },
+                        });
+                    const modifiers = Object.entries(policy?.attributeModifiers ?? {}).map(([attribute, delta]) =>
+                        `${attribute}${delta >= 0 ? '+' : ''}${delta}`).join('、');
+                    const detailCopy = [metadata?.description ?? item.id, modifiers].filter(Boolean).join(' · ');
+                    const detail = this.add.text(contentX + 10, rowTop + 52,
+                        wrapQuestJournalText(detailCopy.length > 64 ? `${detailCopy.slice(0, 63)}…` : detailCopy, 36), {
+                            fontFamily: expeditionUiTheme.fonts.ui, fontSize: '17px', color: '#d9c6a2',
+                            wordWrap: { width: width - contentX * 2 - (hasIcon ? 106 : 20) }, lineSpacing: 4,
+                        });
+                    container.add([title, detail]);
+                    const actionY = rowTop + 180;
+                    if (policy?.equipSlot) container.add(this.createButton({
+                        x: 109, y: actionY, width: 112, height: 44,
+                        label: equipped ? '卸下' : '装备', fillColor: expeditionUiTheme.colors.slate,
+                        onClick: () => this.changeInventoryEquipment(item.itemType, item.id, policy.equipSlot!, equipped),
+                    }));
+                    if (run && item.itemType === 'consumable' && policy?.useEffect?.kind === 'heal') {
+                        const fullHealth = getRunPlayerHealth(run.playerHealth) >= MAX_RUN_PLAYER_HEALTH;
+                        container.add(this.createButton({
+                            x: 109, y: actionY, width: 112, height: 44,
+                            label: fullHealth ? '生命已满' : '使用', fillColor: expeditionUiTheme.colors.jade,
+                            disabled: fullHealth,
+                            onClick: () => this.useInventoryItem(item.itemType, item.id),
+                        }));
+                    }
+                    if (run && droppable && !(equipped && item.count === 1)) {
+                        container.add(this.createButton({
+                            x: 260, y: actionY, width: 116, height: 44,
+                            label: '丢弃 1', fillColor: expeditionUiTheme.colors.slate,
+                            onClick: () => this.dropInventoryItem(item.itemType, item.id, 1),
+                        }));
+                        if (item.count > 1 && !equipped) container.add(this.createButton({
+                            x: 389, y: actionY, width: 122, height: 44,
+                            label: '丢弃全部', fillColor: expeditionUiTheme.colors.ember,
+                            onClick: () => this.dropInventoryItem(item.itemType, item.id, item.count),
+                        }));
+                    } else if (run) container.add(this.add.text(300, actionY,
+                        equipped && item.count === 1 ? '先卸下再丢弃' : '不可丢弃', {
+                            fontFamily: expeditionUiTheme.fonts.ui, fontSize: '16px', color: '#bca785',
+                        }).setOrigin(0.5));
+                });
+            container.add(this.add.text(width / 2, 821, `${this.inventoryPage + 1}/${pageCount} 页`, {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#f3ead3',
+            }).setOrigin(0.5));
+            container.add(this.createButton({
+                x: 136, y: 864, width: 142, height: 48, label: '上一页',
+                fillColor: expeditionUiTheme.colors.slate, disabled: this.inventoryPage === 0,
+                onClick: () => { this.inventoryPage -= 1; this.showInventoryPanel(); },
+            }));
+            container.add(this.createButton({
+                x: width - 136, y: 864, width: 142, height: 48, label: '下一页',
+                fillColor: expeditionUiTheme.colors.slate, disabled: this.inventoryPage >= pageCount - 1,
+                onClick: () => { this.inventoryPage += 1; this.showInventoryPanel(); },
+            }));
+            this.activeNodePanel = container;
+            return;
+        }
+        const messageText = this.add.text(
+            contentX, panelY - panelHeight / 2 + 108,
+            message ?? (run ? '使用补给、装备或整理随行道具；工具和任务物默认保留。' : '出发前可装备或卸下道具。'),
+            { fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#e8d5ab' },
+        );
+        container.add(messageText);
+        if (this.craftingRecipes.length > 0) container.add(this.createButton({
+            x: this.scale.width / 2 + Math.min(980, this.scale.width * 0.78) / 2 - 190,
+            y: panelY - panelHeight / 2 + 48,
+            width: 140, height: 44, label: '制作', fillColor: expeditionUiTheme.colors.jade,
+            onClick: () => { this.craftingPage = 0; this.showCraftingPanel(); },
+        }));
+
+        if (items.length === 0) container.add(this.add.text(contentX, panelY - panelHeight / 2 + 190, '背包里没有道具。', {
+            fontFamily: expeditionUiTheme.fonts.ui, fontSize: '22px', color: '#d9c6a2',
+        }));
+
+        items.slice(this.inventoryPage * pageSize, (this.inventoryPage + 1) * pageSize).forEach((item, index) => {
+            const y = panelY - panelHeight / 2 + 166 + index * 112;
+            const metadata = this.deckbuilderCardMetadata[item.id];
+            const name = metadata?.name ?? item.id;
+            const policy = this.itemActionPolicies[item.id];
+            const droppable = canDropInventoryItem(item, policy);
+            const equippedItems = run?.equippedItems ?? stash.equippedItems;
+            const equipped = policy?.equipSlot !== undefined && equippedItems?.[policy.equipSlot] === item.id;
+            const hasIcon = this.addInventoryItemIcon(container, metadata?.iconAsset,
+                contentX + 35, y + 33, 70, message);
+            const textX = contentX + (hasIcon ? 82 : 0);
+            const title = this.add.text(textX, y, `${name} ×${item.count}${equipped ? ' · 已装备' : ''}`, {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '23px', color: '#f3ead3', fontStyle: 'bold',
+            });
+            const description = metadata?.description ?? item.id;
+            const modifiers = Object.entries(policy?.attributeModifiers ?? {}).map(([attribute, delta]) =>
+                `${attribute}${delta >= 0 ? '+' : ''}${delta}`).join('、');
+            const detailCopy = [description, modifiers].filter(Boolean).join(' · ');
+            const detail = this.add.text(textX, y + 36, detailCopy.length > 64 ? `${detailCopy.slice(0, 63)}…` : detailCopy, {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '17px', color: '#d9c6a2',
+                wordWrap: { width: hasIcon ? 528 : 610 },
+            });
+            container.add([title, detail]);
+            if (policy?.equipSlot) container.add(this.createButton({
+                x: contentX + 530, y: y + 24, width: 142, height: 44,
+                label: equipped ? '卸下' : '装备', fillColor: expeditionUiTheme.colors.slate,
+                onClick: () => this.changeInventoryEquipment(item.itemType, item.id, policy.equipSlot!, equipped),
+            }));
+            if (run && item.itemType === 'consumable' && policy?.useEffect?.kind === 'heal') {
+                const fullHealth = getRunPlayerHealth(run.playerHealth) >= MAX_RUN_PLAYER_HEALTH;
+                container.add(this.createButton({
+                    x: contentX + 530, y: y + 24, width: 142, height: 44,
+                    label: fullHealth ? '生命已满' : '使用', fillColor: expeditionUiTheme.colors.jade,
+                    disabled: fullHealth,
+                    onClick: () => this.useInventoryItem(item.itemType, item.id),
+                }));
+            }
+            if (!run) {
+                if (!policy?.equipSlot) container.add(this.add.text(contentX + 760, y + 22, '无需装备', {
+                    fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#bca785',
+                }).setOrigin(0.5));
+                return;
+            }
+            if (!droppable) {
+                container.add(this.add.text(contentX + 760, y + 22, '不可丢弃', {
+                    fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#bca785',
+                }).setOrigin(0.5));
+                return;
+            }
+            if (equipped && item.count === 1) {
+                container.add(this.add.text(contentX + 760, y + 22, '先卸下再丢弃', {
+                    fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#bca785',
+                }).setOrigin(0.5));
+                return;
+            }
+            const one = this.createButton({
+                x: contentX + 690, y: y + 24, width: 118, height: 44,
+                label: '丢弃 1', fillColor: expeditionUiTheme.colors.slate,
+                onClick: () => this.dropInventoryItem(item.itemType, item.id, 1),
+            });
+            container.add(one);
+            if (item.count > 1 && !equipped) container.add(this.createButton({
+                x: contentX + 825, y: y + 24, width: 130, height: 44,
+                label: '丢弃全部', fillColor: expeditionUiTheme.colors.ember,
+                onClick: () => this.dropInventoryItem(item.itemType, item.id, item.count),
+            }));
+        });
+
+        if (pageCount > 1) {
+            const y = panelY + panelHeight / 2 - 66;
+            container.add(this.add.text(this.scale.width / 2, y, `${this.inventoryPage + 1} / ${pageCount}`, {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#f3ead3',
+            }).setOrigin(0.5));
+            if (this.inventoryPage > 0) container.add(this.createButton({
+                x: this.scale.width / 2 - 170, y, width: 130, height: 44,
+                label: '上一页', fillColor: expeditionUiTheme.colors.slate,
+                onClick: () => { this.inventoryPage -= 1; this.showInventoryPanel(); },
+            }));
+            if (this.inventoryPage < pageCount - 1) container.add(this.createButton({
+                x: this.scale.width / 2 + 170, y, width: 130, height: 44,
+                label: '下一页', fillColor: expeditionUiTheme.colors.slate,
+                onClick: () => { this.inventoryPage += 1; this.showInventoryPanel(); },
+            }));
+        }
+        this.activeNodePanel = container;
+    }
+
+    private dropInventoryItem(itemType: ExpeditionItemType, itemId: string, count: number): void {
+        const result = this.expeditionState.dropCarriedItem(itemType, itemId, count);
+        if (result.activeRun) this.refreshActiveRunDisplay(result.activeRun);
+        const name = this.deckbuilderCardMetadata[itemId]?.name ?? itemId;
+        const message = result.status === 'dropped'
+            ? `已丢弃 ${name} ×${count}。`
+            : result.status === 'restricted' ? `${name} 不可丢弃。`
+                : result.status === 'notOwned' ? `${name} 数量不足，未丢弃。`
+                    : '本次丢弃未完成，背包保持不变。';
+        this.showInventoryPanel(message);
+    }
+
+    private useInventoryItem(itemType: ExpeditionItemType, itemId: string): void {
+        const result = this.expeditionState.useCarriedItem(itemType, itemId);
+        if (result.activeRun) this.refreshActiveRunDisplay(result.activeRun);
+        const name = this.deckbuilderCardMetadata[itemId]?.name ?? itemId;
+        const message = result.status === 'used' ? `使用 ${name}，恢复 ${result.healed} 点生命。`
+            : result.status === 'fullHealth' ? '生命已满，道具未消耗。'
+                : result.status === 'notOwned' ? `${name} 数量不足。` : `${name} 当前无法使用。`;
+        this.showInventoryPanel(message);
+    }
+
+    private changeInventoryEquipment(itemType: ExpeditionItemType, itemId: string, slot: string, equipped: boolean): void {
+        const run = this.expeditionState.activeRun;
+        const result = run
+            ? equipped ? this.expeditionState.unequipCarriedSlot(slot) : this.expeditionState.equipCarriedItem(itemType, itemId)
+            : equipped ? this.expeditionState.unequipStashSlot(slot) : this.expeditionState.equipStashItem(itemType, itemId);
+        if ('activeRun' in result && result.activeRun) this.refreshActiveRunDisplay(result.activeRun);
+        if ('stash' in result) this.preparationPanel?.updateStash(result.stash);
+        const name = this.deckbuilderCardMetadata[itemId]?.name ?? itemId;
+        const message = result.status === 'equipped' ? `已装备 ${name}。`
+            : result.status === 'unequipped' ? `已卸下 ${name}，属性修正已撤销。`
+                : result.status === 'notOwned' ? `${name} 不在背包中。`
+                    : result.status === 'notEquippable' ? `${name} 不能装备。`
+                        : '装备状态未变化。';
+        this.showInventoryPanel(message);
+    }
+
+    private showCraftingPanel(message?: string): void {
+        const run = this.expeditionState.activeRun;
+        const stash = this.expeditionState.persistentStash;
+        const source = run ?? {
+            carriedDeck: stash.cards, carriedItems: stash.items, equippedItems: stash.equippedItems,
+            itemSlotCapacity: stash.itemSlotCapacity, spiritStones: stash.spiritStones,
+        };
+        this.destroyActiveNodePanel();
+        const portrait = isPortraitGameViewport(this.scale.width, this.scale.height);
+        const pageSize = portrait ? 2 : 3;
+        const pageCount = Math.max(1, Math.ceil(this.craftingRecipes.length / pageSize));
+        this.craftingPage = Math.max(0, Math.min(this.craftingPage, pageCount - 1));
+        const { container, contentX, panelY, panelHeight } = this.createModalPanel(
+            '制作', `灵石 ${source.spiritStones} · 背包 ${countOccupiedItemSlots(source.carriedItems)}/${resolveItemSlotCapacity(source.itemSlotCapacity)} 格`,
+        );
+        if (portrait) {
+            const width = this.scale.width;
+            container.add(this.createButton({
+                x: width - 110, y: 198, width: 128, height: 46,
+                label: '返回背包', fillColor: expeditionUiTheme.colors.slate,
+                onClick: () => this.showInventoryPanel(),
+            }));
+            container.add(this.add.text(contentX, 187,
+                wrapQuestJournalText(message ?? '材料和产物一次结算；失败不会扣除。', 26), {
+                    fontFamily: expeditionUiTheme.fonts.ui, fontSize: '17px', color: '#e8d5ab',
+                    wordWrap: { width: 242 },
+                }));
+            this.craftingRecipes.slice(this.craftingPage * pageSize, (this.craftingPage + 1) * pageSize)
+                .forEach((recipe, index) => {
+                    const rowTop = 271 + index * 248;
+                    const exchange = previewCraftingRecipe(source, recipe);
+                    const name = (id: string) => this.deckbuilderCardMetadata[id]?.name ?? id;
+                    const costs = [
+                        ...(recipe.cost.spiritStones ? [`灵石 ×${recipe.cost.spiritStones}`] : []),
+                        ...recipe.cost.items.map(item => `${name(item.id)} ×${item.count}`),
+                    ].join(' · ');
+                    const outputs = recipe.rewards.items.map(item => `${name(item.id)} ×${item.count}`).join(' · ');
+                    const frame = this.add.rectangle(width / 2, rowTop + 109, width - 78, 220,
+                        expeditionUiTheme.colors.panel, 1);
+                    frame.setStrokeStyle(1, expeditionUiTheme.colors.goldSoft, 0.55);
+                    const copy = this.add.text(contentX + 10, rowTop + 15,
+                        wrapQuestJournalText(`${recipe.name}\n材料：${costs}\n产物：${outputs}`, 34), {
+                            fontFamily: expeditionUiTheme.fonts.ui, fontSize: '19px',
+                            color: exchange.status === 'available' ? '#f3ead3' : '#bca785',
+                            wordWrap: { width: width - contentX * 2 - 20 }, lineSpacing: 7,
+                        });
+                    const label = exchange.status === 'available' ? '制作'
+                        : exchange.status === 'insufficientFunds' ? '灵石不足'
+                            : exchange.status === 'insufficientItems' ? '材料不足'
+                                : exchange.status === 'equippedItem' ? '先卸装备' : '背包已满';
+                    container.add([frame, copy]);
+                    container.add(this.createButton({
+                        x: width / 2, y: rowTop + 178, width: width - 150, height: 48,
+                        label, fillColor: exchange.status === 'available'
+                            ? expeditionUiTheme.colors.jade : expeditionUiTheme.colors.slate,
+                        disabled: exchange.status !== 'available',
+                        onClick: () => this.craftInventoryRecipe(recipe),
+                    }));
+                });
+            container.add(this.add.text(width / 2, 821, `${this.craftingPage + 1}/${pageCount} 页`, {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#f3ead3',
+            }).setOrigin(0.5));
+            container.add(this.createButton({
+                x: 136, y: 864, width: 142, height: 48, label: '上一页',
+                fillColor: expeditionUiTheme.colors.slate, disabled: this.craftingPage === 0,
+                onClick: () => { this.craftingPage -= 1; this.showCraftingPanel(); },
+            }));
+            container.add(this.createButton({
+                x: width - 136, y: 864, width: 142, height: 48, label: '下一页',
+                fillColor: expeditionUiTheme.colors.slate, disabled: this.craftingPage >= pageCount - 1,
+                onClick: () => { this.craftingPage += 1; this.showCraftingPanel(); },
+            }));
+            this.activeNodePanel = container;
+            return;
+        }
+        container.add(this.createButton({
+            x: this.scale.width / 2 + Math.min(980, this.scale.width * 0.78) / 2 - 190,
+            y: panelY - panelHeight / 2 + 48,
+            width: 140, height: 44, label: '返回背包', fillColor: expeditionUiTheme.colors.slate,
+            onClick: () => this.showInventoryPanel(),
+        }));
+        container.add(this.add.text(contentX, panelY - panelHeight / 2 + 112,
+            message ?? '材料和产物一次结算；失败不会消耗道具或灵石。', {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#e8d5ab',
+                wordWrap: { width: 810 },
+            }));
+        this.craftingRecipes.slice(this.craftingPage * pageSize, (this.craftingPage + 1) * pageSize)
+            .forEach((recipe, index) => {
+                const y = panelY - panelHeight / 2 + 174 + index * 134;
+                const exchange = previewCraftingRecipe(source, recipe);
+                const name = (id: string) => this.deckbuilderCardMetadata[id]?.name ?? id;
+                const costs = [
+                    ...(recipe.cost.spiritStones ? [`灵石 ×${recipe.cost.spiritStones}`] : []),
+                    ...recipe.cost.items.map(item => `${name(item.id)} ×${item.count}`),
+                ].join(' · ');
+                const outputs = recipe.rewards.items.map(item => `${name(item.id)} ×${item.count}`).join(' · ');
+                const copy = `${recipe.name}\n材料：${costs}\n产物：${outputs}`;
+                container.add(this.add.text(contentX, y, copy, {
+                    fontFamily: expeditionUiTheme.fonts.ui, fontSize: '19px',
+                    color: exchange.status === 'available' ? '#f3ead3' : '#bca785',
+                    wordWrap: { width: 660 }, lineSpacing: 5,
+                }));
+                const label = exchange.status === 'available' ? '制作'
+                    : exchange.status === 'insufficientFunds' ? '灵石不足'
+                        : exchange.status === 'insufficientItems' ? '材料不足'
+                            : exchange.status === 'equippedItem' ? '先卸装备' : '背包已满';
+                container.add(this.createButton({
+                    x: contentX + 760, y: y + 30, width: 204, height: 56, label,
+                    fillColor: exchange.status === 'available' ? expeditionUiTheme.colors.jade : expeditionUiTheme.colors.slate,
+                    disabled: exchange.status !== 'available',
+                    onClick: () => this.craftInventoryRecipe(recipe),
+                }));
+            });
+        if (pageCount > 1) {
+            const y = panelY + panelHeight / 2 - 66;
+            container.add(this.add.text(this.scale.width / 2, y, `${this.craftingPage + 1} / ${pageCount}`, {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#f3ead3',
+            }).setOrigin(0.5));
+            if (this.craftingPage > 0) container.add(this.createButton({
+                x: this.scale.width / 2 - 170, y, width: 130, height: 44,
+                label: '上一页', fillColor: expeditionUiTheme.colors.slate,
+                onClick: () => { this.craftingPage -= 1; this.showCraftingPanel(); },
+            }));
+            if (this.craftingPage < pageCount - 1) container.add(this.createButton({
+                x: this.scale.width / 2 + 170, y, width: 130, height: 44,
+                label: '下一页', fillColor: expeditionUiTheme.colors.slate,
+                onClick: () => { this.craftingPage += 1; this.showCraftingPanel(); },
+            }));
+        }
+        this.activeNodePanel = container;
+    }
+
+    private craftInventoryRecipe(recipe: CraftingRecipe): void {
+        const result = this.expeditionState.craftRecipe(recipe);
+        if (result.activeRun) this.refreshActiveRunDisplay(result.activeRun);
+        else this.preparationPanel?.updateStash(result.stash);
+        const message = result.status === 'crafted' ? `已制作 ${recipe.name}，材料与产物已保存。`
+            : result.status === 'insufficientFunds' ? `${recipe.name}：灵石不足，未扣除材料。`
+                : result.status === 'insufficientItems' ? `${recipe.name}：材料不足，未扣除灵石。`
+                    : result.status === 'equippedItem' ? `${recipe.name}：请先卸下作为材料的装备。`
+                        : `${recipe.name}：背包空间不足，材料保持不变。`;
+        this.showCraftingPanel(message);
+    }
+
     private showEventPanel(eventDefinition: PrototypeEventDefinition, message?: string): void {
         const activeRun = this.expeditionState.activeRun;
 
@@ -1424,8 +1987,15 @@ export class ExpeditionScene extends Scene {
 
         this.destroyActiveNodePanel();
 
-        const view = createEventNodeView(eventDefinition, activeRun, () => 0);
-        const { container, contentX, panelY, panelHeight } = this.createModalPanel(view.title, eventDefinition.nodeId);
+        const view = createEventNodeView(eventDefinition, activeRun, () => 0, {
+            rewardName: id => this.deckbuilderCardMetadata[id]?.name ?? id,
+        });
+        const { container, contentX, panelY, panelHeight } = this.createModalPanel(view.title,
+            isPortraitGameViewport(this.scale.width, this.scale.height) ? '秘境事件' : eventDefinition.nodeId);
+        if (isPortraitGameViewport(this.scale.width, this.scale.height)) {
+            this.renderPortraitEventPanel(eventDefinition, view, container, contentX, message);
+            return;
+        }
         const description = this.add.text(contentX, panelY - panelHeight / 2 + 120, view.description, {
             fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '20px',
@@ -1449,7 +2019,7 @@ export class ExpeditionScene extends Scene {
             fontSize: '20px',
             color: '#f6e2b1',
         });
-        const messageText = this.add.text(contentX, rewardText.y + 44, message ?? (view.claimed ? '该事件奖励已经领取，无法重复获得。' : '领取后会立即写入 active run。'), {
+        const messageText = this.add.text(contentX, rewardText.y + 44, message ?? (view.claimed ? '该事件奖励已经领取，无法重复获得。' : view.inventoryFull ? '背包已满，暂无法领取此奖励。' : '领取后会立即记入本次探索。'), {
             fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '18px',
             color: view.claimed ? '#fca5a5' : '#e8d5ab',
@@ -1459,28 +2029,17 @@ export class ExpeditionScene extends Scene {
             y: panelY + panelHeight / 2 - 68,
             width: 260,
             height: 56,
-            label: view.claimed ? '已领取' : '领取事件奖励',
-            fillColor: view.claimed ? expeditionUiTheme.colors.slate : expeditionUiTheme.colors.gold,
-            disabled: view.claimed,
-            onClick: () => {
-                const result = this.expeditionState.claimEventNodeReward(eventDefinition.nodeId, view.outcome.rewards);
-
-                if (result.activeRun) {
-                    this.refreshActiveRunDisplay(result.activeRun);
-                }
-
-                this.showEventPanel(
-                    eventDefinition,
-                    result.status === 'claimed' ? `已领取奖励：${view.rewardSummary}` : '该事件奖励已经领取，无法重复获得。',
-                );
-            },
+            label: view.claimed ? '已领取' : view.inventoryFull ? '背包已满' : '领取事件奖励',
+            fillColor: view.claimed || view.inventoryFull ? expeditionUiTheme.colors.slate : expeditionUiTheme.colors.gold,
+            disabled: view.claimed || view.inventoryFull,
+            onClick: () => this.claimEventReward(eventDefinition, view),
         });
 
         container.add([description, outcomeLabel, outcomeDescription, rewardText, messageText, ...claimButton]);
         this.activeNodePanel = container;
     }
 
-    private showShopPanel(shopDefinition: PrototypeShopDefinition, message?: string): void {
+    private showShopPanel(shopDefinition: PrototypeShopDefinition, message?: string, page = 0): void {
         const activeRun = this.expeditionState.activeRun;
 
         if (!activeRun) {
@@ -1489,24 +2048,34 @@ export class ExpeditionScene extends Scene {
 
         this.destroyActiveNodePanel();
 
-        const view = createShopNodeView(shopDefinition, activeRun);
-        const { container, contentX, panelY, panelHeight } = this.createModalPanel(view.title, shopDefinition.nodeId);
-        const description = this.add.text(contentX, panelY - panelHeight / 2 + 116, `${view.description}\n当前 run spiritStones：${view.spiritStones}`, {
+        const view = createShopNodeView(shopDefinition, activeRun,
+            id => this.deckbuilderCardMetadata[id]?.name ?? id);
+        const { container, contentX, panelY, panelHeight } = this.createModalPanel(view.title,
+            isPortraitGameViewport(this.scale.width, this.scale.height) ? '秘境商店' : shopDefinition.nodeId);
+        if (isPortraitGameViewport(this.scale.width, this.scale.height)) {
+            this.renderPortraitShopPanel(shopDefinition, view, container, contentX, message, page);
+            return;
+        }
+        const description = this.add.text(contentX, panelY - panelHeight / 2 + 116, `${view.description}\n本次探索灵石：${view.spiritStones}｜背包：${view.occupiedItemSlots}/${view.itemSlotCapacity}`, {
             fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '20px',
             color: '#d9c6a2',
             wordWrap: { width: 860 },
             lineSpacing: 8,
         });
-        const messageText = this.add.text(contentX, description.y + 78, message ?? '选择一个可支付的商品；每个 offer 只能购买一次。', {
+        const messageText = this.add.text(contentX, description.y + description.height + 20, message ?? '选择一个可支付的商品；每件商品只能购买一次。', {
             fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '18px',
             color: message ? '#f6e2b1' : '#e8d5ab',
+            wordWrap: { width: 860 },
         });
 
         container.add([description, messageText]);
-        view.offers.forEach((offerView, index) => {
-            const offerY = messageText.y + 64 + index * 124;
+        const pageSize = view.offers.length > 3 ? 2 : 3;
+        const pageCount = Math.max(1, Math.ceil(view.offers.length / pageSize));
+        const currentPage = Math.max(0, Math.min(page, pageCount - 1));
+        view.offers.slice(currentPage * pageSize, (currentPage + 1) * pageSize).forEach((offerView, index) => {
+            const offerY = messageText.y + messageText.height + 38 + index * 124;
             const offerText = this.add.text(contentX, offerY, this.formatShopOfferLine(offerView), {
                 fontFamily: expeditionUiTheme.fonts.ui,
                 fontSize: '19px',
@@ -1522,32 +2091,173 @@ export class ExpeditionScene extends Scene {
                 label: this.getShopOfferButtonLabel(offerView),
                 fillColor: offerView.state === 'available' ? expeditionUiTheme.colors.ember : expeditionUiTheme.colors.slate,
                 disabled: offerView.state !== 'available',
-                onClick: () => {
-                    const result = this.expeditionState.purchaseShopOffer(
-                        shopDefinition.nodeId,
-                        offerView.id,
-                        offerView.offer.cost,
-                        offerView.offer.rewards,
-                    );
-
-                    if (result.activeRun) {
-                        this.refreshActiveRunDisplay(result.activeRun);
-                    }
-
-                    const nextMessage = result.status === 'purchased'
-                        ? `已购买 ${offerView.label}：${offerView.rewardSummary}`
-                        : result.status === 'alreadyPurchased'
-                            ? `${offerView.label} 已经购买过。`
-                            : `spiritStones 不足，无法购买 ${offerView.label}。`;
-
-                    this.showShopPanel(shopDefinition, nextMessage);
-                },
+                onClick: () => this.purchaseShopOffer(shopDefinition, offerView, currentPage),
             });
 
             container.add([offerText, ...button]);
         });
+        if (pageCount > 1) {
+            const y = panelY + panelHeight / 2 - 66;
+            container.add(this.add.text(this.scale.width / 2, y, `${currentPage + 1} / ${pageCount}`, {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#f3ead3',
+            }).setOrigin(0.5));
+            if (currentPage > 0) container.add(this.createButton({
+                x: this.scale.width / 2 - 170, y, width: 130, height: 44,
+                label: '上一页', fillColor: expeditionUiTheme.colors.slate,
+                onClick: () => this.showShopPanel(shopDefinition, undefined, currentPage - 1),
+            }));
+            if (currentPage < pageCount - 1) container.add(this.createButton({
+                x: this.scale.width / 2 + 170, y, width: 130, height: 44,
+                label: '下一页', fillColor: expeditionUiTheme.colors.slate,
+                onClick: () => this.showShopPanel(shopDefinition, undefined, currentPage + 1),
+            }));
+        }
 
         this.activeNodePanel = container;
+    }
+
+    private renderPortraitEventPanel(
+        eventDefinition: PrototypeEventDefinition,
+        view: ReturnType<typeof createEventNodeView>,
+        container: Phaser.GameObjects.Container,
+        contentX: number,
+        message?: string,
+    ): void {
+        const textWidth = this.scale.width - contentX * 2;
+        const description = this.add.text(contentX, 179, wrapQuestJournalText(view.description, 38), {
+            fontFamily: expeditionUiTheme.fonts.ui, fontSize: '20px', color: '#d9c6a2',
+            wordWrap: { width: textWidth }, lineSpacing: 6,
+        });
+        const outcomeLabel = this.add.text(contentX, description.y + description.height + 31, view.outcome.label, {
+            fontFamily: expeditionUiTheme.fonts.ui, fontSize: '25px', color: '#e9d5ff', fontStyle: 'bold',
+            wordWrap: { width: textWidth },
+        });
+        const outcomeDescription = this.add.text(contentX, outcomeLabel.y + outcomeLabel.height + 25,
+            wrapQuestJournalText(view.outcome.description, 38), {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '19px', color: '#f3ead3',
+                wordWrap: { width: textWidth }, lineSpacing: 5,
+            });
+        const rewardText = this.add.text(contentX, outcomeDescription.y + outcomeDescription.height + 29,
+            wrapQuestJournalText(`奖励：${view.rewardSummary}`, 38), {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '19px', color: '#f6e2b1',
+                wordWrap: { width: textWidth }, lineSpacing: 5,
+            });
+        const feedback = this.add.text(contentX, rewardText.y + rewardText.height + 25,
+            wrapQuestJournalText(message ?? (view.claimed ? '该事件奖励已经领取，无法重复获得。'
+                : view.inventoryFull ? '背包已满，暂无法领取此奖励。' : '领取后会立即写入本次探索。'), 38), {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px',
+                color: view.claimed ? '#fca5a5' : '#e8d5ab', wordWrap: { width: textWidth },
+            });
+        container.add([description, outcomeLabel, outcomeDescription, rewardText, feedback]);
+        container.add(this.createButton({
+            x: this.scale.width / 2, y: 864, width: 310, height: 56,
+            label: view.claimed ? '已领取' : view.inventoryFull ? '背包已满' : '领取事件奖励',
+            fillColor: view.claimed || view.inventoryFull ? expeditionUiTheme.colors.slate : expeditionUiTheme.colors.gold,
+            disabled: view.claimed || view.inventoryFull,
+            onClick: () => this.claimEventReward(eventDefinition, view),
+        }));
+        this.activeNodePanel = container;
+    }
+
+    private claimEventReward(
+        eventDefinition: PrototypeEventDefinition,
+        view: ReturnType<typeof createEventNodeView>,
+    ): void {
+        const result = this.expeditionState.claimEventNodeReward(eventDefinition.nodeId, view.outcome.rewards);
+        if (result.activeRun) this.refreshActiveRunDisplay(result.activeRun);
+        this.showEventPanel(eventDefinition,
+            result.status === 'claimed' ? `已领取奖励：${view.rewardSummary}`
+                : result.status === 'inventoryFull' ? '背包已满，奖励未领取。'
+                    : '该事件奖励已经领取，无法重复获得。');
+    }
+
+    private renderPortraitShopPanel(
+        shopDefinition: PrototypeShopDefinition,
+        view: ReturnType<typeof createShopNodeView>,
+        container: Phaser.GameObjects.Container,
+        contentX: number,
+        message: string | undefined,
+        page: number,
+    ): void {
+        const { width } = this.scale;
+        const textWidth = width - contentX * 2;
+        const currentPage = Math.max(0, Math.min(page, view.offers.length - 1));
+        const offer = view.offers[currentPage];
+        const description = this.add.text(contentX, 171, wrapQuestJournalText(view.description, 38), {
+            fontFamily: expeditionUiTheme.fonts.ui, fontSize: '19px', color: '#d9c6a2',
+            wordWrap: { width: textWidth }, lineSpacing: 5,
+        });
+        const status = this.add.text(contentX, description.y + description.height + 14,
+            `灵石 ${view.spiritStones} · 背包 ${view.occupiedItemSlots}/${view.itemSlotCapacity} 格`, {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#f6e2b1',
+            });
+        const feedback = this.add.text(contentX, status.y + 36,
+            wrapQuestJournalText(message ?? '选择一个可支付的商品；每件商品只能购买一次。', 38), {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px',
+                color: message ? '#f6e2b1' : '#e8d5ab', wordWrap: { width: textWidth },
+            });
+        container.add([description, status, feedback]);
+
+        if (offer) {
+            const cardTop = Math.max(350, feedback.y + feedback.height + 18);
+            const offerFrame = this.add.rectangle(width / 2, (cardTop + 752) / 2,
+                width - 76, 752 - cardTop, expeditionUiTheme.colors.panel, 1);
+            offerFrame.setStrokeStyle(1, expeditionUiTheme.colors.goldSoft, 0.74);
+            const offerText = this.add.text(contentX + 12, cardTop + 22,
+                wrapQuestJournalText(this.formatShopOfferLine(offer), 34), {
+                    fontFamily: expeditionUiTheme.fonts.ui, fontSize: '20px',
+                    color: offer.state === 'available' ? '#f3ead3' : '#bca785',
+                    wordWrap: { width: textWidth - 24 }, lineSpacing: 9,
+                });
+            const buy = this.createButton({
+                x: width / 2, y: 710, width: width - 116, height: 58,
+                label: this.getShopOfferButtonLabel(offer),
+                fillColor: offer.state === 'available' ? expeditionUiTheme.colors.ember : expeditionUiTheme.colors.slate,
+                disabled: offer.state !== 'available',
+                onClick: () => this.purchaseShopOffer(shopDefinition, offer, currentPage),
+            });
+            container.add([offerFrame, offerText, ...buy]);
+        } else {
+            container.add(this.add.text(contentX, 390, '此处暂时没有商品。', {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '20px', color: '#d9c6a2',
+            }));
+        }
+
+        container.add(this.add.text(width / 2, 813,
+            `${view.offers.length ? currentPage + 1 : 0}/${view.offers.length} 件`, {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#f3ead3',
+            }).setOrigin(0.5));
+        container.add(this.createButton({
+            x: 136, y: 864, width: 142, height: 48, label: '上一件',
+            fillColor: expeditionUiTheme.colors.slate, disabled: currentPage === 0,
+            onClick: () => this.showShopPanel(shopDefinition, undefined, currentPage - 1),
+        }));
+        container.add(this.createButton({
+            x: width - 136, y: 864, width: 142, height: 48, label: '下一件',
+            fillColor: expeditionUiTheme.colors.slate,
+            disabled: currentPage >= view.offers.length - 1,
+            onClick: () => this.showShopPanel(shopDefinition, undefined, currentPage + 1),
+        }));
+        this.activeNodePanel = container;
+    }
+
+    private purchaseShopOffer(
+        shopDefinition: PrototypeShopDefinition,
+        offerView: ShopOfferView,
+        page: number,
+    ): void {
+        const result = this.expeditionState.purchaseShopOffer(
+            shopDefinition.nodeId, offerView.id, offerView.offer.cost, offerView.offer.rewards,
+        );
+        if (result.activeRun) this.refreshActiveRunDisplay(result.activeRun);
+        const nextMessage = result.status === 'purchased'
+            ? `已购买 ${offerView.label}：${offerView.rewardSummary}`
+            : result.status === 'alreadyPurchased' ? `${offerView.label} 已经购买过。`
+                : result.status === 'inventoryFull' ? `背包已满，未购买 ${offerView.label}。`
+                    : result.status === 'insufficientItems' ? `材料不足，未购买 ${offerView.label}。`
+                        : result.status === 'equippedItem' ? `请先卸下作为材料的装备，再购买 ${offerView.label}。`
+                            : `灵石不足，无法购买 ${offerView.label}。`;
+        this.showShopPanel(shopDefinition, nextMessage, page);
     }
 
     private showExtractPanel(node: ExtractMapNode, message?: string): void {
@@ -1560,8 +2270,34 @@ export class ExpeditionScene extends Scene {
         this.destroyActiveNodePanel();
 
         const view = createExtractNodeView(node.id, activeRun);
-        const { container, contentX, panelY, panelHeight } = this.createModalPanel(node.label, node.id);
-        const description = this.add.text(contentX, panelY - panelHeight / 2 + 126, '确认后会立刻结束本次秘境探索，并将当前携带的卡牌、道具与 spiritStones 存入永久仓库。', {
+        const { container, contentX, panelY, panelHeight } = this.createModalPanel(node.label,
+            isPortraitGameViewport(this.scale.width, this.scale.height) ? '撤离点' : node.id);
+        const confirm = () => {
+            const summary = resolveExtract({ finalNodeId: node.id, run: activeRun });
+            this.showTerminalSummary(summary);
+        };
+        if (isPortraitGameViewport(this.scale.width, this.scale.height)) {
+            const textWidth = this.scale.width - contentX * 2;
+            const description = this.add.text(contentX, 185,
+                wrapQuestJournalText('确认后会结束本次秘境探索，并将当前携带的卡牌、道具与灵石存入永久仓库。', 38), {
+                    fontFamily: expeditionUiTheme.fonts.ui, fontSize: '20px', color: '#d9c6a2',
+                    wordWrap: { width: textWidth }, lineSpacing: 7,
+                });
+            const feedback = this.add.text(contentX, description.y + description.height + 38,
+                wrapQuestJournalText(message ?? (view.recorded ? '撤离已在本次探索中登记。' : '是否确认从该撤离点离开？'), 38), {
+                    fontFamily: expeditionUiTheme.fonts.ui, fontSize: '19px',
+                    color: view.recorded ? '#e6f3ea' : '#f6e2b1', wordWrap: { width: textWidth },
+                });
+            container.add([description, feedback]);
+            container.add(this.createButton({
+                x: this.scale.width / 2, y: 864, width: 310, height: 56,
+                label: '确认撤离并结算', fillColor: expeditionUiTheme.colors.jade,
+                onClick: confirm,
+            }));
+            this.activeNodePanel = container;
+            return;
+        }
+        const description = this.add.text(contentX, panelY - panelHeight / 2 + 126, '确认后会立刻结束本次秘境探索，并将当前携带的卡牌、道具与灵石存入永久仓库。', {
             fontFamily: expeditionUiTheme.fonts.ui,
             fontSize: '21px',
             color: '#d9c6a2',
@@ -1580,10 +2316,7 @@ export class ExpeditionScene extends Scene {
             height: 56,
             label: '确认撤离并结算',
             fillColor: expeditionUiTheme.colors.jade,
-            onClick: () => {
-                const summary = resolveExtract({ finalNodeId: node.id, run: activeRun });
-                this.showTerminalSummary(summary);
-            },
+            onClick: confirm,
         });
 
         container.add([description, messageText, ...confirmButton]);
@@ -1604,7 +2337,7 @@ export class ExpeditionScene extends Scene {
 
         if (!activeRun || activeRun.runId !== result.runId) {
             this.showPreparationPanel();
-            this.updateStatusPlate(`收到战斗结果 ${result.outcome}，但没有匹配的 active run。`, false);
+            this.updateStatusPlate('战斗结果与当前探索不一致，请从入口重新出发。', false);
             return;
         }
 
@@ -1640,7 +2373,7 @@ export class ExpeditionScene extends Scene {
 
         this.expeditionState.activeRun = victoryResolution.run;
         this.showActiveRun(victoryResolution.run, 'resumed');
-        this.updateStatusPlate(`战斗节点 ${this.getNodeLabel(result.nodeId)} 返回：${result.outcome}。路线继续。`, true);
+        this.updateStatusPlate(`战斗胜利：${this.getNodeLabel(result.nodeId)}。路线继续。`, true);
     }
 
     private showTerminalSummary(summary: RunResolutionSummary): void {
@@ -1648,6 +2381,9 @@ export class ExpeditionScene extends Scene {
         this.runHud.showPostRunSummary(summary, () => {
             this.runHud.hidePostRunSummary();
             this.returnToEntrance(summary);
+        }, {
+            displayName: id => this.deckbuilderCardMetadata[id]?.name ?? id,
+            finalNodeLabel: this.getNodeLabel(summary.finalNodeId),
         });
     }
 
@@ -1656,7 +2392,8 @@ export class ExpeditionScene extends Scene {
         this.showPreparationPanel();
         this.updateStatusPlate(
             summary
-                ? createPostRunEntranceStatus(this.expeditionState.persistentStash, summary)
+                ? createPostRunEntranceStatus(this.expeditionState.persistentStash, summary,
+                    this.getNodeLabel(summary.finalNodeId))
                 : createPreparationSummary(this.expeditionState.persistentStash).statusText,
             false,
         );
@@ -1669,39 +2406,43 @@ export class ExpeditionScene extends Scene {
         panelHeight: number;
     } {
         const { width, height } = this.scale;
+        const portrait = isPortraitGameViewport(width, height);
         const container = this.add.container(0, 0);
-        const panelWidth = Math.min(980, width * 0.78);
-        const panelHeight = Math.min(680, height * 0.72);
+        const panelWidth = portrait ? width - 44 : Math.min(980, width * 0.78);
+        const panelHeight = portrait ? height - 100 : Math.min(680, height * 0.72);
         const panelX = width / 2;
-        const panelY = height / 2 + 68;
-        const contentX = panelX - panelWidth / 2 + 56;
+        const panelY = portrait ? height / 2 : height / 2 + 68;
+        const contentX = panelX - panelWidth / 2 + (portrait ? 24 : 56);
         const overlay = this.add.rectangle(width / 2, height / 2, width, height, expeditionUiTheme.colors.overlay, 0.5);
+        overlay.setInteractive();
         const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, expeditionUiTheme.colors.panelInner, 0.98);
         panel.setStrokeStyle(3, expeditionUiTheme.colors.jadeBright, 0.9);
 
-        const title = this.add.text(contentX, panelY - panelHeight / 2 + 42, titleText, {
+        const title = this.add.text(contentX, panelY - panelHeight / 2 + (portrait ? 24 : 42), titleText, {
             fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '34px',
+            fontSize: portrait ? '27px' : '34px',
             color: '#f3ead3',
             fontStyle: 'bold',
+            wordWrap: portrait ? { width: panelWidth - 110 } : undefined,
         });
-        const subtitle = this.add.text(contentX, title.y + 44, subtitleText, {
+        const subtitle = this.add.text(contentX, title.y + (portrait ? 42 : 44), subtitleText, {
             fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
+            fontSize: portrait ? '16px' : '18px',
             color: '#e8d5ab',
+            wordWrap: portrait ? { width: panelWidth - 48 } : undefined,
         });
         const closeButton = this.createButton({
-            x: panelX + panelWidth / 2 - 52,
-            y: panelY - panelHeight / 2 + 48,
-            width: 64,
-            height: 44,
+            x: panelX + panelWidth / 2 - (portrait ? 36 : 52),
+            y: panelY - panelHeight / 2 + (portrait ? 36 : 48),
+            width: portrait ? 48 : 64,
+            height: portrait ? 42 : 44,
             label: '×',
             fillColor: expeditionUiTheme.colors.slate,
             onClick: () => this.destroyActiveNodePanel(),
         });
 
         container.add([overlay, panel, title, subtitle, ...closeButton]);
-        container.setDepth(1200);
+        container.setDepth(1400);
 
         return { container, contentX, panelY, panelHeight };
     }
@@ -1750,6 +2491,12 @@ export class ExpeditionScene extends Scene {
                 return '已购买';
             case 'unaffordable':
                 return '灵石不足';
+            case 'insufficientItems':
+                return '材料不足';
+            case 'equippedItem':
+                return '先卸装备';
+            case 'inventoryFull':
+                return '背包已满';
         }
     }
 
@@ -1761,19 +2508,30 @@ export class ExpeditionScene extends Scene {
         return !!activeRun && this.isNonCombatNode(node) && activeRun.nodeStates[node.id]?.visited === true;
     }
 
-    private getNodeTypeLabel(node: NonCombatMapNode): string {
+    private getNodeTypeLabel(node: ExpeditionMapNode): string {
         switch (node.type) {
+            case 'entrance':
+                return '入口';
+            case 'battle':
+                return '战斗';
             case 'event':
                 return '事件';
             case 'shop':
                 return '商店';
             case 'extract':
                 return '撤离';
+            case 'boss':
+                return '首领';
         }
     }
 
-    private getNodeColor(node: NonCombatMapNode): number {
+    private getNodeColor(node: ExpeditionMapNode): number {
         switch (node.type) {
+            case 'entrance':
+                return expeditionUiTheme.colors.jade;
+            case 'battle':
+            case 'boss':
+                return expeditionUiTheme.colors.ember;
             case 'event':
                 return expeditionUiTheme.colors.gold;
             case 'shop':

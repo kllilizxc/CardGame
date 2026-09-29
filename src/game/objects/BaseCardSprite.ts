@@ -3,6 +3,7 @@ import { GameObjects } from 'phaser';
 import type { CardPreviewMetadata } from '../managers/common/cardPreviewProtocol';
 import { sceneTheme } from '../scenes/shared/sceneTheme';
 import { blendBattleColor, getBattleCardTextStyle } from '../ui/battle/battleTheme';
+import { watchCardFace, type CardFaceAppearance } from './cardFaceAppearance';
 
 /**
  * 卡片显示模式
@@ -11,6 +12,8 @@ import { blendBattleColor, getBattleCardTextStyle } from '../ui/battle/battleThe
  * - deck: 卡组查看模式（完整信息，不包含描述）
  */
 export type CardDisplayMode = 'field' | 'hover' | 'deck';
+type VisibleCardPart = GameObjects.GameObject & { visible: boolean; setVisible(visible: boolean): unknown };
+const hasVisibility = (object: GameObjects.GameObject): object is VisibleCardPart => 'visible' in object && 'setVisible' in object;
 
 export abstract class BaseCardSprite extends GameObjects.Container {
     protected background!: GameObjects.Rectangle;
@@ -22,6 +25,9 @@ export abstract class BaseCardSprite extends GameObjects.Container {
     protected currentDisplayMode: CardDisplayMode = 'field';
     protected isDraggingDisabled: boolean = false;
     private previewMetadata: CardPreviewMetadata = {};
+    private genericFaceImage?: GameObjects.Image;
+    private genericFaceOriginal?: Array<{ object: VisibleCardPart; visible: boolean }>;
+    private genericFaceRelease?: () => void;
 
     // 卡牌标准尺寸
     protected readonly CARD_WIDTH = 180;
@@ -117,6 +123,24 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         this.setInteractive({ draggable: true, useHandCursor: true });
         this.setScale(this.cardScale);
         this.scene.add.existing(this);
+    }
+
+    /** Shared themed surface for non-unit card sprites; keeps their drag and preview behavior. */
+    protected attachCardFace(card: { id: string; cardFace?: CardFaceAppearance }): void {
+        this.genericFaceOriginal = this.list.filter(hasVisibility).map(object => ({ object, visible: object.visible }));
+        this.genericFaceRelease?.();
+        this.genericFaceRelease = watchCardFace(this.scene, card, key => {
+            if (!this.active) return;
+            this.genericFaceImage?.destroy();
+            this.genericFaceImage = undefined;
+            for (const { object, visible } of this.genericFaceOriginal ?? []) if (object.active) object.setVisible(visible);
+            this.updateDisplayMode();
+            if (key) {
+                for (const { object } of this.genericFaceOriginal ?? []) if (object.active) object.setVisible(false);
+                this.genericFaceImage = this.scene.add.image(0, 0, key).setDisplaySize(this.CARD_WIDTH, this.CARD_HEIGHT);
+                this.addAt(this.genericFaceImage, 0);
+            }
+        });
     }
 
     /**
@@ -302,6 +326,13 @@ export abstract class BaseCardSprite extends GameObjects.Container {
     public setDisplayMode(mode: CardDisplayMode): void {
         this.currentDisplayMode = mode;
         this.updateDisplayMode();
+        if (this.genericFaceImage) for (const { object } of this.genericFaceOriginal ?? []) if (object.active) object.setVisible(false);
+    }
+
+    public destroy(fromScene?: boolean): void {
+        this.genericFaceRelease?.();
+        this.genericFaceRelease = undefined;
+        super.destroy(fromScene);
     }
 
     /**

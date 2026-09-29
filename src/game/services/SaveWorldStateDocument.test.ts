@@ -469,6 +469,26 @@ describe('SaveWorldStateDocument', () => {
                     },
                 },
             },
+            {
+                ...activeRunDocument,
+                worldState: {
+                    ...activeRunDocument.worldState,
+                    persistentStash: {
+                        ...activeRunDocument.worldState.persistentStash,
+                        document: { ...activeRunDocument.worldState.persistentStash.document!, itemSlotCapacity: 0 },
+                    },
+                },
+            },
+            {
+                ...activeRunDocument,
+                worldState: {
+                    ...activeRunDocument.worldState,
+                    activeRun: {
+                        ...activeRunDocument.worldState.activeRun,
+                        document: { ...activeRunDocument.worldState.activeRun.document!, itemSlotCapacity: -1 },
+                    },
+                },
+            },
         ];
 
         for (const malformedDocument of malformedDocuments) {

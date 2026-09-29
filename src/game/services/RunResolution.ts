@@ -14,6 +14,7 @@ import {
     createEmptyRewardBundle,
     subtractStartingLoadoutFromStash,
 } from '../state/GameWorldStateStashOperations';
+import { pruneUnavailableEquipment } from '../state/EquipmentState';
 import type {
     PersistentStash,
     RunResolutionSummary,
@@ -93,8 +94,13 @@ function resolveTerminalOutcome(
         endedAt,
     };
     const stashWithoutRunLoadout = subtractStartingLoadoutFromStash(stash, run.startingLoadout);
+    const settledStash = outcome === 'defeat' ? stashWithoutRunLoadout : addCarriedBundleToStash(stashWithoutRunLoadout, carried, stash.items);
+    const selectedEquipment = outcome === 'defeat' ? stash.equippedItems : run.equippedItems ?? stash.equippedItems;
     const resolvedStash = {
-        ...(outcome === 'defeat' ? stashWithoutRunLoadout : addCarriedBundleToStash(stashWithoutRunLoadout, carried)),
+        ...settledStash,
+        ...(selectedEquipment
+            ? { equippedItems: pruneUnavailableEquipment(selectedEquipment, settledStash.items) }
+            : {}),
         lastRunSummary: summary,
     };
 

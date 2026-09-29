@@ -63,7 +63,11 @@ function clonePersistentStashDocument(stash: DeepReadonly<PersistentStash>): Per
         savedDecks: cloneSavedDecks(stash.savedDecks),
         selectedDeckId: stash.selectedDeckId,
         items: cloneItemStacks(stash.items),
+        ...(stash.equippedItems ? { equippedItems: { ...stash.equippedItems } } : {}),
         spiritStones: stash.spiritStones,
+        ...(stash.itemSlotCapacity !== undefined ? { itemSlotCapacity: stash.itemSlotCapacity } : {}),
+        ...(stash.claimedStoryGrantIds ? { claimedStoryGrantIds: [...stash.claimedStoryGrantIds] } : {}),
+        ...(stash.settledStoryItemTransactionIds ? { settledStoryItemTransactionIds: [...stash.settledStoryItemTransactionIds] } : {}),
     };
 
     if ('lastRunSummary' in stash) {

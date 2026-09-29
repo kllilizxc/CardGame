@@ -143,6 +143,7 @@ describe('deckbuilder card metadata helpers', () => {
                             grade: '凡阶工具',
                             type: '撤离工具',
                             description: '用于标记归路的安全绳。',
+                            iconAsset: 'assets/items/tools/return-rope-v1.png',
                         },
                     ],
                     consumables: [
@@ -191,6 +192,7 @@ describe('deckbuilder card metadata helpers', () => {
             'tool.return-rope': {
                 name: '归返绳',
                 description: '用于标记归路的安全绳。',
+                iconAsset: 'assets/items/tools/return-rope-v1.png',
                 labels: ['撤离工具'],
                 gradeLabel: '凡阶工具',
             },

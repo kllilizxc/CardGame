@@ -1,4 +1,6 @@
 import { GameObjects, Scene } from 'phaser';
+import { isPortraitGameViewport } from '../../layout/gameViewport';
+import { paginateReadableCopy } from '../../scenes/shared/readableCopyPages';
 
 import {
     createPreparationDeckCarouselSummary,
@@ -46,6 +48,7 @@ export interface PreparationPanelConfig {
     onConfirm: () => void;
     onDeckSelect: (deckId: string) => void;
     onOpenDeckManager?: () => void;
+    onOpenInventory?: () => void;
     deckHandoffSummary?: PreparationDeckHandoffSummary | null;
 }
 
@@ -1003,8 +1006,10 @@ export class PreparationPanel extends GameObjects.Container implements EntryPane
     private readonly onConfirm: () => void;
     private readonly onDeckSelect: (deckId: string) => void;
     private readonly onOpenDeckManager?: () => void;
+    private readonly onOpenInventory?: () => void;
     private deckHandoffSummary?: PreparationDeckHandoffSummary | null;
     private panelFrame: EntryPanelFrame | null = null;
+    private portraitInfoPage = 0;
 
     private scrollX = 0;
     private maxScrollX = 0;
@@ -1035,6 +1040,7 @@ export class PreparationPanel extends GameObjects.Container implements EntryPane
         this.onConfirm = config.onConfirm;
         this.onDeckSelect = config.onDeckSelect;
         this.onOpenDeckManager = config.onOpenDeckManager;
+        this.onOpenInventory = config.onOpenInventory;
         this.deckHandoffSummary = config.deckHandoffSummary;
 
         this.renderPanel();
@@ -1053,6 +1059,7 @@ export class PreparationPanel extends GameObjects.Container implements EntryPane
     ): void {
         this.stash = stash;
         this.deckHandoffSummary = null;
+        this.portraitInfoPage = 0;
         this.renderPanel({
             deckSwitchFeedback,
             initialScrollX: this.scrollX,
@@ -1061,6 +1068,107 @@ export class PreparationPanel extends GameObjects.Container implements EntryPane
 
     public getEntryPanelFrame(): EntryPanelFrame | null {
         return this.panelFrame;
+    }
+
+    private renderPortraitPanel(): void {
+        const { width, height } = this.scene.scale;
+        const panelWidth = width - 40;
+        const panelHeight = 800;
+        const panelX = width / 2;
+        const panelY = 550;
+        const panelTop = panelY - panelHeight / 2;
+        const contentWidth = panelWidth - 56;
+        const selected = getSelectedSavedDeck(this.stash);
+        const selectedIndex = this.stash.savedDecks.findIndex(deck => deck.id === selected?.id);
+        const summary = createPreparationSelectedLoadoutSummary(this.stash, this.metadata);
+        const validation = validateExpeditionLoadout(this.stash);
+        const infoCopy = (validation.valid
+            ? [summary.detail, ...summary.readinessChecklistLines]
+            : formatPreparationValidationLines(validation, this.metadata)).join('\n') || '请选择一套可带入的卡组。';
+        const infoPages = paginateReadableCopy(infoCopy, 70);
+        this.portraitInfoPage = Math.min(this.portraitInfoPage, infoPages.length - 1);
+        this.panelFrame = { panelX, panelY, panelWidth, panelHeight };
+
+        const overlay = this.scene.add.rectangle(panelX, height / 2, width, height, 0x030712, 0.8);
+        const shadow = this.scene.add.rectangle(panelX + 5, panelY + 8, panelWidth, panelHeight,
+            expeditionUiTheme.colors.overlay, 0.5);
+        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight,
+            expeditionUiTheme.colors.panel, 0.98);
+        panel.setStrokeStyle(3, expeditionUiTheme.colors.goldSoft, 0.82);
+        const accent = this.scene.add.rectangle(panelX, panelTop + 7, panelWidth - 28, 6,
+            expeditionUiTheme.colors.gold, 0.9);
+        const title = this.scene.add.text(panelX, 196, '出发前确认', {
+            fontFamily: expeditionUiTheme.fonts.display, fontSize: '32px', color: '#f3ead3',
+        }).setOrigin(0.5);
+        const subtitle = this.scene.add.text(panelX, 240, '选定卡组，核对随行物资。', {
+            fontFamily: expeditionUiTheme.fonts.body, fontSize: '19px', color: '#d9c6a2',
+        }).setOrigin(0.5);
+        const deckPlate = this.scene.add.rectangle(panelX, 364, panelWidth - 28, 190,
+            expeditionUiTheme.colors.panelInner, 0.95);
+        deckPlate.setStrokeStyle(1, validation.valid ? expeditionUiTheme.colors.jadeBright : expeditionUiTheme.colors.goldSoft, 0.72);
+        const deckLabel = this.scene.add.text(52, 289, '当前带入卡组', {
+            fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#bca785',
+        });
+        const deckName = this.scene.add.text(panelX, 335, selected?.name ?? '尚未选择卡组', {
+            fontFamily: expeditionUiTheme.fonts.display, fontSize: '26px', color: '#f3ead3',
+            align: 'center', wordWrap: { width: contentWidth },
+        }).setOrigin(0.5);
+        const deckCount = this.scene.add.text(panelX, 391,
+            `${summary.deckCount} 张卡 · ${summary.itemCount} 件道具 · ${summary.spiritStones} 枚灵石`, {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#d9c6a2',
+                align: 'center', wordWrap: { width: contentWidth },
+            }).setOrigin(0.5);
+        const readiness = this.scene.add.text(panelX, 429,
+            validation.valid ? '可以直接出发' : summary.readinessLabel, {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '20px', fontStyle: 'bold',
+                color: validation.valid ? '#b7f1cf' : '#f6e2b1',
+                align: 'center', wordWrap: { width: contentWidth },
+            }).setOrigin(0.5);
+        const switchLabel = this.scene.add.text(panelX, 487,
+            this.stash.savedDecks.length
+                ? `选择卡组 · ${Math.max(1, selectedIndex + 1)}/${this.stash.savedDecks.length}`
+                : '暂无可选卡组', {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '20px', color: '#f3ead3',
+            }).setOrigin(0.5);
+        const secondaryColors: ActionButtonColors = {
+            fill: expeditionUiTheme.colors.slate, hover: expeditionUiTheme.colors.panelInner,
+            stroke: expeditionUiTheme.colors.goldSoft, text: '#f3ead3',
+        };
+        const previousDeck = createActionButton(this.scene, 141, 552, 172, 58, '上一套', secondaryColors,
+            () => this.selectAdjacentDeck(-1), this.stash.savedDecks.length > 1);
+        const nextDeck = createActionButton(this.scene, width - 141, 552, 172, 58, '下一套', secondaryColors,
+            () => this.selectAdjacentDeck(1), this.stash.savedDecks.length > 1);
+        const infoPlate = this.scene.add.rectangle(panelX, 690, panelWidth - 28, 180,
+            expeditionUiTheme.colors.panelInner, 0.94);
+        infoPlate.setStrokeStyle(1, expeditionUiTheme.colors.slate, 0.56);
+        const infoHeading = this.scene.add.text(52, 613,
+            `准备说明 ${this.portraitInfoPage + 1}/${infoPages.length}`, {
+                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#d9c6a2',
+            });
+        const infoBody = this.scene.add.text(52, 647, infoPages[this.portraitInfoPage]!, {
+            fontFamily: expeditionUiTheme.fonts.body, fontSize: '18px', color: '#f3ead3',
+            lineSpacing: 4, wordWrap: { width: contentWidth },
+        });
+        this.add([overlay, shadow, panel, accent, title, subtitle, deckPlate, deckLabel, deckName,
+            deckCount, readiness, switchLabel, previousDeck.container, nextDeck.container,
+            infoPlate, infoHeading, infoBody]);
+        if (infoPages.length > 1) {
+            const previousInfo = createActionButton(this.scene, 141, 753, 172, 42, '上一段', secondaryColors,
+                () => { this.portraitInfoPage -= 1; this.renderPanel(); }, this.portraitInfoPage > 0);
+            const nextInfo = createActionButton(this.scene, width - 141, 753, 172, 42, '下一段', secondaryColors,
+                () => { this.portraitInfoPage += 1; this.renderPanel(); }, this.portraitInfoPage < infoPages.length - 1);
+            this.add([previousInfo.container, nextInfo.container]);
+        }
+        const manage = createActionButton(this.scene, 141, 831, 172, 58, '管理卡组', secondaryColors,
+            () => this.openDeckManager(), Boolean(this.onOpenDeckManager));
+        const inventory = createActionButton(this.scene, width - 141, 831, 172, 58, '整理道具', secondaryColors,
+            () => this.onOpenInventory?.(), Boolean(this.onOpenInventory));
+        const confirm = createActionButton(this.scene, panelX, 910, panelWidth - 56, 68,
+            '确认带入并出发', {
+                fill: expeditionUiTheme.colors.jade, hover: expeditionUiTheme.colors.jadeBright,
+                stroke: expeditionUiTheme.colors.goldSoft, text: '#f3ead3',
+            }, () => this.confirmLoadout(), validation.valid);
+        this.add([manage.container, inventory.container, confirm.container]);
     }
 
     private renderPanel(options: DeckSwitchRenderOptions = {}): void {
@@ -1076,6 +1184,10 @@ export class PreparationPanel extends GameObjects.Container implements EntryPane
         this.pendingDeckClick = null;
 
         const { width, height } = this.scene.scale;
+        if (isPortraitGameViewport(width, height)) {
+            this.renderPortraitPanel();
+            return;
+        }
         const panelWidth = Math.min(1040, width * 0.86);
         const panelX = width / 2;
         const selectedLoadoutSummary = createPreparationSelectedLoadoutSummary(this.stash, this.metadata);
@@ -1504,6 +1616,15 @@ export class PreparationPanel extends GameObjects.Container implements EntryPane
             color: selectedLoadoutColors.mutedColor,
             fontStyle: 'bold',
         });
+        const inventoryAction = this.onOpenInventory ? this.scene.add.text(contentLeft + 128, loadoutStripTop + 10, '整理道具', {
+            fontFamily: expeditionUiTheme.fonts.ui,
+            fontSize: '18px',
+            color: '#d8c08b',
+            fontStyle: 'bold',
+        }).setInteractive({ useHandCursor: true }) : null;
+        inventoryAction?.on('pointerover', () => inventoryAction.setColor('#f3ead3'));
+        inventoryAction?.on('pointerout', () => inventoryAction.setColor('#d8c08b'));
+        inventoryAction?.on('pointerdown', () => this.onOpenInventory?.());
         const loadoutSummaryBadge = this.scene.add.text(
             contentLeft + contentWidth - 18,
             loadoutStripTop + 10,
@@ -1547,6 +1668,7 @@ export class PreparationPanel extends GameObjects.Container implements EntryPane
             loadoutSummaryGlow,
             loadoutSummaryCard,
             loadoutSummaryHeading,
+            ...(inventoryAction ? [inventoryAction] : []),
             loadoutSummaryBadge,
             loadoutSummaryBodyText,
             loadoutSummaryFooter,

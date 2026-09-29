@@ -119,6 +119,7 @@ export class ArtifactSprite extends BaseCardSprite {
                 }
             }
         });
+        this.attachCardFace(cardData);
     }
 
     public getCardData(): ArtifactCard {

@@ -3,6 +3,7 @@ import {
     applyStoryEffects,
     createInitialStoryState,
     evaluateStoryCondition,
+    getEffectiveStoryAttribute,
     goToStoryNode,
 } from '../../state/StoryState';
 import type {
@@ -14,6 +15,7 @@ import type {
     StoryInitialStateSeed,
     StoryState,
 } from '../../types/story';
+import type { StoryDialogueLine } from './storyFlow';
 
 export interface StoryAiHints {
     tone?: string;
@@ -27,10 +29,12 @@ export interface StoryNodeDefinition {
     title: string;
     summary: string;
     detail: string;
+    dialogues?: StoryDialogueLine[];
     tags: string[];
     chapter?: string;
     location?: string;
     timeHint?: string;
+    backgroundAsset?: string;
     sublocation?: string;
     locationId?: string;
     sublocationId?: string;
@@ -70,6 +74,7 @@ export interface StoryGraphDefinition {
     initialState?: StoryInitialStateSeed;
     nodes: StoryNodeDefinition[];
     choices: StoryChoiceDefinition[];
+    shareFactsAcrossStories?: boolean;
 }
 
 export interface StoryWorldState {
@@ -93,11 +98,13 @@ export interface StoryNodeView {
     title: string;
     summary: string;
     detail: string;
+    dialogues?: StoryDialogueLine[];
     subtitle: string;
     tags: string[];
     chapter?: string;
     location?: string;
     timeHint?: string;
+    backgroundAsset?: string;
     sublocation?: string;
     locationId?: string;
     sublocationId?: string;
@@ -170,8 +177,25 @@ function appendUnique(items: string[], item: string): string[] {
     return items.includes(item) ? [...items] : [...items, item];
 }
 
-function createNodeIndex(graph: StoryGraphDefinition): Map<string, StoryNodeDefinition> {
-    return new Map(graph.nodes.map((node) => [node.id, node]));
+/** Reuse the same lookup across dialogue pages and choices in one loaded story. */
+export interface StoryGraphIndex {
+    graph: StoryGraphDefinition;
+    nodesById: Map<string, StoryNodeDefinition>;
+    choicesByNodeId: Map<string, StoryChoiceDefinition[]>;
+}
+
+export function indexStoryGraph(graph: StoryGraphDefinition): StoryGraphIndex {
+    const choicesByNodeId = new Map<string, StoryChoiceDefinition[]>();
+    for (const choice of graph.choices) {
+        const choices = choicesByNodeId.get(choice.from);
+        if (choices) choices.push(choice);
+        else choicesByNodeId.set(choice.from, [choice]);
+    }
+    return {
+        graph,
+        nodesById: new Map(graph.nodes.map((node) => [node.id, node])),
+        choicesByNodeId,
+    };
 }
 
 function findNode(graph: StoryGraphDefinition, nodeId: string): StoryNodeDefinition | undefined {
@@ -185,11 +209,13 @@ function createStoryNodeView(node: StoryNodeDefinition): StoryNodeView {
         title: node.title,
         summary: node.summary,
         detail: node.detail,
+        ...(node.dialogues ? { dialogues: node.dialogues.map(line => ({ ...line })) } : {}),
         subtitle: createNodeSubtitle(node),
         tags: [...node.tags],
         ...(node.chapter ? { chapter: node.chapter } : {}),
         ...(node.location ? { location: node.location } : {}),
         ...(node.timeHint ? { timeHint: node.timeHint } : {}),
+        ...(node.backgroundAsset ? { backgroundAsset: node.backgroundAsset } : {}),
         ...(node.sublocation ? { sublocation: node.sublocation } : {}),
         ...(node.locationId ? { locationId: node.locationId } : {}),
         ...(node.sublocationId ? { sublocationId: node.sublocationId } : {}),
@@ -284,7 +310,7 @@ function createChoiceView(
         disabledReason,
         conditionSummary: createConditionSummary(choice, storyState),
         worldStateHint: choice.condition?.worldStateHint ?? null,
-        effectSummary: createEffectSummary(choice.effects),
+        effectSummary: createEffectSummary(choice.effects, storyState),
         ...(choice.visibleWhen ? { visibleWhen: choice.visibleWhen } : {}),
         ...(choice.enabledWhen ? { enabledWhen: choice.enabledWhen } : {}),
         effects: choiceEffects,
@@ -293,11 +319,29 @@ function createChoiceView(
     };
 }
 
-function createEffectSummary(effects: StoryChoiceEffects | StoryEffect[] | undefined): string {
+function createEffectSummary(effects: StoryChoiceEffects | StoryEffect[] | undefined, storyState: StoryState): string {
     if (Array.isArray(effects)) {
-        return effects.length > 0
-            ? effects.map((effect) => effect.kind).join(' / ')
-            : '无状态变化。';
+        const labels = effects.flatMap((effect): string[] => {
+            switch (effect.kind) {
+                case 'once': return storyState.settledEventIds?.includes(effect.eventId)
+                    ? ['此前已完成']
+                    : [...effect.effects.flatMap(nested => createEffectSummary([nested], storyState).split(' · ')).filter(label => label !== '无状态变化。'), '仅首次'];
+                case 'grantCard': return [`获得卡牌 ×${effect.count}`];
+                case 'grantItem': return [`获得道具 ×${effect.count}`];
+                case 'consumeItem': return [`消耗道具 ×${effect.count}`];
+                case 'learnKnowledge': return ['获得线索'];
+                case 'setQuestStage': return ['任务推进'];
+                case 'startBattle': return ['进入战斗'];
+                case 'adjustAttribute': return [`${effect.attribute}${effect.delta >= 0 ? '+' : ''}${effect.delta}`];
+                case 'setAttribute': return [`${effect.attribute}变为${effect.value}`];
+                case 'adjustRelation': return ['关系变化'];
+                case 'setRelation': return ['关系变化'];
+                case 'moveTo':
+                case 'goToNode': return ['前往新地点'];
+                default: return ['剧情变化'];
+            }
+        });
+        return labels.length > 0 ? [...new Set(labels)].join(' · ') : '无状态变化。';
     }
 
     const parts = [effects?.worldChangeHint, effects?.relationChangeHint].filter((part): part is string => Boolean(part));
@@ -321,6 +365,9 @@ function createFallbackInitialStateSeed(
         flags: graph.initialState?.flags,
         attributes: graph.initialState?.attributes,
         relations: graph.initialState?.relations,
+        knowledge: graph.initialState?.knowledge,
+        questStages: graph.initialState?.questStages,
+        settledEventIds: graph.initialState?.settledEventIds,
     };
 }
 
@@ -410,8 +457,32 @@ function createConditionSummary(choice: StoryChoiceDefinition, storyState: Story
 
 function describeStructuredCondition(condition: StoryCondition, storyState: StoryState): string {
     switch (condition.kind) {
-        case 'attribute':
-            return `${condition.attribute} ${storyState.attributes[condition.attribute] ?? 0} ${condition.operator} ${condition.value}`;
+        case 'always':
+            return '无特殊条件。';
+        case 'attribute': {
+            const actual = getEffectiveStoryAttribute(storyState, condition.attribute);
+            return actual !== undefined
+                ? `${condition.attribute} ${actual} ${condition.operator} ${condition.value}`
+                : `缺少属性 ${condition.attribute}`;
+        }
+        case 'relation':
+            return Object.hasOwn(storyState.relations, condition.relationId)
+                ? `关系 ${condition.relationId} ${storyState.relations[condition.relationId]} ${condition.operator} ${condition.value}`
+                : `缺少关系 ${condition.relationId}`;
+        case 'actorAbility': {
+            const abilities = storyState.actorAbilities?.[condition.actorId];
+            return abilities && Object.hasOwn(abilities, condition.ability)
+                ? `${condition.actorId} 的${condition.ability} ${abilities[condition.ability]} ${condition.operator} ${condition.value}`
+                : `缺少人物能力 ${condition.actorId} · ${condition.ability}`;
+        }
+        case 'itemCount':
+            return `持有 ${condition.itemId} ×${storyState.itemCounts?.[condition.itemId] ?? 0} ${condition.operator} ${condition.value}`;
+        case 'knowledge':
+            return condition.expected === false
+                ? `${condition.actorId} 尚不知道 ${condition.knowledgeId}`
+                : `${condition.actorId} 已知道 ${condition.knowledgeId}`;
+        case 'questStage':
+            return `任务 ${condition.questId} 处于 ${condition.stage}`;
         case 'flag':
             return condition.expected === false
                 ? `未设置标记 ${condition.flag}`
@@ -425,9 +496,14 @@ function describeStructuredCondition(condition: StoryCondition, storyState: Stor
                 ? `未触发对话 ${condition.dialogueId}`
                 : `需要触发对话 ${condition.dialogueId}`;
         case 'all':
-            return '需要所有条件满足';
+            return condition.conditions.every(child => evaluateStoryCondition(storyState, child))
+                ? '所有条件已满足'
+                : condition.conditions.filter(child => !evaluateStoryCondition(storyState, child))
+                    .map(child => describeStructuredCondition(child, storyState)).join('；');
         case 'any':
-            return '需要任一条件满足';
+            return condition.conditions.some(child => evaluateStoryCondition(storyState, child))
+                ? '已有可行条件'
+                : `需要满足其一：${condition.conditions.map(child => describeStructuredCondition(child, storyState)).join('；')}`;
         case 'not':
             return `不能满足：${describeStructuredCondition(condition.condition, storyState)}`;
     }
@@ -473,7 +549,7 @@ function evaluateAttributeRecommendation(
     recommendation: AttributeRecommendation,
     storyState: StoryState,
 ): { recommended: boolean; reason: string | null } {
-    const actualValue = storyState.attributes[recommendation.attribute];
+    const actualValue = getEffectiveStoryAttribute(storyState, recommendation.attribute);
 
     if (typeof actualValue !== 'number') {
         return {
@@ -562,8 +638,10 @@ function createStateLine(storyState: StoryState): string {
 export function createStoryFlowViewModel(
     graph: StoryGraphDefinition,
     state: StoryFlowRuntimeState = {},
+    index?: StoryGraphIndex,
 ): StoryFlowViewModel {
-    const nodesById = createNodeIndex(graph);
+    const indexed = index?.graph === graph ? index : indexStoryGraph(graph);
+    const nodesById = indexed.nodesById;
     const requestedNodeId = state.currentNodeId ?? state.storyState?.currentNodeId ?? graph.entryNodeId;
     const entryNode = nodesById.get(graph.entryNodeId);
     const requestedNode = nodesById.get(requestedNodeId);
@@ -580,8 +658,7 @@ export function createStoryFlowViewModel(
     const currentStoryState = storyState.currentNodeId === currentNode.id
         ? storyState
         : goToStoryNode(storyState, currentNode.id);
-    const choices = graph.choices
-        .filter((choice) => choice.from === currentNode.id)
+    const choices = (indexed.choicesByNodeId.get(currentNode.id) ?? [])
         .map((choice) => {
             const targetNode = nodesById.get(choice.to);
 

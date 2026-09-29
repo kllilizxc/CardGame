@@ -8,6 +8,43 @@ import tutorialTeahouseStoryJson from '../../../../public/data/story/tutorial-qi
 import { validatePlayableStoryGraph } from './storyFlow';
 
 describe('storyFlow', () => {
+    it('preserves stable dialogue lines and rejects reused IDs across scenes', () => {
+        const source = structuredClone(compactStoryGraphJson) as any;
+        source.nodes[0].dialogues = [
+            { id: 'dlg.fox.001', speakerId: 'npc.fox', speakerName: '狐爷爷', text: '药方还在吗？' },
+            { id: 'dlg.player.001', speakerId: 'player', speakerName: '我', text: '我收好了。' },
+        ];
+        expect(validatePlayableStoryGraph(source).nodes[0].dialogues).toHaveLength(2);
+        source.nodes[1].dialogues = [{ ...source.nodes[0].dialogues[0] }];
+        expect(() => validatePlayableStoryGraph(source)).toThrow('dialogues');
+    });
+
+    it('validates shared narrative fields and nested once effects in a compiled scene', () => {
+        const source = structuredClone(compactStoryGraphJson) as any;
+        source.shareFactsAcrossStories = true;
+        source.initialState.knowledge = { player: ['fox.poisoned'] };
+        source.initialState.questStages = { 'quest.heal-fox': 'available' };
+        source.choices[0].visibleWhen = { kind: 'knowledge', actorId: 'player', knowledgeId: 'fox.poisoned' };
+        source.choices[0].enabledWhen = { kind: 'all', conditions: [
+            { kind: 'relation', relationId: 'npc.fox->player', operator: '>=', value: 30 },
+            { kind: 'questStage', questId: 'quest.heal-fox', stage: 'available' },
+        ] };
+        source.choices[0].effects = [{ kind: 'once', eventId: 'quest.heal-fox.reward', effects: [
+            { kind: 'learnKnowledge', actorId: 'npc.guard', knowledgeId: 'fox.identity' },
+            { kind: 'setQuestStage', questId: 'quest.heal-fox', stage: 'completed' },
+            { kind: 'grantCard', grantId: 'quest.heal-fox.card', cardId: 'CR_001', count: 1 },
+        ] }];
+        const graph = validatePlayableStoryGraph(source);
+        expect(graph.shareFactsAcrossStories).toBe(true);
+        expect(graph.choices[0].effects[0]).toMatchObject({ kind: 'once', eventId: 'quest.heal-fox.reward' });
+        expect((graph.choices[0].effects[0] as any).effects[2]).toEqual({ kind: 'grantCard', grantId: 'quest.heal-fox.card', cardId: 'CR_001', count: 1 });
+        source.choices[0].effects[0].effects[2].count = 0;
+        expect(() => validatePlayableStoryGraph(source)).toThrow('positive integer');
+        source.choices[0].effects[0].effects[2].count = 1;
+        source.choices[0].effects[0].effects.push({ kind: 'startBattle', battle: { battleId: 'broken', encounterId: 'x', encounterFile: 'x', deckFile: 'x', onVictoryNodeId: 'missing', onDefeatNodeId: 'finish' } });
+        expect(() => validatePlayableStoryGraph(source)).toThrow('missing');
+    });
+
     it('keeps the compact authoring example valid against the playable StoryState schema', () => {
         const graph = validatePlayableStoryGraph(compactStoryGraphJson);
 

@@ -3,6 +3,7 @@ import type {
     ExpeditionItemStack,
     PersistentStash,
 } from '../types/expedition';
+import { resolveItemSlotCapacity } from './ItemCapacity';
 import {
     createSavedDeck,
     DEFAULT_SAVED_DECK_ID,
@@ -17,6 +18,8 @@ export interface WorldStateStashSeed {
     stashId?: string;
     deckRef?: string;
     items?: ExpeditionItemStack[];
+    equippedItems?: Record<string, string>;
+    itemSlotCapacity?: number;
     spiritStones?: number;
 }
 
@@ -61,6 +64,8 @@ export function createPersistentStashFromWorldStateSeed({
         savedDecks: [starterSavedDeck],
         selectedDeckId: starterSavedDeck.id,
         items: cloneItemStacks(stashSeed?.items ?? DEFAULT_STARTER_ITEMS),
+        ...(stashSeed?.equippedItems ? { equippedItems: { ...stashSeed.equippedItems } } : {}),
+        ...(stashSeed?.itemSlotCapacity !== undefined ? { itemSlotCapacity: resolveItemSlotCapacity(stashSeed.itemSlotCapacity) } : {}),
         spiritStones: stashSeed?.spiritStones ?? DEFAULT_STARTER_SPIRIT_STONES,
         lastRunSummary: null,
     };

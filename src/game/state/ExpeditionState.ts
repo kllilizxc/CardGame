@@ -11,6 +11,12 @@ import {
     type RunPersistenceStorageAdapter,
 } from '../services/RunPersistence';
 import { enterReachableNode } from '../scenes/expedition/mapTraversal';
+import { assertItemCapacityChange, canAcceptItemRewards, resolveItemSlotCapacity } from './ItemCapacity';
+import { canDropInventoryItem, type ItemActionPolicy } from './ItemActionRules';
+import { previewShopExchange, type ShopOfferCost } from './ShopExchange';
+import { previewCraftingRecipe, type CraftingRecipe } from './Crafting';
+import { equipOwnedItem, unequipOwnedSlot } from './EquipmentState';
+import { getRunPlayerHealth, MAX_RUN_PLAYER_HEALTH } from './RunHealth';
 import {
     createPersistentStashFromWorldStateSeed,
     type ExpeditionWorldStateSeed,
@@ -19,8 +25,10 @@ import {
 import {
     addRewardBundleToCarriedBundle,
     createStartingLoadoutFromStash,
+    mergeItemStacks,
 } from './GameWorldStateStashOperations';
 import type {
+    ExpeditionItemType,
     ExpeditionMapDefinition,
     ExpeditionRouteIdentity,
     ExpeditionTargetConfig,
@@ -39,26 +47,51 @@ export interface ExpeditionBootstrapSources {
     activeRunRouteKey?: string | null;
     activeRunIdentity?: ActiveRunTargetIdentity;
     storage?: RunPersistenceStorageAdapter;
+    itemPolicies?: Readonly<Record<string, ItemActionPolicy>>;
 }
 
 export interface CreateRunSnapshotParams extends ExpeditionRouteIdentity {
     entryNodeId: string;
 }
 
-export interface ShopOfferCost {
-    spiritStones: number;
-}
-
 export type EventRewardClaimResult =
     | { status: 'claimed'; activeRun: RunSnapshot }
     | { status: 'alreadyClaimed'; activeRun: RunSnapshot }
+    | { status: 'inventoryFull'; activeRun: RunSnapshot }
     | { status: 'noActiveRun'; activeRun: null };
 
 export type ShopPurchaseResult =
     | { status: 'purchased'; activeRun: RunSnapshot }
     | { status: 'alreadyPurchased'; activeRun: RunSnapshot }
     | { status: 'insufficientFunds'; activeRun: RunSnapshot }
+    | { status: 'insufficientItems' | 'equippedItem'; activeRun: RunSnapshot }
+    | { status: 'inventoryFull'; activeRun: RunSnapshot }
     | { status: 'noActiveRun'; activeRun: null };
+
+export type ItemDropResult =
+    | { status: 'dropped'; activeRun: RunSnapshot }
+    | { status: 'restricted' | 'notOwned' | 'invalidQuantity'; activeRun: RunSnapshot }
+    | { status: 'noActiveRun'; activeRun: null };
+
+export type ItemUseResult =
+    | { status: 'used'; healed: number; activeRun: RunSnapshot }
+    | { status: 'fullHealth' | 'notUsable' | 'notOwned'; activeRun: RunSnapshot }
+    | { status: 'noActiveRun'; activeRun: null };
+
+export type EquipmentChangeResult =
+    | { status: 'equipped' | 'unequipped' | 'alreadyEquipped' | 'notEquipped' | 'notOwned' | 'notEquippable'; activeRun: RunSnapshot }
+    | { status: 'noActiveRun'; activeRun: null };
+
+export type StashEquipmentChangeResult = {
+    status: 'equipped' | 'unequipped' | 'alreadyEquipped' | 'notEquipped' | 'notOwned' | 'notEquippable';
+    stash: PersistentStash;
+};
+
+export type CraftingChangeResult = {
+    status: 'crafted' | 'insufficientFunds' | 'insufficientItems' | 'equippedItem' | 'inventoryFull';
+    activeRun: RunSnapshot | null;
+    stash: PersistentStash;
+};
 
 export type ExtractIntentResult =
     | { status: 'recorded'; activeRun: RunSnapshot }
@@ -103,6 +136,7 @@ function addRewardsToCarriedRun(
         rewards,
     );
 
+    assertItemCapacityChange(run.carriedItems, carried.items, run.itemSlotCapacity);
     return {
         carriedDeck: carried.cards,
         carriedItems: carried.items,
@@ -116,6 +150,7 @@ export class ExpeditionState {
     private readonly targetIdentity: ExpeditionRouteIdentity;
     private readonly activeRunRouteKey: string;
     private readonly storage?: RunPersistenceStorageAdapter;
+    private readonly itemPolicies: Readonly<Record<string, ItemActionPolicy>>;
 
     constructor(
         persistentStash: PersistentStash,
@@ -123,7 +158,9 @@ export class ExpeditionState {
         targetIdentity: ExpeditionRouteIdentity = normalizeActiveRunIdentity(),
         activeRunRouteKey?: string | null,
         storage?: RunPersistenceStorageAdapter,
+        itemPolicies: Readonly<Record<string, ItemActionPolicy>> = {},
     ) {
+        this.itemPolicies = itemPolicies;
         this.persistentStash = persistentStash;
         this.targetIdentity = normalizeActiveRunIdentity(targetIdentity);
         this.activeRunRouteKey = normalizeActiveRunRouteKey(activeRunRouteKey, this.targetIdentity);
@@ -143,6 +180,7 @@ export class ExpeditionState {
         activeRunRouteKey,
         activeRunIdentity,
         storage,
+        itemPolicies,
     }: ExpeditionBootstrapSources): ExpeditionState {
         const normalizedTargetIdentity = normalizeActiveRunIdentity(
             targetIdentity
@@ -159,7 +197,7 @@ export class ExpeditionState {
 
         savePersistentStash(persistentStash, storage);
 
-        return new ExpeditionState(persistentStash, activeRun, normalizedTargetIdentity, normalizedRouteKey, storage);
+        return new ExpeditionState(persistentStash, activeRun, normalizedTargetIdentity, normalizedRouteKey, storage, itemPolicies);
     }
 
     createRunSnapshot({ expeditionId, mapId, entryNodeId }: CreateRunSnapshotParams): RunSnapshot {
@@ -178,7 +216,10 @@ export class ExpeditionState {
             startingLoadout,
             carriedDeck: initialCarriedBundle.cards,
             carriedItems: initialCarriedBundle.items,
+            ...(this.persistentStash.equippedItems ? { equippedItems: { ...this.persistentStash.equippedItems } } : {}),
+            itemSlotCapacity: resolveItemSlotCapacity(this.persistentStash.itemSlotCapacity),
             spiritStones: initialCarriedBundle.spiritStones,
+            playerHealth: MAX_RUN_PLAYER_HEALTH,
             visitedNodeIds: [entryNodeId],
             nodeStates: {
                 [entryNodeId]: {
@@ -201,6 +242,7 @@ export class ExpeditionState {
             return null;
         }
 
+        if (!canAcceptItemRewards(this.activeRun.carriedItems, rewards.items, this.activeRun.itemSlotCapacity)) return null;
         const updatedRun: RunSnapshot = {
             ...this.activeRun,
             ...addRewardsToCarriedRun(this.activeRun, rewards),
@@ -220,6 +262,9 @@ export class ExpeditionState {
 
         if (existingNodeState?.rewardClaimed) {
             return { status: 'alreadyClaimed', activeRun: this.activeRun };
+        }
+        if (!canAcceptItemRewards(this.activeRun.carriedItems, rewards.items, this.activeRun.itemSlotCapacity)) {
+            return { status: 'inventoryFull', activeRun: this.activeRun };
         }
 
         const updatedRun: RunSnapshot = {
@@ -255,21 +300,14 @@ export class ExpeditionState {
             return { status: 'alreadyPurchased', activeRun: this.activeRun };
         }
 
-        if (this.activeRun.spiritStones < cost.spiritStones) {
-            return { status: 'insufficientFunds', activeRun: this.activeRun };
-        }
+        const exchange = previewShopExchange(this.activeRun, cost, rewards);
+        if (exchange.status !== 'available') return { status: exchange.status, activeRun: this.activeRun };
 
         const updatedPurchasedOfferIds = [...purchasedOfferIds, offerId];
         const updatedRun: RunSnapshot = {
             ...this.activeRun,
             currentNodeId: nodeId,
-            ...addRewardsToCarriedRun(
-                {
-                    ...this.activeRun,
-                    spiritStones: this.activeRun.spiritStones - cost.spiritStones,
-                },
-                rewards,
-            ),
+            ...exchange.carried,
             visitedNodeIds: appendUniqueNodeId(this.activeRun.visitedNodeIds, nodeId),
             nodeStates: {
                 ...this.activeRun.nodeStates,
@@ -283,6 +321,115 @@ export class ExpeditionState {
         this.persistActiveRun(updatedRun);
 
         return { status: 'purchased', activeRun: updatedRun };
+    }
+
+    craftRecipe(recipe: CraftingRecipe): CraftingChangeResult {
+        const run = this.activeRun;
+        const stash = this.persistentStash;
+        const exchange = previewCraftingRecipe(run ?? {
+            carriedDeck: stash.cards,
+            carriedItems: stash.items,
+            equippedItems: stash.equippedItems,
+            itemSlotCapacity: stash.itemSlotCapacity,
+            spiritStones: stash.spiritStones,
+        }, recipe);
+        if (exchange.status !== 'available') {
+            return { status: exchange.status, activeRun: run, stash };
+        }
+        if (run) {
+            const next: RunSnapshot = { ...run, ...exchange.carried };
+            this.persistActiveRun(next);
+            return { status: 'crafted', activeRun: this.activeRun, stash };
+        }
+        const next: PersistentStash = {
+            ...stash,
+            items: exchange.carried.carriedItems,
+            spiritStones: exchange.carried.spiritStones,
+        };
+        savePersistentStash(next, this.storage);
+        this.persistentStash = next;
+        return { status: 'crafted', activeRun: null, stash: next };
+    }
+
+    useCarriedItem(itemType: ExpeditionItemType, itemId: string): ItemUseResult {
+        const run = this.activeRun;
+        if (!run) return { status: 'noActiveRun', activeRun: null };
+        const items = mergeItemStacks(run.carriedItems, []);
+        const held = items.find(item => item.id === itemId && item.itemType === itemType);
+        if (!held || held.count < 1) return { status: 'notOwned', activeRun: run };
+        const policy = this.itemPolicies[itemId];
+        if (itemType !== 'consumable' || policy?.id !== itemId || policy.itemType !== itemType
+            || policy.useEffect?.kind !== 'heal') return { status: 'notUsable', activeRun: run };
+        const health = getRunPlayerHealth(run.playerHealth);
+        if (health >= MAX_RUN_PLAYER_HEALTH) return { status: 'fullHealth', activeRun: run };
+        const nextHealth = Math.min(MAX_RUN_PLAYER_HEALTH, health + policy.useEffect.amount);
+        const next: RunSnapshot = {
+            ...run,
+            playerHealth: nextHealth,
+            carriedItems: items.map(item => item === held ? { ...item, count: item.count - 1 } : item)
+                .filter(item => item.count > 0),
+        };
+        this.persistActiveRun(next);
+        return { status: 'used', healed: nextHealth - health, activeRun: next };
+    }
+
+    dropCarriedItem(
+        itemType: ExpeditionItemType,
+        itemId: string,
+        count: number,
+    ): ItemDropResult {
+        if (!this.activeRun) return { status: 'noActiveRun', activeRun: null };
+        if (!Number.isSafeInteger(count) || count < 1) {
+            return { status: 'invalidQuantity', activeRun: this.activeRun };
+        }
+        const currentItems = mergeItemStacks(this.activeRun.carriedItems, []);
+        const held = currentItems.find(item => item.itemType === itemType && item.id === itemId);
+        if (!held || held.count < count) return { status: 'notOwned', activeRun: this.activeRun };
+        if (!canDropInventoryItem(held, this.itemPolicies[itemId])) return { status: 'restricted', activeRun: this.activeRun };
+        if (held.count === count && Object.values(this.activeRun.equippedItems ?? {}).includes(itemId)) {
+            return { status: 'restricted', activeRun: this.activeRun };
+        }
+        const nextItems = currentItems.map(item => item === held ? { ...item, count: item.count - count } : item)
+            .filter(item => item.count > 0);
+        const updatedRun: RunSnapshot = { ...this.activeRun, carriedItems: nextItems };
+        this.persistActiveRun(updatedRun);
+        return { status: 'dropped', activeRun: updatedRun };
+    }
+
+    equipCarriedItem(itemType: ExpeditionItemType, itemId: string): EquipmentChangeResult {
+        if (!this.activeRun) return { status: 'noActiveRun', activeRun: null };
+        const result = equipOwnedItem(this.activeRun.carriedItems, this.activeRun.equippedItems,
+            itemType, itemId, this.itemPolicies[itemId]);
+        if (result.status !== 'equipped') return { status: result.status, activeRun: this.activeRun };
+        const updatedRun: RunSnapshot = { ...this.activeRun, equippedItems: result.equippedItems };
+        this.persistActiveRun(updatedRun);
+        return { status: 'equipped', activeRun: updatedRun };
+    }
+
+    unequipCarriedSlot(slot: string): EquipmentChangeResult {
+        if (!this.activeRun) return { status: 'noActiveRun', activeRun: null };
+        const result = unequipOwnedSlot(this.activeRun.equippedItems, slot);
+        if (result.status !== 'unequipped') return { status: result.status, activeRun: this.activeRun };
+        const updatedRun: RunSnapshot = { ...this.activeRun, equippedItems: result.equippedItems };
+        this.persistActiveRun(updatedRun);
+        return { status: 'unequipped', activeRun: updatedRun };
+    }
+
+    equipStashItem(itemType: ExpeditionItemType, itemId: string): StashEquipmentChangeResult {
+        const result = equipOwnedItem(this.persistentStash.items, this.persistentStash.equippedItems,
+            itemType, itemId, this.itemPolicies[itemId]);
+        if (result.status !== 'equipped') return { status: result.status, stash: this.persistentStash };
+        this.persistentStash = { ...this.persistentStash, equippedItems: result.equippedItems };
+        this.persistCurrentStash();
+        return { status: 'equipped', stash: this.persistentStash };
+    }
+
+    unequipStashSlot(slot: string): StashEquipmentChangeResult {
+        const result = unequipOwnedSlot(this.persistentStash.equippedItems, slot);
+        if (result.status !== 'unequipped') return { status: result.status, stash: this.persistentStash };
+        this.persistentStash = { ...this.persistentStash, equippedItems: result.equippedItems };
+        this.persistCurrentStash();
+        return { status: 'unequipped', stash: this.persistentStash };
     }
 
     recordExtractIntent(nodeId: string, requestedAt = new Date().toISOString()): ExtractIntentResult {
@@ -348,11 +495,12 @@ export class ExpeditionState {
     private persistActiveRun(run: RunSnapshot): void {
         this.assertRunIdentityMatchesState(run);
 
-        this.activeRun = {
+        const next = {
             ...run,
             routeKey: this.activeRunRouteKey,
         };
-        saveActiveRun(this.activeRun, this.targetIdentity, undefined, this.storage);
+        saveActiveRun(next, this.targetIdentity, undefined, this.storage);
+        this.activeRun = next;
     }
 
     private assertRunIdentityMatchesState(identity: ExpeditionRouteIdentity): void {

@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import type { PillCard } from '@data/types/cards/pill';
 import { CardSprite } from '../../objects/CardSprite';
 import type { BattleContext } from '../../context/BattleContext';
+import { canUsePillAtHealth } from './pillUseRules';
 
 /**
  * 丹药槽位信息
@@ -127,6 +128,11 @@ export class PillManager {
             return false;
         }
 
+        if (!canUsePillAtHealth(pill, this.battleContext.battleState)) {
+            this.battleContext.battleLog.addLog('生命值已满，丹药未使用');
+            return false;
+        }
+
         this.battleContext.battleLog.addLog(`使用了【${pill.name}】`);
 
         // 播放使用动画和特效
@@ -155,10 +161,13 @@ export class PillManager {
         pillData.effects.forEach(effect => {
             if (!effect.actions) return;
 
+            let requestedHeal = 0;
+            let appliedHeal = 0;
             effect.actions.forEach(action => {
                 switch (action.type) {
                     case 'healPlayer':
-                        this.healPlayer(action.value || 0);
+                        requestedHeal += Math.max(0, action.value || 0);
+                        appliedHeal += this.healPlayer(action.value || 0, !effect.text);
                         break;
 
                     case 'modifyHealth':
@@ -189,7 +198,11 @@ export class PillManager {
 
             // 显示效果文本
             if (effect.text) {
-                this.battleContext.battleLog.addLog(effect.text);
+                const healingOnly = effect.actions.every(action => action.type === 'healPlayer');
+                const text = healingOnly && appliedHeal < requestedHeal
+                    ? `玩家回复了${appliedHeal}点生命值`
+                    : effect.text;
+                this.battleContext.battleLog.addLog(text);
             }
         });
     }
@@ -197,15 +210,13 @@ export class PillManager {
     /**
      * 回复玩家生命值
      */
-    private healPlayer(amount: number): void {
-        if (amount <= 0) return;
+    private healPlayer(amount: number, logResult = true): number {
+        const healed = this.battleContext.battleState.healPlayer(amount);
+        if (healed <= 0) return 0;
 
-        // 通知场景更新玩家生命值
-        this.scene.events.emit('healPlayer', amount);
-        this.battleContext.battleLog.addLog(`玩家回复了${amount}点生命值`);
-
-        // 显示治疗特效
+        if (logResult) this.battleContext.battleLog.addLog(`玩家回复了${healed}点生命值`);
         this.battleContext.effectManager.showHealEffect();
+        return healed;
     }
 
     /**

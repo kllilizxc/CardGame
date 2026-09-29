@@ -2,6 +2,8 @@ import { GameObjects, Scene } from 'phaser';
 import type { SkillState } from '../../managers/battle/SkillManager';
 import { getSceneTextStyle, sceneTheme } from '../../scenes/shared/sceneTheme';
 import { battleColorToHex, battleTheme, blendBattleColor } from './battleTheme';
+import { watchCardFace } from '../../objects/cardFaceAppearance';
+import { isPortraitGameViewport } from '../../layout/gameViewport';
 
 /**
  * 技能UI组件
@@ -9,6 +11,7 @@ import { battleColorToHex, battleTheme, blendBattleColor } from './battleTheme';
  */
 export class SkillUI extends GameObjects.Container {
     private skillButtons: GameObjects.Container[] = [];
+    private releaseFaces: Array<() => void> = [];
     private skills: SkillState[] = [];
     private onSkillClick: ((skillIndex: number) => void) | null = null;
     private readonly updateHandler = () => this.updateSkills();
@@ -115,7 +118,7 @@ export class SkillUI extends GameObjects.Container {
 
         const stateLine = this.scene.add.text(
             0,
-            50,
+            isPortraitGameViewport(this.scene.scale.width, this.scene.scale.height) ? 42 : 50,
             canUse ? '可催动' : '暂不可用',
             getSceneTextStyle('panelEyebrow', {
                 fontSize: '18px',
@@ -146,6 +149,15 @@ export class SkillUI extends GameObjects.Container {
                 }
             });
         }
+
+        let face: GameObjects.Image | undefined;
+        this.releaseFaces.push(watchCardFace(this.scene, skill, key => {
+            face?.destroy();
+            face = key ? this.scene.add.image(-55, -1, key).setDisplaySize(42, 61) : undefined;
+            if (face) container.addAt(face, 3);
+            name.setX(face ? 25 : 0).setWordWrapWidth(face ? 92 : width - 28);
+            statusText.setX(face ? 25 : 0).setWordWrapWidth(face ? 92 : width - 30);
+        }));
 
         return container;
     }
@@ -199,6 +211,8 @@ export class SkillUI extends GameObjects.Container {
      * 清空技能UI
      */
     private clearSkills(): void {
+        this.releaseFaces.forEach(release => release());
+        this.releaseFaces = [];
         this.skillButtons.forEach(container => container.destroy());
         this.skillButtons = [];
     }
@@ -209,6 +223,7 @@ export class SkillUI extends GameObjects.Container {
     public destroy(fromScene?: boolean): void {
         this.scene.events.off('skillsUpdated', this.updateHandler);
         this.scene.events.off('skillUsed', this.updateHandler);
+        this.clearSkills();
         super.destroy(fromScene);
     }
 }

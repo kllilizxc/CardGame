@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
+import { isPortraitGameViewport } from '../../layout/gameViewport';
 import {
     CONTENT_CATALOG_CACHE_KEY,
     CONTENT_CATALOG_PUBLIC_PATH,
@@ -22,11 +23,13 @@ import {
 } from './worldMap';
 import {
     createSceneBackdrop,
+    createSceneButton,
     createScenePanel,
     createStatusLine,
     getSceneTextStyle,
     sceneTheme,
 } from '../shared/sceneTheme';
+import { QuestJournalOverlay, savedQuestJournalEntries } from '../shared/questJournalOverlay';
 
 export const WORLD_MAP_CACHE_KEY = 'worldMapShell';
 const WORLD_MAP_SUPPORT_COPY = '云阶城镇与试炼入口都已标在图上。拖拽舆图，选定下一段路。';
@@ -38,6 +41,7 @@ export class WorldMapScene extends Scene {
     private shellContainer?: Phaser.GameObjects.Container;
     private mapSurfaceContainer?: Phaser.GameObjects.Container;
     private mapViewport?: WorldMapViewport;
+    private questJournal!: QuestJournalOverlay;
     private mapDragState?: {
         startPointerX: number;
         startPointerY: number;
@@ -45,6 +49,7 @@ export class WorldMapScene extends Scene {
         startSurfaceY: number;
     };
     private returnStatusText?: string;
+    private portraitPage = 0;
     private readonly dragDistanceThreshold = 8;
 
     constructor() {
@@ -74,6 +79,7 @@ export class WorldMapScene extends Scene {
 
     create(): void {
         this.worldMap = this.readValidatedWorldMapResource();
+        this.questJournal = new QuestJournalOverlay(this);
         this.renderShell();
         EventBus.emit('current-scene-ready', this);
     }
@@ -100,10 +106,15 @@ export class WorldMapScene extends Scene {
     }
 
     private renderShell(): void {
+        this.questJournal.close();
         this.shellContainer?.destroy();
         this.mapSurfaceContainer = undefined;
         this.mapViewport = undefined;
         this.mapDragState = undefined;
+        if (isPortraitGameViewport(this.scale.width, this.scale.height)) {
+            this.renderPortraitShell();
+            return;
+        }
 
         const { width, height } = this.scale;
         const container = this.add.container(0, 0);
@@ -129,6 +140,11 @@ export class WorldMapScene extends Scene {
         }));
 
         container.add(this.add.text(contentX, panelTop + 56, '山麓舆图', getSceneTextStyle('panelTitle')));
+        if (savedQuestJournalEntries().length) {
+            container.add(createSceneButton(this, { x: panelX + panelWidth / 2 - 150, y: panelTop + 54,
+                width: 220, height: 52, label: '任务日志', variant: 'secondary',
+                onClick: () => { this.mapDragState = undefined; this.questJournal.open(); } }).objects);
+        }
         container.add(this.add.text(contentX, panelTop + 108, WORLD_MAP_SUPPORT_COPY, getSceneTextStyle('body', {
             wordWrap: { width: panelWidth - 128 },
         })));
@@ -152,6 +168,55 @@ export class WorldMapScene extends Scene {
         this.renderMapSurface(container, mapViewport);
         this.registerMapInputHandlers();
 
+        this.shellContainer = container;
+    }
+
+    private renderPortraitShell(): void {
+        const { width } = this.scale;
+        const container = this.add.container(0, 0);
+        this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
+        container.add(createSceneBackdrop(this));
+        container.add(this.add.text(width / 2, 78, this.worldMap.title, getSceneTextStyle('sceneTitle', {
+            fontSize: '43px', wordWrap: { width: width - 36 }, align: 'center',
+        })).setOrigin(0.5));
+        container.add(this.add.text(width / 2, 138, this.worldMap.subtitle, getSceneTextStyle('sceneSubtitle', {
+            fontSize: '19px', wordWrap: { width: width - 52 }, align: 'center',
+        })).setOrigin(0.5));
+        container.add(createScenePanel(this, { x: width / 2, y: 560, width: width - 32, height: 790 }));
+        container.add(this.add.text(48, 216, '山麓舆图', getSceneTextStyle('panelTitle', { fontSize: '29px' })));
+        if (savedQuestJournalEntries().length) {
+            container.add(createSceneButton(this, { x: width - 110, y: 216, width: 170, height: 52,
+                label: '任务日志', variant: 'secondary', onClick: () => this.questJournal.open() }).objects);
+        }
+        container.add(this.add.text(48, 270, '选择目的地，启程前往。', getSceneTextStyle('support', {
+            fontSize: '18px', wordWrap: { width: width - 90 },
+        })));
+
+        const pageSize = 5;
+        const pageCount = Math.max(1, Math.ceil(this.worldMap.destinations.length / pageSize));
+        this.portraitPage = Math.min(this.portraitPage, pageCount - 1);
+        this.worldMap.destinations.slice(this.portraitPage * pageSize, (this.portraitPage + 1) * pageSize)
+            .forEach((destination, index) => {
+                container.add(createSceneButton(this, { x: width / 2, y: 354 + index * 99,
+                    width: width - 82, height: 84, label: destination.label,
+                    description: `${destination.presentation.regionLabel} · ${destination.kind === 'hub' ? '驻地' : '秘境'}`,
+                    variant: 'option', onClick: () => this.handleDestinationSelected(destination.id),
+                }).objects);
+            });
+        if (pageCount > 1) {
+            container.add(createSceneButton(this, { x: 112, y: 831, width: 152, height: 46,
+                label: '上一页', variant: 'secondary', onClick: () => {
+                    this.portraitPage = (this.portraitPage - 1 + pageCount) % pageCount; this.renderShell();
+                } }).objects);
+            container.add(createSceneButton(this, { x: width - 112, y: 831, width: 152, height: 46,
+                label: '下一页', variant: 'secondary', onClick: () => {
+                    this.portraitPage = (this.portraitPage + 1) % pageCount; this.renderShell();
+                } }).objects);
+        }
+        const status = createStatusLine(this, { x: width / 2, y: 903, width: width - 80,
+            text: this.returnStatusText ?? '点选目的地，前往城镇、山门或秘境。', align: 'center' });
+        this.statusText = status.text;
+        container.add(status.objects);
         this.shellContainer = container;
     }
 
@@ -269,6 +334,7 @@ export class WorldMapScene extends Scene {
         const labelPanelWidth = Math.max(148, destination.label.length * 25);
         const labelPanel = this.add.rectangle(0, 64, labelPanelWidth, 66, sceneTheme.colors.panelInner, 0.86);
         labelPanel.setStrokeStyle(2, palette.stroke, 0.48);
+        labelPanel.setInteractive({ useHandCursor: true });
         const label = this.add.text(0, 46, destination.label, {
             fontFamily: sceneTheme.fonts.ui,
             fontSize: '20px',
@@ -282,7 +348,7 @@ export class WorldMapScene extends Scene {
         }).setOrigin(0.5);
 
         let pointerDownPosition: WorldMapSurfacePosition | undefined;
-        pin.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        const onPointerDown = (pointer: Phaser.Input.Pointer) => {
             if (!this.isPointerInsideMapViewport(pointer)) {
                 return;
             }
@@ -290,8 +356,8 @@ export class WorldMapScene extends Scene {
             pointerDownPosition = { x: pointer.x, y: pointer.y };
             pin.setFillStyle(palette.hoverFill, 1);
             this.previewDestination(destination);
-        });
-        pin.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+        };
+        const onPointerUp = (pointer: Phaser.Input.Pointer) => {
             if (!pointerDownPosition || !this.isPointerInsideMapViewport(pointer)) {
                 pointerDownPosition = undefined;
                 return;
@@ -310,17 +376,23 @@ export class WorldMapScene extends Scene {
             }
 
             this.restoreDefaultStatusText();
-        });
-        pin.on('pointerover', (pointer: Phaser.Input.Pointer) => {
+        };
+        const onPointerOver = (pointer: Phaser.Input.Pointer) => {
             if (this.isPointerInsideMapViewport(pointer)) {
                 pin.setFillStyle(palette.hoverFill, 1);
                 this.previewDestination(destination);
             }
-        });
-        pin.on('pointerout', () => {
+        };
+        const onPointerOut = () => {
             pin.setFillStyle(palette.fill, 0.98);
             this.restoreDefaultStatusText();
-        });
+        };
+        for (const target of [pin, labelPanel]) {
+            target.on('pointerdown', onPointerDown);
+            target.on('pointerup', onPointerUp);
+            target.on('pointerover', onPointerOver);
+            target.on('pointerout', onPointerOut);
+        }
 
         marker.add([aura, pin, glyph, labelPanel, label, region]);
 
@@ -383,7 +455,7 @@ export class WorldMapScene extends Scene {
     }
 
     private handleMapPointerDown(pointer: Phaser.Input.Pointer): void {
-        if (!this.mapSurfaceContainer || !this.isPointerInsideMapViewport(pointer)) {
+        if (this.questJournal.isOpen() || !this.mapSurfaceContainer || !this.isPointerInsideMapViewport(pointer)) {
             return;
         }
 
@@ -396,7 +468,7 @@ export class WorldMapScene extends Scene {
     }
 
     private handleMapPointerMove(pointer: Phaser.Input.Pointer): void {
-        if (!this.mapDragState || !this.mapSurfaceContainer || !this.mapViewport || !pointer.isDown) {
+        if (this.questJournal.isOpen() || !this.mapDragState || !this.mapSurfaceContainer || !this.mapViewport || !pointer.isDown) {
             return;
         }
 

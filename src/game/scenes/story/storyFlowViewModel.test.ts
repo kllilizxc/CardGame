@@ -9,10 +9,35 @@ import {
     createInitialStoryRuntime,
     createStoryChoiceTransition,
     createStoryFlowViewModel,
+    indexStoryGraph,
     type StoryGraphDefinition,
 } from './storyFlowViewModel';
 
 describe('storyFlowViewModel', () => {
+    it('describes a settled one-time reward without promising another grant', () => {
+        const source = structuredClone(storyGraphJson) as any;
+        source.choices[0].effects = [{ kind: 'once', eventId: 'qa.reward.once', effects: [
+            { kind: 'grantItem', transactionId: 'qa.reward.herb', itemId: 'consumable.herb', itemType: 'consumable', count: 1 },
+        ] }];
+        const graph = validatePlayableStoryGraph(source);
+        const fresh = createInitialStoryRuntime(graph);
+        expect(createStoryFlowViewModel(graph, { storyState: fresh }).choices[0]?.effectSummary).toBe('获得道具 ×1 · 仅首次');
+        expect(createStoryFlowViewModel(graph, { storyState: { ...fresh, settledEventIds: ['qa.reward.once'] } }).choices[0]?.effectSummary).toBe('此前已完成');
+    });
+
+    it('explains the unmet item in a combined story condition', () => {
+        const source = structuredClone(storyGraphJson) as any;
+        source.choices[0].enabledWhen = { kind: 'all', conditions: [
+            { kind: 'actorAbility', actorId: 'npc.fox', ability: '医术', operator: '>=', value: 7 },
+            { kind: 'itemCount', itemId: 'consumable.spirit-salve', operator: '>=', value: 1 },
+        ] };
+        const graph = validatePlayableStoryGraph(source);
+        const state = { ...createInitialStoryRuntime(graph), actorAbilities: { 'npc.fox': { 医术: 8 } }, itemCounts: { 'consumable.spirit-salve': 0 } };
+        const view = createStoryFlowViewModel(graph, { storyState: state });
+        expect(view.choices[0]?.selectable).toBe(false);
+        expect(view.choices[0]?.disabledReason).toBe('条件未满足：持有 consumable.spirit-salve ×0 >= 1');
+    });
+
     it('creates an entry-node view with readable StoryState-backed story context and outgoing choices', () => {
         const graph = validatePlayableStoryGraph(storyGraphJson);
         const view = createStoryFlowViewModel(graph, {
@@ -46,7 +71,7 @@ describe('storyFlowViewModel', () => {
             '注意到队伍中有一名体弱少女，主动上前搭话。',
         ]);
         expect(view.choices[0].conditionSummary).toBe('未设置标记 story.sect_entry.disrupted_line');
-        expect(view.choices[0].effectSummary).toBe('setFlag / adjustAttribute / adjustRelation');
+        expect(view.choices[0].effectSummary).toBe('剧情变化 · 心性+1 · 关系变化');
     });
 
     it('marks structured attribute-gated choices as recommended and disables them when unmet', () => {
@@ -350,15 +375,16 @@ describe('storyFlowViewModel', () => {
 
     it('unlocks a later choice after a prior dialogue or flag effect', () => {
         const graph = validatePlayableStoryGraph(storyGraphJson);
+        const index = indexStoryGraph(graph);
         const initialState = createInitialStoryRuntime(graph);
         const jumpedStateWithoutPriorDialogue = goToStoryNode(initialState, 'sect_entry_003_help_girl');
         const lockedView = createStoryFlowViewModel(graph, {
             storyState: jumpedStateWithoutPriorDialogue,
-        });
+        }, index);
         const lockedBellChoice = lockedView.choices.find((choice) => choice.id === 'sect_entry_003_choice_ask_bell');
 
         expect(lockedBellChoice?.selectable).toBe(false);
-        expect(lockedBellChoice?.disabledReason).toBe('条件未满足：需要任一条件满足');
+        expect(lockedBellChoice?.disabledReason).toBe('条件未满足：需要满足其一：需要标记 story.sect_entry.helped_frail_girl；需要触发对话 dialogue.frail_girl.intro');
 
         const initialView = createStoryFlowViewModel(graph, {
             storyState: initialState,
@@ -377,7 +403,7 @@ describe('storyFlowViewModel', () => {
         const unlockedView = createStoryFlowViewModel(graph, {
             storyState: helpResult.nextStoryState,
             selectedChoiceIds: helpResult.nextSelectedChoiceIds,
-        });
+        }, index);
         const unlockedBellChoice = unlockedView.choices.find((choice) => choice.id === 'sect_entry_003_choice_ask_bell');
 
         expect(unlockedBellChoice?.selectable).toBe(true);

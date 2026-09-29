@@ -71,6 +71,7 @@ export class FieldSprite extends BaseCardSprite {
         
         // 设置拖拽事件
         this.setupDragEvents();
+        this.attachCardFace(this.cardData);
     }
 
     private getEffectDescription(): string {

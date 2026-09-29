@@ -43,6 +43,7 @@ describe('createBattleLaunchPayload', () => {
             encounterId: 'test_encounter_01',
             encounterResourceId: 'test_encounter_01',
             encounterFile: 'data/encounters/test-enemy.json',
+            playerHealth: 100,
             runDeck: [
                 { id: 'SX_YJZ_001', count: 1 },
                 { id: 'AR_001', count: 2 },
@@ -112,6 +113,7 @@ describe('createBattleLaunchPayload', () => {
             nodeType: 'battle',
             encounterId: 'test_encounter_01',
             encounterFile: 'data/encounters/test-enemy.json',
+            playerHealth: 100,
             runDeck: [
                 { id: 'SX_YJZ_001', count: 1 },
                 { id: 'AR_001', count: 2 },

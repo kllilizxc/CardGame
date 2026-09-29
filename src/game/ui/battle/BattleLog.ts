@@ -5,6 +5,7 @@ import type { PanelConfig } from '../../config/LayoutConfig';
 import { battleTheme, blendBattleColor } from './battleTheme';
 import { sceneTheme } from '../../scenes/shared/sceneTheme';
 import type { CardPreviewMetadata } from '../../managers/common/cardPreviewProtocol';
+import { isPortraitGameViewport } from '../../layout/gameViewport';
 
 interface LogEntry {
     text: string;
@@ -127,14 +128,15 @@ export class BattleLog {
     private createToggleButton() {
         const { width, height } = this.scene.scale;
         
-        this.toggleButton = this.scene.add.container(width - width * 0.02 - 56, height * 0.5 - this.LOG_HEIGHT / 2 - 40);
+        const portrait = isPortraitGameViewport(width, height);
+        this.toggleButton = this.scene.add.container(width - (portrait ? 60 : width * 0.02 + 56), portrait ? 36 : height * 0.34);
         this.toggleButton.setDepth(1501);
 
-        const buttonShadow = this.scene.add.rectangle(4, 6, 100, 48, sceneTheme.colors.shadow, 0.22);
+        const buttonShadow = this.scene.add.rectangle(4, 6, portrait ? 92 : 100, 48, sceneTheme.colors.shadow, 0.22);
         const btnBg = this.scene.add.rectangle(
             0,
             0,
-            100,
+            portrait ? 92 : 100,
             48,
             blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.gold, 0.18),
             0.96,

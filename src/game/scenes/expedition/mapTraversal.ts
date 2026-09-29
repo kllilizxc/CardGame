@@ -35,6 +35,7 @@ export function isReachableNode(
     activeRun: RunSnapshot,
     nodeId: string,
 ): boolean {
+    if (activeRun.pendingEncounter) return false;
     const currentNode = getNodeById(map, activeRun.currentNodeId);
     const targetNode = getNodeById(map, nodeId);
 

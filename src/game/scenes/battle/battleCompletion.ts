@@ -4,6 +4,7 @@ import type {
     ExpeditionBattleOutcome,
     ExpeditionTargetConfig,
 } from '../../types/expedition';
+import { isRunPlayerHealth } from '../../state/RunHealth';
 
 function getBattleOutcome(payload: BattleLaunchPayload, victory: boolean): ExpeditionBattleOutcome {
     if (!victory) {
@@ -35,6 +36,7 @@ export function createExpeditionBattleCompleteEvent(
     payload: BattleLaunchPayload,
     victory: boolean,
     completedAt = new Date().toISOString(),
+    playerHealth?: number,
 ): ExpeditionBattleCompleteEvent {
     const targetConfig = payload.targetConfig ? cloneTargetConfig(payload.targetConfig) : undefined;
 
@@ -47,6 +49,7 @@ export function createExpeditionBattleCompleteEvent(
         encounterFile: payload.encounterFile,
         victory,
         outcome: getBattleOutcome(payload, victory),
+        ...(isRunPlayerHealth(playerHealth) ? { playerHealth } : {}),
         completedAt,
         ...(targetConfig ? { targetConfig } : {}),
     };
