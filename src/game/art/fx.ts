@@ -198,3 +198,92 @@ export function pxIrisIn(scene: Phaser.Scene, ms = 520): void {
         scene.events.off(Phaser.Scenes.Events.UPDATE, draw);
     });
 }
+
+/**
+ * Full-screen result splash. Victory: spinning gold rays + rising embers.
+ * Defeat: crimson wash + falling ash. Resolves on the next click via `onContinue`.
+ */
+export function showResultSplash(scene: Phaser.Scene, kind: 'victory' | 'defeat', onContinue: () => void): void {
+    const { width, height } = scene.scale;
+    const D = 10000;
+    const win = kind === 'victory';
+    const main = win ? C.gold : C.cinnabar;
+    const dark = win ? C.umber : C.blood;
+    const objs: Phaser.GameObjects.GameObject[] = [];
+
+    const wash = scene.add.rectangle(width / 2, height / 2, width, height, C.void, 0).setDepth(D).setInteractive();
+    objs.push(wash);
+    scene.tweens.add({ targets: wash, fillAlpha: 0.92, duration: 500, ease: 'Stepped', easeParams: [5] });
+
+    // rays / shards
+    const rays = scene.add.graphics().setDepth(D + 1).setPosition(width / 2, height / 2);
+    objs.push(rays);
+    const state = { a: 0, s: 0 };
+    const drawRays = () => {
+        rays.clear();
+        const n = 14;
+        for (let i = 0; i < n; i++) {
+            const ang = state.a + (i / n) * Math.PI * 2;
+            const len = Math.max(width, height) * state.s;
+            rays.fillStyle(i % 2 ? dark : (win ? C.ember : C.crimson), win ? 0.55 : 0.4);
+            rays.beginPath();
+            rays.moveTo(0, 0);
+            rays.lineTo(Math.cos(ang - 0.07) * len, Math.sin(ang - 0.07) * len);
+            rays.lineTo(Math.cos(ang + 0.07) * len, Math.sin(ang + 0.07) * len);
+            rays.closePath();
+            rays.fillPath();
+        }
+    };
+    scene.tweens.add({ targets: state, s: 1, duration: 500, ease: 'Cubic.easeOut', onUpdate: drawRays });
+    scene.tweens.add({ targets: state, a: Math.PI * 2, duration: 22000, repeat: -1, onUpdate: drawRays });
+
+    // banner plate
+    const plate = scene.add.rectangle(width / 2, height / 2, width, 220, C.ink, 1).setDepth(D + 2).setScale(1, 0);
+    const e1 = scene.add.rectangle(width / 2, height / 2 - 116, width, 8, main).setDepth(D + 3).setScale(1, 0);
+    const e2 = scene.add.rectangle(width / 2, height / 2 + 116, width, 8, main).setDepth(D + 3).setScale(1, 0);
+    objs.push(plate, e1, e2);
+    scene.tweens.add({ targets: [plate, e1, e2], scaleY: 1, duration: 260, delay: 200, ease: 'Back.easeOut' });
+
+    const title = scene.add.text(width / 2, height / 2 - 6, win ? '胜 利' : '败 北', {
+        fontFamily: FONT, fontSize: '144px', color: hex(main), stroke: hex(C.void), strokeThickness: 16,
+    }).setOrigin(0.5).setDepth(D + 4).setScale(0);
+    // extruded shadow
+    const shade = scene.add.text(width / 2 + 8, height / 2 + 2, win ? '胜 利' : '败 北', {
+        fontFamily: FONT, fontSize: '144px', color: hex(dark),
+    }).setOrigin(0.5).setDepth(D + 3.5).setScale(0);
+    objs.push(title, shade);
+    scene.tweens.add({ targets: [title, shade], scale: 1, duration: 320, delay: 380, ease: 'Back.easeOut', onComplete: () => {
+        pxBurst(scene, width / 2, height / 2, { colors: win ? [C.glow, C.gold, C.paper] : [C.cinnabar, C.crimson, C.mist], count: 30, speed: 420, size: 12, depth: D + 5 });
+        pxRing(scene, width / 2, height / 2, main, 420, D + 5);
+        pxShake(scene, win ? 8 : 18, 260);
+    } });
+
+    const hint = scene.add.text(width / 2, height / 2 + 190, '点击任意位置继续', {
+        fontFamily: FONT, fontSize: '24px', color: hex(C.paper), stroke: hex(C.void), strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(D + 4).setAlpha(0);
+    objs.push(hint);
+    scene.tweens.add({ targets: hint, alpha: 1, duration: 200, delay: 1000, onComplete: () => {
+        scene.tweens.add({ targets: hint, alpha: 0.25, duration: 500, yoyo: true, repeat: -1, ease: 'Stepped', easeParams: [2] });
+    } });
+
+    // ambient particles: embers up on victory, ash down on defeat
+    const amb = scene.time.addEvent({
+        delay: 90, loop: true,
+        callback: () => {
+            const x = Math.random() * width;
+            const s = Math.random() < 0.3 ? 8 : 4;
+            const p = scene.add.rectangle(snap(x), win ? height + 8 : -8, s, s, win ? [C.gold, C.ember, C.glow][Math.floor(Math.random() * 3)] : [C.mist, C.haze, C.cinnabar][Math.floor(Math.random() * 3)]).setDepth(D + 2);
+            scene.tweens.add({
+                targets: p, y: win ? -20 : height + 20, x: snap(x + (Math.random() - 0.5) * 200), alpha: { from: 1, to: 0.2 },
+                duration: 2500 + Math.random() * 2500, ease: 'Sine.easeInOut', onComplete: () => p.destroy(),
+            });
+        },
+    });
+
+    scene.input.once('pointerdown', () => {
+        amb.remove();
+        onContinue();
+    });
+    // scene teardown destroys these; keep refs alive for GC clarity
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { amb.remove(); objs.forEach((o) => o.destroy()); });
+}

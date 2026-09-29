@@ -22,6 +22,7 @@ type BattleSceneCardDragBridge = Phaser.Scene & {
 export class CardSprite extends BaseCardSprite {
     private cardData: UnitCard;
     private borderColor: number = C.mist;
+    private raceText?: GameObjects.Text;
     private starsText: GameObjects.Text;
     private realmText: GameObjects.Text;
     private attackText: GameObjects.Text;
@@ -75,14 +76,16 @@ export class CardSprite extends BaseCardSprite {
         }).setOrigin(0, 0.5);
         raceText.setAlpha(0.9);
         this.add(raceText);
+        this.raceText = raceText;
 
         // 描述（默认隐藏，只在预览时显示）
-        this.descriptionText = scene.add.text(0, 60, cardData.description, {
+        this.descriptionText = scene.add.text(0, -10, cardData.description, {
             fontSize: '12px',
             color: T.fog,
             backgroundColor: T.ink,
             padding: { x: 4, y: 3 },
-            wordWrap: { width: 160 }
+            lineSpacing: 2,
+            wordWrap: { width: 134 }
         }).setOrigin(0.5);
         this.descriptionText.setVisible(false); // 默认隐藏
         this.add(this.descriptionText);
@@ -209,6 +212,7 @@ export class CardSprite extends BaseCardSprite {
         // 只有在hover模式下才显示描述
         const shouldShowDescription = this.currentDisplayMode === 'hover';
         this.descriptionText.setVisible(shouldShowDescription);
+        this.raceText?.setVisible(!shouldShowDescription);
         
         // 功法列表始终显示（如果有的话）
         this.gongfaContainer.setVisible(true);

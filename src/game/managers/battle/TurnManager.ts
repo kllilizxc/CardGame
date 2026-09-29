@@ -1,3 +1,4 @@
+import { showResultSplash } from '../../art/fx';
 import type { Scene } from 'phaser';
 import type { BattleContext } from '../../context/BattleContext';
 import type { CardSprite } from '../../objects/CardSprite';
@@ -46,46 +47,12 @@ export class TurnManager {
 
     // 显示胜利画面
     public showVictory(onContinue: () => void): void {
-        const { width, height } = this.scene.scale;
-        const overlayDepth = 10000;
-
-        // 纯黑底遮罩，盖住所有 UI
-        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x0b0714, 1);
-        overlay.setDepth(overlayDepth).setInteractive();
-
-        this.scene.add.text(width / 2, height / 2, '胜利！', {
-            fontSize: '64px',
-            color: '#3fbf7a',
-            fontStyle: 'bold'
-        }).setOrigin(0.5).setDepth(overlayDepth + 1);
-
-        this.scene.add.text(width / 2, height / 2 + 80, '点击任意位置继续', {
-            fontSize: '20px',
-            color: '#f4ecd8'
-        }).setOrigin(0.5).setDepth(overlayDepth + 1);
-
-        this.scene.input.once('pointerdown', onContinue);
+        showResultSplash(this.scene, 'victory', onContinue);
     }
 
     // 显示失败画面
     public showDefeat(onContinue: () => void): void {
-        const { width, height } = this.scene.scale;
-
-        // 半透明遮罩
-        this.scene.add.rectangle(width / 2, height / 2, width, height, 0x0b0714, 0.7).setDepth(1999);
-
-        this.scene.add.text(width / 2, height / 2, '失败！', {
-            fontSize: '64px',
-            color: '#ee4a3a',
-            fontStyle: 'bold'
-        }).setOrigin(0.5).setDepth(2000);
-
-        this.scene.add.text(width / 2, height / 2 + 80, '点击任意位置继续', {
-            fontSize: '20px',
-            color: '#f4ecd8'
-        }).setOrigin(0.5).setDepth(2000);
-
-        this.scene.input.once('pointerdown', onContinue);
+        showResultSplash(this.scene, 'defeat', onContinue);
     }
 
     /**

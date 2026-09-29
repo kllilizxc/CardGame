@@ -19,16 +19,16 @@ interface NodeTypeStyle {
 const NODE_TYPE_STYLES: Record<ExpeditionNodeType, NodeTypeStyle> = {
     entrance: { glyph: '入', label: 'entrance', fillColor: 0xffc040 },
     battle: { glyph: '战', label: 'battle', fillColor: 0xee4a3a },
-    event: { glyph: '?', label: 'event', fillColor: 0xa855f7 },
+    event: { glyph: '?', label: 'event', fillColor: 0x9a4cd0 },
     shop: { glyph: '商', label: 'shop', fillColor: 0xffc040 },
     extract: { glyph: '撤', label: 'extract', fillColor: 0x3fbf7a },
-    boss: { glyph: '王', label: 'boss', fillColor: 0xdc2626 },
+    boss: { glyph: '王', label: 'boss', fillColor: 0xb8283a },
 };
 
 function getStrokeColor(node: VisibleExpeditionMapNode): number {
     switch (node.visibility) {
         case 'cleared':
-            return 0x93c5fd;
+            return 0xa0e8f8;
         case 'reachable':
             return 0xffc040;
         case 'silhouette':
@@ -57,7 +57,8 @@ export class MapNodeView extends GameObjects.Container {
         const fillAlpha = this.node.visibility === 'cleared' ? 0.92 : this.node.visibility === 'reachable' ? 1 : 0.34;
         const strokeAlpha = this.node.visibility === 'reachable' ? 1 : this.node.visibility === 'cleared' ? 0.9 : 0.58;
 
-        const nodeCircle = this.scene.add.circle(0, 0, 34, fillColor, fillAlpha);
+        const nodeCircle = this.scene.add.rectangle(0, 0, 68, 68, fillColor, fillAlpha);
+        (nodeCircle as unknown as { deco: boolean }).deco = true;
         nodeCircle.setStrokeStyle(this.node.visibility === 'reachable' ? 4 : 3, getStrokeColor(this.node), strokeAlpha);
 
         const glyph = this.scene.add.text(0, -1, style.glyph, {
@@ -77,12 +78,12 @@ export class MapNodeView extends GameObjects.Container {
         const nodeLabel = this.scene.add.text(0, 69, this.node.label, {
             fontFamily: 'Arial',
             fontSize: '17px',
-            color: isSilhouette ? '#64748b' : '#f4ecd8',
+            color: isSilhouette ? '#6c5f9c' : '#f4ecd8',
         }).setOrigin(0.5);
 
         if (this.node.selectable) {
             nodeCircle.setInteractive({ useHandCursor: true });
-            nodeCircle.on('pointerover', () => nodeCircle.setScale(1.08));
+            nodeCircle.on('pointerover', () => { nodeCircle.setScale(1.1); this.scene.tweens.add({ targets: glyph, y: -5, duration: 90, yoyo: true }); });
             nodeCircle.on('pointerout', () => nodeCircle.setScale(1));
             nodeCircle.on('pointerdown', () => this.onSelect(this.node.id));
         }

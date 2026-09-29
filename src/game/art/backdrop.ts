@@ -418,7 +418,7 @@ export function createBackdrop(scene: Phaser.Scene, theme: BackdropTheme, varian
         embers([C.gold, C.ember, C.glow], 380);
     } else if (theme === 'hall') {
         place(paintHall(scene)[0], D);
-        for (let i = 0; i < 5; i++) lantern(240 + i * 360, 0, 90 + (i % 2) * 40);
+        [150, 470, 1450, 1770].forEach((lx, i) => lantern(lx, 0, 90 + (i % 2) * 40));
         embers([C.gold, C.ember, C.glow], 520);
     } else if (theme === 'cave') {
         const [bg, top, bot] = paintCave(scene);

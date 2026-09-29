@@ -238,8 +238,8 @@ export class HubScene extends Scene {
 
         container.add(this.add.text(detailLeft, panelTop + 300, this.town.description, {
             fontFamily: 'Arial',
-            fontSize: '18px',
-            color: '#f8a8c8',
+            fontSize: '16px',
+            color: '#d6c39a',
             wordWrap: { width: detailWidth },
         }));
 
