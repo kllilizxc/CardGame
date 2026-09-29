@@ -1,6 +1,11 @@
 import type { Scene } from 'phaser';
 import type { BattleLayoutConfig } from '../../config/LayoutConfig';
 import type { BattleState } from '../../state/BattleState';
+import { C, T, hex } from '../../art/palette';
+import { pixelButton, pixelPanel, PANEL_BLOOD, PANEL_INK, type PanelStyle } from '../../art/ui';
+
+const PANEL_PAPER_BTN: PanelStyle = { fill: C.bark, edge: C.void, border: C.gold, hi: C.glow, lo: C.umber, stud: C.paper };
+const PANEL_AZURE_BTN: PanelStyle = { fill: C.deep, edge: C.void, border: C.sky, hi: C.ice, lo: C.night, stud: C.paper };
 
 /**
  * 战斗 UI 管理器
@@ -14,9 +19,10 @@ export class BattleUIManager {
     // UI 元素引用
     private deckButton?: Phaser.GameObjects.Rectangle;
     private discardPileButton?: Phaser.GameObjects.Rectangle;
-    private drawButton?: Phaser.GameObjects.Rectangle;
-    private endTurnButton?: Phaser.GameObjects.Rectangle;
-    private speedButton?: Phaser.GameObjects.Rectangle;
+    private drawButton?: Phaser.GameObjects.Container;
+    private endTurnButton?: Phaser.GameObjects.Container;
+    private speedButton?: Phaser.GameObjects.Container;
+    private decor: Phaser.GameObjects.GameObject[] = [];
     private speedText?: Phaser.GameObjects.Text;
     private statsText?: Phaser.GameObjects.Text;
     private turnText?: Phaser.GameObjects.Text;
@@ -73,93 +79,62 @@ export class BattleUIManager {
      */
     private createTitle(): void {
         const { width, height } = this.scene.scale;
-        const titleFontSize = Math.floor(height * 0.03) + 'px';
-        const titleText = this.scene.add.text(width / 2, height * 0.04, '修仙卡牌 - 战斗场景', {
-            fontSize: titleFontSize,
-            color: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        titleText.setDepth(this.layout.depth.uiText);
+        const plate = pixelPanel(this.scene, width / 2, height * 0.04, 520, 56, PANEL_INK);
+        plate.setDepth(this.layout.depth.uiText - 1);
+        void height;
+        this.decor.push(plate);
+    }
+
+    /** Dashed pixel zone frame with bracketed corners and a name plate. */
+    private drawZone(zone: { x: number; y: number; width: number; height: number }, color: number, label: string, labelDy: number, alpha = 0.16): void {
+        const x0 = Math.round(zone.x - zone.width / 2);
+        const y0 = Math.round(zone.y - zone.height / 2);
+        const w = Math.round(zone.width);
+        const h = Math.round(zone.height);
+        const g = this.scene.add.graphics().setDepth(this.layout.depth.fieldZoneVisuals);
+        g.fillStyle(C.void, alpha);
+        g.fillRect(x0, y0, w, h);
+        g.fillStyle(color, 0.55);
+        for (let x = 0; x < w; x += 16) {
+            g.fillRect(x0 + x, y0, 8, 4);
+            g.fillRect(x0 + x, y0 + h - 4, 8, 4);
+        }
+        for (let y = 0; y < h; y += 16) {
+            g.fillRect(x0, y0 + y, 4, 8);
+            g.fillRect(x0 + w - 4, y0 + y, 4, 8);
+        }
+        // solid corner brackets
+        g.fillStyle(color, 1);
+        const L = 28;
+        for (const [cx, cy, sx, sy] of [[x0, y0, 1, 1], [x0 + w, y0, -1, 1], [x0, y0 + h, 1, -1], [x0 + w, y0 + h, -1, -1]]) {
+            g.fillRect(sx > 0 ? cx : cx - L, sy > 0 ? cy : cy - 8, L, 8);
+            g.fillRect(sx > 0 ? cx : cx - 8, sy > 0 ? cy : cy - L, 8, L);
+        }
+        const tw = Math.max(120, label.length * 24 + 40);
+        const plate = pixelPanel(this.scene, zone.x, y0 + labelDy, tw, 36, { fill: C.void, edge: C.void, border: color, hi: color, lo: C.ink, stud: null, shadow: false });
+        plate.setDepth(this.layout.depth.fieldZoneVisuals);
+        const t = this.scene.add.text(zone.x, y0 + labelDy, label, {
+            fontSize: '12px',
+            color: hex(color),
+        }).setOrigin(0.5).setDepth(this.layout.depth.fieldZoneVisuals);
+        this.decor.push(g, plate, t);
     }
 
     /**
      * 创建场地区域的视觉元素（边框和标签）
      */
     private createFieldZoneVisuals(): void {
-        const { height } = this.scene.scale;
-        const fontSize = Math.floor(height * 0.018) + 'px';
+        this.drawZone(this.layout.enemyFieldZone, C.cinnabar, '敌方场地', -2);
+        this.drawZone(this.layout.fieldCardZone, C.gold, '场地', -2);
+        this.drawZone(this.layout.playerFieldZone, C.jade, '我方场地（拖拽卡牌到这里）', -2);
+        this.drawZone(this.layout.handZone, C.mist, '手牌', -2, 0.28);
+    }
 
-        // 敌方场地边框和标签
-        const enemyConfig = this.layout.enemyFieldZone;
-        const enemyFieldGraphics = this.scene.add.graphics();
-        enemyFieldGraphics.lineStyle(2, 0xe74c3c, 0.7);
-        enemyFieldGraphics.strokeRect(
-            enemyConfig.x - enemyConfig.width / 2,
-            enemyConfig.y - enemyConfig.height / 2,
-            enemyConfig.width,
-            enemyConfig.height
-        );
-        const enemyLabel = this.scene.add.text(enemyConfig.x, enemyConfig.y - enemyConfig.height / 2 - 20, '敌方场地', {
-            fontSize: fontSize,
-            color: '#e74c3c',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        enemyFieldGraphics.setDepth(this.layout.depth.fieldZoneVisuals);
-        enemyLabel.setDepth(this.layout.depth.fieldZoneVisuals);
-
-        // 场地卡区域边框和标签
-        const fieldConfig = this.layout.fieldCardZone;
-        const fieldZoneGraphics = this.scene.add.graphics();
-        fieldZoneGraphics.lineStyle(2, 0xf39c12, 0.7);
-        fieldZoneGraphics.strokeRect(
-            fieldConfig.x - fieldConfig.width / 2,
-            fieldConfig.y - fieldConfig.height / 2,
-            fieldConfig.width,
-            fieldConfig.height
-        );
-        const fieldLabel = this.scene.add.text(fieldConfig.x, fieldConfig.y - fieldConfig.height / 2 - 15, '场地', {
-            fontSize: fontSize,
-            color: '#f39c12',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        fieldZoneGraphics.setDepth(this.layout.depth.fieldZoneVisuals);
-        fieldLabel.setDepth(this.layout.depth.fieldZoneVisuals);
-
-        // 我方场地边框和标签
-        const playerConfig = this.layout.playerFieldZone;
-        const playerFieldGraphics = this.scene.add.graphics();
-        playerFieldGraphics.lineStyle(2, 0x2ecc71, 0.7);
-        playerFieldGraphics.strokeRect(
-            playerConfig.x - playerConfig.width / 2,
-            playerConfig.y - playerConfig.height / 2,
-            playerConfig.width,
-            playerConfig.height
-        );
-        const playerLabel = this.scene.add.text(playerConfig.x, playerConfig.y - playerConfig.height / 2 - 20, '我方场地（拖拽卡牌到这里）', {
-            fontSize: fontSize,
-            color: '#2ecc71',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        playerFieldGraphics.setDepth(this.layout.depth.fieldZoneVisuals);
-        playerLabel.setDepth(this.layout.depth.fieldZoneVisuals);
-
-        // 手牌区域边框和标签
-        const handConfig = this.layout.handZone;
-        const handGraphics = this.scene.add.graphics();
-        handGraphics.lineStyle(2, 0xf39c12, 0.5);
-        handGraphics.strokeRect(
-            handConfig.x - handConfig.width / 2,
-            handConfig.y - handConfig.height / 2,
-            handConfig.width,
-            handConfig.height
-        );
-        const handLabel = this.scene.add.text(handConfig.x, handConfig.y - handConfig.height / 2 - 20, '手牌', {
-            fontSize: fontSize,
-            color: '#f39c12',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        handGraphics.setDepth(this.layout.depth.fieldZoneVisuals);
-        handLabel.setDepth(this.layout.depth.fieldZoneVisuals);
+    private makeButton(x: number, y: number, w: number, h: number, label: string, style: PanelStyle, onClick: () => void): Phaser.GameObjects.Container {
+        return pixelButton(this.scene, {
+            x, y, width: w, height: h, label, labelSize: 24, style,
+            depth: this.layout.depth.uiButtons, onClick,
+        });
     }
 
     /**
@@ -167,82 +142,23 @@ export class BattleUIManager {
      */
     private createActionButtons(): void {
         const { width, height } = this.scene.scale;
-        const buttonWidth = width * 0.075;
-        const buttonHeight = height * 0.045;
+        const buttonWidth = Math.max(150, width * 0.08);
+        const buttonHeight = Math.max(56, height * 0.055);
         const buttonX = width * 0.93;
-        const fontSize = Math.floor(height * 0.016) + 'px';
 
-        // 抽卡按钮
-        this.drawButton = this.scene.add.rectangle(
-            buttonX,
-            height * 0.03,
-            buttonWidth,
-            buttonHeight,
-            0xf39c12
-        ).setInteractive({ useHandCursor: true });
-        this.drawButton.setDepth(this.layout.depth.uiButtons);
-
-        const drawText = this.scene.add.text(buttonX, height * 0.03, '抽一张卡', {
-            fontSize: fontSize,
-            color: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        drawText.setDepth(this.layout.depth.uiText);
-
-        this.drawButton.on('pointerover', () => this.drawButton!.setFillStyle(0xffd700));
-        this.drawButton.on('pointerout', () => this.drawButton!.setFillStyle(0xf39c12));
-        this.drawButton.on('pointerdown', () => {
+        this.drawButton = this.makeButton(buttonX, height * 0.03 + 12, buttonWidth, buttonHeight, '抽一张卡', PANEL_PAPER_BTN, () => {
             if (this.onDrawCard) this.onDrawCard();
         });
-
-        // 结束回合按钮
-        this.endTurnButton = this.scene.add.rectangle(
-            buttonX,
-            height * 0.09,
-            buttonWidth,
-            buttonHeight,
-            0xe74c3c
-        ).setInteractive({ useHandCursor: true });
-        this.endTurnButton.setDepth(this.layout.depth.uiButtons);
-
-        const endTurnText = this.scene.add.text(buttonX, height * 0.09, '结束回合', {
-            fontSize: fontSize,
-            color: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        endTurnText.setDepth(this.layout.depth.uiText);
-
-        this.endTurnButton.on('pointerover', () => this.endTurnButton!.setFillStyle(0xff6b6b));
-        this.endTurnButton.on('pointerout', () => this.endTurnButton!.setFillStyle(0xe74c3c));
-        this.endTurnButton.on('pointerdown', () => {
+        this.endTurnButton = this.makeButton(buttonX, height * 0.09 + 12, buttonWidth, buttonHeight, '结束回合', PANEL_BLOOD, () => {
             if (this.onEndTurn) this.onEndTurn();
         });
-
-        // 速度切换按钮
-        this.speedButton = this.scene.add.rectangle(
-            buttonX,
-            height * 0.15,
-            buttonWidth,
-            buttonHeight,
-            0x3498db
-        ).setInteractive({ useHandCursor: true });
-        this.speedButton.setDepth(this.layout.depth.uiButtons);
-
-        this.speedText = this.scene.add.text(buttonX, height * 0.15, '速度 x1', {
-            fontSize: fontSize,
-            color: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        this.speedText.setDepth(this.layout.depth.uiText);
-
-        this.speedButton.on('pointerover', () => this.speedButton!.setFillStyle(0x5dade2));
-        this.speedButton.on('pointerout', () => this.speedButton!.setFillStyle(0x3498db));
-        this.speedButton.on('pointerdown', () => {
+        this.speedButton = this.makeButton(buttonX, height * 0.15 + 12, buttonWidth, buttonHeight, '速度 x1', PANEL_AZURE_BTN, () => {
             if (this.onToggleSpeed) {
                 this.onToggleSpeed();
                 this.updateSpeedText();
             }
         });
+        this.speedText = this.speedButton.getAt(1) as Phaser.GameObjects.Text;
     }
 
     /**
@@ -251,139 +167,79 @@ export class BattleUIManager {
     private createStatsDisplay(): void {
         const { width, height } = this.scene.scale;
         const buttonX = width * 0.93;
-        const fontSize = Math.floor(height * 0.016) + 'px';
-        const titleFontSize = Math.floor(height * 0.02) + 'px';
 
         // 统计信息
         this.statsText = this.scene.add.text(buttonX, height * 0.64, '', {
-            fontSize: fontSize,
-            color: '#ffffff'
+            fontSize: '12px',
+            color: T.fog,
+            lineSpacing: 6,
+            align: 'center',
         }).setOrigin(0.5);
         this.statsText.setDepth(this.layout.depth.uiText);
 
         // 回合提示
-        this.turnText = this.scene.add.text(width / 2, height * 0.45, '', {
-            fontSize: titleFontSize,
-            color: '#f39c12',
-            fontStyle: 'bold'
+        this.turnText = this.scene.add.text(width / 2, height * 0.04, '', {
+            fontSize: '24px',
+            color: T.gold,
+            stroke: T.void,
+            strokeThickness: 6,
         }).setOrigin(0.5);
         this.turnText.setDepth(this.layout.depth.uiText);
+    }
+
+    /** A pile button: three fanned card backs with a count medallion. */
+    private createPile(cfg: { x: number; y: number; width: number; height: number }, title: string, tint: number, countColor: number, onClick: () => void): Phaser.GameObjects.Rectangle {
+        const depth = this.layout.depth.uiButtons;
+        const hit = this.scene.add.rectangle(cfg.x, cfg.y, cfg.width, cfg.height, C.void, 0.001).setInteractive({ useHandCursor: true });
+        hit.setDepth(depth + 2);
+        const g = this.scene.add.graphics().setDepth(depth);
+        const cw = cfg.width * 0.62;
+        const ch = cfg.height * 0.72;
+        const back = (ox: number, oy: number, hot: boolean) => {
+            g.fillStyle(C.void, 1);
+            g.fillRect(cfg.x - cw / 2 + ox - 4, cfg.y - ch / 2 + oy - 4, cw + 8, ch + 8);
+            g.fillStyle(hot ? C.gold : tint, 1);
+            g.fillRect(cfg.x - cw / 2 + ox, cfg.y - ch / 2 + oy, cw, ch);
+            g.fillStyle(C.ink, 1);
+            g.fillRect(cfg.x - cw / 2 + ox + 8, cfg.y - ch / 2 + oy + 8, cw - 16, ch - 16);
+            g.fillStyle(hot ? C.gold : tint, 1);
+            g.fillRect(cfg.x + ox - 8, cfg.y + oy - 8, 16, 16);
+        };
+        const draw = (hot: boolean) => {
+            g.clear();
+            back(-8, 8, hot); back(4, 4, hot); back(0, 0, hot);
+        };
+        draw(false);
+        const by = cfg.y + cfg.height / 2 + 6;
+        const badge = pixelPanel(this.scene, cfg.x, by, 148, 40, { fill: C.void, edge: C.void, border: countColor, hi: countColor, lo: C.ink, stud: null, shadow: false });
+        badge.setDepth(depth + 3);
+        const titleText = this.scene.add.text(cfg.x - 30, by, title, {
+            fontSize: '12px', color: T.paper,
+        }).setOrigin(1, 0.5).setDepth(depth + 4);
+        const countText = this.scene.add.text(cfg.x + 12, by, '0', {
+            fontSize: '24px', color: hex(countColor),
+        }).setOrigin(0, 0.5).setDepth(depth + 4);
+        hit.setData('titleText', titleText);
+        hit.setData('countText', countText);
+        hit.setData('parts', [g, badge]);
+        hit.on('pointerover', () => { draw(true); titleText.setColor(T.gold); });
+        hit.on('pointerout', () => { draw(false); titleText.setColor(T.paper); });
+        hit.on('pointerdown', onClick);
+        return hit;
     }
 
     /**
      * 创建卡组按钮
      */
     private createDeckButton(): void {
-        const deckConfig = this.layout.deckButton;
-        const buttonX = deckConfig.x;
-        const buttonY = deckConfig.y;
-        const buttonWidth = deckConfig.width;
-        const buttonHeight = deckConfig.height;
-        const fontSize = '14px';
-
-        // 创建按钮背景
-        this.deckButton = this.scene.add.rectangle(
-            buttonX,
-            buttonY,
-            buttonWidth,
-            buttonHeight,
-            0x2c3e50,
-            0.8
-        ).setInteractive({ useHandCursor: true });
-        this.deckButton.setDepth(this.layout.depth.uiButtons);
-
-        // 创建标题文本
-        const titleText = this.scene.add.text(buttonX, buttonY - 15, '牌库', {
-            fontSize: fontSize,
-            color: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        titleText.setDepth(this.layout.depth.uiText);
-
-        // 创建数量文本
-        const countText = this.scene.add.text(buttonX, buttonY + 10, '0', {
-            fontSize: (parseInt(fontSize) * 1.5) + 'px',
-            color: '#3498db',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        countText.setDepth(this.layout.depth.uiText);
-
-        // 保存文本引用到按钮的 data 中
-        this.deckButton.setData('titleText', titleText);
-        this.deckButton.setData('countText', countText);
-
-        // 添加交互效果
-        this.deckButton.on('pointerover', () => {
-            this.deckButton!.setFillStyle(0x34495e, 0.9);
-            titleText.setColor('#3498db');
-        });
-
-        this.deckButton.on('pointerout', () => {
-            this.deckButton!.setFillStyle(0x2c3e50, 0.8);
-            titleText.setColor('#ffffff');
-        });
-
-        this.deckButton.on('pointerdown', () => {
-            if (this.onShowDeck) this.onShowDeck();
-        });
+        this.deckButton = this.createPile(this.layout.deckButton, '牌库', C.azure, C.sky, () => { if (this.onShowDeck) this.onShowDeck(); });
     }
 
     /**
      * 创建弃牌堆按钮
      */
     private createDiscardPileButton(): void {
-        const discardConfig = this.layout.discardPileButton;
-        const buttonX = discardConfig.x;
-        const buttonY = discardConfig.y;
-        const buttonWidth = discardConfig.width;
-        const buttonHeight = discardConfig.height;
-        const fontSize = '14px';
-
-        // 创建按钮背景
-        this.discardPileButton = this.scene.add.rectangle(
-            buttonX,
-            buttonY,
-            buttonWidth,
-            buttonHeight,
-            0x8e44ad,
-            0.8
-        ).setInteractive({ useHandCursor: true });
-        this.discardPileButton.setDepth(this.layout.depth.uiButtons);
-
-        // 创建标题文本
-        const titleText = this.scene.add.text(buttonX, buttonY - 15, '弃牌堆', {
-            fontSize: fontSize,
-            color: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        titleText.setDepth(this.layout.depth.uiText);
-
-        // 创建数量文本
-        const countText = this.scene.add.text(buttonX, buttonY + 10, '0', {
-            fontSize: (parseInt(fontSize) * 1.5) + 'px',
-            color: '#e74c3c',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        countText.setDepth(this.layout.depth.uiText);
-
-        // 保存文本引用到按钮的 data 中
-        this.discardPileButton.setData('titleText', titleText);
-        this.discardPileButton.setData('countText', countText);
-
-        // 添加交互效果
-        this.discardPileButton.on('pointerover', () => {
-            this.discardPileButton!.setFillStyle(0x9b59b6, 0.9);
-            titleText.setColor('#e74c3c');
-        });
-
-        this.discardPileButton.on('pointerout', () => {
-            this.discardPileButton!.setFillStyle(0x8e44ad, 0.8);
-            titleText.setColor('#ffffff');
-        });
-
-        this.discardPileButton.on('pointerdown', () => {
-            if (this.onShowDiscardPile) this.onShowDiscardPile();
-        });
+        this.discardPileButton = this.createPile(this.layout.discardPileButton, '弃牌堆', C.orchid, C.petal, () => { if (this.onShowDiscardPile) this.onShowDiscardPile(); });
     }
 
     /**
@@ -453,12 +309,18 @@ export class BattleUIManager {
      * 销毁所有 UI 元素
      */
     public destroy(): void {
-        this.deckButton?.destroy();
-        this.discardPileButton?.destroy();
+        for (const pile of [this.deckButton, this.discardPileButton]) {
+            if (!pile) continue;
+            (pile.getData('parts') as Phaser.GameObjects.GameObject[] | undefined)?.forEach((o) => o.destroy());
+            (pile.getData('titleText') as Phaser.GameObjects.Text | undefined)?.destroy();
+            (pile.getData('countText') as Phaser.GameObjects.Text | undefined)?.destroy();
+            pile.destroy();
+        }
+        this.decor.forEach((o) => o.destroy());
+        this.decor = [];
         this.drawButton?.destroy();
         this.endTurnButton?.destroy();
         this.speedButton?.destroy();
-        this.speedText?.destroy();
         this.statsText?.destroy();
         this.turnText?.destroy();
     }

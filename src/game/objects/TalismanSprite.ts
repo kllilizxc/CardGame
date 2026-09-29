@@ -1,3 +1,4 @@
+import { C, T } from '../art/palette';
 import { GameObjects } from 'phaser';
 import type { TalismanCard } from '@data/types/cards/talisman';
 import { BaseCardSprite } from './BaseCardSprite';
@@ -13,7 +14,7 @@ export class TalismanSprite extends BaseCardSprite {
         this.cardData = cardData;
 
         // 创建背景（符箓卡用紫色边框）
-        this.createBackground(0x2f2f3a, 0x9b59b6);
+        this.createBackground(C.dusk, C.orchid);
 
         // 创建名称
         this.createNameText(cardData.name);
@@ -21,25 +22,19 @@ export class TalismanSprite extends BaseCardSprite {
         // 类型标签
         const typeLabel = cardData.isInstant ? '符箓·即时' : `符箓·${cardData.duration}回合`;
         this.typeText = scene.add.text(0, -85, typeLabel, {
-            fontSize: '14px',
-            color: '#9b59b6'
+            fontSize: '12px',
+            color: T.petal
         }).setOrigin(0.5);
         this.add(this.typeText);
 
         // 图标占位符
-        const iconBox = scene.add.rectangle(0, -20, 120, 120, 0x3f3a4a);
-        this.add(iconBox);
-        const iconText = scene.add.text(0, -20, '✨', {
-            fontSize: '48px',
-            color: '#b19cd9'
-        }).setOrigin(0.5);
-        this.add(iconText);
+        this.addIconPortrait('talisman');
 
         // 效果描述
         const effectDesc = this.getEffectDescription();
         this.effectText = scene.add.text(0, 55, effectDesc, {
-            fontSize: '14px',
-            color: '#e74c3c',
+            fontSize: '12px',
+            color: T.cinnabar,
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.add(this.effectText);
@@ -103,7 +98,7 @@ export class TalismanSprite extends BaseCardSprite {
     }
 
     protected getDefaultStrokeColor(): number {
-        return 0x9b59b6; // 紫色边框
+        return C.orchid; // 紫色边框
     }
 
     public getCardData(): TalismanCard {

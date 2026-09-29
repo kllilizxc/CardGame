@@ -1,4 +1,6 @@
 import { Scene } from 'phaser';
+import { C } from '../../art/palette';
+import { hitStop, pxBurst, pxDissolve, pxFlash, pxPop, pxRing, pxShake, pxSlash } from '../../art/fx';
 import { CardSprite } from '../../objects/CardSprite';
 import type { ArtifactSprite } from '../../objects/ArtifactSprite';
 import type { TalismanSprite } from '../../objects/TalismanSprite';
@@ -387,104 +389,67 @@ export class BattleAnimationManager {
     // 受击动画
     public playHitAnimation(target: CardSprite): void {
         const originalX = target.x;
-        
-        // 震动效果
+        const scale = target.scale || 1;
+
+        // 像素式震动：整像素左右抖动
         this.addTweens({
             targets: target,
-            x: originalX + 5,
-            duration: 50,
+            x: originalX + 8,
+            duration: 40,
             yoyo: true,
-            repeat: 2,
-            ease: 'Power2',
+            repeat: 3,
+            ease: 'Stepped',
+            easeParams: [1],
             onComplete: () => {
                 target.x = originalX;
             }
         });
-        
-        // 红色闪烁效果
-        this.addTweens({
-            targets: target,
-            alpha: 0.6,
-            duration: 100,
-            yoyo: true,
-            repeat: 1
-        });
-        
-        // 创建红色闪光特效
-        const hitFlash = this.scene.add.circle(target.x, target.y, 50, 0xff0000, 0.5);
-        hitFlash.setDepth(target.depth + 1);
-        this.addTweens({
-            targets: hitFlash,
-            alpha: 0,
-            scale: 1.5,
-            duration: 300,
-            ease: 'Power2',
-            onComplete: () => {
-                hitFlash.destroy();
-            }
-        });
+
+        // 白闪：整张卡牌罩一层纸白
+        const flash = this.scene.add.rectangle(target.x, target.y, 180 * scale, 260 * scale, C.paper, 0.85);
+        flash.setDepth(target.depth + 1);
+        this.scene.tweens.add({ targets: flash, alpha: 0, duration: 200, ease: 'Stepped', easeParams: [3], onComplete: () => flash.destroy() });
+
+        // 斩击线 + 血色像素飞溅 + 冲击环
+        pxSlash(this.scene, target.x, target.y, C.paper, -0.6, 200 * scale + 60);
+        pxBurst(this.scene, target.x, target.y, { colors: [C.cinnabar, C.crimson, C.ember, C.paper], count: 16, speed: 240, size: 10 });
+        pxRing(this.scene, target.x, target.y, C.cinnabar, 110 * scale + 20);
+        pxShake(this.scene, 5, 160);
+        hitStop(this.scene, 70);
     }
 
     // 治疗动画
     public playHealAnimation(target: CardSprite): void {
-        // 绿色闪烁效果
-        this.addTweens({
-            targets: target,
-            alpha: { from: 1, to: 0.7 },
-            duration: 100,
-            yoyo: true,
-            repeat: 2
-        });
-        
-        // 创建绿色治疗光圈特效
-        const healGlow = this.scene.add.circle(target.x, target.y, 40, 0x2ecc71, 0.6);
-        healGlow.setDepth(target.depth + 1);
-        this.addTweens({
-            targets: healGlow,
-            alpha: 0,
-            scale: 1.8,
-            duration: 400,
-            ease: 'Power2',
-            onComplete: () => {
-                healGlow.destroy();
-            }
-        });
-        
-        // 治疗粒子效果（向上飘散）
+        const scale = target.scale || 1;
+        pxRing(this.scene, target.x, target.y + 20, C.lime, 100 * scale + 20);
         for (let i = 0; i < 3; i++) {
-            this.scene.time.delayedCall(i * 100, () => {
-                const particle = this.scene.add.circle(
-                    target.x + (Math.random() - 0.5) * 60,
-                    target.y + 30,
-                    3,
-                    0x2ecc71,
-                    0.8
-                );
-                particle.setDepth(target.depth + 2);
-                this.addTweens({
-                    targets: particle,
-                    y: particle.y - 50,
-                    alpha: 0,
-                    duration: 600,
-                    ease: 'Power1',
-                    onComplete: () => {
-                        particle.destroy();
-                    }
+            this.scene.time.delayedCall(i * 110, () => {
+                pxBurst(this.scene, target.x + (Math.random() - 0.5) * 100 * scale, target.y + 40 * scale, {
+                    colors: [C.lime, C.jade, C.glow], count: 6, speed: 90, size: 8, gravity: -160, life: 700, spread: 0.6, angle: -Math.PI / 2,
+                    depth: target.depth + 2,
                 });
             });
         }
+        // 绿色十字闪烁
+        const cross = this.scene.add.graphics().setDepth(target.depth + 2).setPosition(target.x, target.y);
+        cross.fillStyle(C.lime, 1);
+        cross.fillRect(-8, -28, 16, 56); cross.fillRect(-28, -8, 56, 16);
+        this.scene.tweens.add({ targets: cross, alpha: 0, y: target.y - 60, duration: 600, ease: 'Stepped', easeParams: [6], onComplete: () => cross.destroy() });
     }
 
     // 死亡动画
     public playDeathAnimation(target: CardSprite): void {
         const baseScale = target.scale;
+        const scale = baseScale || 1;
+        pxDissolve(this.scene, target.x, target.y, 180 * scale, 260 * scale, [C.paper, C.mist, C.dusk, C.cinnabar, C.void], target.depth + 1);
+        pxFlash(this.scene, C.paper, 0.2, 120);
         this.addTweens({
             targets: target,
             alpha: 0,
-            scale: baseScale * 0.8,
-            angle: 15,
-            duration: 300,
-            ease: 'Power2.easeIn'
+            scale: baseScale * 0.9,
+            duration: 320,
+            ease: 'Stepped',
+            easeParams: [5]
         });
     }
 
@@ -492,38 +457,24 @@ export class BattleAnimationManager {
     public playPlayerHitEffect(damage: number): void {
         const { width, height } = this.scene.scale;
 
-        // 屏幕震动
-        this.scene.cameras.main.shake(300, 0.02);
+        pxShake(this.scene, 16, 320);
+        pxFlash(this.scene, C.cinnabar, 0.45, 260);
+        hitStop(this.scene, 90);
 
-        // 红色闪光效果
-        const flash = this.scene.add.rectangle(width / 2, height / 2, width, height, 0xff0000, 0.3);
-        flash.setDepth(2400);
-        
-        this.addTweens({
-            targets: flash,
-            alpha: 0,
-            duration: 300,
-            onComplete: () => flash.destroy()
-        });
+        // 屏幕边缘血色像素框
+        const vignette = this.scene.add.graphics().setDepth(2400).setScrollFactor(0);
+        vignette.fillStyle(C.crimson, 0.9);
+        const t = 24;
+        for (let x = 0; x < width; x += 32) {
+            vignette.fillRect(x, 0, 16, t); vignette.fillRect(x + 16, height - t, 16, t);
+        }
+        for (let y = 0; y < height; y += 32) {
+            vignette.fillRect(0, y, t, 16); vignette.fillRect(width - t, y + 16, t, 16);
+        }
+        this.scene.tweens.add({ targets: vignette, alpha: 0, duration: 700, onComplete: () => vignette.destroy() });
 
         // 伤害数字
-        const damageText = this.scene.add.text(width / 2, height * 0.5, `-${damage}`, {
-            fontSize: Math.floor(height * 0.06) + 'px',
-            color: '#ff0000',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 6
-        }).setOrigin(0.5);
-        damageText.setDepth(2401);
-
-        this.addTweens({
-            targets: damageText,
-            y: height * 0.4,
-            alpha: 0,
-            duration: 800,
-            ease: 'Power2',
-            onComplete: () => damageText.destroy()
-        });
+        pxPop(this.scene, width / 2, height * 0.5, `-${damage}`, C.cinnabar, 96, 2401, 350);
     }
 
     /**
@@ -687,7 +638,7 @@ export class BattleAnimationManager {
     }
 
     private shakeCamera(intensity: number = 1): void {
-        this.scene.cameras.main.shake(400 * intensity, 0.01 * intensity, true);
+        pxShake(this.scene, 12 * intensity, 400 * intensity);
     }
 
     /**
@@ -815,78 +766,29 @@ export class BattleAnimationManager {
     /**
      * 显示伤害特效
      */
-    public showDamageEffect(target: CardSprite, color: number = 0xe74c3c): void {
-        // 闪烁效果
+    public showDamageEffect(target: CardSprite, color: number = C.cinnabar): void {
         this.addTweens({
             targets: target,
-            alpha: 0.3,
+            alpha: 0.4,
             duration: 100,
             yoyo: true,
-            repeat: 2
+            repeat: 2,
+            ease: 'Stepped',
+            easeParams: [1]
         });
-
-        // 粒子爆炸效果
-        for (let i = 0; i < 6; i++) {
-            const angle = (Math.PI * 2 * i) / 6;
-            const particle = this.scene.add.circle(target.x, target.y, 3, color, 0.9);
-            particle.setDepth(1000);
-            
-            this.addTweens({
-                targets: particle,
-                x: target.x + Math.cos(angle) * 40,
-                y: target.y + Math.sin(angle) * 40,
-                alpha: 0,
-                duration: 400,
-                ease: 'Power2',
-                onComplete: () => {
-                    particle.destroy();
-                }
-            });
-        }
+        pxBurst(this.scene, target.x, target.y, { colors: [color, C.paper, C.ember], count: 10, speed: 180, size: 8 });
     }
 
     /**
      * 显示增益特效
      */
-    public showBuffEffect(target: CardSprite, color: number = 0xf39c12): void {
-        // 光环效果
-        const ring = this.scene.add.circle(target.x, target.y, 30, color, 0);
-        ring.setStrokeStyle(3, color, 0.8);
-        ring.setDepth(999);
-
-        this.addTweens({
-            targets: ring,
-            radius: 60,
-            alpha: 0,
-            duration: 500,
-            ease: 'Power2',
-            onComplete: () => {
-                ring.destroy();
-            }
-        });
-
-        // 上升粒子
+    public showBuffEffect(target: CardSprite, color: number = C.gold): void {
+        pxRing(this.scene, target.x, target.y, color, 90);
         for (let i = 0; i < 5; i++) {
-            const offsetX = (Math.random() - 0.5) * 40;
-            const particle = this.scene.add.circle(
-                target.x + offsetX,
-                target.y + 30,
-                3,
-                color,
-                0.8
-            );
-            particle.setDepth(1000);
-
-            this.addTweens({
-                targets: particle,
-                y: target.y - 40,
-                alpha: 0,
-                duration: 800,
-                delay: i * 100,
-                ease: 'Power2',
-                onComplete: () => {
-                    particle.destroy();
-                }
+            this.scene.time.delayedCall(i * 80, () => {
+                pxBurst(this.scene, target.x + (Math.random() - 0.5) * 100, target.y + 50, {
+                    colors: [color, C.glow, C.paper], count: 3, speed: 70, size: 6, gravity: -180, life: 800, spread: 0.4,
+                });
             });
         }
     }
@@ -894,29 +796,12 @@ export class BattleAnimationManager {
     /**
      * 显示减益特效
      */
-    public showDebuffEffect(target: CardSprite, color: number = 0x9b59b6): void {
-        // 下沉粒子
+    public showDebuffEffect(target: CardSprite, color: number = C.orchid): void {
         for (let i = 0; i < 5; i++) {
-            const offsetX = (Math.random() - 0.5) * 40;
-            const particle = this.scene.add.circle(
-                target.x + offsetX,
-                target.y - 30,
-                3,
-                color,
-                0.8
-            );
-            particle.setDepth(1000);
-
-            this.addTweens({
-                targets: particle,
-                y: target.y + 40,
-                alpha: 0,
-                duration: 800,
-                delay: i * 100,
-                ease: 'Power2',
-                onComplete: () => {
-                    particle.destroy();
-                }
+            this.scene.time.delayedCall(i * 80, () => {
+                pxBurst(this.scene, target.x + (Math.random() - 0.5) * 100, target.y - 50, {
+                    colors: [color, C.violet, C.void], count: 3, speed: 60, size: 6, gravity: 220, life: 800, spread: 0.4, angle: Math.PI / 2,
+                });
             });
         }
     }
@@ -927,57 +812,15 @@ export class BattleAnimationManager {
     public showExplosionEffect(
         x: number,
         y: number,
-        color: number = 0xe67e22,
+        color: number = C.ember,
         radius: number = 60
     ): void {
-        // 中心闪光
-        const flash = this.scene.add.circle(x, y, 10, 0xffffff, 1);
-        flash.setDepth(1001);
-
-        this.addTweens({
-            targets: flash,
-            radius: 20,
-            alpha: 0,
-            duration: 200,
-            ease: 'Power2',
-            onComplete: () => {
-                flash.destroy();
-            }
-        });
-
-        // 爆炸波纹
-        const wave = this.scene.add.circle(x, y, 0, color, 0.6);
-        wave.setDepth(1000);
-
-        this.addTweens({
-            targets: wave,
-            radius: radius,
-            alpha: 0,
-            duration: 400,
-            ease: 'Power2',
-            onComplete: () => {
-                wave.destroy();
-            }
-        });
-
-        // 爆炸粒子
-        for (let i = 0; i < 12; i++) {
-            const angle = (Math.PI * 2 * i) / 12;
-            const particle = this.scene.add.circle(x, y, 4, color, 0.9);
-            particle.setDepth(1000);
-            
-            this.addTweens({
-                targets: particle,
-                x: x + Math.cos(angle) * radius,
-                y: y + Math.sin(angle) * radius,
-                alpha: 0,
-                duration: 500,
-                ease: 'Power2',
-                onComplete: () => {
-                    particle.destroy();
-                }
-            });
-        }
+        pxFlash(this.scene, C.paper, 0.35, 120);
+        pxRing(this.scene, x, y, C.paper, radius * 1.4);
+        this.scene.time.delayedCall(60, () => pxRing(this.scene, x, y, color, radius * 1.9));
+        pxBurst(this.scene, x, y, { colors: [C.glow, color, C.gold, C.cinnabar], count: 22, speed: radius * 4, size: 12 });
+        pxShake(this.scene, 8, 200);
+        hitStop(this.scene, 50);
     }
 
     /**
@@ -990,26 +833,8 @@ export class BattleAnimationManager {
         color: string = '#ffffff',
         fontSize: number = 24
     ): void {
-        const textObj = this.scene.add.text(x, y, text, {
-            fontSize: `${fontSize}px`,
-            color: color,
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 4
-        });
-        textObj.setOrigin(0.5);
-        textObj.setDepth(1002);
-
-        this.addTweens({
-            targets: textObj,
-            y: y - 50,
-            alpha: 0,
-            duration: 1000,
-            ease: 'Power2',
-            onComplete: () => {
-                textObj.destroy();
-            }
-        });
+        const parsed = parseInt(color.replace('#', ''), 16);
+        pxPop(this.scene, x, y, text, Number.isFinite(parsed) ? parsed : C.paper, Math.max(24, fontSize * 1.2), 1002, 400);
     }
 
     /**
@@ -1131,49 +956,42 @@ export class BattleAnimationManager {
      */
     public showTurnAnimation(text: string, color: number, onComplete: () => void): void {
         const { width, height } = this.scene.scale;
-        const fontSize = Math.floor(height * 0.08) + 'px';
 
-        // 创建遮罩
-        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.5);
-        overlay.setDepth(2500);
-        overlay.setAlpha(0);
-
-        // 创建文字
-        const turnText = this.scene.add.text(width / 2, height / 2, text, {
-            fontSize: fontSize,
+        // 上下黑色像素条 + 中央横幅从两侧滑入
+        const barH = height * 0.16;
+        const top = this.scene.add.rectangle(width / 2, -barH / 2, width, barH, C.void).setDepth(2500);
+        const bottom = this.scene.add.rectangle(width / 2, height + barH / 2, width, barH, C.void).setDepth(2500);
+        const band = this.scene.add.rectangle(-width / 2, height / 2, width, 140, C.ink).setDepth(2500);
+        const bandEdge1 = this.scene.add.rectangle(-width / 2, height / 2 - 72, width, 8, color).setDepth(2501);
+        const bandEdge2 = this.scene.add.rectangle(-width / 2, height / 2 + 72, width, 8, color).setDepth(2501);
+        const turnText = this.scene.add.text(width + 400, height / 2, text, {
+            fontSize: '96px',
             color: '#' + color.toString(16).padStart(6, '0'),
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 8
-        }).setOrigin(0.5);
-        turnText.setDepth(2501);
-        turnText.setScale(0);
+            stroke: '#0b0714',
+            strokeThickness: 12
+        }).setOrigin(0.5).setDepth(2502);
 
-        // 动画序列
-        this.addTweens({
-            targets: overlay,
-            alpha: 1,
-            duration: 200,
-            ease: 'Power2'
-        });
+        const slide = (targets: Phaser.GameObjects.GameObject[], x: number, duration: number, ease = 'Cubic.easeOut') =>
+            this.addTweens({ targets, x, duration, ease });
 
+        this.addTweens({ targets: top, y: barH / 2, duration: 220, ease: 'Stepped', easeParams: [4] });
+        this.addTweens({ targets: bottom, y: height - barH / 2, duration: 220, ease: 'Stepped', easeParams: [4] });
+        slide([band, bandEdge1, bandEdge2], width / 2, 260);
         this.addTweens({
             targets: turnText,
-            scale: 1.2,
-            duration: 300,
+            x: width / 2,
+            duration: 380,
             ease: 'Back.easeOut',
             onComplete: () => {
-                // 停留一会儿
-                this.scene.time.delayedCall(600, () => {
-                    // 淡出
+                pxBurst(this.scene, width / 2, height / 2, { colors: [color, C.glow, C.paper], count: 18, speed: 300, size: 10, depth: 2503 });
+                this.scene.time.delayedCall(560, () => {
+                    slide([band, bandEdge1, bandEdge2], width * 1.5, 260, 'Cubic.easeIn');
+                    this.addTweens({ targets: turnText, x: -600, duration: 280, ease: 'Cubic.easeIn' });
+                    this.addTweens({ targets: top, y: -barH, duration: 240, delay: 120 });
                     this.addTweens({
-                        targets: [overlay, turnText],
-                        alpha: 0,
-                        duration: 300,
-                        ease: 'Power2',
+                        targets: bottom, y: height + barH, duration: 240, delay: 120,
                         onComplete: () => {
-                            overlay.destroy();
-                            turnText.destroy();
+                            [top, bottom, band, bandEdge1, bandEdge2, turnText].forEach((o) => o.destroy());
                             onComplete();
                         }
                     });

@@ -1,3 +1,4 @@
+import { C, T } from '../art/palette';
 import { GameObjects } from 'phaser';
 import type { PillCard } from '@data/types/cards/pill';
 import { BaseCardSprite } from './BaseCardSprite';
@@ -19,7 +20,7 @@ export class PillSprite extends BaseCardSprite {
         this.cardData = cardData;
 
         // 创建背景（丹药卡用青色/绿色边框，表示药物/回复属性）
-        this.createBackground(0x2f3a2f, 0x27ae60);
+        this.createBackground(C.pine, C.jade);
 
         // 创建名称
         this.createNameText(cardData.name);
@@ -27,18 +28,13 @@ export class PillSprite extends BaseCardSprite {
         // 品阶显示
         const gradeLabel = this.getGradeLabel(cardData.grade);
         this.gradeText = scene.add.text(0, -85, gradeLabel, {
-            fontSize: '14px',
-            color: '#27ae60'
+            fontSize: '12px',
+            color: T.lime
         }).setOrigin(0.5);
         this.add(this.gradeText);
 
         // 丹药图标
-        const iconBox = scene.add.rectangle(0, -20, 120, 120, 0x3a4a3a);
-        this.add(iconBox);
-        const iconText = scene.add.text(0, -20, '💊', {
-            fontSize: '48px'
-        }).setOrigin(0.5);
-        this.add(iconText);
+        this.addIconPortrait('pill');
 
         // 目标范围显示
         const targetLabel = this.getTargetLabel();
@@ -118,7 +114,7 @@ export class PillSprite extends BaseCardSprite {
     }
 
     protected getDefaultStrokeColor(): number {
-        return 0x27ae60; // 绿色边框
+        return C.jade; // 绿色边框
     }
 
     public getCardData(): PillCard {

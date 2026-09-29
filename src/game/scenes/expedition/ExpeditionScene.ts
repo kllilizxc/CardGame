@@ -1,3 +1,4 @@
+import { ensureBackdrop } from '../../art/backdrop';
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
@@ -115,8 +116,8 @@ export class ExpeditionScene extends Scene {
             },
         });
 
-        this.cameras.main.setBackgroundColor(0x0f172a);
-        this.add.rectangle(width / 2, height / 2, width, height, 0x111827, 0.92);
+        this.cameras.main.setBackgroundColor(0x0b0714);
+        ensureBackdrop(this, 'cave');
         this.add.text(width / 2, 80, this.mapDefinition.name, {
             fontFamily: 'Arial',
             fontSize: '44px',

@@ -1,3 +1,4 @@
+import { ensureBackdrop } from '../../art/backdrop';
 import { Scene } from 'phaser';
 import { EventBus, EXPEDITION_BATTLE_COMPLETE_EVENT, STORY_BATTLE_COMPLETE_EVENT } from '../../EventBus';
 import { CardSprite } from '../../objects/CardSprite';
@@ -313,7 +314,8 @@ export class BattleScene extends Scene {
         const { width, height } = this.scale;
 
         this.cardScale = this.calculateCardScale();
-        this.cameras.main.setBackgroundColor(0x1a1a2e);
+        this.cameras.main.setBackgroundColor(0x0b0714);
+        ensureBackdrop(this, 'arena');
         
         // 初始化游戏状态
         this.battleState = new BattleState();

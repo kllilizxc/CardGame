@@ -3,6 +3,11 @@ import type { UnitCard } from '@data/types/cards/unit';
 import type { Gongfa } from '@data/types/gongfa';
 import type { StatusInstance } from '@data/types/status';
 import { BaseCardSprite } from './BaseCardSprite';
+import { C, T } from '../art/palette';
+import { auraTexture, avatarTexture, iconTexture, type IconName } from '../art/sprites';
+
+const STAR_BORDER = [C.mist, C.jade, C.sky, C.orchid, C.ember, C.gold];
+const hashSeed = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; };
 import { GongfaTooltip } from '../ui/common/GongfaTooltip';
 import { describeGongfa } from '../utils/GongfaDescriptionBuilder';
 import { getUnitStar, getRealmConfig } from '../utils/RealmHelper';
@@ -16,6 +21,7 @@ type BattleSceneCardDragBridge = Phaser.Scene & {
 
 export class CardSprite extends BaseCardSprite {
     private cardData: UnitCard;
+    private borderColor: number = C.mist;
     private starsText: GameObjects.Text;
     private realmText: GameObjects.Text;
     private attackText: GameObjects.Text;
@@ -32,18 +38,20 @@ export class CardSprite extends BaseCardSprite {
         super(scene, x, y, scale);
         this.cardData = cardData;
 
-        // 创建背景
-        this.createBackground(0x2d2d2d, 0xf39c12);
+        // 创建背景（像素卡框，边框颜色随星级变化）
+        const star = getUnitStar(cardData);
+        this.borderColor = STAR_BORDER[Math.min(Math.max(star, 1), STAR_BORDER.length) - 1];
+        this.createBackground(C.ink, this.borderColor);
 
         // 创建名称
         this.createNameText(cardData.name);
 
         // 星级
-        const star = getUnitStar(cardData);
-        const stars = '★'.repeat(star);
-        this.starsText = scene.add.text(0, -85, stars, {
-            fontSize: '14px',
-            color: '#f1c40f'
+        this.starsText = scene.add.text(0, -85, '★'.repeat(star), {
+            fontSize: '12px',
+            color: T.gold,
+            stroke: T.void,
+            strokeThickness: 4
         }).setOrigin(0.5);
         this.add(this.starsText);
 
@@ -52,46 +60,51 @@ export class CardSprite extends BaseCardSprite {
         const realmInfo = realmConfig ? `${realmConfig.stage} ${realmConfig.phase}`.trim() : '';
         this.realmText = scene.add.text(0, -60, realmInfo, {
             fontSize: '12px',
-            color: '#9b59b6'
+            color: T.orchid
         }).setOrigin(0.5);
         this.add(this.realmText);
 
-        // 种族占位符
-        const raceBox = scene.add.rectangle(0, 0, 150, 80, 0x34495e);
-        this.add(raceBox);
-        const raceText = scene.add.text(0, 0, cardData.race, {
-            fontSize: '14px',
-            color: '#95a5a6'
-        }).setOrigin(0.5);
+        // 灵体立绘：按卡牌 ID 生成的像素生物，浮动呼吸
+        this.add(scene.add.image(0, -10, auraTexture(scene, this.borderColor)).setScale(4));
+        const avatar = scene.add.image(0, -8, avatarTexture(scene, cardData.id ?? cardData.name, cardData.race)).setScale(4);
+        this.add(avatar);
+        scene.tweens.add({ targets: avatar, y: -12, duration: 900 + (hashSeed(cardData.name) % 500), yoyo: true, repeat: -1, ease: 'Stepped', easeParams: [2] });
+        const raceText = scene.add.text(-62, 20, cardData.race, {
+            fontSize: '12px',
+            color: T.dim
+        }).setOrigin(0, 0.5);
+        raceText.setAlpha(0.9);
         this.add(raceText);
 
         // 描述（默认隐藏，只在预览时显示）
         this.descriptionText = scene.add.text(0, 60, cardData.description, {
-            fontSize: '11px',
-            color: '#bdc3c7',
+            fontSize: '12px',
+            color: T.fog,
+            backgroundColor: T.ink,
+            padding: { x: 4, y: 3 },
             wordWrap: { width: 160 }
         }).setOrigin(0.5);
         this.descriptionText.setVisible(false); // 默认隐藏
         this.add(this.descriptionText);
 
         // 攻击力
-        const attackBg = scene.add.rectangle(-50, 100, 60, 30, 0x4d1a1a);
-        this.add(attackBg);
-        this.attackText = scene.add.text(-50, 100, `⚔${cardData.attack}`, {
-            fontSize: '14px',
-            color: '#e74c3c',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
+        this.add(this.makeStatPlate(-46, 101, 'sword', C.blood, C.cinnabar));
+        this.attackText = scene.add.text(-36, 101, `${cardData.attack}`, {
+            fontSize: '24px',
+            color: T.paper,
+            stroke: T.void,
+            strokeThickness: 4
+        }).setOrigin(0, 0.5);
         this.add(this.attackText);
 
         // 生命值
-        const healthBg = scene.add.rectangle(50, 100, 60, 30, 0x1a4d2e);
-        this.add(healthBg);
-        this.healthText = scene.add.text(50, 100, `❤${cardData.health}`, {
-            fontSize: '14px',
-            color: '#2ecc71',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
+        this.add(this.makeStatPlate(46, 101, 'heart', C.moss, C.jade));
+        this.healthText = scene.add.text(56, 101, `${cardData.health}`, {
+            fontSize: '24px',
+            color: T.lime,
+            stroke: T.void,
+            strokeThickness: 4
+        }).setOrigin(0, 0.5);
         this.add(this.healthText);
 
         // 初始化功法提示框
@@ -150,18 +163,18 @@ export class CardSprite extends BaseCardSprite {
         }
         
         // 更新攻击力
-        this.attackText.setText(`⚔${this.cardData.attack}`);
+        this.attackText.setText(`${this.cardData.attack}`);
         
         // 更新生命值
-        this.healthText.setText(`❤${this.cardData.health}`);
+        this.healthText.setText(`${this.cardData.health}`);
         
         // 如果生命值过低，改变颜色提示
         if (this.cardData.health <= 0) {
-            this.healthText.setColor('#666666');
+            this.healthText.setColor(T.dim);
         } else if (this.cardData.health <= this.getOriginalHealth() * 0.3) {
-            this.healthText.setColor('#e74c3c'); // 低血量红色
+            this.healthText.setColor(T.cinnabar); // 低血量红色
         } else {
-            this.healthText.setColor('#2ecc71'); // 正常绿色
+            this.healthText.setColor(T.lime); // 正常绿色
         }
     }
 
@@ -174,7 +187,21 @@ export class CardSprite extends BaseCardSprite {
 
     // 重写：获取默认边框颜色
     protected getDefaultStrokeColor(): number {
-        return 0xf39c12;
+        return this.borderColor;
+    }
+
+    /** Pixel plate with an icon on its left; text is placed by the caller. */
+    private makeStatPlate(cx: number, cy: number, icon: IconName, fill: number, edge: number): GameObjects.Container {
+        const c = this.scene.add.container(cx, cy);
+        const g = this.scene.add.graphics();
+        g.fillStyle(C.void, 1); g.fillRect(-32, -16, 64, 32);
+        g.fillStyle(edge, 1); g.fillRect(-28, -20, 56, 40); g.fillRect(-32, -16, 64, 32);
+        g.fillStyle(fill, 1); g.fillRect(-28, -16, 56, 32);
+        g.fillStyle(C.void, 0.45); g.fillRect(-28, 8, 56, 8);
+        g.fillStyle(C.paper, 0.35); g.fillRect(-28, -16, 56, 4);
+        c.add(g);
+        c.add(this.scene.add.image(-18, 0, iconTexture(this.scene, icon)).setScale(2));
+        return c;
     }
 
     // 重写：更新显示模式
@@ -232,7 +259,7 @@ export class CardSprite extends BaseCardSprite {
             // 创建功法名文本
             const gongfaText = this.scene.add.text(0, y, `【${gongfa.name}】`, {
                 fontSize: '10px',
-                color: '#f39c12',
+                color: T.gold,
                 fontStyle: 'bold'
             }).setOrigin(0.5);
             

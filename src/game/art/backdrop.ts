@@ -281,15 +281,15 @@ function paintArena(scene: Phaser.Scene) {
         // stone arena floor
         for (let y = 122; y < H; y++) {
             const t = (y - 122) / (H - 122);
-            const rowH = 3 + Math.floor(t * 9);
+            const rowH = 6 + Math.floor(t * 12);
             const rowIdx = Math.floor((y - 122) / rowH) + Math.floor(t * 10);
-            const tileW = 18 + Math.floor(t * 58);
+            const tileW = 40 + Math.floor(t * 80);
             for (let x = 0; x < W; x++) {
                 const off = (rowIdx % 2) * (tileW / 2);
                 const seam = ((x + off) % tileW) === 0 || (y - 122) % rowH === 0;
-                let col: number = ((Math.floor((x + off) / tileW) + rowIdx) & 1) ? C.night : C.dusk;
-                if (seam) col = C.ink;
-                else if (bayer(x, y) < 0.14 * (1 - t)) col = C.twilight;
+                let col: number = ((Math.floor((x + off) / tileW) + rowIdx) & 1) ? C.night : C.ink;
+                if (seam) col = C.void;
+                else if (bayer(x, y) < 0.07 * (1 - t) && ((x + y) & 1) === 0) col = C.dusk;
                 bg.px(x, y, col);
             }
         }

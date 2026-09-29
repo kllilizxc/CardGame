@@ -1,5 +1,7 @@
 import { GameObjects } from 'phaser';
 import type { AnyCard } from '@data/types/cards/all';
+import { C } from '../art/palette';
+import { auraTexture, cardFrameTexture, iconTexture, CARD_ART_W, type IconName } from '../art/sprites';
 
 type BattleSceneWithEffectManager = Phaser.Scene & {
     battleContext?: {
@@ -39,19 +41,32 @@ export abstract class BaseCardSprite extends GameObjects.Container {
     /**
      * 创建卡牌背景
      */
-    protected createBackground(color: number, strokeColor: number): void {
-        this.background = this.scene.add.rectangle(0, 0, this.CARD_WIDTH, this.CARD_HEIGHT, color);
-        this.background.setStrokeStyle(3, strokeColor);
+    protected createBackground(color: number, strokeColor: number, portrait: boolean = true): void {
+        // Hover-glow rectangle sits behind the baked pixel frame; its stroke peeks out as the highlight.
+        this.background = this.scene.add.rectangle(0, 0, this.CARD_WIDTH, this.CARD_HEIGHT, C.void);
+        (this.background as unknown as { noDeco: boolean }).noDeco = true;
+        this.background.setStrokeStyle(4, strokeColor);
         this.add(this.background);
+        const frame = this.scene.add.image(0, 0, cardFrameTexture(this.scene, strokeColor, color, portrait));
+        frame.setScale(this.CARD_WIDTH / CARD_ART_W);
+        this.add(frame);
+    }
+
+    /** Floating pixel icon centred in the portrait window. */
+    protected addIconPortrait(icon: IconName): void {
+        this.add(this.scene.add.image(0, -10, auraTexture(this.scene, this.getDefaultStrokeColor())).setScale(4));
+        const img = this.scene.add.image(0, -10, iconTexture(this.scene, icon)).setScale(4);
+        this.add(img);
+        this.scene.tweens.add({ targets: img, y: -14, duration: 1100, yoyo: true, repeat: -1, ease: 'Stepped', easeParams: [2] });
     }
 
     /**
      * 创建卡牌名称文本
      */
     protected createNameText(name: string, y: number = -110): void {
-        this.nameText = this.scene.add.text(0, y, name, {
-            fontSize: '16px',
-            color: '#ffffff',
+        this.nameText = this.scene.add.text(0, y + 4, name, {
+            fontSize: '12px',
+            color: '#f4ecd8',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.add(this.nameText);
@@ -142,7 +157,7 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      * 悬停时的处理（子类可重写）
      */
     protected onPointerOver(): void {
-        this.background.setStrokeStyle(3, 0xffd700);
+        this.background.setStrokeStyle(6, C.glow);
         // 只发送预览事件，不改变原卡片的显示模式
         this.scene.events.emit('showCardPreview', this);
     }
@@ -151,7 +166,7 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      * 离开时的处理（子类可重写）
      */
     protected onPointerOut(): void {
-        this.background.setStrokeStyle(3, this.getDefaultStrokeColor());
+        this.background.setStrokeStyle(4, this.getDefaultStrokeColor());
         // 不再触发隐藏预览，让预览面板保持显示
         // this.scene.events.emit('hideCardPreview');
     }

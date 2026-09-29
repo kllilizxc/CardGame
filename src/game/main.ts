@@ -11,6 +11,7 @@ import { AUTO, Game } from 'phaser';
 import { Preloader } from './scenes/Preloader';
 import { PaletteFX, applyPaletteFX } from './art/PaletteFX';
 import { installPixelText } from './art/textPatch';
+import { installPixelRects } from './art/rectPatch';
 import { pxIrisIn } from './art/fx';
 
 //  Find out more information about the Game Config at:
@@ -50,7 +51,11 @@ const config: Phaser.Types.Core.GameConfig = {
 const StartGame = (parent: string) => {
 
     installPixelText();
+    installPixelRects();
     const game = new Game({ ...config, parent });
+    if (import.meta.env.DEV) {
+        (window as unknown as { __game: Phaser.Game }).__game = game;
+    }
 
     // Every scene gets the palette shader on its camera and a pixel-dissolve entrance.
     game.events.once(Phaser.Core.Events.READY, () => {

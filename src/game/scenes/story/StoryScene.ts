@@ -1,3 +1,4 @@
+import { ensureBackdrop } from '../../art/backdrop';
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
@@ -124,10 +125,8 @@ export class StoryScene extends Scene {
     private renderSceneFrame(): void {
         const { width, height } = this.scale;
 
-        this.cameras.main.setBackgroundColor(0x080f1f);
-        this.add.rectangle(width / 2, height / 2, width, height, 0x0f172a, 1);
-        this.add.circle(230, 160, 360, 0x1d4ed8, 0.15);
-        this.add.circle(width - 220, height - 120, 420, 0x7c3aed, 0.12);
+        this.cameras.main.setBackgroundColor(0x0b0714);
+        ensureBackdrop(this, 'mountain', 'ember');
 
         this.add.text(width / 2, 72, this.storyGraph.title ?? '主线故事', {
             fontFamily: 'Arial',

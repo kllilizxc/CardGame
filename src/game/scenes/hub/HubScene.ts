@@ -1,3 +1,4 @@
+import { ensureBackdrop } from '../../art/backdrop';
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
@@ -156,10 +157,8 @@ export class HubScene extends Scene {
         const { width, height } = this.scale;
         const container = this.add.container(0, 0);
 
-        this.cameras.main.setBackgroundColor(0x09111f);
-        container.add(this.add.rectangle(width / 2, height / 2, width, height, 0x0f172a, 1));
-        container.add(this.add.circle(width * 0.18, height * 0.2, 320, 0x1d4ed8, 0.12));
-        container.add(this.add.circle(width * 0.82, height * 0.86, 380, 0x16a34a, 0.1));
+        this.cameras.main.setBackgroundColor(0x0b0714);
+        ensureBackdrop(this, 'hall');
 
         container.add(this.add.text(width / 2, 74, this.town.title, {
             fontFamily: 'Arial Black',
