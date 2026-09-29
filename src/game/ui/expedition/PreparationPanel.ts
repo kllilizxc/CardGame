@@ -1,46 +1,30 @@
 import { GameObjects, Scene } from 'phaser';
-import { isPortraitGameViewport } from '../../layout/gameViewport';
-import { paginateReadableCopy } from '../../scenes/shared/readableCopyPages';
 
+import type { CardKind } from '@data/types/cards/core';
+import { C, FONT, hex } from '../../art/palette';
+import { drawPixelFrame, PANEL_BLOOD, PANEL_GOLD, PANEL_INK, PANEL_JADE, type PanelStyle } from '../../art/ui';
+import { isPortraitGameViewport } from '../../layout/gameViewport';
 import {
-    createPreparationDeckCarouselSummary,
     createPreparationDeckCardPreview,
     createPreparationSelectedLoadoutSummary,
     formatPreparationValidationLines,
     type PreparationDeckContext,
-    type PreparationFocusChip,
     type PreparationDeckHandoffSummary,
-    type PreparationSelectedLoadoutSummary,
 } from '../../scenes/expedition/entryFlowModel';
 import { validateExpeditionLoadout } from '../../scenes/expedition/expeditionEntryFlow';
+import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import {
     countDeckCards,
     DECK_CARD_MAX,
     DECK_CARD_MIN,
     getSelectedSavedDeck,
-    validateDeckAvailability,
-    validateDeckSize,
-    type DeckValidityReason,
 } from '../../state/PersistentStashDecks';
-import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
-import type {
-    ExpeditionCardStack,
-    PersistentStash,
-    SavedDeck,
-} from '../../types/expedition';
+import type { PersistentStash } from '../../types/expedition';
 import type { EntryPanelFrame, EntryPanelFrameProvider } from './EntryPanelFrame';
-import {
-    calculateDeckSwitcherHeight,
-    calculateDeckCardHeight,
-    calculatePreparationDecisionCardHeight,
-    calculateLoadoutSupportStripHeight,
-    calculateReadinessHeroHeight,
-} from './PreparationPanelLayout';
 import {
     getAdjacentPreparationDeckId,
     getPreparationKeyboardShortcut,
 } from './preparationPanelKeyboard';
-import { expeditionUiTheme } from '../common/expeditionUiTheme';
 
 export interface PreparationPanelConfig {
     stash: PersistentStash;
@@ -57,949 +41,34 @@ export interface PreparationPanelDeckSwitchFeedback {
     after: PreparationDeckContext;
 }
 
-interface DeckDisplayState {
-    valid: boolean;
-    uniqueCardCount: number;
-    selectionLabel: string;
-    statusLabel: string;
-    compositionLines: string[];
-    comparisonLabel: string;
-    comparisonLines: string[];
-    focusChip: PreparationFocusChip;
-    focusSummaryLine: string;
-    footerText: string;
-    fillColor: number;
-    hoverFillColor: number;
-    borderColor: number;
-    accentColor: number;
-    selectionBadgeColor: string;
-    selectionBadgeBackgroundColor: string;
-    statusBadgeColor: string;
-    statusBadgeBackgroundColor: string;
-    countColor: string;
-    previewLabelColor: string;
-    previewTextColor: string;
-    previewFillColor: number;
-    previewBorderColor: number;
-    chipFillColor: number;
-    chipBorderColor: number;
-    chipTextColor: string;
-    footerFillColor: number;
-    footerTextColor: string;
-    shadowColor: number;
-    shadowAlpha: number;
-}
+interface Rect { x: number; y: number; w: number; h: number }
+interface RenderOptions { deckSwitchFeedback?: PreparationPanelDeckSwitchFeedback }
 
-interface DeckHandoffBannerColors {
-    fillColor: number;
-    borderColor: number;
-    badgeColor: string;
-    badgeBackgroundColor: string;
-    detailColor: string;
-}
+const KIND_ORDER: CardKind[] = ['unit', 'artifact', 'talisman', 'field', 'skill', 'pill'];
+const KIND_LABEL: Record<CardKind, string> = { unit: '生物', artifact: '神器', talisman: '护符', field: '场地', skill: '技能', pill: '丹药' };
+const KIND_GLYPH: Record<CardKind, string> = { unit: '灵', artifact: '器', talisman: '符', field: '阵', skill: '诀', pill: '丹' };
+const KIND_COLOR: Record<CardKind, number> = {
+    unit: C.celadon, artifact: C.gold, talisman: C.petal, field: C.sky, skill: C.orchid, pill: C.lime,
+};
 
-interface SelectedLoadoutColors {
-    fillColor: number;
-    borderColor: number;
-    accentColor: number;
-    badgeColor: string;
-    badgeBackgroundColor: string;
-    headlineColor: string;
-    detailColor: string;
-    mutedColor: string;
-}
+const ROSTER_CARD_H = 104;
+const ROSTER_GAP = 10;
 
-interface ActionButtonColors {
-    fill: number;
-    hover: number;
-    stroke: number;
-    text: string;
-}
+const style = (size: number, color: number, extra: Phaser.Types.GameObjects.Text.TextStyle = {}): Phaser.Types.GameObjects.Text.TextStyle => ({
+    fontFamily: FONT, fontSize: `${size}px`, color: hex(color), ...extra,
+});
 
-interface ActionHierarchyColors {
-    barFillColor: number;
-    barBorderColor: number;
-    barAccentColor: number;
-    railLabel: string;
-    titleColor: string;
-    summaryColor: string;
-    supportColor: string;
-    headline: string;
-    detail: string;
-    nextStepLabel: string;
-    shortcutHint: string;
-    stateBadgeLabel: string;
-    stateBadgeColor: string;
-    stateBadgeBackgroundColor: string;
-    primaryAction: 'confirm' | 'manage';
-    confirmButtonLabel: string;
-    manageButtonLabel: string;
-    confirmButtonColors: ActionButtonColors;
-    manageButtonColors: ActionButtonColors;
-    confirmGlowColor: number;
-    confirmGlowAlpha: number;
-    actionGlowColor: number;
-    actionGlowAlpha: number;
-}
-
-interface ManifestPanelColors {
-    fillColor: number;
-    borderColor: number;
-    titleColor: string;
-    bodyColor: string;
-    badgeColor?: string;
-    badgeBackgroundColor?: string;
-}
-
-interface DeckSwitchRenderOptions {
-    deckSwitchFeedback?: PreparationPanelDeckSwitchFeedback;
-    initialScrollX?: number;
-}
-
-interface DeckCardAnimationRefs {
-    deckId: string;
-    container: GameObjects.Container;
-    baseY: number;
-    spotlight?: GameObjects.Rectangle;
-    accent: GameObjects.Rectangle;
-    background: GameObjects.Rectangle;
-    isSelected: boolean;
-    valid: boolean;
-}
-
-interface DeckCardRowBuild {
-    elements: Phaser.GameObjects.GameObject[];
-    selectedCard?: DeckCardAnimationRefs;
-    targetScrollX: number;
-}
-
-interface DeckCarouselWayfindingRefs {
-    progressFill: GameObjects.Rectangle;
-    progressText: GameObjects.Text;
-    progressTrackX: number;
-    progressTrackWidth: number;
-    deckCount: number;
-    viewportWidth: number;
-    slotWidth: number;
-}
-
-interface PreparationPanelAnimationRefs {
-    selectedCard?: DeckCardAnimationRefs;
-    validationContainer?: GameObjects.Container;
-    selectedLoadoutContainer?: GameObjects.Container;
-    carriedReadinessContainer?: GameObjects.Container;
-    actionContainer?: GameObjects.Container;
-    confirmButton?: GameObjects.Container;
-    manageDeckButton?: GameObjects.Container;
-    validationGlow?: GameObjects.Rectangle;
-    selectedLoadoutGlow?: GameObjects.Rectangle;
-    actionGlow?: GameObjects.Rectangle;
-    confirmGlow?: GameObjects.Rectangle;
-    targetScrollX: number;
-}
-
-interface ReadinessHeroMetrics {
-    textWidth: number;
-    validationPanelWidth: number;
-    sectionHeight: number;
-    height: number;
-}
-
-interface LoadoutSupportStripMetrics {
-    bodyHeight: number;
-    footerHeight: number;
-    height: number;
-}
-
-const DECK_CARD_WIDTH = 224;
-const DECK_CARD_GAP = 12;
-const PANEL_MIN_HEIGHT = 640;
-const PANEL_MAX_HEIGHT = 980;
-const PANEL_MAX_HEIGHT_RATIO = 0.96;
-const ACTION_BUTTON_COLUMN_WIDTH = 248;
-const ACTION_BUTTON_PRIMARY_HEIGHT = 56;
-const ACTION_BUTTON_SECONDARY_HEIGHT = 44;
-const ACTION_BUTTON_GAP = 8;
-const READY_SELECTED_FILL = 0x163028;
-const READY_SELECTED_HOVER_FILL = 0x1e4033;
-const READY_DETAIL_FILL = 0x11241d;
-const READY_ACTION_FILL = 0x183026;
-const READY_BADGE_BACKGROUND = '#365b47';
-const NEUTRAL_BADGE_BACKGROUND = '#4c4436';
-
-function clampNumber(value: number, min: number, max: number): number {
-    return Math.min(max, Math.max(min, value));
-}
-
-function validateDeckForDisplay(
-    deck: SavedDeck,
-    stashCards: readonly ExpeditionCardStack[],
-): { valid: boolean; sizeIssue: DeckValidityReason | null; availabilityIssues: DeckValidityReason[] } {
-    const sizeIssue = validateDeckSize(deck.cards);
-    const availabilityIssues = validateDeckAvailability(deck.cards, stashCards);
-
-    return {
-        valid: !sizeIssue && availabilityIssues.length === 0,
-        sizeIssue,
-        availabilityIssues,
-    };
-}
-
-function formatInlinePreviewText(lines: string[], maxEntries: number): string {
-    if (lines.length === 0) {
-        return '无';
-    }
-
-    if (lines.length === 1 && lines[0] === '无') {
-        return '无';
-    }
-
-    if (lines.length <= maxEntries) {
-        return lines.join(' · ');
-    }
-
-    return `${lines.slice(0, maxEntries).join(' · ')} · …另 ${lines.length - maxEntries} 项`;
-}
-
-function formatBulletLines(lines: string[], maxLines = Number.POSITIVE_INFINITY): string {
-    if (lines.length === 0) {
-        return '• 无';
-    }
-
-    return lines
-        .slice(0, maxLines)
-        .map((line) => line.startsWith('• ') ? line : `• ${line}`)
-        .join('\n');
-}
-
-function truncateSingleLine(text: string, maxLength: number): string {
-    const normalized = text.replace(/\s+/g, ' ').trim();
-
-    if (normalized.length <= maxLength) {
-        return normalized;
-    }
-
-    return `${normalized.slice(0, Math.max(0, maxLength - 1))}…`;
-}
-
-function measureTextHeight(
-    scene: Scene,
-    text: string,
-    style: Phaser.Types.GameObjects.Text.TextStyle,
-): number {
-    const measurement = scene.add.text(-10_000, -10_000, text, style).setVisible(false);
-    const height = measurement.height;
-    measurement.destroy();
-
-    return height;
-}
-
-function getDeckCardHeight(scene: Scene, decks: readonly SavedDeck[]): number {
-    const maxDeckNameHeight = decks.reduce((maxHeight, deck) => Math.max(
-        maxHeight,
-        measureTextHeight(scene, deck.name, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            fontStyle: 'bold',
-            wordWrap: { width: DECK_CARD_WIDTH - 28 },
-        }),
-    ), 0);
-
-    return calculateDeckCardHeight(maxDeckNameHeight);
-}
-
-function createManifestPanel(
-    scene: Scene,
-    left: number,
-    top: number,
-    width: number,
-    height: number,
-    title: string,
-    body: string,
-    colors: ManifestPanelColors,
-    options: {
-        badgeText?: string;
-        monospacedBody?: boolean;
-    } = {},
-): Phaser.GameObjects.GameObject[] {
-    const background = scene.add.rectangle(
-        left + width / 2,
-        top + height / 2,
-        width,
-        height,
-        colors.fillColor,
-        0.92,
-    );
-    background.setStrokeStyle(1, colors.borderColor, 0.5);
-    const titleText = scene.add.text(left + 16, top + 14, title, {
-        fontFamily: expeditionUiTheme.fonts.ui,
-        fontSize: '18px',
-        color: colors.titleColor,
-        fontStyle: 'bold',
-    });
-    const badge = options.badgeText
-        ? scene.add.text(left + width - 16, top + 14, options.badgeText, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '14px',
-            color: colors.badgeColor ?? colors.bodyColor,
-            fontStyle: 'bold',
-            backgroundColor: colors.badgeBackgroundColor,
-            padding: { left: 10, right: 10, top: 5, bottom: 5 },
-        }).setOrigin(1, 0)
-        : null;
-    const bodyText = scene.add.text(left + 16, titleText.y + titleText.height + 8, body, {
-        fontFamily: options.monospacedBody ? expeditionUiTheme.fonts.mono : expeditionUiTheme.fonts.ui,
-        fontSize: '18px',
-        color: colors.bodyColor,
-        lineSpacing: 6,
-        wordWrap: { width: width - 32 },
-    });
-
-    return [background, titleText, bodyText, badge].filter(Boolean) as Phaser.GameObjects.GameObject[];
-}
-
-function measureManifestPanelHeight(
-    scene: Scene,
-    body: string,
-    width: number,
-    options: {
-        minHeight?: number;
-        monospacedBody?: boolean;
-    } = {},
-): number {
-    return Math.max(
-        options.minHeight ?? 112,
-        58 + measureTextHeight(scene, body, {
-            fontFamily: options.monospacedBody ? expeditionUiTheme.fonts.mono : expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            lineSpacing: 6,
-            wordWrap: { width: width - 32 },
-        }),
-    );
-}
-
-function getReadinessHeroMetrics(
-    scene: Scene,
-    contentWidth: number,
-    buttonColumnWidth: number,
-    deckName: string,
-    headline: string,
-    detail: string,
-    readinessBody: string,
-    actionBody: string,
-    shortcutHint: string,
-    extraHeaderHeight = 0,
-): ReadinessHeroMetrics {
-    const textWidth = contentWidth - buttonColumnWidth - 44;
-    const validationPanelWidth = textWidth;
-    const deckNameHeight = measureTextHeight(scene, deckName, {
-        fontFamily: expeditionUiTheme.fonts.ui,
-        fontSize: '32px',
-        fontStyle: 'bold',
-        wordWrap: { width: textWidth },
-    });
-    const headlineHeight = measureTextHeight(scene, headline, {
-        fontFamily: expeditionUiTheme.fonts.ui,
-        fontSize: '22px',
-        fontStyle: 'bold',
-        wordWrap: { width: textWidth },
-    });
-    const detailHeight = measureTextHeight(scene, detail, {
-        fontFamily: expeditionUiTheme.fonts.ui,
-        fontSize: '18px',
-        lineSpacing: 6,
-        wordWrap: { width: textWidth },
-    });
-    const sectionHeight = measureManifestPanelHeight(
-        scene,
-        readinessBody,
-        validationPanelWidth,
-        { minHeight: 124 },
-    );
-    const actionBodyHeight = measureTextHeight(scene, actionBody, {
-        fontFamily: expeditionUiTheme.fonts.ui,
-        fontSize: '18px',
-        lineSpacing: 6,
-        wordWrap: { width: buttonColumnWidth - 24 },
-    });
-    const shortcutHintHeight = measureTextHeight(scene, shortcutHint, {
-        fontFamily: expeditionUiTheme.fonts.ui,
-        fontSize: '18px',
-        lineSpacing: 6,
-        wordWrap: { width: buttonColumnWidth - 24 },
-    });
-    const headerHeight = 74
-        + extraHeaderHeight
-        + deckNameHeight
-        + detailHeight
-        + headlineHeight;
-    const actionColumnHeight = 24
-        + actionBodyHeight
-        + 6
-        + shortcutHintHeight
-        + 12
-        + ACTION_BUTTON_PRIMARY_HEIGHT
-        + ACTION_BUTTON_GAP
-        + ACTION_BUTTON_SECONDARY_HEIGHT
-        + 10;
-
-    return {
-        textWidth,
-        validationPanelWidth,
-        sectionHeight,
-        height: calculateReadinessHeroHeight(
-            headerHeight,
-            sectionHeight,
-            0,
-            actionColumnHeight,
-        ),
-    };
-}
-
-function getLoadoutSupportStripMetrics(
-    scene: Scene,
-    contentWidth: number,
-    body: string,
-    footer: string,
-): LoadoutSupportStripMetrics {
-    const bodyHeight = measureTextHeight(scene, body, {
-        fontFamily: expeditionUiTheme.fonts.ui,
-        fontSize: '18px',
-        lineSpacing: 6,
-        wordWrap: { width: contentWidth - 36 },
-    });
-    const footerHeight = measureTextHeight(scene, footer, {
-        fontFamily: expeditionUiTheme.fonts.ui,
-        fontSize: '18px',
-        lineSpacing: 6,
-        wordWrap: { width: contentWidth - 36 },
-    });
-
-    return {
-        bodyHeight,
-        footerHeight,
-        height: calculateLoadoutSupportStripHeight(bodyHeight, footerHeight),
-    };
-}
-
-function createDeckDisplayState(
-    deck: SavedDeck,
-    stashCards: readonly ExpeditionCardStack[],
-    isSelected: boolean,
-    metadata?: CardMetadataMap,
-): DeckDisplayState {
-    const validation = validateDeckForDisplay(deck, stashCards);
-    const preview = createPreparationDeckCardPreview(deck, stashCards, metadata);
-    const selectionLabel = isSelected ? '当前带入' : '候选卡组';
-    const selectionBadgeColor = isSelected ? '#f3ead3' : '#f3ead3';
-    const selectionBadgeBackgroundColor = isSelected ? READY_BADGE_BACKGROUND : NEUTRAL_BADGE_BACKGROUND;
-    const missingCopies = validation.availabilityIssues.reduce(
-        (sum, issue) => sum + (issue.kind === 'insufficient-copies' ? Math.max(0, issue.required - issue.available) : 0),
-        0,
-    );
-    const comparisonLabel = preview.readiness === 'ready'
-        ? '出发状态'
-        : preview.readiness === 'insufficient-copies'
-            ? '缺口重点'
-            : '调整重点';
-    const comparisonLines = preview.shortagePreviewLines.length > 0
-        ? preview.shortagePreviewLines
-        : [preview.focusSummaryLine];
-    const compositionLines = preview.kindBreakdownLines;
-
-    if (validation.valid && isSelected) {
-        return {
-            valid: true,
-            uniqueCardCount: preview.uniqueCardCount,
-            selectionLabel,
-            statusLabel: '可出发',
-            compositionLines,
-            comparisonLabel,
-            comparisonLines,
-            focusChip: preview.focusChip,
-            focusSummaryLine: preview.focusSummaryLine,
-            footerText: '当前将按此出发。',
-            fillColor: READY_SELECTED_FILL,
-            hoverFillColor: READY_SELECTED_HOVER_FILL,
-            borderColor: expeditionUiTheme.colors.goldSoft,
-            accentColor: expeditionUiTheme.colors.jadeBright,
-            selectionBadgeColor,
-            selectionBadgeBackgroundColor,
-            statusBadgeColor: '#f3ead3',
-            statusBadgeBackgroundColor: '#166534',
-            countColor: '#d9c6a2',
-            previewLabelColor: '#e8d5ab',
-            previewTextColor: '#eff6ff',
-            previewFillColor: READY_DETAIL_FILL,
-            previewBorderColor: expeditionUiTheme.colors.jade,
-            chipFillColor: READY_DETAIL_FILL,
-            chipBorderColor: expeditionUiTheme.colors.jadeBright,
-            chipTextColor: '#f3ead3',
-            footerFillColor: READY_DETAIL_FILL,
-            footerTextColor: '#f3ead3',
-            shadowColor: expeditionUiTheme.colors.jade,
-            shadowAlpha: 0.24,
-        };
-    }
-
-    if (validation.valid) {
-        return {
-            valid: true,
-            uniqueCardCount: preview.uniqueCardCount,
-            selectionLabel,
-            statusLabel: '可带入',
-            compositionLines,
-            comparisonLabel,
-            comparisonLines,
-            focusChip: preview.focusChip,
-            focusSummaryLine: preview.focusSummaryLine,
-            footerText: '点按切换为当前带入。',
-            fillColor: 0x12201d,
-            hoverFillColor: 0x163123,
-            borderColor: 0x365314,
-            accentColor: expeditionUiTheme.colors.jade,
-            selectionBadgeColor,
-            selectionBadgeBackgroundColor,
-            statusBadgeColor: '#dcfce7',
-            statusBadgeBackgroundColor: '#166534',
-            countColor: '#e6f3ea',
-            previewLabelColor: '#e6f3ea',
-            previewTextColor: '#f0fdf4',
-            previewFillColor: 0x0e1c17,
-            previewBorderColor: 0x166534,
-            chipFillColor: 0x0e1c17,
-            chipBorderColor: expeditionUiTheme.colors.jade,
-            chipTextColor: '#dcfce7',
-            footerFillColor: 0x0e1c17,
-            footerTextColor: '#dcfce7',
-            shadowColor: expeditionUiTheme.colors.overlay,
-            shadowAlpha: 0.18,
-        };
-    }
-
-    if (validation.sizeIssue?.kind === 'too-few-cards') {
-        return {
-            valid: false,
-            uniqueCardCount: preview.uniqueCardCount,
-            selectionLabel,
-            statusLabel: '张数不足',
-            compositionLines,
-            comparisonLabel,
-            comparisonLines,
-            focusChip: preview.focusChip,
-            focusSummaryLine: preview.focusSummaryLine,
-            footerText: '点按切换后补足牌数。',
-            fillColor: isSelected ? 0x372215 : 0x2f1d12,
-            hoverFillColor: isSelected ? 0x46301e : 0x3b2416,
-            borderColor: isSelected ? expeditionUiTheme.colors.goldSoft : expeditionUiTheme.colors.gold,
-            accentColor: expeditionUiTheme.colors.gold,
-            selectionBadgeColor,
-            selectionBadgeBackgroundColor,
-            statusBadgeColor: '#fef3c7',
-            statusBadgeBackgroundColor: '#92400e',
-            countColor: '#f6e2b1',
-            previewLabelColor: '#fcd34d',
-            previewTextColor: '#f3ead3',
-            previewFillColor: 0x291d0e,
-            previewBorderColor: 0xb45309,
-            chipFillColor: 0x291d0e,
-            chipBorderColor: expeditionUiTheme.colors.gold,
-            chipTextColor: '#fef3c7',
-            footerFillColor: 0x291d0e,
-            footerTextColor: '#f6e2b1',
-            shadowColor: isSelected ? expeditionUiTheme.colors.jade : expeditionUiTheme.colors.overlay,
-            shadowAlpha: isSelected ? 0.22 : 0.18,
-        };
-    }
-
-    if (validation.sizeIssue?.kind === 'too-many-cards') {
-        return {
-            valid: false,
-            uniqueCardCount: preview.uniqueCardCount,
-            selectionLabel,
-            statusLabel: '超出上限',
-            compositionLines,
-            comparisonLabel,
-            comparisonLines,
-            focusChip: preview.focusChip,
-            focusSummaryLine: preview.focusSummaryLine,
-            footerText: '点按切换后精简卡组。',
-            fillColor: isSelected ? 0x3f1d2e : 0x2f1721,
-            hoverFillColor: isSelected ? 0x4c1d30 : 0x3a1822,
-            borderColor: isSelected ? expeditionUiTheme.colors.goldSoft : 0xf87171,
-            accentColor: expeditionUiTheme.colors.emberBright,
-            selectionBadgeColor,
-            selectionBadgeBackgroundColor,
-            statusBadgeColor: '#f3d0c3',
-            statusBadgeBackgroundColor: '#b91c1c',
-            countColor: '#f3d0c3',
-            previewLabelColor: '#f3d0c3',
-            previewTextColor: '#fff1f2',
-            previewFillColor: 0x29131b,
-            previewBorderColor: 0x9f1239,
-            chipFillColor: 0x29131b,
-            chipBorderColor: expeditionUiTheme.colors.emberBright,
-            chipTextColor: '#f3d0c3',
-            footerFillColor: 0x29131b,
-            footerTextColor: '#f3d0c3',
-            shadowColor: isSelected ? expeditionUiTheme.colors.jade : expeditionUiTheme.colors.overlay,
-            shadowAlpha: isSelected ? 0.22 : 0.18,
-        };
-    }
-
-    return {
-        valid: false,
-        uniqueCardCount: preview.uniqueCardCount,
-        selectionLabel,
-        statusLabel: '库存不足',
-        compositionLines,
-        comparisonLabel,
-        comparisonLines,
-        focusChip: preview.focusChip,
-        focusSummaryLine: validation.availabilityIssues.length > 0
-            ? `${validation.availabilityIssues.length} 种卡共缺 ${missingCopies} 张。`
-            : preview.focusSummaryLine,
-        footerText: '点按切换后补齐缺牌。',
-        fillColor: isSelected ? 0x3f1d2e : 0x2f1721,
-        hoverFillColor: isSelected ? 0x4c1d30 : 0x3f1d2e,
-        borderColor: isSelected ? expeditionUiTheme.colors.goldSoft : 0xf87171,
-        accentColor: expeditionUiTheme.colors.emberBright,
-        selectionBadgeColor,
-        selectionBadgeBackgroundColor,
-        statusBadgeColor: '#f3d0c3',
-        statusBadgeBackgroundColor: '#b91c1c',
-        countColor: '#f3d0c3',
-        previewLabelColor: '#f3d0c3',
-        previewTextColor: '#fff1f2',
-        previewFillColor: 0x29131b,
-        previewBorderColor: 0x9f1239,
-        chipFillColor: 0x29131b,
-        chipBorderColor: expeditionUiTheme.colors.emberBright,
-        chipTextColor: '#f3d0c3',
-        footerFillColor: 0x29131b,
-        footerTextColor: '#f3d0c3',
-        shadowColor: isSelected ? expeditionUiTheme.colors.jade : expeditionUiTheme.colors.overlay,
-        shadowAlpha: isSelected ? 0.22 : 0.18,
-    };
-}
-
-function getSelectedLoadoutColors(
-    summary: PreparationSelectedLoadoutSummary,
-): SelectedLoadoutColors {
-    switch (summary.readiness) {
-        case 'ready':
-            return {
-                fillColor: READY_SELECTED_FILL,
-                borderColor: expeditionUiTheme.colors.goldSoft,
-                accentColor: expeditionUiTheme.colors.jadeBright,
-                badgeColor: '#f3ead3',
-                badgeBackgroundColor: READY_BADGE_BACKGROUND,
-                headlineColor: '#f3ead3',
-                detailColor: '#d9c6a2',
-                mutedColor: '#e8d5ab',
-            };
-        case 'too-few-cards':
-            return {
-                fillColor: 0x31210f,
-                borderColor: expeditionUiTheme.colors.gold,
-                accentColor: expeditionUiTheme.colors.gold,
-                badgeColor: '#fef3c7',
-                badgeBackgroundColor: '#92400e',
-                headlineColor: '#f3ead3',
-                detailColor: '#f6e2b1',
-                mutedColor: '#fcd34d',
-            };
-        case 'too-many-cards':
-        case 'insufficient-copies':
-            return {
-                fillColor: 0x311725,
-                borderColor: expeditionUiTheme.colors.emberBright,
-                accentColor: expeditionUiTheme.colors.ember,
-                badgeColor: '#f3d0c3',
-                badgeBackgroundColor: '#b91c1c',
-                headlineColor: '#fff1f2',
-                detailColor: '#f3d0c3',
-                mutedColor: '#f3d0c3',
-            };
-        case 'none':
-            return {
-                fillColor: expeditionUiTheme.colors.panelInner,
-                borderColor: 0x64748b,
-                accentColor: 0x94a3b8,
-                badgeColor: '#f3ead3',
-                badgeBackgroundColor: NEUTRAL_BADGE_BACKGROUND,
-                headlineColor: '#f3ead3',
-                detailColor: '#d9c6a2',
-                mutedColor: '#bca785',
-            };
-    }
-}
-
-function getActionHierarchyColors(
-    summary: PreparationSelectedLoadoutSummary,
-): ActionHierarchyColors {
-    const inventoryDetail = `清单：${summary.deckCount} 张卡 · ${summary.uniqueCardCount} 种卡 · ${summary.itemCount} 件道具 · ${summary.spiritStones} 枚灵石。`;
-
-    switch (summary.readiness) {
-        case 'ready':
-            return {
-                barFillColor: READY_ACTION_FILL,
-                barBorderColor: expeditionUiTheme.colors.goldSoft,
-                barAccentColor: expeditionUiTheme.colors.jadeBright,
-                railLabel: '主操作',
-                titleColor: '#f3ead3',
-                summaryColor: '#d9c6a2',
-                supportColor: '#e8d5ab',
-                headline: `当前带入「${summary.selectedDeckName}」已通过出发校验`,
-                detail: inventoryDetail,
-                nextStepLabel: '现在可以直接确认带入并进入秘境。',
-                shortcutHint: '快捷键：Enter 主操作 · M 管理卡组',
-                stateBadgeLabel: '可出发',
-                stateBadgeColor: '#f3ead3',
-                stateBadgeBackgroundColor: READY_BADGE_BACKGROUND,
-                primaryAction: 'confirm',
-                confirmButtonLabel: '确认带入并出发',
-                manageButtonLabel: '继续管理卡组',
-                confirmButtonColors: {
-                    fill: expeditionUiTheme.colors.jade,
-                    hover: expeditionUiTheme.colors.jadeBright,
-                    stroke: expeditionUiTheme.colors.goldSoft,
-                    text: '#f3ead3',
-                },
-                manageButtonColors: {
-                    fill: expeditionUiTheme.colors.panel,
-                    hover: expeditionUiTheme.colors.panelInner,
-                    stroke: expeditionUiTheme.colors.parchmentSoft,
-                    text: '#f3ead3',
-                },
-                confirmGlowColor: expeditionUiTheme.colors.jadeBright,
-                confirmGlowAlpha: 0.18,
-                actionGlowColor: expeditionUiTheme.colors.jade,
-                actionGlowAlpha: 0.08,
-            };
-        case 'too-few-cards': {
-            const missingCards = Math.max(1, DECK_CARD_MIN - summary.deckCount);
-
-            return {
-                barFillColor: 0x23180d,
-                barBorderColor: expeditionUiTheme.colors.gold,
-                barAccentColor: expeditionUiTheme.colors.gold,
-                railLabel: '主操作',
-                titleColor: '#f3ead3',
-                summaryColor: '#f6e2b1',
-                supportColor: '#fcd34d',
-                headline: `当前带入「${summary.selectedDeckName}」还差 ${missingCards} 张才能出发`,
-                detail: inventoryDetail,
-                nextStepLabel: `先把卡组补到 ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张，再回来确认。`,
-                shortcutHint: '快捷键：Enter 主操作 · M 管理卡组',
-                stateBadgeLabel: `差 ${missingCards} 张`,
-                stateBadgeColor: '#fef3c7',
-                stateBadgeBackgroundColor: '#92400e',
-                primaryAction: 'manage',
-                confirmButtonLabel: '暂不可确认带入',
-                manageButtonLabel: '去管理卡组补足',
-                confirmButtonColors: {
-                    fill: 0x3f3321,
-                    hover: 0x3f3321,
-                    stroke: 0x7c5b1f,
-                    text: '#f3ead3',
-                },
-                manageButtonColors: {
-                    fill: 0xb45309,
-                    hover: 0xd97706,
-                    stroke: 0xfef3c7,
-                    text: '#f3ead3',
-                },
-                confirmGlowColor: expeditionUiTheme.colors.gold,
-                confirmGlowAlpha: 0,
-                actionGlowColor: expeditionUiTheme.colors.gold,
-                actionGlowAlpha: 0.1,
-            };
-        }
-        case 'too-many-cards': {
-            const extraCards = Math.max(1, summary.deckCount - DECK_CARD_MAX);
-
-            return {
-                barFillColor: 0x261320,
-                barBorderColor: expeditionUiTheme.colors.emberBright,
-                barAccentColor: expeditionUiTheme.colors.ember,
-                railLabel: '主操作',
-                titleColor: '#fff1f2',
-                summaryColor: '#f3d0c3',
-                supportColor: '#f3d0c3',
-                headline: `当前带入「${summary.selectedDeckName}」超出上限 ${extraCards} 张`,
-                detail: inventoryDetail,
-                nextStepLabel: `先把卡组精简到 ${DECK_CARD_MAX} 张内，再回来确认。`,
-                shortcutHint: '快捷键：Enter 主操作 · M 管理卡组',
-                stateBadgeLabel: `超 ${extraCards} 张`,
-                stateBadgeColor: '#f3d0c3',
-                stateBadgeBackgroundColor: '#b91c1c',
-                primaryAction: 'manage',
-                confirmButtonLabel: '暂不可确认带入',
-                manageButtonLabel: '去管理卡组精简',
-                confirmButtonColors: {
-                    fill: 0x312330,
-                    hover: 0x312330,
-                    stroke: 0x7f1d1d,
-                    text: '#f3ead3',
-                },
-                manageButtonColors: {
-                    fill: 0xbe123c,
-                    hover: 0xe11d48,
-                    stroke: 0xfecdd3,
-                    text: '#fff1f2',
-                },
-                confirmGlowColor: expeditionUiTheme.colors.emberBright,
-                confirmGlowAlpha: 0,
-                actionGlowColor: expeditionUiTheme.colors.ember,
-                actionGlowAlpha: 0.1,
-            };
-        }
-        case 'insufficient-copies':
-            return {
-                barFillColor: 0x261320,
-                barBorderColor: expeditionUiTheme.colors.emberBright,
-                barAccentColor: expeditionUiTheme.colors.ember,
-                railLabel: '主操作',
-                titleColor: '#fff1f2',
-                summaryColor: '#f3d0c3',
-                supportColor: '#f3d0c3',
-                headline: `当前带入「${summary.selectedDeckName}」仍缺 ${Math.max(1, summary.shortageCardCopies)} 张库存卡`,
-                detail: inventoryDetail,
-                nextStepLabel: '先补齐缺牌库存，再回来确认。',
-                shortcutHint: '快捷键：Enter 主操作 · M 管理卡组',
-                stateBadgeLabel: `缺 ${Math.max(1, summary.shortageCardCopies)} 张`,
-                stateBadgeColor: '#f3d0c3',
-                stateBadgeBackgroundColor: '#b91c1c',
-                primaryAction: 'manage',
-                confirmButtonLabel: '暂不可确认带入',
-                manageButtonLabel: '去管理卡组补齐',
-                confirmButtonColors: {
-                    fill: 0x312330,
-                    hover: 0x312330,
-                    stroke: 0x7f1d1d,
-                    text: '#f3ead3',
-                },
-                manageButtonColors: {
-                    fill: 0xbe123c,
-                    hover: 0xe11d48,
-                    stroke: 0xfecdd3,
-                    text: '#fff1f2',
-                },
-                confirmGlowColor: expeditionUiTheme.colors.emberBright,
-                confirmGlowAlpha: 0,
-                actionGlowColor: expeditionUiTheme.colors.ember,
-                actionGlowAlpha: 0.1,
-            };
-        case 'none':
-            return {
-                barFillColor: expeditionUiTheme.colors.panelInner,
-                barBorderColor: expeditionUiTheme.colors.slate,
-                barAccentColor: 0x64748b,
-                railLabel: '主操作',
-                titleColor: '#f3ead3',
-                summaryColor: '#d9c6a2',
-                supportColor: '#bca785',
-                headline: '尚未选定本次带入卡组',
-                detail: `当前随行物资：${summary.itemCount} 件道具 · ${summary.spiritStones} 枚灵石。`,
-                nextStepLabel: '先去管理卡组创建或选定一套带入。',
-                shortcutHint: '快捷键：Enter 主操作 · M 管理卡组',
-                stateBadgeLabel: '待选卡组',
-                stateBadgeColor: '#f3ead3',
-                stateBadgeBackgroundColor: NEUTRAL_BADGE_BACKGROUND,
-                primaryAction: 'manage',
-                confirmButtonLabel: '暂不可确认带入',
-                manageButtonLabel: '去管理卡组选择',
-                confirmButtonColors: {
-                    fill: expeditionUiTheme.colors.slate,
-                    hover: expeditionUiTheme.colors.slate,
-                    stroke: expeditionUiTheme.colors.parchmentSoft,
-                    text: '#f3ead3',
-                },
-                manageButtonColors: {
-                    fill: expeditionUiTheme.colors.panelInner,
-                    hover: expeditionUiTheme.colors.slate,
-                    stroke: expeditionUiTheme.colors.parchmentSoft,
-                    text: '#f3ead3',
-                },
-                confirmGlowColor: 0x64748b,
-                confirmGlowAlpha: 0,
-                actionGlowColor: 0x64748b,
-                actionGlowAlpha: 0.06,
-            };
-    }
-}
-
-function createActionButton(
-    scene: Scene,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    label: string,
-    colors: ActionButtonColors,
-    onClick: () => void,
-    enabled = true,
-): { container: GameObjects.Container; background: GameObjects.Rectangle; label: GameObjects.Text } {
-    const background = scene.add.rectangle(0, 0, width, height, colors.fill, 1);
-    background.setStrokeStyle(2, colors.stroke, enabled ? 0.95 : 0.38);
-
-    if (enabled) {
-        background.setInteractive({ useHandCursor: true });
-        background.on('pointerover', () => background.setFillStyle(colors.hover, 1));
-        background.on('pointerout', () => background.setFillStyle(colors.fill, 1));
-        background.on('pointerdown', onClick);
-    } else {
-        background.setAlpha(0.55);
-    }
-
-    const text = scene.add.text(0, 0, label, {
-        fontFamily: expeditionUiTheme.fonts.ui,
-        fontSize: height >= 56 ? '20px' : '18px',
-        color: colors.text,
-        fontStyle: 'bold',
-    }).setOrigin(0.5);
-
-    if (!enabled) {
-        text.setAlpha(0.76);
-    }
-
-    const container = scene.add.container(x, y, [background, text]);
-
-    return { container, background, label: text };
-}
-
-function getDeckHandoffBannerColors(
-    tone: PreparationDeckHandoffSummary['tone'],
-): DeckHandoffBannerColors {
-    switch (tone) {
-        case 'positive':
-            return {
-                fillColor: 0x10261d,
-                borderColor: expeditionUiTheme.colors.jade,
-                badgeColor: '#dcfce7',
-                badgeBackgroundColor: '#166534',
-                detailColor: '#e6f3ea',
-            };
-        case 'warning':
-            return {
-                fillColor: 0x2a1420,
-                borderColor: expeditionUiTheme.colors.gold,
-                badgeColor: '#fef3c7',
-                badgeBackgroundColor: '#92400e',
-                detailColor: '#f6e2b1',
-            };
-        case 'neutral':
-            return {
-                fillColor: expeditionUiTheme.colors.panelInner,
-                borderColor: 0x64748b,
-                badgeColor: '#f3ead3',
-                badgeBackgroundColor: NEUTRAL_BADGE_BACKGROUND,
-                detailColor: '#d9c6a2',
-            };
-    }
-}
-
+/**
+ * 出发前确认 — the pre-departure loadout screen.
+ *
+ *   ┌ decks ┐ ┌──────────── selected deck ────────────┐ ┌── pack ─────┐
+ *   │ card  │ │ 出发前确认                             │ │ 灵石 · 道具 │
+ *   │ card  │ │ name          16 / 20–40  ▓▓▓░░       │ │             │
+ *   │ card  │ │ kind bars                              │ │ [ 出发 ]    │
+ *   └───────┘ └────────────────────────────────────────┘ │ [ 管理 ]    │
+ *                                                        └─────────────┘
+ * One decision, one glance: can we leave, and if not, what stands in the way.
+ */
 export class PreparationPanel extends GameObjects.Container implements EntryPanelFrameProvider {
     private stash: PersistentStash;
     private readonly metadata?: CardMetadataMap;
@@ -1008,29 +77,18 @@ export class PreparationPanel extends GameObjects.Container implements EntryPane
     private readonly onOpenDeckManager?: () => void;
     private readonly onOpenInventory?: () => void;
     private deckHandoffSummary?: PreparationDeckHandoffSummary | null;
-    private panelFrame: EntryPanelFrame | null = null;
-    private portraitInfoPage = 0;
+    private readonly portrait: boolean;
+    private readonly frameRect: Rect;
+    private readonly panelFrame: EntryPanelFrame;
 
-    private scrollX = 0;
-    private maxScrollX = 0;
-    private isDragging = false;
-    private dragStartX = 0;
-    private dragMoved = false;
-    private pendingDeckClick: string | null = null;
-    private scrollContainer?: GameObjects.Container;
-    private leftIndicator?: GameObjects.Text;
-    private rightIndicator?: GameObjects.Text;
-    private deckCarouselWayfinding?: DeckCarouselWayfindingRefs;
-    private readonly scrollTweenState = { value: 0 };
-    private wheelHandler?: (
-        pointer: Phaser.Input.Pointer,
-        gameObjects: unknown[],
-        deltaX: number,
-        deltaY: number,
-    ) => void;
-    private pointerMoveHandler?: (pointer: Phaser.Input.Pointer) => void;
-    private pointerUpHandler?: () => void;
+    private rosterScroll = 0;
+    private rosterMaxScroll = 0;
+    private rosterRect: Rect = { x: 0, y: 0, w: 0, h: 0 };
+    private rosterContent?: GameObjects.Container;
+    private rosterMask?: GameObjects.Graphics;
+    private countText?: GameObjects.Text;
     private keydownHandler?: (event: KeyboardEvent) => void;
+    private wheelHandler?: (pointer: Phaser.Input.Pointer, objs: unknown[], dx: number, dy: number) => void;
 
     constructor(scene: Scene, config: PreparationPanelConfig) {
         super(scene, 0, 0);
@@ -1042,1331 +100,506 @@ export class PreparationPanel extends GameObjects.Container implements EntryPane
         this.onOpenDeckManager = config.onOpenDeckManager;
         this.onOpenInventory = config.onOpenInventory;
         this.deckHandoffSummary = config.deckHandoffSummary;
+        this.portrait = isPortraitGameViewport(scene.scale.width, scene.scale.height);
 
-        this.renderPanel();
+        const { width: W, height: H } = scene.scale;
+        this.frameRect = this.portrait
+            ? { x: 8, y: 56, w: W - 16, h: H - 64 }
+            : { x: 24, y: 76, w: W - 48, h: H - 100 };
+        this.panelFrame = {
+            panelX: this.frameRect.x + this.frameRect.w / 2,
+            panelY: this.frameRect.y + this.frameRect.h / 2,
+            panelWidth: this.frameRect.w,
+            panelHeight: this.frameRect.h,
+        };
+
+        this.render();
+
         this.keydownHandler = this.handleKeyDown.bind(this);
         scene.input.keyboard?.on('keydown', this.keydownHandler);
-        this.once(Phaser.GameObjects.Events.DESTROY, () => {
-            this.teardownScrollInteraction();
-            this.teardownKeyboardShortcuts();
-        });
+        this.wheelHandler = (pointer, _objs, _dx, dy) => {
+            if (!this.visible || this.rosterMaxScroll <= 0) return;
+            const r = this.rosterRect;
+            if (pointer.x < r.x || pointer.x > r.x + r.w || pointer.y < r.y || pointer.y > r.y + r.h) return;
+            this.setRosterScroll(this.rosterScroll + dy * 0.6);
+        };
+        scene.input.on('wheel', this.wheelHandler);
+        this.once(Phaser.GameObjects.Events.DESTROY, () => this.teardown());
         scene.add.existing(this);
     }
 
-    updateStash(
-        stash: PersistentStash,
-        deckSwitchFeedback?: PreparationPanelDeckSwitchFeedback,
-    ): void {
+    updateStash(stash: PersistentStash, deckSwitchFeedback?: PreparationPanelDeckSwitchFeedback): void {
         this.stash = stash;
         this.deckHandoffSummary = null;
-        this.portraitInfoPage = 0;
-        this.renderPanel({
-            deckSwitchFeedback,
-            initialScrollX: this.scrollX,
-        });
+        this.render({ deckSwitchFeedback });
     }
 
     public getEntryPanelFrame(): EntryPanelFrame | null {
         return this.panelFrame;
     }
 
-    private renderPortraitPanel(): void {
-        const { width, height } = this.scene.scale;
-        const panelWidth = width - 40;
-        const panelHeight = 800;
-        const panelX = width / 2;
-        const panelY = 550;
-        const panelTop = panelY - panelHeight / 2;
-        const contentWidth = panelWidth - 56;
-        const selected = getSelectedSavedDeck(this.stash);
-        const selectedIndex = this.stash.savedDecks.findIndex(deck => deck.id === selected?.id);
-        const summary = createPreparationSelectedLoadoutSummary(this.stash, this.metadata);
-        const validation = validateExpeditionLoadout(this.stash);
-        const infoCopy = (validation.valid
-            ? [summary.detail, ...summary.readinessChecklistLines]
-            : formatPreparationValidationLines(validation, this.metadata)).join('\n') || '请选择一套可带入的卡组。';
-        const infoPages = paginateReadableCopy(infoCopy, 70);
-        this.portraitInfoPage = Math.min(this.portraitInfoPage, infoPages.length - 1);
-        this.panelFrame = { panelX, panelY, panelWidth, panelHeight };
-
-        const overlay = this.scene.add.rectangle(panelX, height / 2, width, height, 0x030712, 0.8);
-        const shadow = this.scene.add.rectangle(panelX + 5, panelY + 8, panelWidth, panelHeight,
-            expeditionUiTheme.colors.overlay, 0.5);
-        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight,
-            expeditionUiTheme.colors.panel, 0.98);
-        panel.setStrokeStyle(3, expeditionUiTheme.colors.goldSoft, 0.82);
-        const accent = this.scene.add.rectangle(panelX, panelTop + 7, panelWidth - 28, 6,
-            expeditionUiTheme.colors.gold, 0.9);
-        const title = this.scene.add.text(panelX, 196, '出发前确认', {
-            fontFamily: expeditionUiTheme.fonts.display, fontSize: '32px', color: '#f3ead3',
-        }).setOrigin(0.5);
-        const subtitle = this.scene.add.text(panelX, 240, '选定卡组，核对随行物资。', {
-            fontFamily: expeditionUiTheme.fonts.body, fontSize: '19px', color: '#d9c6a2',
-        }).setOrigin(0.5);
-        const deckPlate = this.scene.add.rectangle(panelX, 364, panelWidth - 28, 190,
-            expeditionUiTheme.colors.panelInner, 0.95);
-        deckPlate.setStrokeStyle(1, validation.valid ? expeditionUiTheme.colors.jadeBright : expeditionUiTheme.colors.goldSoft, 0.72);
-        const deckLabel = this.scene.add.text(52, 289, '当前带入卡组', {
-            fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#bca785',
-        });
-        const deckName = this.scene.add.text(panelX, 335, selected?.name ?? '尚未选择卡组', {
-            fontFamily: expeditionUiTheme.fonts.display, fontSize: '26px', color: '#f3ead3',
-            align: 'center', wordWrap: { width: contentWidth },
-        }).setOrigin(0.5);
-        const deckCount = this.scene.add.text(panelX, 391,
-            `${summary.deckCount} 张卡 · ${summary.itemCount} 件道具 · ${summary.spiritStones} 枚灵石`, {
-                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#d9c6a2',
-                align: 'center', wordWrap: { width: contentWidth },
-            }).setOrigin(0.5);
-        const readiness = this.scene.add.text(panelX, 429,
-            validation.valid ? '可以直接出发' : summary.readinessLabel, {
-                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '20px', fontStyle: 'bold',
-                color: validation.valid ? '#b7f1cf' : '#f6e2b1',
-                align: 'center', wordWrap: { width: contentWidth },
-            }).setOrigin(0.5);
-        const switchLabel = this.scene.add.text(panelX, 487,
-            this.stash.savedDecks.length
-                ? `选择卡组 · ${Math.max(1, selectedIndex + 1)}/${this.stash.savedDecks.length}`
-                : '暂无可选卡组', {
-                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '20px', color: '#f3ead3',
-            }).setOrigin(0.5);
-        const secondaryColors: ActionButtonColors = {
-            fill: expeditionUiTheme.colors.slate, hover: expeditionUiTheme.colors.panelInner,
-            stroke: expeditionUiTheme.colors.goldSoft, text: '#f3ead3',
-        };
-        const previousDeck = createActionButton(this.scene, 141, 552, 172, 58, '上一套', secondaryColors,
-            () => this.selectAdjacentDeck(-1), this.stash.savedDecks.length > 1);
-        const nextDeck = createActionButton(this.scene, width - 141, 552, 172, 58, '下一套', secondaryColors,
-            () => this.selectAdjacentDeck(1), this.stash.savedDecks.length > 1);
-        const infoPlate = this.scene.add.rectangle(panelX, 690, panelWidth - 28, 180,
-            expeditionUiTheme.colors.panelInner, 0.94);
-        infoPlate.setStrokeStyle(1, expeditionUiTheme.colors.slate, 0.56);
-        const infoHeading = this.scene.add.text(52, 613,
-            `准备说明 ${this.portraitInfoPage + 1}/${infoPages.length}`, {
-                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#d9c6a2',
-            });
-        const infoBody = this.scene.add.text(52, 647, infoPages[this.portraitInfoPage]!, {
-            fontFamily: expeditionUiTheme.fonts.body, fontSize: '18px', color: '#f3ead3',
-            lineSpacing: 4, wordWrap: { width: contentWidth },
-        });
-        this.add([overlay, shadow, panel, accent, title, subtitle, deckPlate, deckLabel, deckName,
-            deckCount, readiness, switchLabel, previousDeck.container, nextDeck.container,
-            infoPlate, infoHeading, infoBody]);
-        if (infoPages.length > 1) {
-            const previousInfo = createActionButton(this.scene, 141, 753, 172, 42, '上一段', secondaryColors,
-                () => { this.portraitInfoPage -= 1; this.renderPanel(); }, this.portraitInfoPage > 0);
-            const nextInfo = createActionButton(this.scene, width - 141, 753, 172, 42, '下一段', secondaryColors,
-                () => { this.portraitInfoPage += 1; this.renderPanel(); }, this.portraitInfoPage < infoPages.length - 1);
-            this.add([previousInfo.container, nextInfo.container]);
-        }
-        const manage = createActionButton(this.scene, 141, 831, 172, 58, '管理卡组', secondaryColors,
-            () => this.openDeckManager(), Boolean(this.onOpenDeckManager));
-        const inventory = createActionButton(this.scene, width - 141, 831, 172, 58, '整理道具', secondaryColors,
-            () => this.onOpenInventory?.(), Boolean(this.onOpenInventory));
-        const confirm = createActionButton(this.scene, panelX, 910, panelWidth - 56, 68,
-            '确认带入并出发', {
-                fill: expeditionUiTheme.colors.jade, hover: expeditionUiTheme.colors.jadeBright,
-                stroke: expeditionUiTheme.colors.goldSoft, text: '#f3ead3',
-            }, () => this.confirmLoadout(), validation.valid);
-        this.add([manage.container, inventory.container, confirm.container]);
+    // ---------------------------------------------------------------------------------------
+    // drawing helpers
+    // ---------------------------------------------------------------------------------------
+    private text(x: number, y: number, s: string, size: number, color: number, extra: Phaser.Types.GameObjects.Text.TextStyle = {}) {
+        return this.scene.add.text(x, y, s, style(size, color, extra));
     }
 
-    private renderPanel(options: DeckSwitchRenderOptions = {}): void {
-        this.teardownScrollInteraction();
-        this.scene.tweens.killTweensOf(this.scrollTweenState);
-        this.removeAll(true);
-        this.scrollContainer = undefined;
-        this.leftIndicator = undefined;
-        this.rightIndicator = undefined;
-        this.deckCarouselWayfinding = undefined;
-        this.isDragging = false;
-        this.dragMoved = false;
-        this.pendingDeckClick = null;
+    private frame(rect: Rect, s: PanelStyle) {
+        const g = this.scene.add.graphics().setPosition(rect.x, rect.y);
+        drawPixelFrame(g, rect.w, rect.h, { shadow: false, ...s });
+        return g;
+    }
 
-        const { width, height } = this.scene.scale;
-        if (isPortraitGameViewport(width, height)) {
-            this.renderPortraitPanel();
+    private fit(t: GameObjects.Text, maxW: number) {
+        if (t.width > maxW) t.setScale(maxW / t.width);
+        return t;
+    }
+
+    private meter(x: number, y: number, w: number, h: number, count: number, color: number) {
+        const g = this.scene.add.graphics().setPosition(x, y);
+        g.fillStyle(C.void, 1).fillRect(0, 0, w, h);
+        g.fillStyle(C.ink, 1).fillRect(3, 3, w - 6, h - 6);
+        const fill = Math.round(((w - 6) * Math.min(1, count / DECK_CARD_MAX)) / 4) * 4;
+        g.fillStyle(color, 1).fillRect(3, 3, fill, h - 6);
+        g.fillStyle(C.paper, 0.3).fillRect(3, 3, fill, 3);
+        const minX = 3 + Math.round(((w - 6) * DECK_CARD_MIN) / DECK_CARD_MAX);
+        g.fillStyle(C.glow, 1).fillRect(minX - 2, -4, 4, h + 8);
+        g.fillStyle(C.void, 0.4);
+        for (let i = 5; i < DECK_CARD_MAX; i += 5) g.fillRect(3 + Math.round(((w - 6) * i) / DECK_CARD_MAX), 3, 2, h - 6);
+        return { g, minX };
+    }
+
+    private button(
+        parent: GameObjects.Container,
+        rect: Rect,
+        label: string,
+        opts: { style: PanelStyle; enabled: boolean; size?: number; sub?: string; onClick: () => void },
+    ) {
+        const c = this.scene.add.container(rect.x, rect.y);
+        const g = this.scene.add.graphics();
+        const base = opts.style;
+        const draw = (hot: boolean) => {
+            g.clear();
+            if (!opts.enabled) {
+                drawPixelFrame(g, rect.w, rect.h, { shadow: false, fill: C.ink, edge: C.void, border: C.dusk, hi: C.twilight, lo: C.void, stud: null });
+            } else {
+                drawPixelFrame(g, rect.w, rect.h, hot ? { ...base, fill: base.border, shadow: false } : { ...base, shadow: false });
+            }
+        };
+        draw(false);
+        c.add(g);
+        const size = opts.size ?? 24;
+        const t = this.text(rect.w / 2, opts.sub ? rect.h / 2 - 10 : rect.h / 2, label, size, opts.enabled ? C.paper : C.mist, { stroke: hex(C.void), strokeThickness: 3 }).setOrigin(0.5);
+        this.fit(t, rect.w - 24);
+        c.add(t);
+        if (opts.sub) c.add(this.text(rect.w / 2, rect.h / 2 + 22, opts.sub, 12, opts.enabled ? C.glow : C.haze).setOrigin(0.5));
+        if (opts.enabled) {
+            const hit = this.scene.add.rectangle(rect.w / 2, rect.h / 2, rect.w, rect.h, 0x000000, 0.001).setInteractive({ useHandCursor: true });
+            hit.on('pointerover', () => draw(true));
+            hit.on('pointerout', () => draw(false));
+            hit.on('pointerdown', opts.onClick);
+            c.add(hit);
+        }
+        parent.add(c);
+        return c;
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // render
+    // ---------------------------------------------------------------------------------------
+    private render(options: RenderOptions = {}): void {
+        this.removeAll(true);
+        this.rosterMask?.destroy();
+        this.rosterMask = undefined;
+        this.rosterContent = undefined;
+        this.countText = undefined;
+
+        const fr = this.frameRect;
+        const validation = validateExpeditionLoadout(this.stash);
+        const summary = createPreparationSelectedLoadoutSummary(this.stash, this.metadata);
+        const ok = validation.valid;
+        const deck = getSelectedSavedDeck(this.stash);
+        const count = deck ? countDeckCards(deck.cards) : 0;
+        const tone = ok ? C.celadon : count > DECK_CARD_MAX ? C.cinnabar : C.gold;
+
+        this.add(this.frame(fr, { ...PANEL_INK, fill: C.ink, border: C.dusk, hi: C.haze, lo: C.void }));
+
+        const pad = 16, gap = 14;
+        const inner: Rect = { x: fr.x + pad, y: fr.y + pad, w: fr.w - pad * 2, h: fr.h - pad * 2 };
+
+        if (this.portrait) {
+            this.renderPortrait(inner, summary, validation, ok, count, tone, deck?.cards ?? [], options);
             return;
         }
-        const panelWidth = Math.min(1040, width * 0.86);
-        const panelX = width / 2;
-        const selectedLoadoutSummary = createPreparationSelectedLoadoutSummary(this.stash, this.metadata);
-        const deckCarouselSummary = createPreparationDeckCarouselSummary(this.stash);
-        const validation = validateExpeditionLoadout(this.stash);
-        const isDeckValid = validation.valid;
-        const selectedDeck = getSelectedSavedDeck(this.stash);
-        const selectedDeckId = selectedDeck?.id ?? null;
-        const selectedLoadoutColors = getSelectedLoadoutColors(selectedLoadoutSummary);
-        const actionColors = getActionHierarchyColors(selectedLoadoutSummary);
-        const contentWidth = panelWidth - 96;
-        const buttonColumnWidth = Math.min(
-            ACTION_BUTTON_COLUMN_WIDTH,
-            Math.max(232, Math.floor(contentWidth * 0.3)),
-        );
-        const selectorInnerWidth = contentWidth - 36;
-        const preparationTitle = '出发前确认';
-        const preparationSubtitle = '能出发就确认；不能就管理卡组。';
-        const itemPreviewText = formatInlinePreviewText(selectedLoadoutSummary.itemPreviewLines, 2);
-        const validationLines = formatPreparationValidationLines(validation, this.metadata);
-        const validationChecklistBody = formatBulletLines(
-            isDeckValid ? selectedLoadoutSummary.readinessChecklistLines : validationLines,
-            2,
-        );
-        const loadoutSupportBody = [
-            `卡组总览：${selectedLoadoutSummary.kindSummaryLine}`,
-            selectedLoadoutSummary.issuePreviewLines.length > 0
-                ? `阻塞摘要：${formatInlinePreviewText(selectedLoadoutSummary.issuePreviewLines, 2)}`
-                : `物资封单：${itemPreviewText}`,
-        ].join('\n');
-        const loadoutSupportFooter = selectedLoadoutSummary.footer;
-        const selectorSupportText = this.stash.savedDecks.length === 0
-            ? '暂无候选卡组；先去管理卡组整理一套。'
-            : deckCarouselSummary.invalidDeckCount > 0
-                ? `候选 ${deckCarouselSummary.readyDeckCount} 套可带入 · ${deckCarouselSummary.invalidDeckCount} 套需调整`
-                : `候选 ${deckCarouselSummary.readyDeckCount} 套都可直接带入`;
-        const carouselProgressMeasurementText = this.stash.savedDecks.length === 0
-            ? '浏览进度 0% · 按 M 去管理卡组'
-            : this.stash.savedDecks.length > 3
-                ? `浏览进度 100% · 可见 1-${Math.min(this.stash.savedDecks.length, 4)} / ${this.stash.savedDecks.length} 套 · 拖动/滚轮/← → 切换`
-                : `浏览进度 100% · 当前 1-${this.stash.savedDecks.length} / ${this.stash.savedDecks.length} 套 · 点按或按 ← / → 切换`;
-        const heroDetailText = selectedLoadoutSummary.detail;
-        const actionSummaryLabel = '下一步';
-        const actionSummaryText = actionColors.nextStepLabel.replace(/^下一步：/, '');
-        const subtitleHeight = measureTextHeight(
-            this.scene,
-            preparationSubtitle,
-            {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                wordWrap: { width: contentWidth - buttonColumnWidth - 48 },
-            },
-        );
-        const handoffDetailHeight = this.deckHandoffSummary
-            ? measureTextHeight(this.scene, this.deckHandoffSummary.detail, {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                wordWrap: { width: contentWidth - buttonColumnWidth - 72 },
-                lineSpacing: 6,
-            })
-            : 0;
-        const handoffBannerHeight = this.deckHandoffSummary
-            ? Math.max(76, 28 + handoffDetailHeight + 16)
-            : 0;
-        const heroLeadHeight = subtitleHeight + 8 + (handoffBannerHeight > 0 ? handoffBannerHeight + 8 : 0);
-        const heroMetrics = getReadinessHeroMetrics(
-            this.scene,
-            contentWidth,
-            buttonColumnWidth,
-            selectedLoadoutSummary.selectedDeckName,
-            selectedLoadoutSummary.headline,
-            heroDetailText,
-            validationChecklistBody,
-            actionSummaryText,
-            actionColors.shortcutHint,
-            heroLeadHeight,
-        );
-        const loadoutStripMetrics = getLoadoutSupportStripMetrics(
-            this.scene,
-            contentWidth,
-            loadoutSupportBody,
-            loadoutSupportFooter,
-        );
-        const decisionCardHeight = calculatePreparationDecisionCardHeight(
-            heroMetrics.height,
-            loadoutStripMetrics.height,
-        );
-        const deckCardHeight = getDeckCardHeight(this.scene, this.stash.savedDecks);
-        const selectorHeadingHeight = measureTextHeight(this.scene, '改用其他卡组', {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            fontStyle: 'bold',
-        });
-        const selectorSupportHeight = measureTextHeight(this.scene, selectorSupportText, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            lineSpacing: 6,
-            wordWrap: { width: selectorInnerWidth },
-        });
-        const selectorProgressHeight = measureTextHeight(this.scene, carouselProgressMeasurementText, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            lineSpacing: 6,
-            wordWrap: { width: selectorInnerWidth },
-        });
-        const deckSwitcherSectionHeaderHeight = Math.max(selectorHeadingHeight, 24)
-            + 8
-            + selectorSupportHeight
-            + 8
-            + selectorProgressHeight
-            + 10;
-        const deckSwitcherSectionHeight = calculateDeckSwitcherHeight(
-            deckSwitcherSectionHeaderHeight,
-            deckCardHeight,
-        );
-        const preflightTopOffset = 30;
-        const panelHeight = Math.min(
-            Math.max(PANEL_MIN_HEIGHT, preflightTopOffset + decisionCardHeight + 10 + deckSwitcherSectionHeight + 24),
-            Math.min(PANEL_MAX_HEIGHT, Math.floor(height * PANEL_MAX_HEIGHT_RATIO)),
-        );
-        const panelY = height / 2 + (panelHeight > 760 ? 6 : 12);
-        const panelLeft = panelX - panelWidth / 2;
-        const panelTop = panelY - panelHeight / 2;
-        const contentLeft = panelLeft + 48;
-        const readinessHeroTop = panelTop + preflightTopOffset;
-        const loadoutStripTop = readinessHeroTop + decisionCardHeight - loadoutStripMetrics.height - 10;
-        const deckSwitcherTop = readinessHeroTop + decisionCardHeight + 10;
-        this.panelFrame = {
-            panelX,
-            panelY,
-            panelWidth,
-            panelHeight,
-        };
 
-        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x030712, 0.8);
-        const shadow = this.scene.add.rectangle(panelX, panelY + 12, panelWidth + 16, panelHeight + 16, expeditionUiTheme.colors.overlay, 0.42);
-        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, expeditionUiTheme.colors.panel, 0.98);
-        panel.setStrokeStyle(3, expeditionUiTheme.colors.goldSoft, 0.82);
-        const panelAccent = this.scene.add.rectangle(panelX, panelTop + 6, panelWidth - 36, 6, expeditionUiTheme.colors.gold, 0.96).setOrigin(0.5, 0);
-        const handoffSummary = this.deckHandoffSummary;
+        const rosterW = 340, packW = 440;
+        const roster: Rect = { x: inner.x, y: inner.y, w: rosterW, h: inner.h };
+        const pack: Rect = { x: inner.x + inner.w - packW, y: inner.y, w: packW, h: inner.h };
+        const main: Rect = { x: roster.x + rosterW + gap, y: inner.y, w: pack.x - gap - (roster.x + rosterW + gap), h: inner.h };
 
-        const heroInnerLeft = contentLeft + 18;
-        const heroButtonLeft = contentLeft + contentWidth - buttonColumnWidth - 20;
-        const heroGlow = this.scene.add.rectangle(
-            panelX,
-            readinessHeroTop + decisionCardHeight / 2,
-            contentWidth + 12,
-            decisionCardHeight + 10,
-            selectedLoadoutColors.accentColor,
-            selectedLoadoutSummary.readiness === 'ready' ? 0.08 : 0.12,
-        );
-        const heroCard = this.scene.add.rectangle(
-            panelX,
-            readinessHeroTop + decisionCardHeight / 2,
-            contentWidth,
-            decisionCardHeight,
-            selectedLoadoutColors.fillColor,
-            0.98,
-        );
-        heroCard.setStrokeStyle(2, selectedLoadoutColors.borderColor, 0.92);
-        const heroAccent = this.scene.add.rectangle(
-            panelX,
-            readinessHeroTop + 4,
-            contentWidth - 16,
-            4,
-            selectedLoadoutColors.accentColor,
-            1,
-        ).setOrigin(0.5, 0);
-        const heroRailLabel = this.scene.add.text(heroInnerLeft, readinessHeroTop + 16, preparationTitle, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: actionColors.supportColor,
-            fontStyle: 'bold',
-        });
-        const heroStateBadge = this.scene.add.text(
-            heroButtonLeft - 12,
-            readinessHeroTop + 12,
-            actionColors.stateBadgeLabel,
-            {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                color: actionColors.stateBadgeColor,
-                fontStyle: 'bold',
-                backgroundColor: actionColors.stateBadgeBackgroundColor,
-                padding: { left: 12, right: 12, top: 6, bottom: 6 },
-            },
-        ).setOrigin(1, 0);
-        const heroIntro = this.scene.add.text(heroInnerLeft, heroRailLabel.y + heroRailLabel.height + 4, preparationSubtitle, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: '#d9c6a2',
-            wordWrap: { width: heroMetrics.textWidth },
-        });
-        const heroHandoffElements: Phaser.GameObjects.GameObject[] = [];
-        let heroBodyTop = heroIntro.y + heroIntro.height + 10;
-
-        if (handoffSummary) {
-            const bannerColors = getDeckHandoffBannerColors(handoffSummary.tone);
-            const compactBanner = this.scene.add.rectangle(
-                heroInnerLeft + heroMetrics.textWidth / 2,
-                heroBodyTop + handoffBannerHeight / 2,
-                heroMetrics.textWidth,
-                handoffBannerHeight,
-                bannerColors.fillColor,
-                0.46,
-            ).setOrigin(0.5, 0.5);
-            compactBanner.setStrokeStyle(1, bannerColors.borderColor, 0.54);
-            const compactBannerTitle = this.scene.add.text(heroInnerLeft + 12, heroBodyTop + 8, handoffSummary.title, {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '14px',
-                color: bannerColors.badgeColor,
-                fontStyle: 'bold',
-                backgroundColor: bannerColors.badgeBackgroundColor,
-                padding: { left: 10, right: 10, top: 4, bottom: 4 },
-            });
-            const compactBannerDetail = this.scene.add.text(heroInnerLeft + 12, compactBannerTitle.y + compactBannerTitle.height + 4, handoffSummary.detail, {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                color: bannerColors.detailColor,
-                wordWrap: { width: heroMetrics.textWidth - 24 },
-                lineSpacing: 6,
-            });
-
-            heroBodyTop += handoffBannerHeight + 10;
-            heroHandoffElements.push(compactBanner, compactBannerTitle, compactBannerDetail);
-        }
-
-        const heroDeckLabel = this.scene.add.text(heroInnerLeft, heroBodyTop, '当前带入', {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: selectedLoadoutColors.mutedColor,
-            fontStyle: 'bold',
-        });
-        const heroDeckName = this.scene.add.text(heroInnerLeft, heroDeckLabel.y + heroDeckLabel.height + 8, selectedLoadoutSummary.selectedDeckName, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '32px',
-            color: selectedLoadoutColors.headlineColor,
-            fontStyle: 'bold',
-            wordWrap: { width: heroMetrics.textWidth },
-        });
-        const heroHeadline = this.scene.add.text(heroInnerLeft, heroDeckName.y + heroDeckName.height + 8, selectedLoadoutSummary.headline, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '22px',
-            color: actionColors.titleColor,
-            fontStyle: 'bold',
-            wordWrap: { width: heroMetrics.textWidth },
-        });
-        const heroDetail = this.scene.add.text(heroInnerLeft, heroHeadline.y + heroHeadline.height + 6, heroDetailText, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: actionColors.summaryColor,
-            lineSpacing: 6,
-            wordWrap: { width: heroMetrics.textWidth },
-        });
-        const readinessPanelTop = heroDetail.y + heroDetail.height + 12;
-        const readinessPanel = createManifestPanel(
-            this.scene,
-            heroInnerLeft,
-            readinessPanelTop,
-            heroMetrics.validationPanelWidth,
-            heroMetrics.sectionHeight,
-            selectedLoadoutSummary.issuePreviewLines.length > 0 ? '当前阻塞' : '已核对',
-            validationChecklistBody,
-            {
-                fillColor: selectedLoadoutSummary.readiness === 'ready' ? READY_DETAIL_FILL : 0x29131b,
-                borderColor: selectedLoadoutSummary.readiness === 'ready' ? expeditionUiTheme.colors.jadeBright : selectedLoadoutColors.borderColor,
-                titleColor: selectedLoadoutColors.mutedColor,
-                bodyColor: selectedLoadoutColors.headlineColor,
-                badgeColor: selectedLoadoutColors.badgeColor,
-                badgeBackgroundColor: selectedLoadoutColors.badgeBackgroundColor,
-            },
-            {
-                badgeText: selectedLoadoutSummary.readinessLabel,
-            },
-        );
-        const heroSummaryContainer = this.scene.add.container(0, 0, [
-            heroRailLabel,
-            heroStateBadge,
-            heroIntro,
-            ...heroHandoffElements,
-            heroDeckLabel,
-            heroDeckName,
-            heroHeadline,
-            heroDetail,
-            ...readinessPanel,
-        ]);
-
-        const actionGlow = this.scene.add.rectangle(
-            heroButtonLeft + buttonColumnWidth / 2,
-            readinessHeroTop + heroMetrics.height / 2,
-            buttonColumnWidth + 18,
-            heroMetrics.height - 24,
-            actionColors.actionGlowColor,
-            actionColors.actionGlowAlpha,
-        );
-        const actionColumnPlate = this.scene.add.rectangle(
-            heroButtonLeft + buttonColumnWidth / 2,
-            readinessHeroTop + heroMetrics.height / 2,
-            buttonColumnWidth,
-            heroMetrics.height - 36,
-            actionColors.barFillColor,
-            0.28,
-        );
-        actionColumnPlate.setStrokeStyle(1, actionColors.barBorderColor, 0.24);
-        const actionDivider = this.scene.add.rectangle(
-            heroButtonLeft - 10,
-            readinessHeroTop + heroMetrics.height / 2,
-            1,
-            heroMetrics.height - 42,
-            actionColors.barBorderColor,
-            0.36,
-        ).setOrigin(0.5, 0.5);
-        const actionSlotLabel = this.scene.add.text(heroButtonLeft, readinessHeroTop + 18, actionColors.railLabel, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: actionColors.supportColor,
-            fontStyle: 'bold',
-        });
-        const actionSummaryHeading = this.scene.add.text(heroButtonLeft, actionSlotLabel.y + actionSlotLabel.height + 8, actionSummaryLabel, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: selectedLoadoutSummary.readiness === 'ready' ? '#d9c6a2' : '#fcd34d',
-            fontStyle: 'bold',
-        });
-        const actionSummary = this.scene.add.text(heroButtonLeft, actionSummaryHeading.y + actionSummaryHeading.height + 8, actionSummaryText, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: actionColors.summaryColor,
-            lineSpacing: 6,
-            wordWrap: { width: buttonColumnWidth - 24 },
-        });
-        const actionShortcutHint = this.scene.add.text(heroButtonLeft, actionSummary.y + actionSummary.height + 8, actionColors.shortcutHint, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: actionColors.supportColor,
-            lineSpacing: 6,
-            wordWrap: { width: buttonColumnWidth - 24 },
-        });
-        const buttonStackHeight = ACTION_BUTTON_PRIMARY_HEIGHT + ACTION_BUTTON_GAP + ACTION_BUTTON_SECONDARY_HEIGHT;
-        const buttonStackTop = Math.max(
-            actionShortcutHint.y + actionShortcutHint.height + 12,
-            readinessHeroTop + heroMetrics.height - 16 - buttonStackHeight,
-        );
-        const primaryButtonY = buttonStackTop + ACTION_BUTTON_PRIMARY_HEIGHT / 2;
-        const secondaryButtonY = buttonStackTop + ACTION_BUTTON_PRIMARY_HEIGHT + ACTION_BUTTON_GAP + ACTION_BUTTON_SECONDARY_HEIGHT / 2;
-        const manageButtonHeight = actionColors.primaryAction === 'manage'
-            ? ACTION_BUTTON_PRIMARY_HEIGHT
-            : ACTION_BUTTON_SECONDARY_HEIGHT;
-        const confirmButtonHeight = actionColors.primaryAction === 'confirm'
-            ? ACTION_BUTTON_PRIMARY_HEIGHT
-            : ACTION_BUTTON_SECONDARY_HEIGHT;
-        const manageButtonY = actionColors.primaryAction === 'manage' ? primaryButtonY : secondaryButtonY;
-        const confirmButtonY = actionColors.primaryAction === 'confirm' ? primaryButtonY : secondaryButtonY;
-        const deckManagerButton = createActionButton(
-            this.scene,
-            heroButtonLeft + buttonColumnWidth / 2,
-            manageButtonY,
-            buttonColumnWidth,
-            manageButtonHeight,
-            actionColors.manageButtonLabel,
-            actionColors.manageButtonColors,
-            () => this.openDeckManager(),
-        );
-        const confirmGlow = this.scene.add.rectangle(
-            heroButtonLeft + buttonColumnWidth / 2,
-            confirmButtonY,
-            buttonColumnWidth + 18,
-            confirmButtonHeight + 14,
-            actionColors.confirmGlowColor,
-            actionColors.confirmGlowAlpha,
-        );
-        const confirmButton = createActionButton(
-            this.scene,
-            heroButtonLeft + buttonColumnWidth / 2,
-            confirmButtonY,
-            buttonColumnWidth,
-            confirmButtonHeight,
-            actionColors.confirmButtonLabel,
-            actionColors.confirmButtonColors,
-            () => this.confirmLoadout(),
-            isDeckValid,
-        );
-        const actionContainer = this.scene.add.container(0, 0, [
-            actionGlow,
-            actionColumnPlate,
-            actionDivider,
-            actionSlotLabel,
-            actionSummaryHeading,
-            actionSummary,
-            actionShortcutHint,
-            deckManagerButton.container,
-            confirmGlow,
-            confirmButton.container,
-        ]);
-
-        const selectorInnerLeft = contentLeft + 18;
-        const loadoutDivider = this.scene.add.rectangle(
-            panelX,
-            loadoutStripTop - 4,
-            contentWidth - 28,
-            1,
-            selectedLoadoutColors.borderColor,
-            0.18,
-        ).setOrigin(0.5, 0);
-        const loadoutSummaryGlow = this.scene.add.rectangle(
-            panelX,
-            loadoutStripTop + loadoutStripMetrics.height / 2,
-            contentWidth - 8,
-            loadoutStripMetrics.height + 4,
-            selectedLoadoutColors.accentColor,
-            0.05,
-        );
-        loadoutSummaryGlow.setStrokeStyle(1, selectedLoadoutColors.borderColor, 0.06);
-        const loadoutSummaryCard = this.scene.add.rectangle(
-            panelX,
-            loadoutStripTop + loadoutStripMetrics.height / 2,
-            contentWidth - 20,
-            loadoutStripMetrics.height,
-            expeditionUiTheme.colors.ink,
-            0.5,
-        );
-        loadoutSummaryCard.setStrokeStyle(1, selectedLoadoutColors.borderColor, 0.1);
-        const loadoutSummaryHeading = this.scene.add.text(contentLeft + 18, loadoutStripTop + 10, '带入清单', {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: selectedLoadoutColors.mutedColor,
-            fontStyle: 'bold',
-        });
-        const inventoryAction = this.onOpenInventory ? this.scene.add.text(contentLeft + 128, loadoutStripTop + 10, '整理道具', {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: '#d8c08b',
-            fontStyle: 'bold',
-        }).setInteractive({ useHandCursor: true }) : null;
-        inventoryAction?.on('pointerover', () => inventoryAction.setColor('#f3ead3'));
-        inventoryAction?.on('pointerout', () => inventoryAction.setColor('#d8c08b'));
-        inventoryAction?.on('pointerdown', () => this.onOpenInventory?.());
-        const loadoutSummaryBadge = this.scene.add.text(
-            contentLeft + contentWidth - 18,
-            loadoutStripTop + 10,
-            `物资：${selectedLoadoutSummary.itemCount} 件道具 · 灵石 ${selectedLoadoutSummary.spiritStones} 枚`,
-            {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '16px',
-                color: selectedLoadoutColors.mutedColor,
-            },
-        ).setOrigin(1, 0);
-        const loadoutSummaryBodyTop = Math.max(
-            loadoutSummaryHeading.y + loadoutSummaryHeading.height,
-            loadoutSummaryBadge.y + loadoutSummaryBadge.height,
-        ) + 6;
-        const loadoutSummaryBodyText = this.scene.add.text(
-            contentLeft + 18,
-            loadoutSummaryBodyTop,
-            loadoutSupportBody,
-            {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                color: '#f3ead3',
-                lineSpacing: 6,
-                wordWrap: { width: contentWidth - 36 },
-            },
-        );
-        const loadoutSummaryFooter = this.scene.add.text(
-            contentLeft + 18,
-            loadoutStripTop + loadoutStripMetrics.height - 10,
-            loadoutSupportFooter,
-            {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                color: '#bca785',
-                lineSpacing: 6,
-                wordWrap: { width: contentWidth - 36 },
-            },
-        ).setOrigin(0, 1);
-        const loadoutSummaryContainer = this.scene.add.container(0, 0, [
-            loadoutDivider,
-            loadoutSummaryGlow,
-            loadoutSummaryCard,
-            loadoutSummaryHeading,
-            ...(inventoryAction ? [inventoryAction] : []),
-            loadoutSummaryBadge,
-            loadoutSummaryBodyText,
-            loadoutSummaryFooter,
-        ]);
-
-        const switcherPanel = this.scene.add.rectangle(
-            panelX,
-            deckSwitcherTop + deckSwitcherSectionHeight / 2,
-            contentWidth - 28,
-            deckSwitcherSectionHeight,
-            expeditionUiTheme.colors.ink,
-            0.44,
-        );
-        switcherPanel.setStrokeStyle(1, selectedLoadoutColors.borderColor, 0.1);
-        const switcherAccent = this.scene.add.rectangle(
-            panelX,
-            deckSwitcherTop + 4,
-            contentWidth - 42,
-            3,
-            selectedLoadoutColors.accentColor,
-            0.6,
-        ).setOrigin(0.5, 0);
-        const selectorHeading = this.scene.add.text(selectorInnerLeft, deckSwitcherTop + 10, '改用其他卡组', {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: '#bca785',
-            fontStyle: 'bold',
-        });
-        const selectorPositionBadge = this.scene.add.text(
-            contentLeft + contentWidth - 18,
-            deckSwitcherTop + 6,
-            deckCarouselSummary.positionLabel,
-            {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '16px',
-                color: '#f3ead3',
-                fontStyle: 'bold',
-                backgroundColor: '#0f172a',
-                padding: { left: 10, right: 10, top: 5, bottom: 5 },
-            },
-        ).setOrigin(1, 0);
-        const selectorSupportSummary = this.scene.add.text(
-            selectorInnerLeft,
-            selectorHeading.y + selectorHeading.height + 4,
-            selectorSupportText,
-            {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                color: '#64748b',
-                lineSpacing: 6,
-                wordWrap: { width: selectorInnerWidth },
-            },
-        );
-        const carouselProgressText = this.scene.add.text(
-            selectorInnerLeft,
-            selectorSupportSummary.y + selectorSupportSummary.height + 4,
-            '',
-            {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                color: this.maxScrollX > 0 ? '#d3b27b' : '#bca785',
-                lineSpacing: 6,
-                wordWrap: { width: selectorInnerWidth },
-            },
-        );
-        const carouselProgressTrack = this.scene.add.rectangle(
-            selectorInnerLeft,
-            carouselProgressText.y + carouselProgressText.height + 4,
-            selectorInnerWidth,
-            6,
-            expeditionUiTheme.colors.panelInner,
-            0.72,
-        ).setOrigin(0, 0.5);
-        const carouselProgressFill = this.scene.add.rectangle(
-            selectorInnerLeft,
-            carouselProgressTrack.y,
-            selectorInnerWidth,
-            6,
-            selectedLoadoutColors.accentColor,
-            0.92,
-        ).setOrigin(0, 0.5);
-        carouselProgressFill.setScale(0, 1);
-        this.deckCarouselWayfinding = {
-            progressFill: carouselProgressFill,
-            progressText: carouselProgressText,
-            progressTrackX: selectorInnerLeft,
-            progressTrackWidth: selectorInnerWidth,
-            deckCount: this.stash.savedDecks.length,
-            viewportWidth: selectorInnerWidth,
-            slotWidth: DECK_CARD_WIDTH + DECK_CARD_GAP,
-        };
-        const deckCardRow = this.createDeckCardRow(
-            selectorInnerLeft,
-            carouselProgressTrack.y + 8,
-            selectorInnerWidth,
-            selectedDeckId,
-            deckCardHeight,
-            options.initialScrollX,
-        );
-        const deckSwitcherContainer = this.scene.add.container(0, 0, [
-            switcherPanel,
-            switcherAccent,
-            selectorHeading,
-            selectorPositionBadge,
-            selectorSupportSummary,
-            carouselProgressText,
-            carouselProgressTrack,
-            carouselProgressFill,
-            ...deckCardRow.elements,
-        ]);
-        const readinessHeroContainer = this.scene.add.container(0, 0, [
-            heroGlow,
-            heroCard,
-            heroAccent,
-            heroSummaryContainer,
-            actionContainer,
-            loadoutSummaryContainer,
-            deckSwitcherContainer,
-        ]);
-
-        this.add([
-            overlay,
-            shadow,
-            panel,
-            panelAccent,
-            readinessHeroContainer,
-        ]);
-
-        this.updateScrollIndicators();
-
-        if (this.maxScrollX > 0) {
-            this.setupScrollInteraction();
-        }
-
-        this.setDepth(1000);
-
-        if (options.deckSwitchFeedback) {
-            this.playDeckSwitchFeedback(options.deckSwitchFeedback, {
-                selectedCard: deckCardRow.selectedCard,
-                validationContainer: heroSummaryContainer,
-                selectedLoadoutContainer: deckSwitcherContainer,
-                carriedReadinessContainer: loadoutSummaryContainer,
-                actionContainer,
-                confirmButton: confirmButton.container,
-                manageDeckButton: deckManagerButton.container,
-                validationGlow: heroGlow,
-                selectedLoadoutGlow: loadoutSummaryGlow,
-                actionGlow,
-                confirmGlow,
-                targetScrollX: deckCardRow.targetScrollX,
-            });
-        }
+        this.renderRoster(roster);
+        this.renderMain(main, summary, validation, ok, count, tone, deck?.cards ?? [], options);
+        this.renderPack(pack, summary, ok);
     }
 
-    private createDeckCardRow(
-        startX: number,
-        y: number,
-        maxWidth: number,
-        selectedDeckId: string | null,
-        cardHeight: number,
-        initialScrollX?: number,
-    ): DeckCardRowBuild {
-        const elements: Phaser.GameObjects.GameObject[] = [];
+    private renderRoster(rect: Rect) {
+        this.add(this.frame(rect, { ...PANEL_INK, fill: C.night }));
+        this.add(this.text(rect.x + 20, rect.y + 16, '候 选 卡 组', 24, C.glow));
         const decks = this.stash.savedDecks;
-        const cardWidth = DECK_CARD_WIDTH;
-        const cardGap = DECK_CARD_GAP;
-        let selectedCard: DeckCardAnimationRefs | undefined;
+        const readyCount = decks.filter(d => createPreparationDeckCardPreview(d, this.stash.cards, this.metadata).readiness === 'ready').length;
+        this.add(this.text(rect.x + 20, rect.y + 52, `${decks.length} 套 · ${readyCount} 套可带入`, 12, C.fog));
 
-        if (decks.length === 0) {
-            this.maxScrollX = 0;
-            this.scrollX = 0;
+        const view: Rect = { x: rect.x + 10, y: rect.y + 84, w: rect.w - 20, h: rect.h - 84 - 56 };
+        this.rosterRect = view;
+        const content = this.scene.add.container(view.x, view.y);
+        this.rosterContent = content;
+        this.add(content);
 
-            const emptyState = this.scene.add.rectangle(startX + maxWidth / 2, y + cardHeight / 2, maxWidth, cardHeight, expeditionUiTheme.colors.panelInner, 0.94);
-            emptyState.setStrokeStyle(2, expeditionUiTheme.colors.slate, 0.82);
-            const emptyTitle = this.scene.add.text(startX + 20, y + 20, '暂无可带入卡组', {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '24px',
-                color: '#f3ead3',
-                fontStyle: 'bold',
-            });
-            const emptyBody = this.scene.add.text(startX + 20, emptyTitle.y + 38, '请先点击“管理卡组”整理一套满足要求的卡组，再开始秘境探索。', {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                color: '#bca785',
-                wordWrap: { width: maxWidth - 40 },
-            });
-            elements.push(emptyState, emptyTitle, emptyBody);
-            return {
-                elements,
-                targetScrollX: 0,
+        const maskG = this.scene.make.graphics({}, false);
+        maskG.fillStyle(0xffffff).fillRect(view.x, view.y, view.w, view.h);
+        content.setMask(maskG.createGeometryMask());
+        this.rosterMask = maskG;
+
+        const selectedId = this.stash.selectedDeckId;
+        decks.forEach((d, i) => {
+            const y = i * (ROSTER_CARD_H + ROSTER_GAP);
+            const sel = d.id === selectedId;
+            const preview = createPreparationDeckCardPreview(d, this.stash.cards, this.metadata);
+            const good = preview.readiness === 'ready';
+            const n = preview.deckCount;
+            const w = view.w - 8;
+            const c = this.scene.add.container(0, y);
+            const g = this.scene.add.graphics();
+            const draw = (hot: boolean) => {
+                g.clear();
+                drawPixelFrame(g, w, ROSTER_CARD_H, {
+                    shadow: false,
+                    fill: sel ? C.pine : C.ink,
+                    edge: C.void,
+                    border: sel ? C.gold : hot ? C.haze : C.dusk,
+                    hi: sel ? C.glow : C.haze,
+                    lo: C.void,
+                    stud: sel ? C.gold : null,
+                });
             };
-        }
-
-        const totalContentWidth = decks.length * cardWidth + Math.max(0, decks.length - 1) * cardGap;
-        const needsScroll = totalContentWidth > maxWidth;
-        const selectedDeckIndex = Math.max(0, decks.findIndex((deck) => deck.id === selectedDeckId));
-        const targetScrollX = Math.max(0, clampNumber(
-            selectedDeckIndex * (cardWidth + cardGap) - (maxWidth - cardWidth) / 2,
-            0,
-            Math.max(0, totalContentWidth - maxWidth),
-        ));
-
-        this.maxScrollX = Math.max(0, totalContentWidth - maxWidth);
-        this.scrollX = this.maxScrollX > 0
-            ? clampNumber(initialScrollX ?? targetScrollX, 0, this.maxScrollX)
-            : 0;
-        this.scrollTweenState.value = this.scrollX;
-
-        const maskGraphics = this.scene.make.graphics({});
-        maskGraphics.fillStyle(0xffffff);
-        maskGraphics.fillRect(startX, y, maxWidth, cardHeight);
-        const mask = maskGraphics.createGeometryMask();
-        elements.push(maskGraphics);
-
-        const innerContainer = this.scene.add.container(0, 0);
-        innerContainer.setX(-this.scrollX);
-        this.scrollContainer = innerContainer;
-
-        const outerContainer = this.scene.add.container(startX, y);
-        outerContainer.add(innerContainer);
-        outerContainer.setMask(mask);
-        elements.push(outerContainer);
-
-        decks.forEach((deck, index) => {
-            const cardX = index * (cardWidth + cardGap) + cardWidth / 2;
-            const cardY = cardHeight / 2;
-            const isSelected = deck.id === selectedDeckId;
-            const displayState = createDeckDisplayState(deck, this.stash.cards, isSelected, this.metadata);
-            const cardCount = countDeckCards(deck.cards);
-            const selectedLift = isSelected ? -4 : 0;
-            const spotlight = isSelected
-                ? this.scene.add.rectangle(0, 0, cardWidth + 12, cardHeight + 12, displayState.borderColor, 0.08)
-                : undefined;
-            const cardContainer = this.scene.add.container(cardX, cardY + selectedLift);
-            const shadow = this.scene.add.rectangle(4, 6, cardWidth, cardHeight, displayState.shadowColor, displayState.shadowAlpha);
-            spotlight?.setStrokeStyle(1, displayState.borderColor, 0.32);
-            const bg = this.scene.add.rectangle(0, 0, cardWidth, cardHeight, displayState.fillColor, 0.98);
-            bg.setStrokeStyle(isSelected ? 2 : 1, displayState.borderColor, isSelected ? 1 : 0.88);
-
-            const accent = this.scene.add.rectangle(0, -cardHeight / 2 + 5, cardWidth - 12, 6, displayState.accentColor, 1).setOrigin(0.5, 0);
-            const selection = this.scene.add.text(-cardWidth / 2 + 16, -cardHeight / 2 + 14, displayState.selectionLabel, {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '14px',
-                color: displayState.selectionBadgeColor,
-                fontStyle: 'bold',
-                backgroundColor: displayState.selectionBadgeBackgroundColor,
-                padding: { left: 8, right: 8, top: 4, bottom: 4 },
+            draw(false);
+            c.add(g);
+            c.add(this.fit(this.text(18, 14, d.name, 24, sel ? C.paper : C.fog, { stroke: hex(C.void), strokeThickness: 3 }), w - 36));
+            const col = good ? C.celadon : n > DECK_CARD_MAX ? C.cinnabar : C.gold;
+            c.add(this.text(18, 54, `${n} 张 · ${preview.uniqueCardCount} 种`, 12, col));
+            c.add(this.text(w - 16, 54, preview.readinessLabel, 12, good ? C.celadon : C.ember).setOrigin(1, 0));
+            const m = this.meter(18, 80, w - 36, 12, n, col);
+            c.add(m.g);
+            if (sel) c.add(this.text(w - 16, 14, '当前带入', 12, C.glow).setOrigin(1, 0));
+            c.setSize(w, ROSTER_CARD_H).setInteractive(new Phaser.Geom.Rectangle(w / 2, ROSTER_CARD_H / 2, w, ROSTER_CARD_H), Phaser.Geom.Rectangle.Contains);
+            if (c.input) c.input.cursor = 'pointer';
+            c.on('pointerover', () => draw(true));
+            c.on('pointerout', () => draw(false));
+            c.on('pointerup', (p: Phaser.Input.Pointer) => {
+                if (p.y < view.y || p.y > view.y + view.h) return;
+                if (d.id !== this.stash.selectedDeckId) this.onDeckSelect(d.id);
             });
-            const status = this.scene.add.text(cardWidth / 2 - 16, -cardHeight / 2 + 14, displayState.statusLabel, {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '14px',
-                color: displayState.statusBadgeColor,
-                fontStyle: 'bold',
-                backgroundColor: displayState.statusBadgeBackgroundColor,
-                padding: { left: 8, right: 8, top: 4, bottom: 4 },
-            }).setOrigin(1, 0);
-            const deckName = this.scene.add.text(-cardWidth / 2 + 16, selection.y + selection.height + 10, deck.name, {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '18px',
-                color: '#f3ead3',
-                fontStyle: 'bold',
-                wordWrap: { width: cardWidth - 32 },
-            });
-            const countText = this.scene.add.text(
-                -cardWidth / 2 + 16,
-                deckName.y + deckName.height + 8,
-                `${cardCount} 张 · ${displayState.uniqueCardCount} 种卡`,
-                {
-                    fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '16px',
-                    color: displayState.countColor,
-                },
-            );
-            const statusNote = this.scene.add.text(
-                -cardWidth / 2 + 16,
-                countText.y + countText.height + 6,
-                truncateSingleLine(displayState.comparisonLines[0] ?? displayState.focusSummaryLine, 17),
-                {
-                    fontFamily: expeditionUiTheme.fonts.ui,
-                    fontSize: '16px',
-                    color: displayState.previewTextColor,
-                    wordWrap: { width: cardWidth - 32, useAdvancedWrap: true },
-                },
-            );
-            bg.setInteractive({ useHandCursor: true });
-            bg.on('pointerover', () => bg.setFillStyle(displayState.hoverFillColor, 1));
-            bg.on('pointerout', () => bg.setFillStyle(displayState.fillColor, 0.98));
-            bg.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-                this.pendingDeckClick = deck.id;
-                this.dragStartX = pointer.x;
-                this.isDragging = true;
-                this.dragMoved = false;
-            });
-
-            cardContainer.add([
-                ...(spotlight ? [spotlight] : []),
-                shadow,
-                bg,
-                accent,
-                selection,
-                status,
-                deckName,
-                countText,
-                statusNote,
-            ]);
-
-            innerContainer.add(cardContainer);
-
-            if (isSelected) {
-                selectedCard = {
-                    deckId: deck.id,
-                    container: cardContainer,
-                    baseY: cardY + selectedLift,
-                    spotlight,
-                    accent,
-                    background: bg,
-                    isSelected,
-                    valid: displayState.valid,
-                };
-            }
+            content.add(c);
         });
 
-        if (needsScroll) {
-            this.leftIndicator = this.scene.add.text(startX + 10, y + cardHeight / 2, '◀', {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '20px',
-                color: '#d3b27b',
-                backgroundColor: '#111827',
-                padding: { left: 8, right: 8, top: 8, bottom: 8 },
-            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-            this.leftIndicator.on('pointerdown', () => this.applyScroll(this.scrollX - (cardWidth + cardGap)));
+        const total = decks.length * (ROSTER_CARD_H + ROSTER_GAP) - ROSTER_GAP;
+        this.rosterMaxScroll = Math.max(0, total - view.h);
+        this.rosterScroll = Math.min(this.rosterScroll, this.rosterMaxScroll);
+        content.y = view.y - this.rosterScroll;
 
-            this.rightIndicator = this.scene.add.text(startX + maxWidth - 10, y + cardHeight / 2, '▶', {
-                fontFamily: expeditionUiTheme.fonts.ui,
-                fontSize: '20px',
-                color: '#d3b27b',
-                backgroundColor: '#111827',
-                padding: { left: 8, right: 8, top: 8, bottom: 8 },
-            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-            this.rightIndicator.on('pointerdown', () => this.applyScroll(this.scrollX + (cardWidth + cardGap)));
-
-            this.updateScrollIndicators();
-            elements.push(this.leftIndicator, this.rightIndicator);
-        }
-
-        return {
-            elements,
-            selectedCard,
-            targetScrollX,
-        };
+        this.add(this.text(rect.x + 20, rect.y + rect.h - 40, '← → 选择卡组', 12, C.haze));
+        if (this.rosterMaxScroll > 0) this.add(this.text(rect.x + rect.w - 20, rect.y + rect.h - 40, '滚轮浏览', 12, C.haze).setOrigin(1, 0));
     }
 
-    private playDeckSwitchFeedback(
-        feedback: PreparationPanelDeckSwitchFeedback,
-        refs: PreparationPanelAnimationRefs,
-    ): void {
-        const deckChanged = feedback.before.selectedDeckId !== feedback.after.selectedDeckId;
-        const readinessChanged = feedback.before.readiness !== feedback.after.readiness;
-        const becameReady = feedback.before.readiness !== 'ready' && feedback.after.readiness === 'ready';
-        const becameInvalid = feedback.before.readiness === 'ready' && feedback.after.readiness !== 'ready';
+    private setRosterScroll(v: number) {
+        this.rosterScroll = Math.max(0, Math.min(this.rosterMaxScroll, v));
+        if (this.rosterContent) this.rosterContent.y = this.rosterRect.y - this.rosterScroll;
+    }
 
-        if (deckChanged && refs.selectedCard) {
-            refs.selectedCard.container.setAlpha(0.84);
-            refs.selectedCard.container.setScale(0.95);
-            refs.selectedCard.container.setY(refs.selectedCard.baseY + 14);
-            refs.selectedCard.background.setAlpha(0.9);
-            refs.selectedCard.accent.setScale(0.78, 1);
-            refs.selectedCard.spotlight?.setAlpha(0);
+    private kindCounts(cards: readonly { id: string; count: number }[]) {
+        const map = new Map<CardKind, number>();
+        let unknown = 0;
+        for (const s of cards) {
+            const k = this.metadata?.[s.id]?.kind;
+            if (!k) { unknown += s.count; continue; }
+            map.set(k, (map.get(k) ?? 0) + s.count);
+        }
+        return { map, unknown };
+    }
 
-            this.scene.tweens.add({
-                targets: refs.selectedCard.container,
-                alpha: 1,
-                scaleX: 1,
-                scaleY: 1,
-                y: refs.selectedCard.baseY,
-                duration: 260,
-                ease: 'Back.easeOut',
-            });
-            this.scene.tweens.add({
-                targets: refs.selectedCard.background,
-                alpha: 0.98,
-                duration: 220,
-                ease: 'Cubic.easeOut',
-            });
-            this.scene.tweens.add({
-                targets: refs.selectedCard.accent,
-                scaleX: 1,
-                duration: 240,
-                ease: 'Cubic.easeOut',
-            });
+    private renderMain(
+        rect: Rect,
+        summary: ReturnType<typeof createPreparationSelectedLoadoutSummary>,
+        validation: ReturnType<typeof validateExpeditionLoadout>,
+        ok: boolean,
+        count: number,
+        tone: number,
+        cards: readonly { id: string; count: number }[],
+        options: RenderOptions,
+    ) {
+        this.add(this.frame(rect, { ...PANEL_INK, fill: C.night }));
+        const x = rect.x + 28;
+        const w = rect.w - 56;
+        let y = rect.y + 22;
 
-            if (refs.selectedCard.spotlight) {
-                this.scene.tweens.add({
-                    targets: refs.selectedCard.spotlight,
-                    alpha: refs.selectedCard.valid ? 0.22 : 0.28,
-                    duration: 180,
-                    ease: 'Cubic.easeOut',
-                    yoyo: true,
-                    hold: 90,
+        this.add(this.text(x, y, '出发前确认', 36, C.paper, { stroke: hex(C.void), strokeThickness: 5 }));
+        this.add(this.text(x, y + 52, '能出发就确认；不能就管理卡组。', 12, C.fog));
+
+        const seal: Rect = { x: rect.x + rect.w - 28 - 168, y: y + 4, w: 168, h: 48 };
+        this.add(this.frame(seal, ok ? PANEL_JADE : PANEL_BLOOD));
+        this.add(this.text(seal.x + seal.w / 2, seal.y + seal.h / 2, ok ? '可以出发' : summary.focusChip.value, 24, C.paper).setOrigin(0.5));
+        y += 92;
+
+        const handoff = this.deckHandoffSummary;
+        if (handoff) {
+            const hc = handoff.tone === 'positive' ? PANEL_JADE : handoff.tone === 'warning' ? PANEL_BLOOD : PANEL_GOLD;
+            this.add(this.frame({ x, y, w, h: 72 }, hc));
+            this.add(this.text(x + 18, y + 12, handoff.title, 24, C.paper));
+            this.add(this.fit(this.text(x + 18, y + 46, handoff.detail, 12, C.fog), w - 36));
+            y += 88;
+        }
+
+        // hero: current deck
+        const hero: Rect = { x, y, w, h: 236 };
+        this.add(this.frame(hero, { ...PANEL_INK, fill: C.ink, border: ok ? C.olive : C.dusk }));
+        this.add(this.text(hero.x + 22, hero.y + 16, '当前带入', 12, C.glow));
+        this.add(this.fit(this.text(hero.x + 22, hero.y + 40, summary.selectedDeckName, 36, C.paper, { stroke: hex(C.void), strokeThickness: 5 }), w - 300));
+        this.countText = this.text(hero.x + hero.w - 112, hero.y + 58, `${count}`, 48, tone, { stroke: hex(C.void), strokeThickness: 6 }).setOrigin(1, 0.5);
+        this.add(this.countText);
+        this.add(this.text(hero.x + hero.w - 104, hero.y + 72, `/ ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, 12, C.mist).setOrigin(0, 0.5));
+        const mw = hero.w - 44;
+        const m = this.meter(hero.x + 22, hero.y + 112, mw, 24, count, tone);
+        this.add(m.g);
+        this.add(this.text(hero.x + 22 + m.minX, hero.y + 112 + 24 + 8, `${DECK_CARD_MIN}`, 12, C.glow).setOrigin(0.5, 0));
+        this.add(this.text(hero.x + 22, hero.y + 176, summary.headline, 24, ok ? C.celadon : C.gold));
+        this.add(this.fit(this.text(hero.x + 22, hero.y + 208, `${summary.detail}  ${summary.uniqueCardCount} 种卡`, 12, C.fog), mw));
+
+        if (options.deckSwitchFeedback && this.countText) {
+            const t = this.countText;
+            t.setScale(1.5);
+            this.scene.tweens.add({ targets: t, scaleX: 1, scaleY: 1, duration: 320, ease: 'Back.Out' });
+            const flash = this.scene.add.rectangle(hero.x + hero.w / 2, hero.y + hero.h / 2, hero.w, hero.h, C.glow, 0.22);
+            this.add(flash);
+            this.scene.tweens.add({ targets: flash, alpha: 0, duration: 420, onComplete: () => flash.destroy() });
+        }
+        y += hero.h + 14;
+
+        // blocker / ok box
+        const boxH = ok ? 64 : 34 + Math.max(1, formatPreparationValidationLines(validation, this.metadata).length) * 28 + 20;
+        const box: Rect = { x, y, w, h: Math.min(boxH, 150) };
+        this.add(this.frame(box, ok ? PANEL_JADE : PANEL_BLOOD));
+        if (ok) {
+            this.add(this.text(box.x + 22, box.y + box.h / 2, '卡组符合要求，可以带入秘境。', 24, C.paper).setOrigin(0, 0.5));
+        } else {
+            this.add(this.text(box.x + 22, box.y + 12, '当前阻塞', 12, C.petal));
+            formatPreparationValidationLines(validation, this.metadata).slice(0, 3).forEach((line, i) => {
+                this.add(this.fit(this.text(box.x + 22, box.y + 34 + i * 28, `· ${line}`, 24, C.paper), box.w - 44));
+            });
+        }
+        y += box.h + 14;
+
+        // composition
+        const compH = rect.y + rect.h - 22 - y;
+        if (compH > 120) {
+            const comp: Rect = { x, y, w, h: compH };
+            this.add(this.frame(comp, { ...PANEL_INK, fill: C.ink }));
+            this.add(this.text(comp.x + 22, comp.y + 14, '卡组总览', 12, C.glow));
+            const { map, unknown } = this.kindCounts(cards);
+            const rows = KIND_ORDER.filter(k => map.has(k));
+            const rowH = Math.min(40, Math.floor((comp.h - 48) / Math.max(1, rows.length + (unknown ? 1 : 0))));
+            const barX = comp.x + 190, barW = comp.w - 190 - 90;
+            const maxN = Math.max(1, ...rows.map(k => map.get(k) ?? 0), unknown);
+            rows.forEach((k, i) => {
+                const ry = comp.y + 42 + i * rowH;
+                const n = map.get(k) ?? 0;
+                this.add(this.text(comp.x + 22, ry + rowH / 2, KIND_GLYPH[k], 24, KIND_COLOR[k]).setOrigin(0, 0.5));
+                this.add(this.text(comp.x + 62, ry + rowH / 2, KIND_LABEL[k], 24, C.paper).setOrigin(0, 0.5));
+                const g = this.scene.add.graphics();
+                g.fillStyle(C.void, 1).fillRect(barX, ry + rowH / 2 - 8, barW, 16);
+                g.fillStyle(KIND_COLOR[k], 1).fillRect(barX + 2, ry + rowH / 2 - 6, Math.max(4, Math.round(((barW - 4) * n) / maxN / 4) * 4), 12);
+                this.add(g);
+                this.add(this.text(comp.x + comp.w - 22, ry + rowH / 2, `${n}`, 24, C.glow).setOrigin(1, 0.5));
+            });
+            const listTop = comp.y + 42 + (rows.length + (unknown ? 1 : 0)) * rowH + 18;
+            if (rows.length > 0 && comp.y + comp.h - listTop > 80) {
+                const dv = this.scene.add.graphics();
+                dv.fillStyle(C.dusk, 1).fillRect(comp.x + 22, listTop - 10, comp.w - 44, 2);
+                this.add(dv);
+                this.add(this.text(comp.x + 22, listTop + 4, '带入清单', 12, C.glow));
+                const colW = Math.floor((comp.w - 44) / 3);
+                const perCol = Math.max(1, Math.floor((comp.y + comp.h - listTop - 40) / 28));
+                summary.deckPreviewLines.slice(0, perCol * 3).forEach((line, i) => {
+                    const cx = comp.x + 22 + Math.floor(i / perCol) * colW;
+                    const cy = listTop + 34 + (i % perCol) * 28;
+                    this.add(this.fit(this.text(cx, cy, line, 12, C.fog), colW - 16));
                 });
             }
-        }
-
-        [
-            refs.validationContainer,
-            refs.selectedLoadoutContainer,
-            refs.carriedReadinessContainer,
-            refs.actionContainer,
-        ].forEach((target, index) => {
-            if (!target) {
-                return;
+            if (rows.length === 0) {
+                this.add(this.fit(this.text(comp.x + 22, comp.y + 48, summary.compositionLine, 12, C.fog), comp.w - 44));
             }
-
-            target.setAlpha(0.68);
-            target.setY(12 + index * 3);
-            this.scene.tweens.add({
-                targets: target,
-                alpha: 1,
-                y: 0,
-                duration: 220 + index * 30,
-                ease: 'Cubic.easeOut',
-                delay: 40 + index * 20,
-            });
-        });
-
-        if (Math.abs(refs.targetScrollX - this.scrollX) > 1) {
-            this.animateScrollTo(refs.targetScrollX, 260);
-        }
-
-        if (becameReady) {
-            refs.confirmButton?.setScale(0.95);
-            refs.confirmGlow?.setAlpha(0);
-            refs.actionGlow?.setAlpha(0.04);
-
-            this.scene.tweens.add({
-                targets: refs.confirmButton,
-                scaleX: 1,
-                scaleY: 1,
-                duration: 260,
-                ease: 'Back.easeOut',
-                delay: 120,
-            });
-            this.scene.tweens.add({
-                targets: refs.confirmGlow,
-                alpha: 0.26,
-                duration: 180,
-                ease: 'Cubic.easeOut',
-                yoyo: true,
-                hold: 140,
-                delay: 100,
-            });
-            this.scene.tweens.add({
-                targets: refs.actionGlow,
-                alpha: 0.14,
-                duration: 180,
-                ease: 'Cubic.easeOut',
-                yoyo: true,
-                hold: 140,
-                delay: 60,
-            });
-            return;
-        }
-
-        if (becameInvalid) {
-            refs.manageDeckButton?.setScale(0.96);
-            refs.validationGlow?.setAlpha(0.06);
-            refs.selectedLoadoutGlow?.setAlpha(0.08);
-            refs.actionGlow?.setAlpha(0.04);
-
-            this.scene.tweens.add({
-                targets: refs.manageDeckButton,
-                scaleX: 1,
-                scaleY: 1,
-                duration: 240,
-                ease: 'Back.easeOut',
-                delay: 120,
-            });
-            this.scene.tweens.add({
-                targets: [refs.validationGlow, refs.selectedLoadoutGlow, refs.actionGlow].filter(Boolean),
-                alpha: 0.18,
-                duration: 170,
-                ease: 'Cubic.easeOut',
-                yoyo: true,
-                hold: 120,
-                delay: 80,
-            });
-            return;
-        }
-
-        if (readinessChanged) {
-            this.scene.tweens.add({
-                targets: [refs.validationGlow, refs.selectedLoadoutGlow, refs.actionGlow].filter(Boolean),
-                alpha: '+=0.08',
-                duration: 150,
-                ease: 'Cubic.easeOut',
-                yoyo: true,
-                hold: 100,
-                delay: 70,
-            });
         }
     }
 
-    private animateScrollTo(targetScrollX: number, duration: number): void {
-        const clampedTarget = clampNumber(targetScrollX, 0, this.maxScrollX);
+    private renderPack(rect: Rect, summary: ReturnType<typeof createPreparationSelectedLoadoutSummary>, ok: boolean) {
+        this.add(this.frame(rect, { ...PANEL_INK, fill: C.night }));
+        const x = rect.x + 24, w = rect.w - 48;
+        this.add(this.text(x, rect.y + 20, '行 囊', 24, C.glow));
 
-        if (!this.scrollContainer || Math.abs(clampedTarget - this.scrollX) <= 0.5) {
-            this.applyScroll(clampedTarget, true);
-            return;
+        // spirit stones
+        const stones: Rect = { x, y: rect.y + 62, w, h: 88 };
+        this.add(this.frame(stones, PANEL_GOLD));
+        this.add(this.text(stones.x + 20, stones.y + 14, '灵石', 12, C.glow));
+        this.add(this.text(stones.x + stones.w - 20, stones.y + stones.h / 2 + 8, `${summary.spiritStones}`, 48, C.glow, { stroke: hex(C.void), strokeThickness: 6 }).setOrigin(1, 0.5));
+
+        // items
+        const itemsTop = stones.y + stones.h + 14;
+        const itemsH = 56 + Math.min(7, summary.itemPreviewLines.length) * 28 + (this.onOpenInventory ? 72 : 24);
+        const items: Rect = { x, y: itemsTop, w, h: itemsH };
+        this.add(this.frame(items, { ...PANEL_INK, fill: C.ink }));
+        this.add(this.text(items.x + 20, items.y + 14, `物资：${summary.itemCount} 件道具`, 24, C.paper));
+        const lines = summary.itemPreviewLines.slice(0, 7);
+        lines.forEach((line, i) => {
+            this.add(this.fit(this.text(items.x + 20, items.y + 56 + i * 28, line === '无' ? '暂无道具' : `· ${line}`, 12, C.fog), items.w - 40));
+        });
+        if (summary.itemPreviewLines.length > 7) {
+            this.add(this.text(items.x + 20, items.y + 56 + 7 * 28, `…另有 ${summary.itemPreviewLines.length - 7} 项`, 12, C.haze));
+        }
+        if (this.onOpenInventory) {
+            this.button(this, { x: items.x + 16, y: items.y + items.h - 56, w: items.w - 32, h: 40 }, '整理道具', {
+                style: PANEL_INK, enabled: true, size: 24, onClick: () => this.onOpenInventory?.(),
+            });
         }
 
-        this.scene.tweens.killTweensOf(this.scrollTweenState);
-        this.scrollTweenState.value = this.scrollX;
-        this.scene.tweens.add({
-            targets: this.scrollTweenState,
-            value: clampedTarget,
-            duration,
-            ease: 'Cubic.easeOut',
-            onUpdate: () => this.applyScroll(this.scrollTweenState.value, true),
+        // actions
+        const bottom = rect.y + rect.h - 24;
+        this.add(this.text(rect.x + rect.w / 2, bottom - 4, '快捷键：Enter 主操作 · M 管理卡组', 12, C.haze).setOrigin(0.5, 1));
+        const manageH = 64, goH = 104;
+        const manageY = bottom - 30 - manageH;
+        const goY = manageY - 16 - goH;
+        this.button(this, { x, y: goY, w, h: goH }, ok ? '确认带入并出发' : '暂不可确认带入', {
+            style: PANEL_BLOOD, enabled: ok, size: 36, sub: ok ? '现在可以直接确认带入并进入秘境。' : summary.focusSummaryLine, onClick: () => this.confirmLoadout(),
+        });
+        this.button(this, { x, y: manageY, w, h: manageH }, ok ? '管理卡组' : '去管理卡组补足', {
+            style: ok ? PANEL_INK : PANEL_GOLD, enabled: !!this.onOpenDeckManager, size: 24, onClick: () => this.openDeckManager(),
         });
     }
 
-    private setupScrollInteraction(): void {
-        this.teardownScrollInteraction();
+    private renderPortrait(
+        inner: Rect,
+        summary: ReturnType<typeof createPreparationSelectedLoadoutSummary>,
+        validation: ReturnType<typeof validateExpeditionLoadout>,
+        ok: boolean,
+        count: number,
+        tone: number,
+        cards: readonly { id: string; count: number }[],
+        options: RenderOptions,
+    ) {
+        const x = inner.x + 8, w = inner.w - 16;
+        let y = inner.y + 8;
+        this.add(this.text(x, y, '出发前确认', 36, C.paper, { stroke: hex(C.void), strokeThickness: 5 }));
+        this.add(this.text(x, y + 50, '能出发就确认；不能就管理卡组。', 12, C.fog));
+        y += 84;
 
-        this.wheelHandler = (_pointer: Phaser.Input.Pointer, _gameObjects: unknown[], _deltaX: number, deltaY: number) => {
-            if (!this.visible) {
-                return;
-            }
-
-            this.applyScroll(this.scrollX + deltaY * 0.65);
+        // deck switcher
+        const decks = this.stash.savedDecks;
+        const idx = Math.max(0, decks.findIndex(d => d.id === this.stash.selectedDeckId));
+        const sw: Rect = { x, y, w, h: 64 };
+        this.add(this.frame(sw, { ...PANEL_INK, fill: C.ink }));
+        const arrow = (ax: number, label: string, dir: -1 | 1, on: boolean) => {
+            this.button(this, { x: ax, y: sw.y + 8, w: 48, h: 48 }, label, { style: PANEL_INK, enabled: on, size: 24, onClick: () => this.selectAdjacentDeck(dir) });
         };
-        this.pointerMoveHandler = (pointer: Phaser.Input.Pointer) => {
-            if (!this.visible || !this.isDragging) {
-                return;
-            }
+        arrow(sw.x + 8, '<', -1, idx > 0);
+        arrow(sw.x + sw.w - 56, '>', 1, idx < decks.length - 1);
+        this.add(this.fit(this.text(sw.x + sw.w / 2, sw.y + 22, summary.selectedDeckName, 24, C.paper), sw.w - 140).setOrigin(0.5));
+        this.add(this.text(sw.x + sw.w / 2, sw.y + 46, `第 ${idx + 1} / ${decks.length} 套`, 12, C.fog).setOrigin(0.5));
+        y += sw.h + 12;
 
-            const dx = this.dragStartX - pointer.x;
-
-            if (!this.dragMoved && Math.abs(dx) > 4) {
-                this.dragMoved = true;
-            }
-
-            if (this.dragMoved) {
-                this.applyScroll(this.scrollX + dx);
-                this.dragStartX = pointer.x;
-            }
-        };
-        this.pointerUpHandler = () => {
-            if (!this.isDragging) {
-                return;
-            }
-
-            if (!this.dragMoved && this.pendingDeckClick !== null) {
-                this.onDeckSelect(this.pendingDeckClick);
-            }
-
-            this.isDragging = false;
-            this.dragMoved = false;
-            this.pendingDeckClick = null;
-        };
-
-        this.scene.input.on('wheel', this.wheelHandler);
-        this.scene.input.on('pointermove', this.pointerMoveHandler);
-        this.scene.input.on('pointerup', this.pointerUpHandler);
-    }
-
-    private teardownScrollInteraction(): void {
-        this.scene.tweens.killTweensOf(this.scrollTweenState);
-
-        if (this.wheelHandler) {
-            this.scene.input.off('wheel', this.wheelHandler);
-            this.wheelHandler = undefined;
+        // count + meter
+        this.countText = this.text(x + 4, y, `${count}`, 48, tone, { stroke: hex(C.void), strokeThickness: 6 });
+        this.add(this.countText);
+        this.add(this.text(x + 4 + this.countText.width + 10, y + 32, `/ ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, 12, C.mist));
+        this.add(this.text(x + w, y + 10, ok ? '可以出发' : summary.focusChip.value, 24, ok ? C.celadon : C.ember).setOrigin(1, 0));
+        y += 64;
+        this.add(this.meter(x, y, w, 20, count, tone).g);
+        y += 44;
+        if (options.deckSwitchFeedback && this.countText) {
+            this.countText.setScale(1.4);
+            this.scene.tweens.add({ targets: this.countText, scaleX: 1, scaleY: 1, duration: 320, ease: 'Back.Out' });
         }
 
-        if (this.pointerMoveHandler) {
-            this.scene.input.off('pointermove', this.pointerMoveHandler);
-            this.pointerMoveHandler = undefined;
-        }
+        // status box
+        const lines = ok ? ['卡组符合要求，可以带入秘境。'] : formatPreparationValidationLines(validation, this.metadata).slice(0, 2);
+        const box: Rect = { x, y, w, h: 24 + lines.length * 52 };
+        this.add(this.frame(box, ok ? PANEL_JADE : PANEL_BLOOD));
+        lines.forEach((line, i) => {
+            this.add(this.text(box.x + 16, box.y + 14 + i * 52, line, 12, C.paper, { wordWrap: { width: box.w - 32 } }));
+        });
+        y += box.h + 14;
 
-        if (this.pointerUpHandler) {
-            this.scene.input.off('pointerup', this.pointerUpHandler);
-            this.pointerUpHandler = undefined;
-        }
-    }
+        // kinds (compact, two per row)
+        const { map } = this.kindCounts(cards);
+        KIND_ORDER.filter(k => map.has(k)).forEach((k, i) => {
+            const cx = x + (i % 2) * (w / 2), cy = y + Math.floor(i / 2) * 36;
+            this.add(this.text(cx + 8, cy, `${KIND_GLYPH[k]} ${KIND_LABEL[k]}`, 24, KIND_COLOR[k]));
+            this.add(this.text(cx + w / 2 - 20, cy, `${map.get(k)}`, 24, C.glow).setOrigin(1, 0));
+        });
+        y += Math.ceil(KIND_ORDER.filter(k => map.has(k)).length / 2) * 36 + 12;
 
-    private applyScroll(desired: number, skipTweenKill = false): void {
-        if (!skipTweenKill) {
-            this.scene.tweens.killTweensOf(this.scrollTweenState);
-        }
+        this.add(this.text(x + 4, y, `物资：${summary.itemCount} 件道具 · 灵石 ${summary.spiritStones}`, 12, C.fog));
 
-        this.scrollX = clampNumber(desired, 0, this.maxScrollX);
-        this.scrollTweenState.value = this.scrollX;
-
-        if (this.scrollContainer) {
-            this.scrollContainer.setX(-this.scrollX);
-        }
-
-        this.updateScrollIndicators();
-    }
-
-    private updateScrollIndicators(): void {
-        if (this.leftIndicator) {
-            this.leftIndicator.setAlpha(this.scrollX > 1 ? 1 : 0.25);
-        }
-
-        if (this.rightIndicator) {
-            this.rightIndicator.setAlpha(this.scrollX < this.maxScrollX - 1 ? 1 : 0.25);
-        }
-
-        if (this.deckCarouselWayfinding) {
-            const {
-                progressFill,
-                progressText,
-                progressTrackX,
-                progressTrackWidth,
-                deckCount,
-                viewportWidth,
-                slotWidth,
-            } = this.deckCarouselWayfinding;
-            const totalContentWidth = deckCount > 0
-                ? deckCount * slotWidth - DECK_CARD_GAP
-                : 0;
-            const progressRatio = this.maxScrollX <= 1 ? 0 : clampNumber(this.scrollX / this.maxScrollX, 0, 1);
-            const thumbRatio = totalContentWidth > 0
-                ? clampNumber(viewportWidth / totalContentWidth, 0.14, 1)
-                : 0;
-            const thumbWidth = progressTrackWidth * thumbRatio;
-            const thumbTravel = Math.max(0, progressTrackWidth - thumbWidth);
-            const visibleStart = deckCount === 0
-                ? 0
-                : Math.min(deckCount, Math.floor(this.scrollX / slotWidth) + 1);
-            const visibleEnd = deckCount === 0
-                ? 0
-                : Math.min(deckCount, Math.max(visibleStart, Math.ceil((this.scrollX + viewportWidth) / slotWidth)));
-
-            progressFill.setScale(deckCount === 0 ? 0 : thumbRatio, 1);
-            progressFill.setX(progressTrackX + thumbTravel * progressRatio);
-            progressText.setColor(this.maxScrollX > 0 ? '#d3b27b' : '#bca785');
-            progressText.setText(deckCount === 0
-                ? '浏览进度 0% · 暂无卡组 · 请先去管理卡组整理一套。'
-                : this.maxScrollX > 0
-                    ? `浏览进度 ${Math.round(progressRatio * 100)}% · 可见 ${visibleStart}-${visibleEnd} / ${deckCount} 套 · 拖动/滚轮/← → 切换`
-                    : `浏览进度 100% · 当前 ${visibleStart}-${visibleEnd} / ${deckCount} 套 · 点按或按 ← / → 切换`);
+        // actions
+        const bottom = inner.y + inner.h - 8;
+        const manageY = bottom - 56;
+        const goY = manageY - 12 - 88;
+        this.button(this, { x, y: goY, w, h: 88 }, ok ? '确认带入并出发' : '暂不可确认带入', {
+            style: PANEL_BLOOD, enabled: ok, size: 36, onClick: () => this.confirmLoadout(),
+        });
+        this.button(this, { x, y: manageY, w: this.onOpenInventory ? w * 0.62 : w, h: 56 }, ok ? '管理卡组' : '去管理卡组补足', {
+            style: ok ? PANEL_INK : PANEL_GOLD, enabled: !!this.onOpenDeckManager, size: 24, onClick: () => this.openDeckManager(),
+        });
+        if (this.onOpenInventory) {
+            this.button(this, { x: x + w * 0.62 + 10, y: manageY, w: w * 0.38 - 10, h: 56 }, '道具', {
+                style: PANEL_INK, enabled: true, size: 24, onClick: () => this.onOpenInventory?.(),
+            });
         }
     }
 
+    // ---------------------------------------------------------------------------------------
+    // input
+    // ---------------------------------------------------------------------------------------
     private handleKeyDown(event: KeyboardEvent): void {
-        if (!this.visible) {
-            return;
-        }
-
+        if (!this.visible) return;
         const shortcut = getPreparationKeyboardShortcut(event);
-        if (!shortcut) {
-            return;
-        }
-
-        if (event.repeat && shortcut !== 'previous-deck' && shortcut !== 'next-deck') {
-            return;
-        }
-
+        if (!shortcut) return;
+        if (event.repeat && shortcut !== 'previous-deck' && shortcut !== 'next-deck') return;
         event.preventDefault();
 
         switch (shortcut) {
-            case 'previous-deck':
-                this.selectAdjacentDeck(-1);
-                return;
-            case 'next-deck':
-                this.selectAdjacentDeck(1);
-                return;
-            case 'primary-action':
-                this.triggerPrimaryAction();
-                return;
-            case 'manage':
-                this.openDeckManager();
-                return;
-            default:
-                return;
+            case 'previous-deck': this.selectAdjacentDeck(-1); return;
+            case 'next-deck': this.selectAdjacentDeck(1); return;
+            case 'primary-action': this.triggerPrimaryAction(); return;
+            case 'manage': this.openDeckManager(); return;
+            default: return;
         }
     }
 
-    private teardownKeyboardShortcuts(): void {
+    private teardown(): void {
+        this.rosterMask?.destroy();
+        this.rosterMask = undefined;
         if (this.keydownHandler) {
             this.scene.input.keyboard?.off('keydown', this.keydownHandler);
             this.keydownHandler = undefined;
         }
+        if (this.wheelHandler) {
+            this.scene.input.off('wheel', this.wheelHandler);
+            this.wheelHandler = undefined;
+        }
     }
 
     private selectAdjacentDeck(direction: -1 | 1): void {
-        const nextDeckId = getAdjacentPreparationDeckId(
-            this.stash.savedDecks,
-            this.stash.selectedDeckId,
-            direction,
-        );
-
-        if (!nextDeckId || nextDeckId === this.stash.selectedDeckId) {
-            return;
-        }
-
+        const nextDeckId = getAdjacentPreparationDeckId(this.stash.savedDecks, this.stash.selectedDeckId, direction);
+        if (!nextDeckId || nextDeckId === this.stash.selectedDeckId) return;
         this.onDeckSelect(nextDeckId);
     }
 
@@ -2379,15 +612,11 @@ export class PreparationPanel extends GameObjects.Container implements EntryPane
             this.confirmLoadout();
             return;
         }
-
         this.openDeckManager();
     }
 
     private confirmLoadout(): void {
-        if (!this.canConfirmLoadout()) {
-            return;
-        }
-
+        if (!this.canConfirmLoadout()) return;
         this.onConfirm();
     }
 
