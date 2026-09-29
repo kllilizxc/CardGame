@@ -22,7 +22,8 @@ export class BattleState {
     public enemyField: CardSprite[] = [];
     
     // 玩家状态
-    public playerHealth: number = 100;
+    public readonly maxPlayerHealth: number = 100;
+    public playerHealth: number = this.maxPlayerHealth;
     
     // 回合状态
     public isPlayerTurn: boolean = true;
@@ -142,8 +143,11 @@ export class BattleState {
     /**
      * 恢复玩家生命值
      */
-    public healPlayer(amount: number): void {
-        this.playerHealth += amount;
+    public healPlayer(amount: number): number {
+        if (amount <= 0) return 0;
+        const previous = this.playerHealth;
+        this.playerHealth = Math.min(this.maxPlayerHealth, previous + amount);
+        return this.playerHealth - previous;
     }
 
     /**
@@ -199,7 +203,7 @@ export class BattleState {
         this.hand = [];
         this.playerField = [];
         this.enemyField = [];
-        this.playerHealth = 100;
+        this.playerHealth = this.maxPlayerHealth;
         this.isPlayerTurn = true;
         this.turnNumber = 1;
         this.isProcessingTurn = false;

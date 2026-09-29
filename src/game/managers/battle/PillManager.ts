@@ -3,6 +3,7 @@ import type { PillCard } from '@data/types/cards/pill';
 import { CardSprite } from '../../objects/CardSprite';
 import type { BattleContext } from '../../context/BattleContext';
 import type { EffectResolver, EffectExecutionContext } from './EffectResolver';
+import { canUsePillAtHealth } from './pillUseRules';
 
 /**
  * 丹药槽位信息
@@ -139,6 +140,11 @@ export class PillManager {
             return false;
         }
 
+        if (!canUsePillAtHealth(pill, this.battleContext.battleState)) {
+            this.battleContext.battleLog.addLog('生命值已满，丹药未使用');
+            return false;
+        }
+
         this.battleContext.battleLog.addLog(`使用了【${pill.name}】`);
 
         // 播放使用动画和特效
@@ -171,6 +177,9 @@ export class PillManager {
         for (const effect of pillData.effects) {
             if (!effect.actions) continue;
 
+            let requestedHeal = 0;
+            let appliedHeal = 0;
+
             const scope = effect.target?.scope;
             let targets: CardSprite[] = [];
 
@@ -201,10 +210,16 @@ export class PillManager {
             };
 
             for (const action of effect.actions) {
+                if (action.type === 'healPlayer') {
+                    requestedHeal += Math.max(0, action.value ?? 0);
+                    const healed = this.battleContext.battleState.healPlayer(action.value ?? 0);
+                    appliedHeal += healed;
+                    if (healed > 0) this.battleContext.effectManager.showHealEffect();
+                    continue;
+                }
                 // For player-targeted actions or ownerPlayer scope
                 if (scope === 'ownerPlayer' || (targets.length === 0 && (
-                    action.type === 'healPlayer'
-                    || action.type === 'damagePlayer'
+                    action.type === 'damagePlayer'
                     || action.type === 'drawCards'
                 ))) {
                     this.effectResolver.executeAction(action, [], ctx);
@@ -234,7 +249,11 @@ export class PillManager {
             }
 
             if (effect.text) {
-                this.battleContext.battleLog.addLog(effect.text);
+                const healingOnly = effect.actions.every(action => action.type === 'healPlayer');
+                this.battleContext.battleLog.addLog(healingOnly && appliedHeal < requestedHeal
+                    ? `玩家回复了${appliedHeal}点生命值` : effect.text);
+            } else if (appliedHeal > 0) {
+                this.battleContext.battleLog.addLog(`玩家回复了${appliedHeal}点生命值`);
             }
         }
     }

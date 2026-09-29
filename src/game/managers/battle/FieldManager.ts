@@ -2,7 +2,7 @@ import type { Scene } from 'phaser';
 import type { BattleContext } from '../../context/BattleContext';
 import { FieldSprite } from '../../objects/FieldSprite';
 import type { FieldCard } from '@data/types/cards/field';
-import type { CardEffect, LegacyCardEffect, LegacyEffectAction } from '@data/types/cards/effects';
+import { isLegacyCardEffect, type CardEffect, type LegacyCardEffect, type LegacyEffectAction } from '@data/types/cards/effects';
 import type { CardSprite } from '../../objects/CardSprite';
 import type { EffectResolver, EffectExecutionContext } from './EffectResolver';
 
@@ -198,6 +198,26 @@ export class FieldManager {
         turnEndEffects.forEach((effect: CardEffect) => {
             this.applyFieldEffect(effect, isPlayerTurn, playerUnits, enemyUnits);
         });
+    }
+
+    /** Player-owned field effects fire once for each enemy defeated by a player unit. */
+    public onPlayerUnitKill(
+        killer: CardSprite,
+        playerUnits: CardSprite[],
+        enemyUnits: CardSprite[],
+    ): void {
+        if (!this.currentField || !playerUnits.includes(killer)) return;
+        const fieldData = this.currentField.getCardData();
+        for (const effect of fieldData.effects || []) {
+            if (!isLegacyCardEffect(effect) || effect.timing !== 'onKill') continue;
+            this.effectResolver.executeEffect(effect, {
+                playerField: playerUnits,
+                enemyField: enemyUnits,
+                triggerUnit: killer,
+                sourceCard: this.currentField,
+                sourceName: fieldData.name,
+            });
+        }
     }
 
     /**

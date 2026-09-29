@@ -12,6 +12,7 @@ import type { EffectResolver } from '../managers/battle/EffectResolver';
 import type { FieldManager } from '../managers/battle/FieldManager';
 import type { PillManager } from '../managers/battle/PillManager';
 import type { EffectManager } from '../managers/battle/EffectManager';
+import type { BattleState } from '../state/BattleState';
 
 /**
  * 战斗上下文 - 集中管理所有通用的管理器引用
@@ -20,6 +21,7 @@ import type { EffectManager } from '../managers/battle/EffectManager';
 export class BattleContext {
     // 核心引用
     public readonly scene: Scene;
+    public readonly battleState: BattleState;
     
     // UI 管理器
     public battleLog!: BattleLog;
@@ -46,8 +48,9 @@ export class BattleContext {
     public battleStateChecker!: BattleStateChecker;
     public turnManager!: TurnManager;
 
-    constructor(scene: Scene) {
+    constructor(scene: Scene, battleState: BattleState) {
         this.scene = scene;
+        this.battleState = battleState;
     }
 
     /**

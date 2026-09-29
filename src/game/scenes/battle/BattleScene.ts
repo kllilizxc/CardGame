@@ -326,12 +326,13 @@ export class BattleScene extends Scene {
         
         // 初始化游戏状态
         this.battleState = new BattleState();
+        this.setupEffectActionEvents();
         
         // 初始化布局配置
         this.layout = createDefaultLayout(width, height);
 
         // 初始化战斗上下文
-        this.battleContext = new BattleContext(this);
+        this.battleContext = new BattleContext(this, this.battleState);
 
         // 注入运行时目录加载的境界 / 法器品级配置；缺省时 helper 保持 static fallback。
         this.installRuntimeHelperConfigs();
@@ -475,6 +476,17 @@ export class BattleScene extends Scene {
         EventBus.emit('current-scene-ready', this);
     }
 
+    /** Connect card draw effects to the existing hand and deck flow. */
+    private setupEffectActionEvents(): void {
+        const drawCards = (count: number) => {
+            for (let index = 0; index < count; index++) this.drawCard();
+        };
+        this.events.on('drawCards', drawCards);
+        this.events.once('shutdown', () => {
+            this.events.off('drawCards', drawCards);
+        });
+    }
+
     /**
      * 处理符箓使用逻辑（补充BattleEventManager）
      */
@@ -569,23 +581,23 @@ export class BattleScene extends Scene {
             return;
         }
 
-        this.notifyTutorialAction('use_pill');
-
         // 根据丹药目标类型决定使用方式
+        let used = false;
         if (pill.target === 'player') {
             // 直接使用（作用于玩家）
-            this.pillManager.usePillFromSlot(slotIndex, 'player');
+            used = this.pillManager.usePillFromSlot(slotIndex, 'player');
         } else if (pill.target === 'unit') {
             // 需要选择目标单位（暂时简化：对第一个友方单位生效）
             if (this.playerField.length > 0) {
-                this.pillManager.usePillFromSlot(slotIndex, this.playerField[0]);
+                used = this.pillManager.usePillFromSlot(slotIndex, this.playerField[0]);
             } else {
                 this.battleLog.addLog('没有可用的目标单位');
             }
         } else {
             // 群体效果（allUnits, all），直接使用
-            this.pillManager.usePillFromSlot(slotIndex);
+            used = this.pillManager.usePillFromSlot(slotIndex);
         }
+        if (used) this.notifyTutorialAction('use_pill');
     }
 
     /**
@@ -1085,7 +1097,7 @@ export class BattleScene extends Scene {
             combatManager: this.combatManager,
             battleStatusController: this.battleStatusController,
             battleStateChecker: this.battleStateChecker,
-            onPlayerDamaged: (damage: number) => { this.playerHealth -= damage; },
+            onPlayerDamaged: (damage: number) => { this.battleState.damagePlayer(damage); },
             onRemoveUnit: (unit: CardSprite, isPlayer: boolean) => this.removeUnitFromField(unit, isPlayer),
             onDrawCard: () => this.drawCard(),
             onArrangeField: () => {

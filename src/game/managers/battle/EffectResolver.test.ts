@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, mock, spyOn } from 'bun:test';
 import { EffectResolver, type EffectExecutionContext } from './EffectResolver';
 import type { BattleContext } from '../../context/BattleContext';
 import type { LegacyCardEffect, LegacyEffectAction } from '@data/types/cards/effects';
+import { BattleState } from '../../state/BattleState';
 
 // ==================== 测试辅助 ====================
 
@@ -226,6 +227,18 @@ describe('EffectResolver — 动作执行', () => {
         expect((bc.scene as any).events.emit).toHaveBeenCalledWith('healPlayer', 5);
     });
 
+    it('real battle state receives only the health actually restored', () => {
+        const state = new BattleState();
+        state.damagePlayer(4);
+        const realResolver = new EffectResolver(Object.assign({}, bc, { battleState: state }));
+        realResolver.executeAction({ type: 'healPlayer', value: 5 }, [], makeContext());
+        expect(state.playerHealth).toBe(100);
+        expect((bc.scene as any).events.emit).not.toHaveBeenCalledWith('healPlayer', 5);
+        expect((bc.battleLog.addLog as ReturnType<typeof mock>)).toHaveBeenCalledWith('【测试卡牌】为玩家回复4点生命值');
+        realResolver.executeAction({ type: 'healPlayer', value: 5 }, [], makeContext());
+        expect(state.playerHealth).toBe(100);
+    });
+
     it('damagePlayer 触发玩家伤害事件', () => {
         const action: LegacyEffectAction = { type: 'damagePlayer', value: 3 };
         resolver.executeAction(action, [], makeContext());
@@ -409,6 +422,7 @@ describe('EffectResolver — 场地回合开始的临时攻击修正', () => {
         expect(ally.getCardData().attack).toBe(3);
         expect(enemy.getCardData().attack).toBe(4);
     });
+
 });
 
 describe('EffectResolver — 场地永续效果', () => {

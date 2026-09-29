@@ -2,6 +2,7 @@ import { getWenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
 import type { CardSprite } from '../../objects/CardSprite';
 import type { ArtifactSprite } from '../../objects/ArtifactSprite';
 import type { BattleContext } from '../../context/BattleContext';
+import { isLegacyCardEffect } from '@data/types/cards/effects';
 
 export class CombatManager {
     private battleContext: BattleContext;
@@ -105,13 +106,14 @@ export class CombatManager {
     }
 
     // 对单位造成伤害
-    public damageUnit(unit: CardSprite, damage: number): void {
+    public damageUnit(unit: CardSprite, damage: number): boolean {
         // 检查单位是否还存活（未被销毁）
         if (!unit.active) {
-            return;
+            return false;
         }
         
         const cardData = unit.getCardData();
+        const wasAlive = cardData.health > 0;
         
         // 通过 StatusManager 处理伤害（会先消耗护甲）
         const finalDamage = this.battleContext.statusManager.processDamage(cardData.id, damage);
@@ -129,6 +131,35 @@ export class CombatManager {
         unit.updateStats();
         const statuses = this.battleContext.statusManager.getUnitStatuses(cardData.id);
         unit.updateStatusDisplay(statuses);
+        return wasAlive && cardData.health === 0;
+    }
+
+    /** Trigger kill effects only for a living unit defeated by this attack. */
+    private triggerOnKill(attacker: CardSprite, defeated: CardSprite): void {
+        const battleScene = this.battleContext.scene as any;
+        const playerField: CardSprite[] = battleScene.playerField || [];
+        const enemyField: CardSprite[] = battleScene.enemyField || [];
+        const playerKill = playerField.includes(attacker) && enemyField.includes(defeated);
+        const enemyKill = enemyField.includes(attacker) && playerField.includes(defeated);
+        if (!playerKill && !enemyKill) return;
+
+        if (playerKill) {
+            this.battleContext.fieldManager?.onPlayerUnitKill(attacker, playerField, enemyField);
+        }
+
+        const allyField = playerKill ? playerField : enemyField;
+        const opposingField = playerKill ? enemyField : playerField;
+        for (const effect of attacker.getCardData().effects || []) {
+            if (!isLegacyCardEffect(effect) || effect.timing !== 'onKill') continue;
+            this.battleContext.effectResolver.executeEffect(effect, {
+                playerField: allyField,
+                enemyField: opposingField,
+                triggerUnit: attacker,
+                attackTarget: defeated,
+                sourceCard: attacker,
+                sourceName: attacker.getCardData().name,
+            });
+        }
     }
 
     /**
@@ -159,10 +190,11 @@ export class CombatManager {
                         damage,
                         delay + index * 200, // 每个目标间隔200ms
                         (unit, dmg) => {
-                            this.damageUnit(unit, dmg);
+                            const killed = this.damageUnit(unit, dmg);
                             if (battleScene.artifactManager) {
                                 battleScene.artifactManager.onUnitDamaged(unit, attacker);
                             }
+                            if (killed && unit.getCardData().health === 0) this.triggerOnKill(attacker, unit);
                         }
                     );
                 }
@@ -186,10 +218,11 @@ export class CombatManager {
                     damage,
                     delay,
                     (unit, dmg) => {
-                        this.damageUnit(unit, dmg);
+                        const killed = this.damageUnit(unit, dmg);
                         if (battleScene.artifactManager) {
                             battleScene.artifactManager.onUnitDamaged(unit, attacker);
                         }
+                        if (killed && unit.getCardData().health === 0) this.triggerOnKill(attacker, unit);
                     }
                 );
             }

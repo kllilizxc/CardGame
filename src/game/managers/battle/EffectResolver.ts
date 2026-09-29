@@ -227,9 +227,16 @@ export class EffectResolver {
             case 'healPlayer': {
                 const amount = action.value ?? 0;
                 if (amount > 0) {
-                    this.battleContext.scene.events.emit('healPlayer', amount);
-                    battleLog.addLog(`【${sourceName}】为玩家回复${amount}点生命值`);
-                    effectManager.showHealEffect();
+                    let healed = amount;
+                    if (this.battleContext.battleState) {
+                        healed = this.battleContext.battleState.healPlayer(amount);
+                    } else {
+                        this.battleContext.scene.events.emit('healPlayer', amount);
+                    }
+                    if (healed > 0) {
+                        battleLog.addLog(`【${sourceName}】为玩家回复${healed}点生命值`);
+                        effectManager.showHealEffect();
+                    }
                 }
                 break;
             }
@@ -237,7 +244,12 @@ export class EffectResolver {
             case 'damagePlayer': {
                 const amount = action.value ?? 0;
                 if (amount > 0) {
-                    this.battleContext.scene.events.emit('damagePlayer', amount);
+                    if (this.battleContext.battleState) {
+                        this.battleContext.battleState.damagePlayer(amount);
+                        this.battleContext.battleTickManager.tick();
+                    } else {
+                        this.battleContext.scene.events.emit('damagePlayer', amount);
+                    }
                     battleLog.addLog(`【${sourceName}】对玩家造成${amount}点伤害`);
                 }
                 break;
