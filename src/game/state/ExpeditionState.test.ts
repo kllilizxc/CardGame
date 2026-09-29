@@ -7,7 +7,9 @@ import prototypeShopJson from '../../../public/data/mijing/prototype-shop.json';
 import worldMapJson from '../../../public/data/world/world-map.json';
 
 import {
+    ACTIVE_RUN_STORAGE_KEY,
     createActiveRunStorageKey,
+    createActiveRunRouteKey,
     loadActiveRun,
     loadPersistentStash,
     resetRunPersistenceForTests,
@@ -15,18 +17,31 @@ import {
     STASH_STORAGE_KEY,
 } from '../services/RunPersistence';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
-import { getSelectedDeckCards } from './PersistentStashDecks';
+import type {
+    PersistentStash,
+    PrototypeEventDefinition,
+    PrototypeShopDefinition,
+    RunSnapshot,
+} from '../types/expedition';
 import { ExpeditionState } from './ExpeditionState';
+import {
+    DEFAULT_EXPEDITION_TARGET,
+    DEFAULT_EXPEDITION_TARGET_ROUTE_KEY,
+    SYNTHETIC_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
+    createRunSnapshot as createRunSnapshotFixture,
+    createItemStack,
+    createTestPersistentStash,
+    normalizeExpeditionWorldStateSeed,
+    createItemStacksFromSeed,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
-const DEFAULT_TARGET = {
-    expeditionId: 'phase01-first-playable-expedition',
-    mapId: 'phase01-prototype-map',
-};
-
-const SYNTHETIC_TARGET = {
-    expeditionId: 'synthetic-expedition',
-    mapId: 'synthetic-map',
-};
+const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
+const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
+const LEGACY_ROUTE_LOOKUP = 'worldMap:destination.synthetic-expedition';
+const LEGACY_ROUTE_STORAGE_KEY = `${ACTIVE_RUN_STORAGE_KEY}:${LEGACY_ROUTE_LOOKUP}`;
+const initialWorldStateStashItems = createItemStacksFromSeed(initialWorldState.stash.items);
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -91,6 +106,83 @@ function getCheckedInExpeditionTarget(destinationId: string): { expeditionId: st
     };
 }
 
+function createStoredStash(): PersistentStash {
+    return createTestPersistentStash({
+        stashId: 'player-existing-stash',
+        deckRef: 'player-existing-deck',
+        deck: [{ id: 'EXISTING_CARD', count: 1 }],
+        items: [createItemStack('tool.existing', 'tool', 3)],
+        spiritStones: 777,
+        lastRunSummary: {
+            runId: 'run-finished',
+            outcome: 'extract',
+            finalNodeId: 'extract.synthetic',
+            kept: {
+                cards: [{ id: 'EXISTING_CARD', count: 1 }],
+                items: [createItemStack('tool.existing', 'tool', 1)],
+                spiritStones: 12,
+            },
+            lost: {
+                cards: [],
+                items: [],
+                spiritStones: 0,
+            },
+            endedAt: '2026-05-10T00:00:00.000Z',
+        },
+    });
+}
+
+function createStoredActiveRun(
+    target: { expeditionId: string; mapId: string },
+    runId: string,
+    currentNodeId: string,
+): RunSnapshot {
+    return createRunSnapshotFixture(target, {
+        runId,
+        currentNodeId,
+        startingLoadout: {
+            cards: [{ id: 'EXISTING_CARD', count: 1 }],
+            items: [createItemStack('tool.existing', 'tool', 1)],
+            spiritStones: 12,
+        },
+        carriedDeck: [{ id: 'EXISTING_CARD', count: 1 }],
+        carriedItems: [createItemStack('tool.existing', 'tool', 1)],
+        spiritStones: 12,
+        visitedNodeIds: [currentNodeId],
+        nodeStates: {
+            [currentNodeId]: {
+                nodeId: currentNodeId,
+                status: 'cleared',
+                visited: true,
+                rewardClaimed: true,
+            },
+        },
+        startedAt: '2026-05-10T00:00:00.000Z',
+    });
+}
+
+function sortedJsonKeys(storage: Storage, key: string): string[] {
+    return Object.keys(JSON.parse(storage.getItem(key) ?? '{}')).sort();
+}
+
+function expectCreatedActiveRunJsonShape(storage: Storage, target: { expeditionId: string; mapId: string }): void {
+    expect(sortedJsonKeys(storage, createActiveRunStorageKey(target))).toEqual([
+        'carriedDeck',
+        'carriedItems',
+        'currentNodeId',
+        'expeditionId',
+        'mapId',
+        'nodeStates',
+        'routeKey',
+        'runId',
+        'spiritStones',
+        'startedAt',
+        'startingLoadout',
+        'status',
+        'visitedNodeIds',
+    ]);
+}
+
 describe('ExpeditionState', () => {
     beforeEach(() => {
         resetRunPersistenceForTests();
@@ -98,24 +190,21 @@ describe('ExpeditionState', () => {
 
     it('seeds the persistent starter stash from the world bootstrap data', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
 
         expect(state.activeRun).toBeNull();
         expect(state.persistentStash.stashId).toBe('phase01.starter-stash');
-        expect(state.persistentStash.cards).toEqual(starterDeckJson.cards);
-        expect(state.persistentStash.savedDecks).toEqual([
-            { id: 'starter-deck', name: starterDeckJson.name, cards: starterDeckJson.cards },
-        ]);
-        expect(state.persistentStash.selectedDeckId).toBe('starter-deck');
-        expect(state.persistentStash.items).toEqual(initialWorldState.stash.items);
+        expect(state.persistentStash.deckRef).toBe('starter-deck');
+        expect(state.persistentStash.deck).toEqual(starterDeckJson.cards);
+        expect(state.persistentStash.items).toEqual(initialWorldStateStashItems);
         expect(state.persistentStash.spiritStones).toBe(initialWorldState.stash.spiritStones);
     });
 
     it('saves the seeded stash once and reuses an existing persistent stash on bootstrap', () => {
         const seededState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
 
@@ -124,10 +213,9 @@ describe('ExpeditionState', () => {
         const existingStash = {
             ...seededState.persistentStash,
             stashId: 'player-existing-stash',
-            cards: [{ id: 'EXISTING_CARD', count: 1 }],
-            savedDecks: [{ id: 'player-existing-deck', name: 'player-existing-deck', cards: [{ id: 'EXISTING_CARD', count: 1 }] }],
-            selectedDeckId: 'player-existing-deck',
-            items: [{ id: 'tool.existing', itemType: 'tool' as const, count: 3 }],
+            deckRef: 'player-existing-deck',
+            deck: [{ id: 'EXISTING_CARD', count: 1 }],
+            items: [createItemStack('tool.existing', 'tool', 3)],
             spiritStones: 777,
         };
         savePersistentStash(existingStash);
@@ -154,7 +242,7 @@ describe('ExpeditionState', () => {
         const injectedStorage = new MemoryStorage();
 
         const state = withThrowingAmbientLocalStorage(() => ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: SYNTHETIC_TARGET,
             storage: injectedStorage,
@@ -170,9 +258,133 @@ describe('ExpeditionState', () => {
         expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
     });
 
+    it('creates active-run snapshots through the GameWorldState writer with route normalization, legacy cleanup, and stable JSON shape', () => {
+        const injectedStorage = new MemoryStorage();
+        const legacyRun = createStoredActiveRun(SYNTHETIC_TARGET, 'run-legacy-before-create', 'event.synthetic');
+        injectedStorage.setItem(ACTIVE_RUN_STORAGE_KEY, JSON.stringify(legacyRun));
+        injectedStorage.setItem(LEGACY_ROUTE_STORAGE_KEY, JSON.stringify({
+            ...legacyRun,
+            routeKey: LEGACY_ROUTE_LOOKUP,
+        }));
+        const state = new ExpeditionState(
+            createStoredStash(),
+            null,
+            SYNTHETIC_TARGET,
+            LEGACY_ROUTE_LOOKUP,
+            injectedStorage,
+        );
+
+        const run = withThrowingAmbientLocalStorage(() => state.createRunSnapshot({
+            ...SYNTHETIC_TARGET,
+            entryNodeId: 'entrance.synthetic',
+        }));
+        const storedRun = JSON.parse(
+            injectedStorage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET)) ?? 'null',
+        ) as RunSnapshot;
+
+        expect(storedRun.runId).toBe(run.runId);
+        expect(storedRun.routeKey).toBe(SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY);
+        expect(state.activeRun).toEqual(storedRun);
+        expect(injectedStorage.getItem(ACTIVE_RUN_STORAGE_KEY)).toBeNull();
+        expect(injectedStorage.getItem(LEGACY_ROUTE_STORAGE_KEY)).toBeNull();
+        expectCreatedActiveRunJsonShape(injectedStorage, SYNTHETIC_TARGET);
+        expect(loadActiveRun(SYNTHETIC_TARGET, undefined, injectedStorage)?.runId).toBe(run.runId);
+        expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
+    });
+
+    it('bootstraps a stored stash through the GameWorldState writer without changing JSON shape or other active-run routes', () => {
+        const injectedStorage = new MemoryStorage();
+        const storedStash = createStoredStash();
+        const syntheticRun = createStoredActiveRun(SYNTHETIC_TARGET, 'run-synthetic', 'event.synthetic');
+        const defaultRun = createStoredActiveRun(DEFAULT_TARGET, 'run-default', 'entrance.mountain-gate');
+        const syntheticActiveRunKey = createActiveRunStorageKey(SYNTHETIC_TARGET);
+        const defaultActiveRunKey = createActiveRunStorageKey(DEFAULT_TARGET);
+        injectedStorage.setItem(STASH_STORAGE_KEY, JSON.stringify(storedStash));
+        injectedStorage.setItem(syntheticActiveRunKey, JSON.stringify(syntheticRun));
+        injectedStorage.setItem(defaultActiveRunKey, JSON.stringify(defaultRun));
+
+        const state = withThrowingAmbientLocalStorage(() => ExpeditionState.bootstrap({
+            worldState: {
+                stash: {
+                    stashId: 'seed-that-must-not-replace-existing',
+                    deckRef: 'seed-deck-ref',
+                    items: [],
+                    spiritStones: 1,
+                },
+            },
+            starterDeck: {
+                cards: [{ id: 'SEED_CARD', count: 9 }],
+            },
+            targetIdentity: SYNTHETIC_TARGET,
+            storage: injectedStorage,
+        }));
+
+        expect(state.persistentStash).toEqual(storedStash);
+        expect(state.activeRun?.runId).toBe(syntheticRun.runId);
+        expect(JSON.parse(injectedStorage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(storedStash);
+        expect(sortedJsonKeys(injectedStorage, STASH_STORAGE_KEY)).toEqual([
+            'deck',
+            'deckRef',
+            'items',
+            'lastRunSummary',
+            'spiritStones',
+            'stashId',
+        ]);
+        expect(JSON.parse(injectedStorage.getItem(defaultActiveRunKey) ?? 'null')?.runId).toBe(defaultRun.runId);
+        expect(loadPersistentStash()).toBeNull();
+        expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
+    });
+
+    it('materializes the seed-fallback stash through the GameWorldState writer with the compatibility JSON shape', () => {
+        const injectedStorage = new MemoryStorage();
+
+        const state = withThrowingAmbientLocalStorage(() => ExpeditionState.bootstrap({
+            worldState: createWorldStateSeed(),
+            starterDeck: structuredClone(starterDeckJson),
+            storage: injectedStorage,
+        }));
+
+        expect(state.persistentStash.stashId).toBe('phase01.starter-stash');
+        expect(JSON.parse(injectedStorage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(state.persistentStash);
+        expect(sortedJsonKeys(injectedStorage, STASH_STORAGE_KEY)).toEqual([
+            'deck',
+            'deckRef',
+            'items',
+            'lastRunSummary',
+            'spiritStones',
+            'stashId',
+        ]);
+        expect(state.persistentStash.deck).toEqual(starterDeckJson.cards);
+        expect(state.persistentStash.items).toEqual(initialWorldStateStashItems);
+        expect(state.persistentStash.spiritStones).toBe(initialWorldState.stash.spiritStones);
+    });
+
+    it('cleans corrupt stash and active-run reads on bootstrap before materializing seed fallback', () => {
+        const injectedStorage = new MemoryStorage();
+        const activeRunKey = createActiveRunStorageKey(SYNTHETIC_TARGET);
+        const otherActiveRunKey = createActiveRunStorageKey(DEFAULT_TARGET);
+        const defaultRun = createStoredActiveRun(DEFAULT_TARGET, 'run-default', 'entrance.mountain-gate');
+        injectedStorage.setItem(STASH_STORAGE_KEY, '{not valid json');
+        injectedStorage.setItem(activeRunKey, '{not valid json');
+        injectedStorage.setItem(otherActiveRunKey, JSON.stringify(defaultRun));
+
+        const state = withThrowingAmbientLocalStorage(() => ExpeditionState.bootstrap({
+            worldState: createWorldStateSeed(),
+            starterDeck: structuredClone(starterDeckJson),
+            targetIdentity: SYNTHETIC_TARGET,
+            storage: injectedStorage,
+        }));
+
+        expect(state.activeRun).toBeNull();
+        expect(state.persistentStash.stashId).toBe('phase01.starter-stash');
+        expect(JSON.parse(injectedStorage.getItem(STASH_STORAGE_KEY) ?? 'null')).toEqual(state.persistentStash);
+        expect(injectedStorage.getItem(activeRunKey)).toBeNull();
+        expect(JSON.parse(injectedStorage.getItem(otherActiveRunKey) ?? 'null')?.runId).toBe(defaultRun.runId);
+    });
+
     it('creates and persists a run snapshot from the current stash loadout', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
 
@@ -183,7 +395,7 @@ describe('ExpeditionState', () => {
         });
 
         expect(run.currentNodeId).toBe('entrance.mountain-gate');
-        expect(run.carriedDeck).toEqual(getSelectedDeckCards(state.persistentStash));
+        expect(run.carriedDeck).toEqual(state.persistentStash.deck);
         expect(run.carriedItems).toEqual(state.persistentStash.items);
         expect(run.spiritStones).toBe(state.persistentStash.spiritStones);
         expect(run.visitedNodeIds).toEqual(['entrance.mountain-gate']);
@@ -203,7 +415,7 @@ describe('ExpeditionState', () => {
             mapId: 'phase01-jade-cave-map',
         };
         const outerMountainState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             activeRunRouteKey: 'worldMap:destination.qingyun-outer-mountain-trial',
             activeRunIdentity: outerMountainTarget,
@@ -214,13 +426,13 @@ describe('ExpeditionState', () => {
             entryNodeId: 'entrance.mountain-gate',
         });
         const jadeCaveState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             activeRunRouteKey: 'worldMap:destination.jade-cave-trial',
             activeRunIdentity: jadeCaveTarget,
         });
 
-        expect(outerMountainRun.routeKey).toBe('expedition:phase01-first-playable-expedition:phase01-prototype-map');
+        expect(outerMountainRun.routeKey).toBe(DEFAULT_EXPEDITION_TARGET_ROUTE_KEY);
         expect(jadeCaveState.activeRun).toBeNull();
 
         const jadeCaveRun = jadeCaveState.createRunSnapshot({
@@ -228,19 +440,19 @@ describe('ExpeditionState', () => {
             entryNodeId: 'entrance.jade-cave',
         });
         const restoredOuterMountainState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             activeRunRouteKey: 'worldMap:destination.qingyun-outer-mountain-trial',
             activeRunIdentity: outerMountainTarget,
         });
         const restoredJadeCaveState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             activeRunRouteKey: 'worldMap:destination.jade-cave-trial',
             activeRunIdentity: jadeCaveTarget,
         });
 
-        expect(jadeCaveRun.routeKey).toBe('expedition:phase01-jade-cave-expedition:phase01-jade-cave-map');
+        expect(jadeCaveRun.routeKey).toBe(createActiveRunRouteKey(jadeCaveTarget));
         expect(loadActiveRun(outerMountainTarget)?.runId).toBe(outerMountainRun.runId);
         expect(loadActiveRun(jadeCaveTarget)?.runId).toBe(jadeCaveRun.runId);
         expect(restoredOuterMountainState.activeRun?.runId).toBe(outerMountainRun.runId);
@@ -249,7 +461,7 @@ describe('ExpeditionState', () => {
 
     it('claims one prototype event reward, persists the run, and blocks duplicate claims', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
         state.createRunSnapshot({
@@ -257,7 +469,7 @@ describe('ExpeditionState', () => {
             mapId: 'phase01-prototype-map',
             entryNodeId: 'entrance.mountain-gate',
         });
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
         const outcome = event.pool[0];
 
         const firstClaim = state.claimEventNodeReward(event.nodeId, structuredClone(outcome.rewards));
@@ -284,7 +496,7 @@ describe('ExpeditionState', () => {
 
     it('purchases prototype shop offers with run spiritStones and blocks duplicate or unaffordable purchases', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
         state.createRunSnapshot({
@@ -292,7 +504,7 @@ describe('ExpeditionState', () => {
             mapId: 'phase01-prototype-map',
             entryNodeId: 'entrance.mountain-gate',
         });
-        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'];
+        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'] as unknown as PrototypeShopDefinition;
         const swordOffer = shop.offers.find((offer) => offer.id === 'offer.qingyun-sword');
         const charmOffer = shop.offers.find((offer) => offer.id === 'offer.fly-sword-charm');
 
@@ -331,13 +543,13 @@ describe('ExpeditionState', () => {
         expect(unaffordablePurchase.status).toBe('insufficientFunds');
         expect(state.activeRun?.spiritStones).toBe(12);
         expect(state.activeRun?.carriedItems.some((stack) => stack.id === 'artifact_fly_sword_basic')).toBe(false);
-        expect(state.persistentStash.cards.find((stack) => stack.id === 'AR_001')?.count).toBe(3);
+        expect(state.persistentStash.deck.find((stack) => stack.id === 'AR_001')?.count).toBe(3);
         expect(state.persistentStash.spiritStones).toBe(36);
     });
 
     it('records an extract intent for terminal resolution without resolving the run immediately', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
         state.createRunSnapshot({
@@ -374,7 +586,7 @@ describe('ExpeditionState', () => {
 
     it('loads and persists active runs independently by expeditionId and mapId', () => {
         const defaultState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: DEFAULT_TARGET,
         });
@@ -389,7 +601,7 @@ describe('ExpeditionState', () => {
         });
 
         const syntheticState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: SYNTHETIC_TARGET,
         });
@@ -399,17 +611,17 @@ describe('ExpeditionState', () => {
         });
         syntheticState.applyNodeRewardPreview({
             cards: [{ id: 'AR_001', count: 1 }],
-            items: [{ id: 'artifact.synthetic', itemType: 'artifact', count: 1 }],
+            items: [createItemStack('artifact.synthetic', 'artifact', 1)],
             spiritStones: 21,
         });
 
         const resumedDefaultState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: DEFAULT_TARGET,
         });
         const directDefaultState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
 
@@ -418,18 +630,14 @@ describe('ExpeditionState', () => {
         expect(directDefaultState.activeRun?.runId).toBe(defaultRun.runId);
         expect(loadActiveRun(DEFAULT_TARGET)?.runId).toBe(defaultRun.runId);
         expect(loadActiveRun(SYNTHETIC_TARGET)?.runId).toBe(syntheticRun.runId);
-        expect(loadActiveRun(SYNTHETIC_TARGET)?.carriedItems).toContainEqual({
-            id: 'artifact.synthetic',
-            itemType: 'artifact',
-            count: 1,
-        });
+        expect(loadActiveRun(SYNTHETIC_TARGET)?.carriedItems).toContainEqual(createItemStack('artifact.synthetic', 'artifact', 1));
     });
 
     it('loads and persists active runs independently for checked-in world-map Expedition destinations', () => {
         const outerMountainTarget = getCheckedInExpeditionTarget('destination.qingyun-outer-mountain-trial');
         const jadeCaveTarget = getCheckedInExpeditionTarget('destination.qingyun-jade-cave-trial');
         const outerMountainState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: outerMountainTarget,
         });
@@ -438,7 +646,7 @@ describe('ExpeditionState', () => {
             entryNodeId: 'entrance.mountain-gate',
         });
         const jadeCaveState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: jadeCaveTarget,
         });
@@ -448,18 +656,18 @@ describe('ExpeditionState', () => {
         });
 
         const restoredOuterMountainState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: outerMountainTarget,
         });
         const restoredJadeCaveState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: jadeCaveTarget,
         });
 
-        expect(outerMountainRun.routeKey).toBe('expedition:phase01-first-playable-expedition:phase01-prototype-map');
-        expect(jadeCaveRun.routeKey).toBe('expedition:phase01-jade-cave-expedition:phase01-jade-cave-map');
+        expect(outerMountainRun.routeKey).toBe(DEFAULT_EXPEDITION_TARGET_ROUTE_KEY);
+        expect(jadeCaveRun.routeKey).toBe(createActiveRunRouteKey(jadeCaveTarget));
         expect(restoredOuterMountainState.activeRun?.runId).toBe(outerMountainRun.runId);
         expect(restoredJadeCaveState.activeRun?.runId).toBe(jadeCaveRun.runId);
         expect(loadActiveRun(outerMountainTarget)?.runId).toBe(outerMountainRun.runId);
@@ -468,7 +676,7 @@ describe('ExpeditionState', () => {
 
     it('clears only the current target active run when returning to the entrance', () => {
         const defaultState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: DEFAULT_TARGET,
         });
@@ -477,7 +685,7 @@ describe('ExpeditionState', () => {
             entryNodeId: 'entrance.mountain-gate',
         });
         const syntheticState = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: SYNTHETIC_TARGET,
         });
@@ -491,5 +699,34 @@ describe('ExpeditionState', () => {
         expect(loadActiveRun(DEFAULT_TARGET)).toBeNull();
         expect(loadActiveRun(SYNTHETIC_TARGET)?.runId).toBe(syntheticRun.runId);
         expect(defaultRun.runId).not.toBe(syntheticRun.runId);
+    });
+
+    it('resets to entrance through the GameWorldState active-run clear writer and removes matching legacy keys', () => {
+        const injectedStorage = new MemoryStorage();
+        const syntheticRun = createStoredActiveRun(SYNTHETIC_TARGET, 'run-synthetic-clear', 'extract.synthetic');
+        const defaultRun = createStoredActiveRun(DEFAULT_TARGET, 'run-default-survives', 'event.default');
+        injectedStorage.setItem(createActiveRunStorageKey(SYNTHETIC_TARGET), JSON.stringify(syntheticRun));
+        injectedStorage.setItem(ACTIVE_RUN_STORAGE_KEY, JSON.stringify(syntheticRun));
+        injectedStorage.setItem(LEGACY_ROUTE_STORAGE_KEY, JSON.stringify({
+            ...syntheticRun,
+            routeKey: LEGACY_ROUTE_LOOKUP,
+        }));
+        injectedStorage.setItem(createActiveRunStorageKey(DEFAULT_TARGET), JSON.stringify(defaultRun));
+        const state = new ExpeditionState(
+            createStoredStash(),
+            syntheticRun,
+            SYNTHETIC_TARGET,
+            LEGACY_ROUTE_LOOKUP,
+            injectedStorage,
+        );
+
+        withThrowingAmbientLocalStorage(() => state.resetToEntranceState());
+
+        expect(state.activeRun).toBeNull();
+        expect(injectedStorage.getItem(createActiveRunStorageKey(SYNTHETIC_TARGET))).toBeNull();
+        expect(injectedStorage.getItem(ACTIVE_RUN_STORAGE_KEY)).toBeNull();
+        expect(injectedStorage.getItem(LEGACY_ROUTE_STORAGE_KEY)).toBeNull();
+        expect(loadActiveRun(DEFAULT_TARGET, undefined, injectedStorage)?.runId).toBe(defaultRun.runId);
+        expect(loadActiveRun(SYNTHETIC_TARGET)).toBeNull();
     });
 });

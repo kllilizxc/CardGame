@@ -16,12 +16,21 @@ export interface StoryAiHints {
     forbid?: string[];
 }
 
+export interface StoryDialogueLine {
+    id: string;
+    speakerId: string;
+    speakerName: string;
+    text: string;
+    emotion?: string;
+}
+
 export interface StoryNode {
     id: string;
     type: 'story';
     title: string;
     summary: string;
     detail: string;
+    dialogues?: StoryDialogueLine[];
     tags: string[];
     chapter: string;
     location: string;
@@ -29,6 +38,7 @@ export interface StoryNode {
     locationId: string;
     sublocationId: string;
     timeHint: string;
+    backgroundAsset?: string;
     onEnter: StoryEffect[];
     aiHints?: StoryAiHints;
 }
@@ -52,6 +62,7 @@ export interface StoryGraph {
     initialState: StoryInitialStateSeed;
     nodes: StoryNode[];
     choices: StoryChoice[];
+    shareFactsAcrossStories?: boolean;
 }
 
 function assertRecord(value: unknown, label: string): asserts value is Record<string, unknown> {
@@ -177,6 +188,20 @@ function readOptionalNumberRecord(source: Record<string, unknown>, key: string, 
     }));
 }
 
+function readOptionalStringRecord(source: Record<string, unknown>, key: string, label: string): Record<string, string> | undefined {
+    const value = source[key];
+    if (value === undefined) return undefined;
+    assertRecord(value, `${label}.${key}`);
+    return Object.fromEntries(Object.entries(value).map(([entryKey, entry]) => [entryKey, readRequiredString({ value: entry }, 'value', `${label}.${key}.${entryKey}`)]));
+}
+
+function readOptionalStringArrayRecord(source: Record<string, unknown>, key: string, label: string): Record<string, string[]> | undefined {
+    const value = source[key];
+    if (value === undefined) return undefined;
+    assertRecord(value, `${label}.${key}`);
+    return Object.fromEntries(Object.entries(value).map(([entryKey, entry]) => [entryKey, readStringArray({ value: entry }, 'value', `${label}.${key}.${entryKey}`)]));
+}
+
 function parseAttributeOperator(value: unknown, label: string): StoryAttributeOperator {
     const operator = typeof value === 'string' ? value : '';
     const operators: StoryAttributeOperator[] = ['>', '>=', '<', '<=', '==', '!='];
@@ -194,12 +219,47 @@ function parseStoryCondition(value: unknown, label: string): StoryCondition {
     const kind = readRequiredString(value, 'kind', label);
 
     switch (kind) {
+        case 'always':
+            return { kind };
         case 'attribute':
             return {
                 kind,
                 attribute: readRequiredString(value, 'attribute', label),
                 operator: parseAttributeOperator(value.operator, `${label}.operator`),
                 value: readRequiredNumber(value, 'value', label),
+            };
+        case 'relation':
+            return {
+                kind,
+                relationId: readRequiredString(value, 'relationId', label),
+                operator: parseAttributeOperator(value.operator, `${label}.operator`),
+                value: readRequiredNumber(value, 'value', label),
+            };
+        case 'actorAbility':
+            return {
+                kind,
+                actorId: readRequiredString(value, 'actorId', label),
+                ability: readRequiredString(value, 'ability', label),
+                operator: parseAttributeOperator(value.operator, `${label}.operator`),
+                value: readRequiredNumber(value, 'value', label),
+            };
+        case 'itemCount': {
+            const count = readRequiredNumber(value, 'value', label);
+            if (!Number.isSafeInteger(count) || count < 0) throw new Error(`Story graph ${label}.value must be a non-negative integer.`);
+            return { kind, itemId: readRequiredString(value, 'itemId', label), operator: parseAttributeOperator(value.operator, `${label}.operator`), value: count };
+        }
+        case 'knowledge':
+            return {
+                kind,
+                actorId: readRequiredString(value, 'actorId', label),
+                knowledgeId: readRequiredString(value, 'knowledgeId', label),
+                expected: readOptionalBoolean(value, 'expected', label),
+            };
+        case 'questStage':
+            return {
+                kind,
+                questId: readRequiredString(value, 'questId', label),
+                stage: readRequiredString(value, 'stage', label),
             };
         case 'flag':
             return {
@@ -358,6 +418,42 @@ function parseStoryEffect(value: unknown, label: string): StoryEffect {
                 kind,
                 nodeId: readRequiredString(value, 'nodeId', label),
             };
+        case 'setLocationLabel':
+            return {
+                kind,
+                location: readRequiredString(value, 'location', label),
+            };
+        case 'learnKnowledge':
+            return {
+                kind,
+                actorId: readRequiredString(value, 'actorId', label),
+                knowledgeId: readRequiredString(value, 'knowledgeId', label),
+            };
+        case 'setQuestStage':
+            return {
+                kind,
+                questId: readRequiredString(value, 'questId', label),
+                stage: readRequiredString(value, 'stage', label),
+            };
+        case 'grantCard': {
+            const count = readRequiredNumber(value, 'count', label);
+            if (!Number.isSafeInteger(count) || count < 1) throw new Error(`Story graph ${label}.count must be a positive integer.`);
+            return { kind, grantId: readRequiredString(value, 'grantId', label), cardId: readRequiredString(value, 'cardId', label), count };
+        }
+        case 'grantItem':
+        case 'consumeItem': {
+            const count = readRequiredNumber(value, 'count', label);
+            if (!Number.isSafeInteger(count) || count < 1) throw new Error(`Story graph ${label}.count must be a positive integer.`);
+            const itemType = readRequiredString(value, 'itemType', label);
+            if (!['artifact', 'tool', 'consumable', 'material', 'quest'].includes(itemType)) throw new Error(`Story graph ${label}.itemType is unsupported.`);
+            return { kind, transactionId: readRequiredString(value, 'transactionId', label), itemId: readRequiredString(value, 'itemId', label), itemType: itemType as 'artifact' | 'tool' | 'consumable' | 'material' | 'quest', count };
+        }
+        case 'once':
+            return {
+                kind,
+                eventId: readRequiredString(value, 'eventId', label),
+                effects: parseStoryEffects(value.effects, `${label}.effects`),
+            };
         case 'startBattle':
             return {
                 kind,
@@ -394,15 +490,43 @@ function parseAiHints(value: unknown, label: string): StoryAiHints | undefined {
     };
 }
 
+function parseStoryDialogues(value: unknown, label: string): StoryDialogueLine[] | undefined {
+    if (value === undefined) return undefined;
+    if (!Array.isArray(value) || value.length > 2000) {
+        throw new Error(`Story graph ${label} must be an array of at most 2000 lines.`);
+    }
+    return value.map((entry, index): StoryDialogueLine => {
+        const lineLabel = `${label}[${index}]`;
+        assertRecord(entry, lineLabel);
+        const id = readRequiredString(entry, 'id', lineLabel);
+        const speakerId = readRequiredString(entry, 'speakerId', lineLabel);
+        const speakerName = readRequiredString(entry, 'speakerName', lineLabel);
+        const text = readRequiredString(entry, 'text', lineLabel);
+        const emotion = readOptionalString(entry, 'emotion', lineLabel);
+        if (!/^[A-Za-z0-9][A-Za-z0-9._:-]*$/u.test(id)
+            || !/^[A-Za-z0-9][A-Za-z0-9._:-]*$/u.test(speakerId) || text.length > 500) {
+            throw new Error(`Story graph ${lineLabel} has an invalid ID, speaker, or text length.`);
+        }
+        return { id, speakerId, speakerName, text, ...(emotion ? { emotion } : {}) };
+    });
+}
+
 function toStoryNode(rawNode: unknown, index: number): StoryNode {
     assertRecord(rawNode, `nodes[${index}]`);
 
+    const backgroundAsset = readOptionalString(rawNode, 'backgroundAsset', `nodes[${index}]`);
+    if (backgroundAsset && !/^assets\/story\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+\.png$/u.test(backgroundAsset)) {
+        throw new Error(`Story graph nodes[${index}].backgroundAsset must name a story PNG asset.`);
+    }
+
+    const dialogues = parseStoryDialogues(rawNode.dialogues, `nodes[${index}].dialogues`);
     return {
         id: readRequiredString(rawNode, 'id', `nodes[${index}]`),
         type: 'story',
         title: readRequiredString(rawNode, 'title', `nodes[${index}]`),
         summary: readRequiredString(rawNode, 'summary', `nodes[${index}]`),
         detail: readRequiredString(rawNode, 'detail', `nodes[${index}]`),
+        ...(dialogues ? { dialogues } : {}),
         tags: readStringArray(rawNode, 'tags', `nodes[${index}]`),
         chapter: readRequiredString(rawNode, 'chapter', `nodes[${index}]`),
         location: readRequiredString(rawNode, 'location', `nodes[${index}]`),
@@ -410,6 +534,7 @@ function toStoryNode(rawNode: unknown, index: number): StoryNode {
         locationId: readRequiredString(rawNode, 'locationId', `nodes[${index}]`),
         sublocationId: readRequiredString(rawNode, 'sublocationId', `nodes[${index}]`),
         timeHint: readRequiredString(rawNode, 'timeHint', `nodes[${index}]`),
+        ...(backgroundAsset ? { backgroundAsset } : {}),
         onEnter: parseStoryEffects(rawNode.onEnter, `nodes[${index}].onEnter`),
         aiHints: parseAiHints(rawNode.aiHints, `nodes[${index}].aiHints`),
     };
@@ -447,6 +572,9 @@ function parseInitialState(
         flags: readOptionalBooleanRecord(rawState, 'flags', 'initialState'),
         attributes: readOptionalNumberRecord(rawState, 'attributes', 'initialState'),
         relations: readOptionalNumberRecord(rawState, 'relations', 'initialState'),
+        knowledge: readOptionalStringArrayRecord(rawState, 'knowledge', 'initialState'),
+        questStages: readOptionalStringRecord(rawState, 'questStages', 'initialState'),
+        settledEventIds: readOptionalStringArray(rawState, 'settledEventIds', 'initialState'),
     };
 }
 
@@ -478,6 +606,10 @@ function validateStoryBattleTriggers(
     nodeIds: Set<string>,
 ): void {
     effects.forEach((effect, index) => {
+        if (effect.kind === 'once') {
+            validateStoryBattleTriggers(effect.effects, `${label}[${index}].effects`, nodeIds);
+            return;
+        }
         if (effect.kind !== 'startBattle') {
             return;
         }
@@ -507,6 +639,7 @@ export function validatePlayableStoryGraph(rawGraph: unknown): StoryGraph {
 
     assertUniqueIds(nodes.map((node) => node.id), 'nodes');
     assertUniqueIds(choices.map((choice) => choice.id), 'choices');
+    assertUniqueIds(nodes.flatMap(node => node.dialogues?.map(line => line.id) ?? []), 'dialogues');
 
     if (!nodeIds.has(entryNodeId)) {
         throw new Error(`Story graph entryNodeId does not exist: ${entryNodeId}`);
@@ -536,5 +669,6 @@ export function validatePlayableStoryGraph(rawGraph: unknown): StoryGraph {
         initialState: parseInitialState(rawGraph.initialState, { storyId, entryNodeId }),
         nodes,
         choices,
+        ...(readOptionalBoolean(rawGraph, 'shareFactsAcrossStories', 'root') === undefined ? {} : { shareFactsAcrossStories: rawGraph.shareFactsAcrossStories as boolean }),
     };
 }

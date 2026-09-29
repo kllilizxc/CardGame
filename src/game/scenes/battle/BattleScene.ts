@@ -1,15 +1,17 @@
 import { Scene } from 'phaser';
+import { WenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
+import { ensureWenxinArt } from '../../art/wenxin/WenxinArt';
 import { EventBus, EXPEDITION_BATTLE_COMPLETE_EVENT, STORY_BATTLE_COMPLETE_EVENT } from '../../EventBus';
 import { CardSprite } from '../../objects/CardSprite';
 import { ArtifactSprite } from '../../objects/ArtifactSprite';
 import { TalismanSprite } from '../../objects/TalismanSprite';
 import { FieldSprite } from '../../objects/FieldSprite';
-import type { BaseCardSprite } from '../../objects/BaseCardSprite';
-import type { UnitCard } from '../../../../public/data/types/cards/unit';
-import type { ArtifactCard, ArtifactWeaponType } from '../../../../public/data/types/cards/artifact';
-import type { TalismanCard } from '../../../../public/data/types/cards/talisman';
-import type { CombatBaselineConfig } from '../../../../public/data/types/combat-baseline';
-import type { ArtifactGradeConfig } from '../../../../public/data/types/artifact-grade';
+import type { UnitCard } from '@data/types/cards/unit';
+import type { ArtifactCard, ArtifactWeaponType } from '@data/types/cards/artifact';
+import type { TalismanCard } from '@data/types/cards/talisman';
+import type { FieldCard } from '@data/types/cards/field';
+import type { CombatBaselineConfig } from '@data/types/combat-baseline';
+import type { ArtifactGradeConfig } from '@data/types/artifact-grade';
 import { CardListView } from '../../ui/common/CardListView';
 import { getUnitStar, installRuntimeRealmConfig, resetRuntimeRealmConfig } from '../../utils/RealmHelper';
 import { installRuntimeArtifactGradeConfig, resetRuntimeArtifactGradeConfig } from '../../utils/ArtifactHelper';
@@ -31,22 +33,29 @@ import { createDefaultLayout, type BattleLayoutConfig } from '../../config/Layou
 import { ManagerFactory } from '../../managers/battle/ManagerFactory';
 import { UsageManager } from '../../managers/battle/UsageManager';
 import { BattleContext } from '../../context/BattleContext';
-import type { PillCard } from '../../../../public/data/types/cards/pill';
-import type { SkillCard } from '../../../../public/data/types/cards/skill';
+import type { PillCard } from '@data/types/cards/pill';
+import type { SkillCard } from '@data/types/cards/skill';
 import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import { BattleState } from '../../state/BattleState';
 import { BattleUIManager } from '../../ui/battle/BattleUIManager';
+import { TutorialOverlayController } from '../../ui/battle/TutorialOverlayController';
+import type { TutorialStepDefinition, TutorialPlayerAction, TutorialHighlightZone } from '../../ui/battle/TutorialOverlayController';
 import { CardPreviewManager } from '../../managers/common/CardPreviewManager';
-import type { CardPreviewMetadata, PreviewCardData } from '../../managers/common/cardPreviewProtocol';
 import { PillTooltipUI } from '../../ui/common/PillTooltipUI';
+import type { AnyCard } from '@data/types/cards/all';
 import type { BattleLaunchPayload } from '../../types/expedition';
 import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import { createExpeditionBattleCompleteEvent } from './battleCompletion';
+import { findArtifactEquipTarget } from './artifactEquipTarget';
+import {
+    getBuiltInTutorialStepsForEncounter,
+    resolveTutorialStepDefinitions,
+} from './tutorialStepRuntime';
 import { createStoryBattleCompleteEvent } from '../story/storyBattleRoundTrip';
-import { createSceneBackdrop, sceneTheme } from '../shared/sceneTheme';
 import {
     BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
     BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
+    BATTLE_LOADOUT_CONFIG_CACHE_KEY,
     BATTLE_STATUS_DEFINITIONS_CACHE_KEY,
     createBattleDeckStartupPlan,
     getBattleDeckCacheKey,
@@ -54,9 +63,17 @@ import {
     getEncounterCacheKey,
     getEncounterFile,
     getEncounterUnits,
+    type BattleSharedArtifactCardsData,
     normalizeBattleLaunchPayload,
     normalizeStoryBattleLaunchPayload,
+    type BattleSharedFieldCardsData,
+    type BattleSharedGongfaListData,
+    type BattleSharedPillCardsData,
+    type BattleSharedSkillCardsData,
+    type BattleSharedTalismanCardsData,
+    type BattleSharedUnitCardsData,
     resolveBattleSharedRuntimeResources,
+    resolveBattleLoadout,
     resolveDefaultBattleRuntimeResources,
     resolveExpeditionBattleRuntimeResources,
     resolveStoryBattleRuntimeResources,
@@ -126,6 +143,11 @@ export class BattleScene extends Scene {
     private deckCacheKey = 'starterDeck';
     private battleEndHandled = false;
 
+    // 教程覆盖层
+    private tutorialController?: TutorialOverlayController;
+    private isTutorialMode = false;
+    private tutorialStepsCacheKey: string | null = null;
+
     constructor() {
         super('BattleScene');
     }
@@ -142,6 +164,14 @@ export class BattleScene extends Scene {
         this.encounterCacheKey = getEncounterCacheKey(this.launchPayload, this.storyLaunchPayload);
         this.deckCacheKey = getBattleDeckCacheKey(this.storyLaunchPayload);
         this.battleEndHandled = false;
+        this.isTutorialMode = TutorialOverlayController.hasTutorialSource(data)
+            || this.isTutorialEncounter();
+        this.tutorialStepsCacheKey = this.resolveTutorialStepsCacheKey();
+    }
+
+    /** 通过故事战斗的 encounterId 前缀检测是否为教程战斗 */
+    private isTutorialEncounter(): boolean {
+        return this.storyLaunchPayload?.battleLaunch?.encounterId?.startsWith('tutorial_encounter_') ?? false;
     }
 
     // ===== Getter 方法，用于兼容现有代码 =====
@@ -182,7 +212,7 @@ export class BattleScene extends Scene {
         return height / 1080;
     }
 
-    private getRequiredSharedRuntimeJson(cacheKey: BattleSharedRuntimeResourceCacheKey): unknown {
+    private getRequiredSharedRuntimeJson<TData>(cacheKey: BattleSharedRuntimeResourceCacheKey): TData {
         const resource = this.sharedRuntimeResources?.[cacheKey];
 
         if (!resource) {
@@ -197,10 +227,22 @@ export class BattleScene extends Scene {
             );
         }
 
-        return data;
+        return data as TData;
     }
 
-    private getOptionalSharedRuntimeJson(cacheKey: BattleOptionalSharedRuntimeResourceCacheKey): unknown | undefined {
+    private getRequiredRuntimeJson<TData>(cacheKey: string): TData {
+        const data = this.cache.json.get(cacheKey);
+
+        if (data === undefined) {
+            throw new Error(
+                `BattleScene failed to load encounter resource from preload: JSON cache key ${cacheKey} is missing after create preload.`,
+            );
+        }
+
+        return data as TData;
+    }
+
+    private getOptionalSharedRuntimeJson<TData>(cacheKey: BattleOptionalSharedRuntimeResourceCacheKey): TData | undefined {
         const resource = this.sharedRuntimeResources?.[cacheKey];
 
         if (!resource) {
@@ -215,7 +257,7 @@ export class BattleScene extends Scene {
             );
         }
 
-        return data;
+        return data as TData;
     }
 
     private installRuntimeHelperConfigs(): void {
@@ -268,6 +310,10 @@ export class BattleScene extends Scene {
             this.expeditionRuntimeResources,
             this.defaultRuntimeResources,
         ));
+
+        if (this.tutorialStepsCacheKey) {
+            this.load.json(this.tutorialStepsCacheKey, this.getTutorialStepsPublicPath());
+        }
     }
 
     async create() {
@@ -275,27 +321,27 @@ export class BattleScene extends Scene {
         const { width, height } = this.scale;
 
         this.cardScale = this.calculateCardScale();
-        this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
-        createSceneBackdrop(this);
-        this.add
-            .rectangle(width / 2, height / 2, width - 140, height - 180, sceneTheme.colors.ink, 0.14)
-            .setStrokeStyle(2, sceneTheme.colors.gold, 0.12);
+        this.cameras.main.setBackgroundColor(0x0d1320);
+        await ensureWenxinArt(this);
+        if (!this.sys.isActive()) return;
+        new WenxinBattleStage(this);
         
         // 初始化游戏状态
         this.battleState = new BattleState();
+        this.setupEffectActionEvents();
         
         // 初始化布局配置
         this.layout = createDefaultLayout(width, height);
 
         // 初始化战斗上下文
-        this.battleContext = new BattleContext(this);
+        this.battleContext = new BattleContext(this, this.battleState);
 
         // 注入运行时目录加载的境界 / 法器品级配置；缺省时 helper 保持 static fallback。
         this.installRuntimeHelperConfigs();
 
         // 使用 ManagerFactory 统一初始化所有管理器
-        const gongfaData = this.getRequiredSharedRuntimeJson('gongfaList') as { gongfa: any[] };
-        const statusDefinitionsData = this.getRequiredSharedRuntimeJson(BATTLE_STATUS_DEFINITIONS_CACHE_KEY);
+        const gongfaData = this.getRequiredSharedRuntimeJson<BattleSharedGongfaListData>('gongfaList');
+        const statusDefinitionsData = this.getRequiredSharedRuntimeJson<unknown>(BATTLE_STATUS_DEFINITIONS_CACHE_KEY);
         const managers = await ManagerFactory.createManagers(this, this.battleContext, {
             layout: this.layout,
             cardScale: this.cardScale,
@@ -321,13 +367,18 @@ export class BattleScene extends Scene {
         this.sacrificeUI = new SacrificeSelectionUI(this);
 
         // 加载所有卡牌数据
-        const unitCardsData = this.getRequiredSharedRuntimeJson('unitCards') as { units: UnitCard[] };
-        const artifactCardsData = this.getRequiredSharedRuntimeJson('artifactCards') as { artifacts: any[] };
-        const talismanCardsData = this.getRequiredSharedRuntimeJson('talismanCards') as { talismans: any[] };
-        const fieldCardsData = this.getRequiredSharedRuntimeJson('fieldCards') as { fields: any[] };
-        const pillCardsData = this.getRequiredSharedRuntimeJson('pillCards') as { pills: any[] };
-        const skillCardsData = this.getRequiredSharedRuntimeJson('skillCards') as { skills: SkillCard[] };
-        const starterDeckData = this.cache.json.get(this.deckCacheKey) as { cards: Array<{ id: string; count: number }> };
+        const unitCardsData = this.getRequiredSharedRuntimeJson<BattleSharedUnitCardsData>('unitCards');
+        const artifactCardsData = this.getRequiredSharedRuntimeJson<BattleSharedArtifactCardsData>('artifactCards');
+        const talismanCardsData = this.getRequiredSharedRuntimeJson<BattleSharedTalismanCardsData>('talismanCards');
+        const fieldCardsData = this.getRequiredSharedRuntimeJson<BattleSharedFieldCardsData>('fieldCards');
+        const pillCardsData = this.getRequiredSharedRuntimeJson<BattleSharedPillCardsData>('pillCards');
+        const skillCardsData = this.getRequiredSharedRuntimeJson<BattleSharedSkillCardsData>('skillCards');
+        const battleLoadout = resolveBattleLoadout(
+            this.getRequiredSharedRuntimeJson(BATTLE_LOADOUT_CONFIG_CACHE_KEY),
+            pillCardsData.pills,
+            skillCardsData.skills,
+        );
+        const starterDeckData = this.getRequiredRuntimeJson<{ cards: Array<{ id: string; count: number }> }>(this.deckCacheKey);
         const deckStartupPlan = createBattleDeckStartupPlan(
             this.launchPayload,
             this.storyLaunchPayload,
@@ -335,7 +386,7 @@ export class BattleScene extends Scene {
         );
 
         // 创建卡牌索引
-        const allCards = new Map<string, any>();
+        const allCards = new Map<string, UnitCard | ArtifactCard | TalismanCard | FieldCard | PillCard>();
         unitCardsData.units.forEach(card => allCards.set(card.id, card));
         artifactCardsData.artifacts.forEach(card => allCards.set(card.id, card));
         talismanCardsData.talismans.forEach(card => allCards.set(card.id, card));
@@ -378,7 +429,7 @@ export class BattleScene extends Scene {
             onEndTurn: () => this.endTurn(),
             onToggleSpeed: () => this.toggleGameSpeed(),
             onShowDeck: () => new CardListView(this, '卡组', [...this.deck]),
-            onShowDiscardPile: () => new CardListView(this, '弃牌堆', [...this.discardPile]),
+            onShowDiscardPile: () => new CardListView(this, '弃牌堆', [...this.discardPile])
         });
         this.uiManager.createAll();
 
@@ -387,10 +438,10 @@ export class BattleScene extends Scene {
         this.pillTooltipUI = new PillTooltipUI(this);
 
         // 初始化丹药系统
-        this.setupPillSystem(pillCardsData.pills);
+        this.setupPillSystem(battleLoadout.pills);
 
         // 初始化技能系统
-        this.setupSkillSystem(skillCardsData.skills);
+        this.setupSkillSystem(battleLoadout.skills);
 
         // 设置事件管理器的场地区域引用
         this.eventManager.setFieldZones(this.playerFieldZone, this.enemyFieldZone);
@@ -409,16 +460,38 @@ export class BattleScene extends Scene {
         // 设置符箓使用逻辑
         this.setupTalismanUsageLogic();
 
+        // 初始化教程覆盖层（仅教程模式激活）
+        if (this.isTutorialMode) {
+            this.tutorialController = new TutorialOverlayController(this);
+            this.tutorialController.setOnStepChange(() => this.syncTutorialInteractionState());
+            if (this.tutorialStepsCacheKey) {
+                this.loadAndStartTutorialSteps();
+            } else {
+                this.loadTutorialStepsForEncounter();
+            }
+        }
+
         this.battleLog.addLog('战斗开始！');
         
         // 开始第一回合
         this.time.delayedCall(500, () => {
-            this.turnManager.showTurnAnimation(`回合 ${this.turnNumber}`, sceneTheme.colors.jadeBright, () => {
+            this.turnManager.showTurnAnimation(`回合 ${this.turnNumber}`, 0x2ecc71, () => {
                 this.turnManager.startPlayerTurn(this.getTurnContext());
             });
         });
         
         EventBus.emit('current-scene-ready', this);
+    }
+
+    /** Connect card draw effects to the existing hand and deck flow. */
+    private setupEffectActionEvents(): void {
+        const drawCards = (count: number) => {
+            for (let index = 0; index < count; index++) this.drawCard();
+        };
+        this.events.on('drawCards', drawCards);
+        this.events.once('shutdown', () => {
+            this.events.off('drawCards', drawCards);
+        });
     }
 
     /**
@@ -430,6 +503,10 @@ export class BattleScene extends Scene {
             target: CardSprite,
             targetSide: 'ally' | 'enemy'
         ) => {
+            if (!this.isTutorialActionAllowed('use_skill')) {
+                this.battleLog.addLog('当前步骤不允许使用符箓');
+                return;
+            }
             // 先启动符箓选择状态
             this.talismanManager.startUseTalisman(talisman);
             
@@ -449,6 +526,7 @@ export class BattleScene extends Scene {
                 
                 // 重新排列手牌
                 this.cardManager.arrangeHand(this.hand);
+                this.notifyTutorialAction('use_skill');
                 
                 // 等待动画和死亡处理完成后，播放符箓飞向弃牌堆的动画
                 this.time.delayedCall(900, () => {
@@ -468,7 +546,7 @@ export class BattleScene extends Scene {
     /**
      * 初始化丹药系统
      */
-    private setupPillSystem(pillsData: PillCard[]): void {
+    private setupPillSystem(pillsData: readonly PillCard[]): void {
         const pillConfig = this.layout.pillSlots;
         
         // 创建丹药槽位UI
@@ -485,48 +563,45 @@ export class BattleScene extends Scene {
         // 初始化槽位显示
         this.pillSlotUI.createSlots(this.pillManager.getSlots());
 
-        // 给玩家添加初始丹药（测试：添加2个丹药）
-        if (pillsData.length > 0) {
-            // 添加第一个丹药
-            this.pillManager.addPill(pillsData[0]);
-            
-            // 添加第二个丹药（如果有）
-            if (pillsData.length > 1) {
-                this.pillManager.addPill(pillsData[1]);
-            }
-        }
+        for (const pill of pillsData) this.pillManager.addPill(pill);
     }
 
     /**
      * 使用指定槽位的丹药
      */
     private usePillFromSlot(slotIndex: number): void {
+        if (!this.isTutorialActionAllowed('use_pill')) {
+            this.battleLog.addLog('当前步骤不允许使用丹药');
+            return;
+        }
         const pill = this.pillManager.getPillAt(slotIndex);
         if (!pill) {
             return;
         }
 
         // 根据丹药目标类型决定使用方式
+        let used = false;
         if (pill.target === 'player') {
             // 直接使用（作用于玩家）
-            this.pillManager.usePillFromSlot(slotIndex, 'player');
+            used = this.pillManager.usePillFromSlot(slotIndex, 'player');
         } else if (pill.target === 'unit') {
             // 需要选择目标单位（暂时简化：对第一个友方单位生效）
             if (this.playerField.length > 0) {
-                this.pillManager.usePillFromSlot(slotIndex, this.playerField[0]);
+                used = this.pillManager.usePillFromSlot(slotIndex, this.playerField[0]);
             } else {
                 this.battleLog.addLog('没有可用的目标单位');
             }
         } else {
             // 群体效果（allUnits, all），直接使用
-            this.pillManager.usePillFromSlot(slotIndex);
+            used = this.pillManager.usePillFromSlot(slotIndex);
         }
+        if (used) this.notifyTutorialAction('use_pill');
     }
 
     /**
      * 初始化技能系统
      */
-    private setupSkillSystem(skillsData: SkillCard[]): void {
+    private setupSkillSystem(skillsData: readonly SkillCard[]): void {
         // 初始化技能管理器
         this.skillManager = new SkillManager(this, this.battleLog);
         
@@ -548,7 +623,7 @@ export class BattleScene extends Scene {
             playerField: this.playerField,
             enemyField: this.enemyField,
             discardPile: this.discardPile
-        });
+        }, this.battleContext);
         
         // 将 GameActionHandler 注入到 TalismanManager
         this.talismanManager.setGameActionHandler(this.skillEffectHandler.getGameActionHandler());
@@ -565,9 +640,7 @@ export class BattleScene extends Scene {
             }
         );
 
-        // 给玩家装备初始技能（只装备第一个技能：注定一抽）
-        const playerSkills = skillsData.slice(0, 1);
-        this.skillManager.initializeSkills(playerSkills);
+        this.skillManager.initializeSkills([...skillsData]);
         this.skillUI.createSkills(this.skillManager.getSkills());
     }
 
@@ -575,6 +648,18 @@ export class BattleScene extends Scene {
      * 使用技能
      */
     private useSkill(skillIndex: number): void {
+        if (!this.isTutorialActionAllowed('use_skill')) {
+            this.battleLog.addLog('当前步骤不允许使用技能');
+            return;
+        }
+        this.notifyTutorialAction('use_skill');
+        this.skillEffectHandler.updateContext({
+            deck: this.deck,
+            hand: this.hand,
+            playerField: this.playerField,
+            enemyField: this.enemyField,
+            discardPile: this.discardPile,
+        });
         this.skillManager.useSkill(skillIndex, (skill, onCancel) => {
             // 使用技能效果处理器执行技能效果，传入取消回调
             this.skillEffectHandler.applySkillEffect(skill, onCancel);
@@ -607,24 +692,21 @@ export class BattleScene extends Scene {
     }
 
     private setupCardPreview() {
-        this.events.on('showCardPreview', (card: BaseCardSprite, metadata?: CardPreviewMetadata) => {
-            this.cardPreviewManager.showFromSprite(card, metadata);
+        // 使用新的 CardPreviewManager
+        this.events.on('showCardPreview', (card: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite) => {
+            this.cardPreviewManager.showFromSprite(card);
         });
 
-        this.events.on('showCardPreviewFromData', (cardData: PreviewCardData, metadata?: CardPreviewMetadata) => {
-            this.cardPreviewManager.showFromData(cardData, metadata);
+        this.events.on('showCardPreviewFromData', (cardData: AnyCard) => {
+            this.cardPreviewManager.showFromData(cardData);
         });
 
         this.events.on('hideCardPreview', () => {
-            this.cardPreviewManager.clear();
-        });
-
-        this.events.on('clearCardPreviewContext', (contextId: string) => {
-            this.cardPreviewManager.clearContext(contextId);
+            this.cardPreviewManager.hide();
         });
 
         // 使用新的 PillTooltipUI
-        this.events.on('showPillTooltip', (pill: any, x: number, y: number) => {
+        this.events.on('showPillTooltip', (pill: PillCard, x: number, y: number) => {
             this.pillTooltipUI.show(pill, x, y);
         });
 
@@ -704,6 +786,12 @@ export class BattleScene extends Scene {
             return false;
         }
 
+        // 教程白名单检查：允许 card_played 或 sacrifice 操作
+        if (!this.isTutorialActionAllowed('card_played') && !this.isTutorialActionAllowed('sacrifice')) {
+            this.battleLog.addLog('当前步骤不允许打出卡牌');
+            return false;
+        }
+
         const cardData = card.getCardData();
         
         // 检查是否需要献祭
@@ -735,17 +823,14 @@ export class BattleScene extends Scene {
         }
         
         // 不需要献祭，直接召唤
-        const result = this.cardManager.playCardToField(card, this.hand.filter(c => c instanceof CardSprite) as CardSprite[], this.playerField);
+        const result = this.cardManager.playCardToField(card, this.hand, this.playerField);
         if (result.success) {
-            // 过滤并更新手牌
-            const cardIndex = this.hand.indexOf(card);
-            if (cardIndex > -1) {
-                this.hand.splice(cardIndex, 1);
-            }
+            this.hand = result.hand;
             this.playerField = result.playerField;
             this.cardManager.arrangePlayerField(this.playerField);
             this.cardManager.arrangeHand(this.hand);
-            
+            this.notifyTutorialAction('card_played');
+
             // 触发召唤效果
             this.unitEffectManager.applyOnSummonEffects(card, {
                 playerField: this.playerField,
@@ -769,12 +854,18 @@ export class BattleScene extends Scene {
      * 执行献祭并召唤单位
      */
     private performSacrificeAndSummon(card: CardSprite, sacrificeTargets: CardSprite[]): void {
+        if (!this.isTutorialActionAllowed('sacrifice')) {
+            this.battleLog.addLog('当前步骤不允许献祭');
+            return;
+        }
+        this.notifyTutorialAction('sacrifice');
+
         // 先将被献祭的单位加入弃牌堆
         sacrificeTargets.forEach(unit => {
             const unitData = unit.getCardData();
             this.addToDiscardPile(unitData);
         });
-        
+
         // 执行献祭
         this.sacrificeManager.performSacrifice(
             sacrificeTargets,
@@ -789,22 +880,17 @@ export class BattleScene extends Scene {
                 // 现在召唤新单位
                 const result = this.cardManager.playCardToField(
                     card,
-                    this.hand.filter(c => c instanceof CardSprite) as CardSprite[],
+                    this.hand,
                     this.playerField
                 );
                 
                 if (result.success) {
-                    // 从手牌中移除
-                    const cardIndex = this.hand.indexOf(card);
-                    if (cardIndex > -1) {
-                        this.hand.splice(cardIndex, 1);
-                    }
-                    
-                    // 更新场上单位
+                    this.hand = result.hand;
                     this.playerField = result.playerField;
                     this.cardManager.arrangePlayerField(this.playerField);
                     this.cardManager.arrangeHand(this.hand);
-                    
+                    this.notifyTutorialAction('card_played');
+
                     // 触发召唤效果
                     this.unitEffectManager.applyOnSummonEffects(card, {
                         playerField: this.playerField,
@@ -831,17 +917,15 @@ export class BattleScene extends Scene {
     }
 
     public tryEquipArtifact(artifact: ArtifactSprite): boolean {
-        // 检查是否拖到某个场上单位附近
-        let targetUnit: CardSprite | null = null;
-        let minDistance = 150; // 最大装备距离
-
-        for (const unit of this.playerField) {
-            const distance = Phaser.Math.Distance.Between(artifact.x, artifact.y, unit.x, unit.y);
-            if (distance < minDistance) {
-                minDistance = distance;
-                targetUnit = unit;
-            }
+        if (!this.isTutorialActionAllowed('equip_artifact')) {
+            this.battleLog.addLog('当前步骤不允许装备法宝');
+            return false;
         }
+        const targetUnit = findArtifactEquipTarget(
+            { x: artifact.x, y: artifact.y },
+            this.playerField,
+            unit => unit.battleView?.image.getBounds(),
+        );
 
         if (targetUnit) {
             // 尝试装备
@@ -856,6 +940,7 @@ export class BattleScene extends Scene {
 
                 const artifactData = artifact.getCardData() as ArtifactCard;
                 this.recordArtifactUsage(artifactData.weaponType);
+                this.notifyTutorialAction('equip_artifact');
                 return true;
             }
         }
@@ -900,13 +985,13 @@ export class BattleScene extends Scene {
     }
 
     private spawnEnemies() {
-        const encounterData = this.cache.json.get(this.encounterCacheKey) as any;
+        const encounterData = this.getRequiredRuntimeJson(this.encounterCacheKey);
         if (!encounterData) {
             console.error('遭遇配置加载失败！');
             return;
         }
 
-        const cardsDataObj = this.cache.json.get('unitCards') as { units: UnitCard[] };
+        const cardsDataObj = this.getRequiredSharedRuntimeJson<BattleSharedUnitCardsData>('unitCards');
         const allCards = cardsDataObj.units;
 
         const spawnedEnemies: CardSprite[] = [];
@@ -930,11 +1015,15 @@ export class BattleScene extends Scene {
     }
 
     private drawCard() {
+        if (!this.isTutorialActionAllowed('card_drawn')) {
+            this.battleLog.addLog('当前步骤不允许抽卡');
+            return;
+        }
         const result = this.cardManager.drawCard(this.deck, this.hand);
         this.deck = result.deck;
         this.hand = result.hand;
         this.cardManager.arrangeHand(this.hand);
-        
+        this.notifyTutorialAction('card_drawn');
         // UI 会自动更新，无需手动调用
     }
 
@@ -965,13 +1054,16 @@ export class BattleScene extends Scene {
                 card.input.enabled = true;
             }
         });
-        
+
         // 启用场上单位交互
         this.playerField.forEach(unit => {
             if (unit.input) {
                 unit.input.enabled = true;
             }
         });
+
+        // 教程模式下根据步骤白名单进一步限制交互
+        this.syncTutorialInteractionState();
     }
 
     /**
@@ -1008,9 +1100,13 @@ export class BattleScene extends Scene {
             combatManager: this.combatManager,
             battleStatusController: this.battleStatusController,
             battleStateChecker: this.battleStateChecker,
-            onPlayerDamaged: (damage: number) => { this.playerHealth -= damage; },
+            onPlayerDamaged: (damage: number) => { this.battleState.damagePlayer(damage); },
             onRemoveUnit: (unit: CardSprite, isPlayer: boolean) => this.removeUnitFromField(unit, isPlayer),
             onDrawCard: () => this.drawCard(),
+            onArrangeField: () => {
+                this.cardManager.arrangePlayerField(this.playerField);
+                this.cardManager.arrangeEnemyField(this.enemyField);
+            },
             onEnablePlayerInteraction: () => this.enablePlayerInteraction(),
             onDisablePlayerInteraction: () => this.disablePlayerInteraction(),
             onApplyPlayerTurnEndEffects: () => this.applyPlayerTurnEndEffects(),
@@ -1025,7 +1121,13 @@ export class BattleScene extends Scene {
             isPlayerTurn: this.isPlayerTurn,
             isProcessingTurn: this.isProcessingTurn
         });
-        
+
+        if (!this.isTutorialActionAllowed('end_turn')) {
+            this.battleLog.addLog('当前步骤不允许结束回合');
+            return;
+        }
+
+        this.notifyTutorialAction('end_turn');
         // 委托给 TurnManager（TurnManager 会设置 isProcessingTurn）
         this.turnManager.endTurn(this.getTurnContext());
     }
@@ -1080,12 +1182,188 @@ export class BattleScene extends Scene {
         }
     }
 
+    // ===== 教程覆盖层 =====
+
+    /** 获取教程控制器（仅教程模式可用） */
+    getTutorialController(): TutorialOverlayController | undefined {
+        return this.tutorialController;
+    }
+
+    /**
+     * 加载教程步骤并启动覆盖层。
+     * 仅在 isTutorialMode 时有效。
+     */
+    loadTutorialSteps(steps: TutorialStepDefinition[], onComplete?: () => void): void {
+        if (!this.tutorialController) return;
+        this.tutorialController.loadSteps(steps);
+        this.tutorialController.start(onComplete);
+    }
+
+    /**
+     * 根据遭遇战 ID 加载对应的教程步骤。
+     */
+    private loadTutorialStepsForEncounter(): boolean {
+        const steps = getBuiltInTutorialStepsForEncounter(
+            this.storyLaunchPayload?.battleLaunch?.encounterId,
+        );
+
+        if (!steps) {
+            return false;
+        }
+
+        this.loadTutorialSteps(steps);
+        return true;
+    }
+
+    /** 通知教程控制器玩家操作 */
+    private notifyTutorialAction(action: TutorialPlayerAction): void {
+        this.tutorialController?.notifyPlayerAction(action);
+    }
+
+    /** 检查当前教程步骤是否允许指定操作 */
+    private isTutorialActionAllowed(action: TutorialPlayerAction): boolean {
+        if (!this.tutorialController) return true;
+        return this.tutorialController.isActionAllowed(action);
+    }
+
+    /** 根据当前教程步骤的白名单同步卡片交互和 UI 按钮状态 */
+    private syncTutorialInteractionState(): void {
+        if (!this.isTutorialMode || !this.tutorialController) return;
+
+        const allowed = this.tutorialController.getAllowedActions();
+        const hasRestrictions = allowed.length > 0;
+
+        // 需要卡片交互的操作类型
+        const cardActions: TutorialPlayerAction[] = ['card_played', 'equip_artifact', 'use_skill', 'sacrifice'];
+        const needsCardInteraction = !hasRestrictions || allowed.some(a => cardActions.includes(a));
+
+        if (hasRestrictions && !needsCardInteraction) {
+            this.disablePlayerInteraction();
+        } else if (needsCardInteraction && this.isPlayerTurn) {
+            // 直接启用卡片输入（避免 enablePlayerInteraction → syncTutorialInteractionState 递归）
+            this.hand.forEach(card => {
+                if (card.input) card.input.enabled = true;
+            });
+            this.playerField.forEach(unit => {
+                if (unit.input) unit.input.enabled = true;
+            });
+        }
+
+        // 同步 UI 按钮状态
+        if (this.uiManager) {
+            this.uiManager.setDrawButtonEnabled(!hasRestrictions || allowed.includes('card_drawn'));
+            this.uiManager.setEndTurnButtonEnabled(!hasRestrictions || allowed.includes('end_turn'));
+        }
+    }
+
+    /**
+     * 根据 storyLaunchPayload 的 battleId 解析教程步骤 JSON 的缓存键。
+     * 仅 isTutorialMode 时有意义。
+     */
+    private resolveTutorialStepsCacheKey(): string | null {
+        if (!this.isTutorialMode) return null;
+        const battleId = this.storyLaunchPayload?.battleLaunch.battleId;
+        if (!battleId) return null;
+        const match = battleId.match(/^tutorial\.(stage\d+)\./);
+        return match ? `tutorialSteps_${match[1]}` : null;
+    }
+
+    /** 获取教程步骤 JSON 文件的 public 路径 */
+    private getTutorialStepsPublicPath(): string {
+        const cacheKey = this.tutorialStepsCacheKey;
+        if (!cacheKey) throw new Error('tutorialStepsCacheKey not set');
+        const stage = cacheKey.replace('tutorialSteps_', '');
+        return `data/tutorial/tutorial-steps-${stage}.json`;
+    }
+
+    /** 加载教程步骤 JSON 并补充 completionCheck 与动态高亮区域 */
+    private loadAndStartTutorialSteps(): void {
+        if (!this.tutorialController || !this.tutorialStepsCacheKey) return;
+
+        const resolution = resolveTutorialStepDefinitions({
+            rawSteps: this.cache.json.get(this.tutorialStepsCacheKey),
+            encounterId: this.storyLaunchPayload?.battleLaunch?.encounterId,
+            enrichRawSteps: (rawSteps) => this.enrichTutorialSteps(rawSteps),
+        });
+
+        if (!resolution.steps) {
+            console.warn(`教程步骤数据缺失或格式无效: ${this.tutorialStepsCacheKey}`);
+            return;
+        }
+
+        if (resolution.source === 'encounter-fallback') {
+            console.warn(`教程步骤 JSON 缺失，已回退到内置步骤: ${this.tutorialStepsCacheKey}`);
+        }
+
+        this.loadTutorialSteps(resolution.steps);
+    }
+
+    /** 将原始 JSON 数据填充为完整的 TutorialStepDefinition[] */
+    private enrichTutorialSteps(rawSteps: unknown[]): TutorialStepDefinition[] {
+        const { width, height } = this.scale;
+        return rawSteps.map((raw) => {
+            const record = raw as Record<string, unknown>;
+            const completesOn = record.__completesOn as TutorialPlayerAction | undefined;
+            const zoneRef = record.__zoneRef as string | undefined;
+            return {
+                id: record.id as string,
+                guideText: record.guideText as string,
+                textPosition: (record.textPosition ?? 'top') as TutorialStepDefinition['textPosition'],
+                highlightZones: zoneRef
+                    ? this.computeHighlightZones(zoneRef)
+                    : (record.highlightZones as TutorialStepDefinition['highlightZones'] ?? []),
+                showArrow: record.showArrow as boolean | undefined,
+                arrowFromX: this.computeArrowCoord(record.arrowFromPctX, width),
+                arrowFromY: this.computeArrowCoord(record.arrowFromPctY, height),
+                arrowToX: this.computeArrowCoord(record.arrowToPctX, width),
+                arrowToY: this.computeArrowCoord(record.arrowToPctY, height),
+                allowedActions: completesOn ? [completesOn] : undefined,
+                completionCheck: completesOn
+                    ? (action: TutorialPlayerAction) => action === completesOn
+                    : undefined,
+            };
+        });
+    }
+
+    /** 根据 zoneRef 字符串从 LayoutConfig 查找高亮区域坐标 */
+    private computeHighlightZones(zoneRef: string): TutorialHighlightZone[] {
+        const z = this.layout;
+        let zoneCfg: { x: number; y: number; w: number; h: number } | null = null;
+        switch (zoneRef) {
+            case 'handZone':
+                zoneCfg = { x: z.handZone.x, y: z.handZone.y, w: z.handZone.width, h: z.handZone.height };
+                break;
+            case 'playerFieldZone':
+                zoneCfg = { x: z.playerFieldZone.x, y: z.playerFieldZone.y, w: z.playerFieldZone.width, h: z.playerFieldZone.height };
+                break;
+            case 'enemyFieldZone':
+                zoneCfg = { x: z.enemyFieldZone.x, y: z.enemyFieldZone.y, w: z.enemyFieldZone.width, h: z.enemyFieldZone.height };
+                break;
+            case 'endTurnButton':
+                zoneCfg = { x: z.endTurnButton.x, y: z.endTurnButton.y, w: z.endTurnButton.width, h: z.endTurnButton.height };
+                break;
+            case 'drawButton':
+                zoneCfg = { x: z.drawButton.x, y: z.drawButton.y, w: z.drawButton.width, h: z.drawButton.height };
+                break;
+            default:
+                return [];
+        }
+        return [{ x: zoneCfg.x, y: zoneCfg.y, width: zoneCfg.w, height: zoneCfg.h }];
+    }
+
+    /** 将百分比坐标转换为像素值（百分比值以 0-100 范围表示） */
+    private computeArrowCoord(pctValue: unknown, screenSize: number): number | undefined {
+        if (typeof pctValue !== 'number') return undefined;
+        return (pctValue / 100) * screenSize;
+    }
+
     public handleBattleEnd(victory: boolean): void {
         if (this.battleEndHandled) {
             return;
         }
 
         this.battleEndHandled = true;
+        this.battleContext.effectResolver.clearTurnAttackMods();
 
         if (this.storyLaunchPayload) {
             const result = createStoryBattleCompleteEvent(this.storyLaunchPayload, victory);

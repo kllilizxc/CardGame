@@ -1,6 +1,7 @@
 import type { Scene } from 'phaser';
 import type { BattleContext } from '../../context/BattleContext';
 import type { CardSprite } from '../../objects/CardSprite';
+import type { CombatManager } from './CombatManager';
 
 /**
  * 回合管理器上下文（用于回合执行时的运行时数据）
@@ -11,14 +12,18 @@ export interface TurnManagerContext {
     isPlayerTurn: boolean;
     isProcessingTurn: boolean;
     playerHealth: number;
+    turnNumber: number;
+    combatManager: CombatManager;
     onPlayerDamaged: (damage: number) => void;
     onRemoveUnit: (unit: CardSprite, isPlayer: boolean) => void;
-    onArrangeField: () => void;
     onApplyPlayerTurnEndEffects: () => void;
     onSetIsPlayerTurn: (value: boolean) => void;
     onSetTurnNumber: (value: number) => void;
     onSetIsProcessingTurn: (value: boolean) => void;
+    onEnablePlayerInteraction: () => void;
     onDisablePlayerInteraction: () => void;
+    onArrangeField: () => void;
+    onDrawCard: () => void;
 }
 
 /**
@@ -110,7 +115,12 @@ export class TurnManager {
             context.enemyField
         );
 
-        // 2. 等待状态动画完成后进入战斗阶段
+        // 2. 触发场地回合结束效果
+        this.triggerFieldTurnEnd(context);
+        // 处理丹药持续时间到期
+        this.triggerPillTurnEnd(context);
+
+        // 3. 等待状态动画完成后进入战斗阶段
         this.battleContext.battleLog.addLog('═══ 战斗阶段 ═══');
         context.onApplyPlayerTurnEndEffects();
         this.executePlayerTurn(context);
@@ -120,19 +130,24 @@ export class TurnManager {
      * 执行玩家攻击阶段
      */
     public executePlayerTurn(context: TurnManagerContext): void {
+        const state = this.battleContext.battleState;
         context.combatManager.resolveCombat(
-            context.isPlayerTurn,
-            context.playerField,
-            context.enemyField,
+            state.isPlayerTurn,
+            state.playerField,
+            state.enemyField,
             context.onPlayerDamaged,
             () => {
+                this.battleContext.effectResolver.clearTurnAttackMods();
+                this.battleContext.battleTickManager.tick();
+                if (state.enemyField.length === 0 || state.playerHealth <= 0) return;
                 // 切换到敌人回合
                 context.onSetIsPlayerTurn(false);
 
                 // 等待死亡动画完成后切换到敌人回合
                 this.scene.time.delayedCall(600, () => {
-                this.showTurnAnimation('敌人回合', 0xe74c3c, () => {
-                    this.startEnemyTurn(context);
+                    if (state.enemyField.length === 0 || state.playerHealth <= 0) return;
+                    this.showTurnAnimation('敌人回合', 0xe74c3c, () => {
+                        this.startEnemyTurn(context);
                     });
                 });
             }
@@ -143,18 +158,24 @@ export class TurnManager {
      * 开始敌人回合
      */
     public startEnemyTurn(context: TurnManagerContext): void {
+        const state = this.battleContext.battleState;
+        if (state.enemyField.length === 0 || state.playerHealth <= 0) return;
         // 禁用玩家交互
         context.onDisablePlayerInteraction();
 
         // 1. 触发回合开始状态
         this.battleContext.battleLog.addLog('═══ 敌人回合开始 ═══');
         this.battleContext.battleStatusController.triggerTurnStartStatuses(
-            context.playerField,
-            context.enemyField
+            state.playerField,
+            state.enemyField
         );
 
-        // 2. 等待状态动画完成后进入战斗
+        // 2. 触发场地回合开始效果
+        this.triggerFieldTurnStart(context, false);
+
+        // 3. 等待状态动画完成后进入战斗
         this.scene.time.delayedCall(800, () => {
+            if (state.enemyField.length === 0 || state.playerHealth <= 0) return;
             this.executeEnemyTurn(context);
         });
     }
@@ -163,27 +184,36 @@ export class TurnManager {
      * 执行敌人攻击阶段
      */
     public executeEnemyTurn(context: TurnManagerContext): void {
+        const state = this.battleContext.battleState;
+        if (state.enemyField.length === 0 || state.playerHealth <= 0) return;
         context.combatManager.resolveCombat(
             false, // 敌人回合，isPlayerTurn 应该是 false
-            context.playerField,
-            context.enemyField,
+            state.playerField,
+            state.enemyField,
             context.onPlayerDamaged,
             () => {
+                this.battleContext.effectResolver.clearTurnAttackMods();
+                this.battleContext.battleTickManager.tick();
+                if (state.enemyField.length === 0 || state.playerHealth <= 0) return;
                 // 切换到玩家回合并增加回合数
                 context.onSetIsPlayerTurn(true);
-                context.onSetTurnNumber(context.turnNumber + 1);
+                context.onSetTurnNumber(state.turnNumber + 1);
 
                 // 等待死亡动画完成后，先触发敌人回合结束状态
                 this.scene.time.delayedCall(600, () => {
                     this.battleContext.battleLog.addLog('═══ 敌人回合结束 ═══');
                     this.battleContext.battleStatusController.triggerTurnEndStatuses(
-                        context.playerField,
-                        context.enemyField
+                        state.playerField,
+                        state.enemyField
                     );
+
+                    // 触发场地回合结束 + 丹药持续时间处理
+                    this.triggerFieldTurnEnd(context);
+                    this.triggerPillTurnEnd(context);
 
                     // 等待状态动画完成后切换到玩家回合
                     this.scene.time.delayedCall(800, () => {
-                        this.showTurnAnimation(`回合 ${context.turnNumber + 1}`, 0x2ecc71, () => {
+                        this.showTurnAnimation(`回合 ${state.turnNumber}`, 0x2ecc71, () => {
                             this.startPlayerTurn(context);
                         });
                     });
@@ -193,9 +223,49 @@ export class TurnManager {
     }
 
     /**
+     * 触发场地回合开始效果
+     */
+    private triggerFieldTurnStart(_context: TurnManagerContext, isPlayerTurn: boolean): void {
+        if (this.battleContext.fieldManager) {
+            this.battleContext.fieldManager.onTurnStart(
+                isPlayerTurn,
+                this.battleContext.battleState.playerField,
+                this.battleContext.battleState.enemyField,
+            );
+        }
+    }
+
+    /**
+     * 触发场地回合结束效果
+     */
+    private triggerFieldTurnEnd(_context: TurnManagerContext): void {
+        if (this.battleContext.fieldManager) {
+            this.battleContext.fieldManager.onTurnEnd(
+                this.battleContext.battleState.isPlayerTurn,
+                this.battleContext.battleState.playerField,
+                this.battleContext.battleState.enemyField,
+            );
+        }
+    }
+
+    /**
+     * 处理丹药持续时间到期
+     */
+    private triggerPillTurnEnd(_context: TurnManagerContext): void {
+        if (this.battleContext.pillManager) {
+            this.battleContext.pillManager.onTurnEnd(
+                this.battleContext.battleState.playerField,
+                this.battleContext.battleState.enemyField,
+            );
+        }
+    }
+
+    /**
      * 开始玩家回合
      */
     public startPlayerTurn(context: TurnManagerContext): void {
+        const state = this.battleContext.battleState;
+        if (state.enemyField.length === 0 || state.playerHealth <= 0) return;
         // 重置回合处理标志，允许玩家再次结束回合
         context.onSetIsProcessingTurn(false);
 
@@ -203,13 +273,16 @@ export class TurnManager {
         context.onEnablePlayerInteraction();
 
         // 1. 触发回合开始状态
-        this.battleContext.battleLog.addLog(`═══ 回合 ${context.turnNumber} 开始 ═══`);
+        this.battleContext.battleLog.addLog(`═══ 回合 ${state.turnNumber} 开始 ═══`);
         this.battleContext.battleStatusController.triggerTurnStartStatuses(
-            context.playerField,
-            context.enemyField
+            state.playerField,
+            state.enemyField
         );
 
-        // 2. 抽卡（立即执行，不再等待）
+        // 2. 触发场地回合开始效果
+        this.triggerFieldTurnStart(context, state.isPlayerTurn);
+
+        // 3. 抽卡（立即执行，不再等待）
         context.onDrawCard();
     }
 }

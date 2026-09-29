@@ -1,5 +1,5 @@
 import { GameObjects } from 'phaser';
-import type { PillCard } from '../../../data/types/cards/pill';
+import type { PillCard } from '@data/types/cards/pill';
 import { BaseCardSprite } from './BaseCardSprite';
 import { CardEffectFormatter } from '../utils/CardEffectFormatter';
 import {
@@ -98,6 +98,7 @@ export class PillSprite extends BaseCardSprite {
             },
             emitSceneEvents: false,
         });
+        this.attachCardFace(cardData);
     }
 
     private getGradeLabel(grade: number): string {

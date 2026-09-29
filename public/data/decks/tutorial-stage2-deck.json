@@ -1,0 +1,16 @@
+{
+  "name": "教学第二阶段卡组",
+  "description": "五道试炼：区分并运用单位、法宝、符箓、场地、丹药五种卡牌类型。初始手牌包含全部五种类型。",
+  "cards": [
+    { "id": "SX_YJZ_001", "count": 1 },
+    { "id": "AR_001", "count": 1 },
+    { "id": "TL_001", "count": 1 },
+    { "id": "FD_001", "count": 1 },
+    { "id": "PL_001", "count": 1 },
+    { "id": "SX_TY_001", "count": 1 },
+    { "id": "SX_YJS_001", "count": 1 },
+    { "id": "TL_004", "count": 1 },
+    { "id": "AR_004", "count": 1 },
+    { "id": "PL_007", "count": 1 }
+  ]
+}

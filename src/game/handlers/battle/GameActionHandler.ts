@@ -6,16 +6,24 @@ import type { BattleLog } from '../../ui/battle/BattleLog';
 import type { CardManager } from '../../managers/battle/CardManager';
 import type { DeckSelectionUI } from '../../ui/common/DeckSelectionUI';
 import type { BattleAnimationManager } from '../../managers/battle/BattleAnimationManager';
+import type { StatusManager } from '../../managers/battle/StatusManager';
 import { getStatusDefinition } from '../../utils/StatusHelper';
+import type { ArtifactCard } from '@data/types/cards/artifact';
+import type { UnitCard } from '@data/types/cards/unit';
+import type { TalismanCard } from '@data/types/cards/talisman';
+import type { FieldCard } from '@data/types/cards/field';
+import type { PillCard } from '@data/types/cards/pill';
+import type { LegacyEffectAction } from '@data/types/cards/effects';
 
-type AnyCard = any;
+type GameActionCard = UnitCard | ArtifactCard | TalismanCard | FieldCard | PillCard;
+type SceneWithStatusManager = Scene & { statusManager?: StatusManager };
 
 /**
  * 游戏动作处理上下文
  */
 export interface GameActionContext {
     scene: Scene;
-    deck: AnyCard[];
+    deck: GameActionCard[];
     hand: BaseCardSprite[];
     cardScale: number;
     battleLog: BattleLog;
@@ -27,7 +35,7 @@ export interface GameActionContext {
     // 战场信息（用于效果处理）
     playerField?: CardSprite[];
     enemyField?: CardSprite[];
-    discardPile?: AnyCard[];
+    discardPile?: GameActionCard[];
 }
 
 /**
@@ -57,7 +65,7 @@ export class GameActionHandler {
      * @param filter 可选的过滤条件（未来扩展）
      * @param onCancel 取消时的回调
      */
-    public searchDeck(_count: number = 1, filter?: (card: AnyCard) => boolean, onCancel?: () => void): void {
+    public searchDeck(_count: number = 1, filter?: (card: GameActionCard) => boolean, onCancel?: () => void): void {
         const { deck, deckSelectionUI, hand, cardScale, battleLog, cardManager, updateDeckCount, scene } = this.context;
 
         // 应用过滤条件（如果有）
@@ -75,9 +83,9 @@ export class GameActionHandler {
         deckSelectionUI.show(
             filteredDeck,
             1, // 单选
-            (selectedCard) => {
+            (selectedCard: GameActionCard) => {
                 // 将选中的卡牌加入手牌
-                const card = selectedCard as AnyCard;
+                const card = selectedCard;
                 const index = deck.indexOf(card);
                 if (index > -1) {
                     deck.splice(index, 1);
@@ -87,7 +95,7 @@ export class GameActionHandler {
 
                     if (sprite) {
                         hand.push(sprite);
-                        cardManager.arrangeHand(hand as any);
+                        cardManager.arrangeHand(hand);
                         battleLog.addLog(`检索了【${card.name}】`);
                         updateDeckCount();
                     }
@@ -103,7 +111,7 @@ export class GameActionHandler {
      * @param filter 过滤条件
      * @param onCancel 取消时的回调
      */
-    public searchDeckToDiscard(count: number = 1, filter?: (card: AnyCard) => boolean, onCancel?: () => void): void {
+    public searchDeckToDiscard(count: number = 1, filter?: (card: GameActionCard) => boolean, onCancel?: () => void): void {
         const { deck, discardPile, deckSelectionUI, battleLog, updateDeckCount, animationManager } = this.context;
 
         if (!discardPile) {
@@ -125,11 +133,11 @@ export class GameActionHandler {
         deckSelectionUI.show(
             filteredDeck,
             count,
-            (selected) => {
+            (selected: GameActionCard | GameActionCard[]) => {
                 // 先移动卡牌数据
                 // 统一转换为数组处理
-                const cards = Array.isArray(selected) ? selected : [selected as AnyCard];
-                cards.forEach((card: AnyCard) => {
+                const cards = Array.isArray(selected) ? selected : [selected];
+                cards.forEach((card) => {
                     const index = deck.indexOf(card);
                     if (index > -1) {
                         deck.splice(index, 1);
@@ -152,7 +160,7 @@ export class GameActionHandler {
      * @param filter 可选的过滤条件
      * @param onCancel 取消时的回调
      */
-    public recoverFromDiscardPile(_count: number = 1, filter?: (card: AnyCard) => boolean, onCancel?: () => void): void {
+    public recoverFromDiscardPile(_count: number = 1, filter?: (card: GameActionCard) => boolean, onCancel?: () => void): void {
         const { discardPile, deckSelectionUI, hand, cardScale, battleLog, cardManager, scene, animationManager } = this.context;
 
         if (!discardPile) {
@@ -176,9 +184,9 @@ export class GameActionHandler {
         deckSelectionUI.show(
             filteredCards,
             1, // 单选
-            (selectedCard) => {
+            (selectedCard: GameActionCard) => {
                 // 从弃牌堆移除
-                const card = selectedCard as AnyCard;
+                const card = selectedCard;
                 const index = discardPile.indexOf(card);
                 if (index > -1) {
                     discardPile.splice(index, 1);
@@ -189,7 +197,7 @@ export class GameActionHandler {
 
                     if (sprite) {
                         hand.push(sprite);
-                        cardManager.arrangeHand(hand as any);
+                        cardManager.arrangeHand(hand);
                         battleLog.addLog(`从弃牌堆回收了【${card.name}】`);
                     }
                 }
@@ -202,13 +210,13 @@ export class GameActionHandler {
      * 将卡牌添加到手牌（不从卡组移除，比如"创造"效果）
      * @param cardData 卡牌数据
      */
-    public addCardToHand(cardData: AnyCard): boolean {
+    public addCardToHand(cardData: GameActionCard): boolean {
         const { scene, hand, cardScale, battleLog, cardManager } = this.context;
 
         const sprite = CardSpriteFactory.createSprite(scene, cardData, 0, 0, cardScale);
         if (sprite) {
             hand.push(sprite);
-            cardManager.arrangeHand(hand as any);
+            cardManager.arrangeHand(hand);
             battleLog.addLog(`获得了【${cardData.name}】`);
             return true;
         }
@@ -240,52 +248,58 @@ export class GameActionHandler {
      * @param targets 目标单位数组（群体目标）
      */
     public applyEffect(
-        action: any,
+        action: LegacyEffectAction,
         source: string,
         sourceCard?: BaseCardSprite,
         target?: CardSprite,
         targets?: CardSprite[]
     ): void {
-        const { battleLog } = this.context;
+        const actionValue = action.value ?? 0;
 
         switch (action.type) {
             case 'modifyHealth':
                 if (target) {
-                    this.modifyHealth(target, action.value, source, sourceCard);
+                    this.modifyHealth(target, actionValue, source, sourceCard);
                 } else if (targets) {
-                    targets.forEach(t => this.modifyHealth(t, action.value, source, sourceCard));
+                    targets.forEach(t => this.modifyHealth(t, actionValue, source, sourceCard));
                 }
                 break;
 
             case 'dealDamage':
                 if (target) {
-                    this.modifyHealth(target, -Math.abs(action.value), source, sourceCard);
+                    this.modifyHealth(target, -Math.abs(actionValue), source, sourceCard);
                 } else if (targets) {
-                    targets.forEach(t => this.modifyHealth(t, -Math.abs(action.value), source, sourceCard));
+                    targets.forEach(t => this.modifyHealth(t, -Math.abs(actionValue), source, sourceCard));
                 }
                 break;
 
             case 'heal':
                 if (target) {
-                    this.modifyHealth(target, Math.abs(action.value), source, sourceCard);
+                    this.modifyHealth(target, Math.abs(actionValue), source, sourceCard);
                 } else if (targets) {
-                    targets.forEach(t => this.modifyHealth(t, Math.abs(action.value), source, sourceCard));
+                    targets.forEach(t => this.modifyHealth(t, Math.abs(actionValue), source, sourceCard));
                 }
                 break;
 
             case 'modifyAttack':
                 if (target) {
-                    this.modifyAttack(target, action.value, source, sourceCard);
+                    this.modifyAttack(target, actionValue, source, sourceCard);
                 } else if (targets) {
-                    targets.forEach(t => this.modifyAttack(t, action.value, source, sourceCard));
+                    targets.forEach(t => this.modifyAttack(t, actionValue, source, sourceCard));
                 }
                 break;
 
             case 'applyStatus':
+                if (!action.statusId) {
+                    console.warn(`效果动作缺少 statusId: ${action.type}`);
+                    break;
+                }
+                const statusId = action.statusId;
+                const stacks = action.stacks || 1;
                 if (target) {
-                    this.applyStatus(target, action.statusId, action.stacks || 1, source, sourceCard);
+                    this.applyStatus(target, statusId, stacks, source, sourceCard);
                 } else if (targets) {
-                    targets.forEach(t => this.applyStatus(t, action.statusId, action.stacks || 1, source, sourceCard));
+                    targets.forEach(t => this.applyStatus(t, statusId, stacks, source, sourceCard));
                 }
                 break;
 
@@ -369,15 +383,14 @@ export class GameActionHandler {
         const { battleLog, scene } = this.context;
         const targetData = target.getCardData();
         
-        // 获取 statusManager
-        const battleScene = scene as any;
-        if (!battleScene.statusManager) {
+        const statusManager = this.getStatusManager(scene);
+        if (!statusManager) {
             console.warn('StatusManager not available');
             return;
         }
 
         // 施加状态
-        const success = battleScene.statusManager.applyStatus(
+        const success = statusManager.applyStatus(
             targetData.id,
             statusId,
             stacks
@@ -396,7 +409,7 @@ export class GameActionHandler {
             );
 
             // 更新状态显示UI
-            const statuses = battleScene.statusManager.getUnitStatuses(targetData.id);
+            const statuses = statusManager.getUnitStatuses(targetData.id);
             target.updateStatusDisplay(statuses);
         }
     }
@@ -408,15 +421,14 @@ export class GameActionHandler {
         const { battleLog, scene } = this.context;
         const targetData = target.getCardData();
         
-        // 获取 statusManager
-        const battleScene = scene as any;
-        if (!battleScene.statusManager) {
+        const statusManager = this.getStatusManager(scene);
+        if (!statusManager) {
             console.warn('StatusManager not available');
             return;
         }
 
         // 移除所有负面状态
-        battleScene.statusManager.clearDebuffs(targetData.id);
+        statusManager.clearDebuffs(targetData.id);
 
         // 记录日志
         const cardRefs = sourceCard ? [sourceCard, target] : [target];
@@ -426,8 +438,12 @@ export class GameActionHandler {
         );
 
         // 更新状态显示UI
-        const statuses = battleScene.statusManager.getUnitStatuses(targetData.id);
+        const statuses = statusManager.getUnitStatuses(targetData.id);
         target.updateStatusDisplay(statuses);
+    }
+
+    private getStatusManager(scene: Scene): StatusManager | undefined {
+        return (scene as SceneWithStatusManager).statusManager;
     }
 
     /**

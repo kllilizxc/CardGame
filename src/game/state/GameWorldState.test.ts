@@ -31,16 +31,16 @@ import type { StoryState } from '../types/story';
 import { ExpeditionState } from './ExpeditionState';
 import { createGameWorldState } from './GameWorldState';
 import { createPersistentStashFromWorldStateSeed } from './GameWorldStateSeed';
+import {
+    DEFAULT_EXPEDITION_TARGET,
+    createItemStack,
+    normalizeExpeditionWorldStateSeed,
+    SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
+    SYNTHETIC_EXPEDITION_TARGET,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
-const DEFAULT_TARGET = {
-    expeditionId: 'phase01-first-playable-expedition',
-    mapId: 'phase01-prototype-map',
-};
-
-const SYNTHETIC_TARGET = {
-    expeditionId: 'synthetic-expedition',
-    mapId: 'synthetic-map',
-};
+const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
+const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -159,7 +159,7 @@ function createRunForTarget(
     entryNodeId = targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'entrance.mountain-gate' : 'entrance.synthetic',
 ): RunSnapshot {
     const state = ExpeditionState.bootstrap({
-        worldState: structuredClone(initialWorldState),
+        worldState: normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState)),
         starterDeck: structuredClone(starterDeckJson),
         targetIdentity,
     });
@@ -170,7 +170,7 @@ function createRunForTarget(
 
     state.applyNodeRewardPreview({
         cards: [{ id: targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'TL_002' : 'AR_001', count: 1 }],
-        items: [{ id: 'tool.synthetic-marker', itemType: 'tool', count: 1 }],
+        items: [createItemStack('tool.synthetic-marker', 'tool', 1)],
         spiritStones: 7,
     });
 
@@ -182,7 +182,7 @@ function createRunForTarget(
         ],
         carriedItems: [
             ...run.carriedItems,
-            { id: 'tool.synthetic-marker', itemType: 'tool', count: 1 },
+            createItemStack('tool.synthetic-marker', 'tool', 1),
         ],
         spiritStones: run.spiritStones + 7,
     };
@@ -190,7 +190,7 @@ function createRunForTarget(
 
 function createSeedSources() {
     return {
-        worldState: structuredClone(initialWorldState),
+        worldState: normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState)),
         starterDeck: structuredClone(starterDeckJson),
     };
 }
@@ -240,6 +240,11 @@ describe('GameWorldState', () => {
         const defaultRun = createRunForTarget(DEFAULT_TARGET);
         const syntheticRun = createRunForTarget(SYNTHETIC_TARGET);
         const storageKeysBeforeRead = storage.keys().sort();
+        const storedStash = loadPersistentStash();
+
+        if (!storedStash) {
+            throw new Error('Expected stored persistent stash to exist.');
+        }
 
         const worldState = createGameWorldState({
             ...createSeedSources(),
@@ -254,7 +259,7 @@ describe('GameWorldState', () => {
             'hub.qingyun-town|action.start-qingyun-entry-story|data%2Fstory%2Fstory-graph.json',
         ]);
         expect(worldState.persistentStash.source).toBe('stored-stash');
-        expect(worldState.persistentStash.document).toEqual(loadPersistentStash());
+        expect(worldState.persistentStash.document).toEqual(storedStash);
         expect(worldState.activeRun.identity).toEqual(SYNTHETIC_TARGET);
         expect(worldState.activeRun.keys).toEqual(createActiveRunCompatibilityKeys(undefined, SYNTHETIC_TARGET));
         expect(worldState.activeRun.document?.runId).toBe(syntheticRun.runId);
@@ -289,9 +294,9 @@ describe('GameWorldState', () => {
         });
 
         expect(worldState.activeRun.identity).toEqual(SYNTHETIC_TARGET);
-        expect(worldState.activeRun.keys.routeKey).toBe('expedition:synthetic-expedition:synthetic-map');
+        expect(worldState.activeRun.keys.routeKey).toBe(SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY);
         expect(worldState.activeRun.keys.canonicalStorageKey).toBe(
-            'cardgame.active-run.v1:expedition:synthetic-expedition:synthetic-map',
+            createActiveRunStorageKey(SYNTHETIC_TARGET),
         );
         expect(worldState.activeRun.document).toBeNull();
     });
@@ -324,7 +329,7 @@ describe('GameWorldState', () => {
         expect(secondRead.activeRun.keys.legacyRouteStorageKeys).toEqual([]);
         expect(secondRead.runResolution.terminalOutcomes).toEqual(RUN_RESOLUTION_TERMINAL_OUTCOMES);
         expect(seedSources.starterDeck.cards[0].count).toBe(starterDeckJson.cards[0].count);
-        expect(seedSources.worldState.stash.items[0].count).toBe(initialWorldState.stash.items[0].count);
+        expect(seedSources.worldState.stash?.items?.[0]?.count).toBe(initialWorldState.stash.items[0].count);
     });
 
     it('reads injected slices and seed fallback without touching ambient globalThis.localStorage', () => {

@@ -23,12 +23,14 @@ import {
 } from './nonCombatNodeFlow';
 import { createRunAfterBattleVictory } from './runResultFlow';
 import { enterReachableNode, getVisibleNodes, isReachableNode } from './mapTraversal';
+import { normalizeExpeditionWorldStateSeed } from '../../testing/fixtures/expeditionWorldStateFixtures';
 
 const prototypeMap = prototypeMapJson as ExpeditionMapDefinition;
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 function createStartedRun(): ExpeditionState {
     const expeditionState = ExpeditionState.bootstrap({
-        worldState: structuredClone(initialWorldState),
+        worldState: createWorldStateSeed(),
         starterDeck: structuredClone(starterDeckJson),
     });
 
@@ -127,6 +129,10 @@ describe('mapTraversal', () => {
         const battleRun = expeditionState.enterReachableNode(prototypeMap, 'battle.mist-foxes');
         const persistedBattleRun = loadActiveRun();
 
+        if (!battleRun) {
+            throw new Error('Expected battle node entry to produce an active run snapshot.');
+        }
+
         expect(battleRun?.currentNodeId).toBe('battle.mist-foxes');
         expect(battleRun?.visitedNodeIds).toEqual(['entrance.mountain-gate', 'battle.mist-foxes']);
         expect(battleRun?.nodeStates['battle.mist-foxes']).toEqual({
@@ -136,13 +142,13 @@ describe('mapTraversal', () => {
             rewardClaimed: false,
         });
         expect(battleRun?.pendingEncounter).toEqual({
-            runId: battleRun?.runId,
+            runId: battleRun.runId,
             nodeId: 'battle.mist-foxes',
             nodeType: 'battle',
             encounterId: 'test_encounter_01',
             encounterResourceId: 'test_encounter_01',
             encounterFile: 'data/encounters/test-enemy.json',
-            runDeck: battleRun?.carriedDeck,
+            runDeck: battleRun.carriedDeck,
         });
         expect(persistedBattleRun?.pendingEncounter?.nodeId).toBe('battle.mist-foxes');
 
@@ -201,7 +207,7 @@ describe('mapTraversal', () => {
             shops: tutorialShop,
         });
         const expeditionState = ExpeditionState.bootstrap({
-            worldState: tutorialWorldState,
+            worldState: normalizeExpeditionWorldStateSeed(tutorialWorldState),
             starterDeck: tutorialStarterDeck,
             targetIdentity: tutorialTargetConfig,
             activeRunRouteKey: tutorialTargetConfig.routeKey,
@@ -268,7 +274,7 @@ describe('mapTraversal', () => {
             storage,
         );
 
-        expect(fixedEventView.rewardSummary).toBe('TL_002 +1 · tool_talisman_basic +1 · spiritStones +12');
+        expect(fixedEventView.rewardSummary).toBe('TL_002 +1 · tool_talisman_basic +1 · 灵石 +12');
 
         const claimed = eventState.claimEventNodeReward(eventDefinition.nodeId, fixedEventView.outcome.rewards);
 

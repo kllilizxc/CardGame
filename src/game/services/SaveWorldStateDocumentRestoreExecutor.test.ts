@@ -27,16 +27,15 @@ import {
     executeSaveWorldStateDocumentRestorePlan,
     SaveWorldStateDocumentRestoreExecutionError,
 } from './SaveWorldStateDocumentRestoreExecutor';
+import {
+    DEFAULT_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET,
+    normalizeExpeditionWorldStateSeed,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
-const DEFAULT_TARGET = {
-    expeditionId: 'phase01-first-playable-expedition',
-    mapId: 'phase01-prototype-map',
-};
-
-const SYNTHETIC_TARGET = {
-    expeditionId: 'synthetic-expedition',
-    mapId: 'synthetic-map',
-};
+const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
+const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 type StorageCall =
     | readonly ['setItem', string, string]
@@ -166,12 +165,14 @@ function createStoryState(nodeId = 'sect_entry_003_help_girl'): StoryState {
 
 function startRun(
     targetIdentity: { expeditionId: string; mapId: string } = DEFAULT_TARGET,
+    runStorage?: RecordingStorage,
     entryNodeId = targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'entrance.mountain-gate' : 'entrance.synthetic',
 ): string {
     const state = ExpeditionState.bootstrap({
-        worldState: structuredClone(initialWorldState),
+        worldState: createWorldStateSeed(),
         starterDeck: structuredClone(starterDeckJson),
         targetIdentity,
+        storage: runStorage,
     });
     const run = state.createRunSnapshot({
         ...targetIdentity,
@@ -209,25 +210,6 @@ function createCompleteRestorePlan() {
     );
 
     return createSaveWorldStateDocumentRestorePlan(document);
-}
-
-function seedInjectedSourceStorage(
-    targetStorage: RecordingStorage,
-    targetIdentity: { expeditionId: string; mapId: string },
-): void {
-    const sourceStorage = globalThis.localStorage;
-
-    for (const key of [
-        STORY_HUB_SESSION_STORAGE_KEY,
-        STASH_STORAGE_KEY,
-        createActiveRunStorageKey(targetIdentity),
-    ]) {
-        const rawValue = sourceStorage.getItem(key);
-
-        if (rawValue !== null) {
-            targetStorage.seed(key, rawValue);
-        }
-    }
 }
 
 describe('SaveWorldStateDocumentRestoreExecutor', () => {
@@ -307,12 +289,14 @@ describe('SaveWorldStateDocumentRestoreExecutor', () => {
     });
 
     it('round-trips snapshot document creation and restore through injected storages without touching ambient localStorage', () => {
+        const sourceStorage = new RecordingStorage();
+        const targetStorage = new RecordingStorage();
         saveHubSessionSnapshot({
             hubId: 'hub.qingyun-town',
             currentLocationId: 'location.qingyun-town.teahouse',
             statusText: 'round-trip source session',
             updatedAt: '2026-05-09T06:00:00.000Z',
-        });
+        }, sourceStorage);
         saveStoryRuntimeSession({
             hubId: 'hub.qingyun-town',
             actionId: 'action.start-qingyun-entry-story',
@@ -321,11 +305,8 @@ describe('SaveWorldStateDocumentRestoreExecutor', () => {
             selectedChoiceIds: ['sect_entry_001_choice_help_girl'],
             statusText: 'round-trip source story',
             updatedAt: '2026-05-09T06:01:00.000Z',
-        });
-        const syntheticRunId = startRun(SYNTHETIC_TARGET);
-        const sourceStorage = new RecordingStorage();
-        const targetStorage = new RecordingStorage();
-        seedInjectedSourceStorage(sourceStorage, SYNTHETIC_TARGET);
+        }, sourceStorage);
+        const syntheticRunId = startRun(SYNTHETIC_TARGET, sourceStorage);
 
         const restoredSnapshot = withThrowingAmbientLocalStorage(() => {
             const sourceDocument = createSaveWorldStateDocument(createSaveWorldStateSnapshot({

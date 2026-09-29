@@ -1,12 +1,13 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
+import { createSceneBackdrop, createScenePanel, sceneTheme } from '../shared/sceneTheme';
 import { CONTENT_CATALOG_CACHE_KEY } from '../../content/contentCatalog';
 import {
     loadHubSessionSnapshot,
     loadStoryRuntimeSession,
-    saveHubSessionSnapshot,
 } from '../../services/StoryHubSessionPersistence';
+import { writeGameWorldStateHubSessionSnapshotWithFallbackStorage } from '../../state/GameWorldStateStoryHubSessionWrite';
 import { createWorldMapReturnIntent } from '../worldmap/worldMap';
 import {
     assertHubSceneCatalogResourceMatchesLoadedHub,
@@ -24,30 +25,32 @@ import {
     createHubMapInitialSurfacePosition,
     createInitialHubNavigationState,
     createStoryHubSessionKeyFromAction,
+    findHubStartStoryAction,
     getHubLocationSurfacePosition,
     resolveHubLocation,
     shouldActivateHubMarker,
     validateHubTownDefinition,
     type HubNavigationState,
     type HubTownAction,
+    type HubTownNavigateAction,
     type HubTownStartStoryAction,
     type HubTownDefinition,
     type HubTownLocation,
     type HubTownSurfacePosition,
     type HubTownViewport,
 } from './hubTown';
-import {
-    createSceneBackdrop,
-    createSceneButton,
-    createScenePanel,
-    createStatusLine,
-    getSceneTextStyle,
-    sceneTheme,
-} from '../shared/sceneTheme';
 
-const HUB_MAP_TITLE = '城镇地图';
-const HUB_MAP_INSTRUCTION = '拖拽查看地图，点击标记切换想去的地点。';
-const HUB_DEFAULT_STATUS_TEXT = '选好落脚点后安心四处看看；离开城镇后，下次回来仍会从这里继续。';
+function isHubTownNavigateAction(action: HubTownAction): action is HubTownNavigateAction {
+    return action.kind === 'navigate';
+}
+
+function isHubTownStartStoryAction(action: HubTownAction): action is HubTownStartStoryAction {
+    return action.kind === 'startStory';
+}
+
+function unsupportedHubActionIntent(intent: never): never {
+    throw new Error(`Hub action intent has unsupported kind: ${JSON.stringify(intent)}`);
+}
 
 export class HubScene extends Scene {
     private launchData: NormalizedHubSceneLaunchData = normalizeHubSceneLaunchData();
@@ -108,6 +111,16 @@ export class HubScene extends Scene {
         }
         this.persistHubNavigationState();
 
+        const startAction = this.launchData.startActionId && this.launchData.startStoryResourceId
+            ? findHubStartStoryAction(this.town, this.launchData.startActionId, this.launchData.startStoryResourceId)
+            : null;
+        if (startAction) {
+            this.navigationState = { ...this.navigationState, currentLocationId: startAction.location.id };
+            this.persistHubNavigationState();
+            this.handleAction(startAction.action);
+            return;
+        }
+
         this.renderShell();
         EventBus.emit('current-scene-ready', this);
     }
@@ -158,8 +171,19 @@ export class HubScene extends Scene {
         this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
         container.add(createSceneBackdrop(this));
 
-        container.add(this.add.text(width / 2, 78, this.town.title, getSceneTextStyle('sceneTitle')).setOrigin(0.5));
-        container.add(this.add.text(width / 2, 134, this.town.subtitle, getSceneTextStyle('sceneSubtitle')).setOrigin(0.5));
+        container.add(this.add.text(width / 2, 74, this.town.title, {
+            fontFamily: sceneTheme.fonts.display,
+            fontSize: '48px',
+            color: '#f3ead3',
+            stroke: '#140f0a',
+            strokeThickness: 8,
+        }).setOrigin(0.5));
+
+        container.add(this.add.text(width / 2, 126, this.town.subtitle, {
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: '22px',
+            color: '#d9c6a2',
+        }).setOrigin(0.5));
 
         const panelWidth = Math.min(1520, width - 220);
         const panelHeight = Math.min(760, height - 245);
@@ -172,53 +196,75 @@ export class HubScene extends Scene {
         const mapWidth = Math.min(660, panelWidth * 0.46);
         const mapViewport = {
             left: contentX,
-            top: panelTop + 164,
+            top: panelTop + 150,
             width: mapWidth,
-            height: panelHeight - 234,
+            height: panelHeight - 220,
         };
         const detailLeft = mapViewport.left + mapViewport.width + 54;
         const detailWidth = panelRight - detailLeft - 54;
 
-        container.add(createScenePanel(this, {
-            x: panelX,
-            y: panelY,
-            width: panelWidth,
-            height: panelHeight,
+        container.add(createScenePanel(this, { x: panelX, y: panelY, width: panelWidth, height: panelHeight }));
+
+        container.add(this.add.text(contentX, panelTop + 48, '地点子地图', {
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: '31px',
+            color: '#e8d5ab',
+            fontStyle: 'bold',
         }));
 
-        container.add(this.add.text(contentX, panelTop + 50, HUB_MAP_TITLE, getSceneTextStyle('panelTitle')));
+        container.add(this.add.text(contentX, panelTop + 94, '拖拽平移地图，点击标记选择 Hub 小地点。', {
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: '18px',
+            color: '#d9c6a2',
+            wordWrap: { width: mapViewport.width },
+        }));
 
         this.renderHubMapSurface(container, mapViewport, currentLocation.id);
 
-        container.add(this.add.text(detailLeft, panelTop + 50, currentLocation.presentation.regionLabel, getSceneTextStyle('panelEyebrow')));
-        container.add(this.add.text(detailLeft, panelTop + 88, currentLocation.title, getSceneTextStyle('panelTitle', {
+        container.add(this.add.text(detailLeft, panelTop + 48, currentLocation.title, {
+            fontFamily: sceneTheme.fonts.ui,
             fontSize: '36px',
-        })));
-        container.add(this.add.text(
-            detailLeft,
-            panelTop + 150,
-            `${currentLocation.summary}\n${currentLocation.detail}`,
-            getSceneTextStyle('body', {
-                fontSize: '20px',
-                wordWrap: { width: detailWidth },
-            }),
-        ));
+            color: '#e8d5ab',
+            fontStyle: 'bold',
+        }));
 
-        const statusLine = this.navigationState.statusText ?? HUB_DEFAULT_STATUS_TEXT;
-        const status = createStatusLine(this, {
-            x: detailLeft + detailWidth / 2,
-            y: panelTop + 372,
-            width: detailWidth,
-            text: statusLine,
+        container.add(this.add.text(detailLeft, panelTop + 102, currentLocation.summary, {
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: '24px',
+            color: '#f3ead3',
+            fontStyle: 'bold',
+            wordWrap: { width: detailWidth },
+        }));
+
+        container.add(this.add.text(detailLeft, panelTop + 162, currentLocation.detail, {
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: '21px',
+            color: '#f3ead3',
+            lineSpacing: 10,
+            wordWrap: { width: detailWidth },
+        }));
+
+        container.add(this.add.text(detailLeft, panelTop + 300, this.town.description, {
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: '18px',
+            color: '#d9c6a2',
+            wordWrap: { width: detailWidth },
+        }));
+
+        const statusLine = this.navigationState.statusText ?? '当前 Hub 位置会保存到本地 Story/Hub session。';
+        this.statusText = this.add.text(detailLeft, panelTop + 368, statusLine, {
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: '17px',
+            color: '#e8d5ab',
+            wordWrap: { width: detailWidth },
         });
-        this.statusText = status.text;
-        container.add(status.objects);
+        container.add(this.statusText);
 
         currentLocation.actions.forEach((action, index) => {
             container.add(this.createActionButton(
                 action,
                 detailLeft + detailWidth / 2,
-                panelTop + 472 + index * 102,
+                panelTop + 462 + index * 92,
                 detailWidth,
             ));
         });
@@ -242,9 +288,9 @@ export class HubScene extends Scene {
             viewport.width,
             viewport.height,
             sceneTheme.colors.ink,
-            0.94,
+            1,
         );
-        viewportBackground.setStrokeStyle(2, sceneTheme.colors.gold, 0.28);
+        viewportBackground.setStrokeStyle(2, sceneTheme.colors.gold, 0.4);
         container.add(viewportBackground);
 
         const initialSurfacePosition = createHubMapInitialSurfacePosition(this.town.presentation, viewport);
@@ -275,15 +321,16 @@ export class HubScene extends Scene {
             0x000000,
             0,
         );
-        frame.setStrokeStyle(4, sceneTheme.colors.gold, 0.54);
+        frame.setStrokeStyle(4, sceneTheme.colors.gold, 0.74);
         container.add(frame);
 
-        const hint = this.add.text(viewport.left + 22, viewport.top + 18, HUB_MAP_INSTRUCTION, getSceneTextStyle('support', {
-            color: '#f3ead3',
+        const hint = this.add.text(viewport.left + 22, viewport.top + 18, '拖拽查看周边 · 点击地点标记', {
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: '16px',
+            color: '#d9c6a2',
             backgroundColor: '#493824cc',
             padding: { x: 12, y: 7 },
-            wordWrap: { width: viewport.width - 44 },
-        }));
+        });
         container.add(hint);
 
         this.registerHubMapInputHandlers();
@@ -302,11 +349,11 @@ export class HubScene extends Scene {
         const { mapWidth, mapHeight } = this.town.presentation;
         const graphics = this.add.graphics();
 
-        graphics.fillStyle(sceneTheme.colors.jade, 0.28);
+        graphics.fillStyle(sceneTheme.colors.jade, 0.48);
         graphics.fillEllipse(mapWidth * 0.36, mapHeight * 0.68, mapWidth * 0.48, mapHeight * 0.34);
-        graphics.fillStyle(sceneTheme.colors.gold, 0.16);
+        graphics.fillStyle(sceneTheme.colors.jadeBright, 0.36);
         graphics.fillEllipse(mapWidth * 0.62, mapHeight * 0.42, mapWidth * 0.52, mapHeight * 0.36);
-        graphics.fillStyle(sceneTheme.colors.ember, 0.18);
+        graphics.fillStyle(sceneTheme.colors.ember, 0.34);
         graphics.fillEllipse(mapWidth * 0.5, mapHeight * 0.54, mapWidth * 0.32, mapHeight * 0.24);
 
         graphics.lineStyle(2, sceneTheme.colors.gold, 0.1);
@@ -323,12 +370,12 @@ export class HubScene extends Scene {
     private createHubMapRouteArtwork(): Phaser.GameObjects.Graphics {
         const graphics = this.add.graphics();
 
-        graphics.lineStyle(5, sceneTheme.colors.parchmentSoft, 0.18);
+        graphics.lineStyle(5, sceneTheme.colors.parchmentSoft, 0.26);
         this.town.locations.forEach((location) => {
             const sourcePosition = getHubLocationSurfacePosition(this.town, location);
 
             location.actions.forEach((action) => {
-                if (action.kind !== 'navigate') {
+                if (!isHubTownNavigateAction(action)) {
                     return;
                 }
 
@@ -366,17 +413,17 @@ export class HubScene extends Scene {
         }).setOrigin(0.5);
 
         const labelPanelWidth = Math.max(156, location.title.length * 25);
-        const labelPanel = this.add.rectangle(0, 60, labelPanelWidth, 66, sceneTheme.colors.panelInner, 0.86);
+        const labelPanel = this.add.rectangle(0, 60, labelPanelWidth, 60, sceneTheme.colors.ink, 0.84);
         labelPanel.setStrokeStyle(2, palette.stroke, selected ? 0.72 : 0.48);
         const label = this.add.text(0, 45, location.title, {
             fontFamily: sceneTheme.fonts.ui,
             fontSize: '19px',
-            color: selected ? '#e8d5ab' : '#f3ead3',
+            color: selected ? '#fef3c7' : '#f8fafc',
             fontStyle: 'bold',
         }).setOrigin(0.5);
         const region = this.add.text(0, 70, location.presentation.regionLabel, {
-            fontFamily: sceneTheme.fonts.body,
-            fontSize: '18px',
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: '14px',
             color: '#d9c6a2',
         }).setOrigin(0.5);
 
@@ -442,7 +489,7 @@ export class HubScene extends Scene {
         const iconPalette: Record<string, { fill: number; hoverFill: number; stroke: number }> = {
             'gate-market': {
                 fill: sceneTheme.colors.jade,
-                hoverFill: sceneTheme.colors.jadeBright,
+                hoverFill: sceneTheme.colors.gold,
                 stroke: sceneTheme.colors.goldSoft,
             },
             teahouse: {
@@ -452,14 +499,14 @@ export class HubScene extends Scene {
             },
             'sect-gate': {
                 fill: sceneTheme.colors.slate,
-                hoverFill: 0x6b6257,
+                hoverFill: sceneTheme.colors.jadeBright,
                 stroke: sceneTheme.colors.parchmentSoft,
             },
         };
 
         return iconPalette[location.presentation.icon] ?? {
             fill: sceneTheme.colors.slate,
-            hoverFill: 0x6b6257,
+            hoverFill: sceneTheme.colors.jadeBright,
             stroke: sceneTheme.colors.parchmentSoft,
         };
     }
@@ -483,7 +530,7 @@ export class HubScene extends Scene {
     }
 
     private restoreDefaultStatusText(): void {
-        this.statusText?.setText(this.navigationState.statusText ?? HUB_DEFAULT_STATUS_TEXT);
+        this.statusText?.setText(this.navigationState.statusText ?? '当前 Hub 位置会保存到本地 Story/Hub session。');
     }
 
     private handleHubMarkerSelected(locationId: string): void {
@@ -491,10 +538,9 @@ export class HubScene extends Scene {
 
         this.navigationState = applyHubNavigationIntent(
             this.town,
-            this.navigationState,
             createHubLocationSelectionIntent(
                 location.id,
-                `已选定前往：${location.title}。`,
+                `已在 Hub 子地图选择：${location.title}。`,
             ),
         );
         this.persistHubNavigationState();
@@ -554,43 +600,64 @@ export class HubScene extends Scene {
     }
 
     private createWorldMapReturnButton(x: number, y: number): Phaser.GameObjects.GameObject[] {
-        return createSceneButton(this, {
-            x,
-            y,
-            width: 220,
-            height: 52,
-            label: '返回大地图',
-            onClick: () => this.returnToWorldMap(),
-            variant: 'secondary',
-        }).objects;
+        const button = this.add.rectangle(x, y, 220, 52, 0x334155, 0.94);
+        button.setStrokeStyle(2, 0xffffff, 0.78);
+        button.setInteractive({ useHandCursor: true });
+        button.on('pointerover', () => button.setFillStyle(sceneTheme.colors.slate, 1));
+        button.on('pointerout', () => button.setFillStyle(0x334155, 0.94));
+        button.on('pointerdown', () => this.returnToWorldMap());
+
+        const label = this.add.text(x, y, '返回大地图', {
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: '18px',
+            color: '#f3ead3',
+            fontStyle: 'bold',
+        }).setOrigin(0.5);
+
+        return [button, label];
     }
 
     private createActionButton(action: HubTownAction, x: number, y: number, width: number): Phaser.GameObjects.GameObject[] {
-        const variant = action.kind === 'startStory' ? 'primary' : 'option';
-        return createSceneButton(this, {
-            x,
-            y,
-            width,
-            height: 86,
-            label: action.label,
-            description: action.description,
-            onClick: () => this.handleAction(action),
-            variant,
-            align: 'left',
-        }).objects;
+        const button = this.add.rectangle(x, y, width, 76, 0x1d4ed8, 0.94);
+        button.setStrokeStyle(3, 0xffffff, 0.82);
+        button.setInteractive({ useHandCursor: true });
+        button.on('pointerover', () => button.setFillStyle(sceneTheme.colors.jade, 1));
+        button.on('pointerout', () => button.setFillStyle(0x1d4ed8, 0.94));
+        button.on('pointerdown', () => this.handleAction(action));
+
+        const textX = x - width / 2 + 30;
+        const label = this.add.text(textX, y - 23, action.label, {
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: '23px',
+            color: '#f3ead3',
+            fontStyle: 'bold',
+        });
+
+        const description = this.add.text(textX, y + 10, action.description, {
+            fontFamily: sceneTheme.fonts.ui,
+            fontSize: '17px',
+            color: '#d9c6a2',
+            wordWrap: { width: width - 60 },
+        });
+
+        return [button, label, description];
     }
 
     private handleAction(action: HubTownAction): void {
         const intent = this.createActionIntent(action);
 
-        if (intent.kind === 'navigateLocation') {
-            this.navigationState = applyHubNavigationIntent(this.town, this.navigationState, intent);
-            this.persistHubNavigationState();
-            this.renderShell();
-            return;
+        switch (intent.kind) {
+            case 'navigateLocation':
+                this.navigationState = applyHubNavigationIntent(this.town, intent);
+                this.persistHubNavigationState();
+                this.renderShell();
+                break;
+            case 'startScene':
+                this.scene.start(intent.sceneKey, intent.payload);
+                break;
+            default:
+                unsupportedHubActionIntent(intent);
         }
-
-        this.scene.start(intent.sceneKey, intent.payload);
     }
 
     private returnToWorldMap(): void {
@@ -605,7 +672,7 @@ export class HubScene extends Scene {
     }
 
     private createActionIntent(action: HubTownAction) {
-        if (action.kind !== 'startStory') {
+        if (!isHubTownStartStoryAction(action)) {
             return createHubActionIntent(action);
         }
 
@@ -617,11 +684,13 @@ export class HubScene extends Scene {
     }
 
     private persistHubNavigationState(): void {
-        saveHubSessionSnapshot({
-            hubId: this.launchData.hubId,
-            currentLocationId: this.navigationState.currentLocationId,
-            ...(this.navigationState.statusText ? { statusText: this.navigationState.statusText } : {}),
-            updatedAt: new Date().toISOString(),
+        writeGameWorldStateHubSessionSnapshotWithFallbackStorage({
+            snapshot: {
+                hubId: this.launchData.hubId,
+                currentLocationId: this.navigationState.currentLocationId,
+                ...(this.navigationState.statusText ? { statusText: this.navigationState.statusText } : {}),
+                updatedAt: new Date().toISOString(),
+            },
         });
     }
 }

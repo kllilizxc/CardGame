@@ -106,12 +106,26 @@ export interface HubSceneLocationSelectionIntent {
 }
 
 export type HubTownActionIntent = HubSceneStoryLaunchIntent | HubSceneNavigationIntent;
-export type HubSceneActionIntent =
-    | HubTownActionIntent
-    | HubSceneLocationSelectionIntent;
+export type HubSceneActionIntent = HubSceneNavigationIntent | HubSceneLocationSelectionIntent;
+
+function isHubTownNavigateAction(action: HubTownAction): action is HubTownNavigateAction {
+    return action.kind === 'navigate';
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function unsupportedHubTownAction(action: never): never {
+    const invalidAction = action as unknown as HubTownAction;
+
+    throw new Error(`Hub action ${invalidAction.id} has unsupported kind: ${invalidAction.kind}`);
+}
+
+function unsupportedHubNavigationIntent(intent: never): never {
+    const invalidIntent = intent as unknown as HubSceneActionIntent;
+
+    throw new Error(`Hub navigation intent has unsupported kind: ${invalidIntent.kind}`);
 }
 
 function requireString(value: unknown, field: string): string {
@@ -281,7 +295,7 @@ function validateNavigationTargets(locations: HubTownLocation[]): void {
 
     locations.forEach((location) => {
         location.actions.forEach((action) => {
-            if (action.kind === 'navigate' && !locationIds.has(action.targetLocationId)) {
+            if (isHubTownNavigateAction(action) && !locationIds.has(action.targetLocationId)) {
                 throw new Error(`Hub action ${action.id} points to missing targetLocationId: ${action.targetLocationId}`);
             }
         });
@@ -329,6 +343,21 @@ export function resolveHubLocation(town: HubTownDefinition, locationId: string):
     }
 
     return location;
+}
+
+export function findHubStartStoryAction(
+    town: HubTownDefinition,
+    actionId: string,
+    storyResourceId: string,
+): { location: HubTownLocation; action: HubTownStartStoryAction } | null {
+    for (const location of town.locations) {
+        const action = location.actions.find((candidate): candidate is HubTownStartStoryAction =>
+            candidate.kind === 'startStory'
+            && candidate.id === actionId
+            && candidate.storyResourceId === storyResourceId);
+        if (action) return { location, action };
+    }
+    return null;
 }
 
 export function createInitialHubNavigationState(
@@ -406,19 +435,22 @@ export function createHubActionIntent(
     action: HubTownAction,
     savedStorySession?: StoryRuntimeSessionSnapshot | null,
 ): HubTownActionIntent {
-    if (action.kind === 'navigate') {
-        return {
-            kind: 'navigateLocation',
-            targetLocationId: action.targetLocationId,
-            ...(action.statusText ? { statusText: action.statusText } : {}),
-        };
+    switch (action.kind) {
+        case 'navigate':
+            return {
+                kind: 'navigateLocation',
+                targetLocationId: action.targetLocationId,
+                ...(action.statusText ? { statusText: action.statusText } : {}),
+            };
+        case 'startStory':
+            return {
+                kind: 'startScene',
+                sceneKey: 'StoryScene',
+                payload: createResumedStoryLaunchPayload(action, savedStorySession),
+            };
+        default:
+            return unsupportedHubTownAction(action);
     }
-
-    return {
-        kind: 'startScene',
-        sceneKey: 'StoryScene',
-        payload: createResumedStoryLaunchPayload(action, savedStorySession),
-    };
 }
 
 export function createHubLocationSelectionIntent(
@@ -434,19 +466,21 @@ export function createHubLocationSelectionIntent(
 
 export function applyHubNavigationIntent(
     town: HubTownDefinition,
-    state: HubNavigationState,
     intent: HubSceneActionIntent,
 ): HubNavigationState {
-    if (intent.kind !== 'navigateLocation' && intent.kind !== 'selectLocation') {
-        return state;
+    switch (intent.kind) {
+        case 'navigateLocation':
+        case 'selectLocation': {
+            const targetLocation = resolveHubLocation(town, intent.targetLocationId);
+
+            return {
+                currentLocationId: targetLocation.id,
+                ...(intent.statusText ? { statusText: intent.statusText } : {}),
+            };
+        }
+        default:
+            return unsupportedHubNavigationIntent(intent);
     }
-
-    const targetLocation = resolveHubLocation(town, intent.targetLocationId);
-
-    return {
-        currentLocationId: targetLocation.id,
-        ...(intent.statusText ? { statusText: intent.statusText } : {}),
-    };
 }
 
 export function getHubLocationSurfacePosition(

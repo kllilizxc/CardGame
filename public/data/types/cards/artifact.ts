@@ -56,6 +56,9 @@ export interface ArtifactCard extends BaseCard {
   attackBonus?: number;
   healthBonus?: number;
 
+  /** 耐久度：使用次数限制，耗尽后法器损坏 */
+  durability?: number;
+
   /** 装备后或作为场上持续卡时提供的效果 */
   effects?: CardEffect[];
 }

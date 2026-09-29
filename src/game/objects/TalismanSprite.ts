@@ -1,5 +1,5 @@
 import { GameObjects } from 'phaser';
-import type { TalismanCard } from '../../../data/types/cards/talisman';
+import type { TalismanCard } from '@data/types/cards/talisman';
 import { BaseCardSprite } from './BaseCardSprite';
 import {
     battleColorToHex,
@@ -94,6 +94,7 @@ export class TalismanSprite extends BaseCardSprite {
             },
             emitSceneEvents: false,
         });
+        this.attachCardFace(cardData);
     }
 
     private getEffectDescription(): string {

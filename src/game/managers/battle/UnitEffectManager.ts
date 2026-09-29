@@ -1,22 +1,20 @@
 import type { BattleContext } from '../../context/BattleContext';
-import { getUnitStar } from '../../utils/RealmHelper';
-import { getStarFromGradeId } from '../../utils/ArtifactHelper';
 import type { CardSprite } from '../../objects/CardSprite';
 import type {
     Gongfa,
     GongfaAction,
-    EffectSchema,
 } from '@data/types/gongfa';
 import { EffectEventType, EffectEventSide } from '@data/types/gongfa';
-import type { UnitCard } from '@data/types/cards/unit';
 import type { ArtifactCard, ArtifactWeaponType } from '@data/types/cards/artifact';
-import { evaluateGongfaNumberExpression, type GongfaExpressionContext } from './gongfaExpression';
+import { evaluateGongfaNumberExpression } from './gongfaExpression';
+import { buildGongfaExpressionContext } from './gongfaExpressionContext';
 import type { GongfaCardOperationCard } from './gongfaCardOperations';
 import { areGongfaConditionsSatisfied } from './gongfaConditionEvaluation';
 import {
     executeGongfaActions,
     type GongfaOperationDispatchContext
 } from './gongfaOperationDispatch';
+import { isGongfaEventMatch } from './gongfaEventMatching';
 
 type AnyHandSprite = CardSprite | import('../../objects/ArtifactSprite').ArtifactSprite | import('../../objects/TalismanSprite').TalismanSprite | import('../../objects/FieldSprite').FieldSprite;
 
@@ -43,7 +41,7 @@ export class UnitEffectManager {
 
     constructor(
         battleContext: BattleContext,
-        gongfaList: Gongfa[]
+        gongfaList: readonly Gongfa[]
     ) {
         this.battleContext = battleContext;
 
@@ -92,7 +90,7 @@ export class UnitEffectManager {
                 return;
             }
 
-            if (!this.isEventMatch(gongfa.schema.event, eventType, side)) {
+            if (!isGongfaEventMatch(gongfa.schema.event, { type: eventType, side })) {
                 return;
             }
 
@@ -107,22 +105,6 @@ export class UnitEffectManager {
                 this.battleContext.battleLog.addGongfaLog(cardData.name, displayName, description, [unit]);
             }
         });
-    }
-
-    private isEventMatch(event: EffectSchema['event'], currentType: EffectEventType, currentSide: EffectEventSide): boolean {
-        if (event.type === EffectEventType.Custom) {
-            return event.type === currentType && event.side === currentSide;
-        }
-
-        if (event.type !== currentType) {
-            return false;
-        }
-
-        if (!event.side || event.side === EffectEventSide.Any) {
-            return true;
-        }
-
-        return event.side === currentSide;
     }
 
     private executeActions(actions: GongfaAction[], context: GongfaRuntimeContext): boolean {
@@ -141,7 +123,7 @@ export class UnitEffectManager {
                 cardScale: context.cardScale,
                 gameActionHandler: context.gameActionHandler,
                 battleLog: this.battleContext.battleLog,
-                expressionContext: this.buildExpressionContext(context) ?? {}
+                expressionContext: this.createExpressionContext(context) ?? {}
             },
             immediateAttack: {
                 triggerUnit: context.triggerUnit,
@@ -166,7 +148,7 @@ export class UnitEffectManager {
      * - "artifact.star * 2" - 法器星级 * 2
      */
     private evaluateExpression(expression: string, context: GongfaRuntimeContext): number {
-        const expressionContext = this.buildExpressionContext(context);
+        const expressionContext = this.createExpressionContext(context);
         if (!expressionContext) {
             console.warn(`表达式计算需要 triggerUnit: ${expression}`);
             return 0;
@@ -180,17 +162,10 @@ export class UnitEffectManager {
         }
     }
 
-    private buildExpressionContext(context: GongfaRuntimeContext): GongfaExpressionContext | undefined {
-        if (!context.triggerUnit) {
-            return undefined;
-        }
-
-        const unitData = context.triggerUnit.getCardData() as UnitCard;
-        return {
-            cardStar: getUnitStar(unitData),
-            artifactStar: context.equippedArtifact
-                ? getStarFromGradeId(context.equippedArtifact.gradeId)
-                : 0
-        };
+    private createExpressionContext(context: GongfaRuntimeContext) {
+        return buildGongfaExpressionContext({
+            triggerUnit: context.triggerUnit?.getCardData(),
+            equippedArtifact: context.equippedArtifact
+        });
     }
 }

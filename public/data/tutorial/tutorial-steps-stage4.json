@@ -1,0 +1,50 @@
+[
+  {
+    "id": "stage4_step1_burn_threat",
+    "guideText": "烈焰狼的攻击会施加「灼烧」状态——每回合结束时持续造成2点伤害，持续2回合。注意观察单位上的状态图标。后排的青云药童每回合为全体敌人恢复3点生命值，是敌方续航的关键。",
+    "textPosition": "top",
+    "showArrow": true,
+    "arrowFromPctX": 50,
+    "arrowFromPctY": 8,
+    "arrowToPctX": 50,
+    "arrowToPctY": 25,
+    "__zoneRef": "enemyFieldZone",
+    "__completesOn": "card_drawn"
+  },
+  {
+    "id": "stage4_step2_use_pill",
+    "guideText": "灼烧的持续伤害会不断消耗你的生命值。点击左下角丹药槽使用丹药，可以瞬间恢复生命——把握治疗时机是应对持续状态伤害的关键。",
+    "textPosition": "top",
+    "showArrow": true,
+    "arrowFromPctX": 50,
+    "arrowFromPctY": 8,
+    "arrowToPctX": 8,
+    "arrowToPctY": 82,
+    "__zoneRef": "handZone",
+    "__completesOn": "use_pill"
+  },
+  {
+    "id": "stage4_step3_use_skill",
+    "guideText": "青云药童每回合为全体敌人恢复生命值，必须优先消灭！使用手牌中的符箓卡或技能对药童造成伤害——先断续航再斩主力，是战术判断的关键。",
+    "textPosition": "top",
+    "showArrow": true,
+    "arrowFromPctX": 50,
+    "arrowFromPctY": 8,
+    "arrowToPctX": 50,
+    "arrowToPctY": 25,
+    "__zoneRef": "enemyFieldZone",
+    "__completesOn": "use_skill"
+  },
+  {
+    "id": "stage4_step4_finish",
+    "guideText": "药童已除，烈焰狼失去了治疗来源。继续运用单位、法宝和丹药的力量，在灼烧压力下合理分配资源，击败最后的烈焰狼即可获胜！",
+    "textPosition": "top",
+    "showArrow": true,
+    "arrowFromPctX": 50,
+    "arrowFromPctY": 8,
+    "arrowToPctX": 93,
+    "arrowToPctY": 9,
+    "__zoneRef": "endTurnButton",
+    "__completesOn": "end_turn"
+  }
+]

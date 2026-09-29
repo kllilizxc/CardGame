@@ -3,6 +3,16 @@ import type { PillCard } from '../../../../public/data/types/cards/pill';
 import { battleTheme, blendBattleColor } from '../battle/battleTheme';
 import { sceneTheme } from '../../scenes/shared/sceneTheme';
 
+type BattleSceneTooltipLayout = {
+    depth?: {
+        pillTooltip?: number;
+    };
+};
+
+type BattleSceneWithLayout = Scene & {
+    layout?: BattleSceneTooltipLayout;
+};
+
 /**
  * 丹药提示框 UI
  * 负责显示丹药的详细信息
@@ -25,7 +35,7 @@ export class PillTooltipUI {
         // 创建 tooltip 容器
         this.tooltip = this.scene.add.container(x, y);
         // 使用布局配置的深度
-        const battleScene = this.scene as any;
+        const battleScene = this.scene as BattleSceneWithLayout;
         const depth = battleScene.layout?.depth?.pillTooltip ?? 7000;
         this.tooltip.setDepth(depth);
 

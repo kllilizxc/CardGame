@@ -32,16 +32,19 @@ import {
     writeRawStoryHubSessionForTests,
 } from './StoryHubSessionPersistence';
 import { createSaveWorldStateSnapshot } from './SaveWorldStateSnapshot';
+import {
+    DEFAULT_EXPEDITION_TARGET,
+    DEFAULT_EXPEDITION_TARGET_ROUTE_KEY,
+    SYNTHETIC_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
+    normalizeExpeditionWorldStateSeed,
+    createItemStacksFromSeed,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
-const DEFAULT_TARGET = {
-    expeditionId: 'phase01-first-playable-expedition',
-    mapId: 'phase01-prototype-map',
-};
-
-const SYNTHETIC_TARGET = {
-    expeditionId: 'synthetic-expedition',
-    mapId: 'synthetic-map',
-};
+const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
+const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
+const initialWorldStateStashItems = createItemStacksFromSeed(initialWorldState.stash.items);
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -140,11 +143,13 @@ function createStoryState(nodeId = 'sect_entry_003_help_girl'): StoryState {
 function startRun(
     targetIdentity: { expeditionId: string; mapId: string } = DEFAULT_TARGET,
     entryNodeId = targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'entrance.mountain-gate' : 'entrance.synthetic',
+    runStorage?: MemoryStorage,
 ): { state: ExpeditionState; run: RunSnapshot } {
     const state = ExpeditionState.bootstrap({
-        worldState: structuredClone(initialWorldState),
+        worldState: createWorldStateSeed(),
         starterDeck: structuredClone(starterDeckJson),
         targetIdentity,
+        storage: runStorage,
     });
     const run = state.createRunSnapshot({
         ...targetIdentity,
@@ -164,23 +169,6 @@ function writeStaleActiveRun(targetIdentity: { expeditionId: string; mapId: stri
     }));
 
     return storageKey;
-}
-
-function copyCurrentPersistenceInto(
-    targetStorage: MemoryStorage,
-    targetIdentity: { expeditionId: string; mapId: string },
-): void {
-    for (const key of [
-        STORY_HUB_SESSION_STORAGE_KEY,
-        STASH_STORAGE_KEY,
-        createActiveRunStorageKey(targetIdentity),
-    ]) {
-        const rawValue = storage.getItem(key);
-
-        if (rawValue !== null) {
-            targetStorage.setItem(key, rawValue);
-        }
-    }
 }
 
 describe('SaveWorldStateSnapshot', () => {
@@ -280,12 +268,13 @@ describe('SaveWorldStateSnapshot', () => {
     });
 
     it('builds the current Story/Hub, stash, and route-keyed active-run slices from injected storage without touching ambient localStorage', () => {
+        const injectedStorage = new MemoryStorage();
         saveHubSessionSnapshot({
             hubId: 'hub.qingyun-town',
             currentLocationId: 'location.qingyun-town.teahouse',
             statusText: '注入式读取应只看显式 storage。',
             updatedAt: '2026-05-09T06:00:00.000Z',
-        });
+        }, injectedStorage);
         saveStoryRuntimeSession({
             hubId: 'hub.qingyun-town',
             actionId: 'action.start-qingyun-entry-story',
@@ -294,15 +283,13 @@ describe('SaveWorldStateSnapshot', () => {
             selectedChoiceIds: ['sect_entry_001_choice_help_girl'],
             statusText: '注入式 story session',
             updatedAt: '2026-05-09T06:01:00.000Z',
-        });
-        const { state, run } = startRun(SYNTHETIC_TARGET);
+        }, injectedStorage);
+        const { state, run } = startRun(SYNTHETIC_TARGET, undefined, injectedStorage);
         state.applyNodeRewardPreview({
             cards: [{ id: 'AR_001', count: 1 }],
             items: [],
             spiritStones: 9,
         });
-        const injectedStorage = new MemoryStorage();
-        copyCurrentPersistenceInto(injectedStorage, SYNTHETIC_TARGET);
         const ambientKeysBeforeSnapshot = storage.keys().sort();
 
         const snapshot = withThrowingAmbientLocalStorage(() => createSaveWorldStateSnapshot({
@@ -319,8 +306,7 @@ describe('SaveWorldStateSnapshot', () => {
             'hub.qingyun-town|action.start-qingyun-entry-story|data%2Fstory%2Fstory-graph.json',
         ]);
         expect(snapshot.persistentStash.document?.stashId).toBe('phase01.starter-stash');
-        expect(snapshot.persistentStash.document?.cards).toEqual(starterDeckJson.cards);
-        expect(snapshot.persistentStash.document?.savedDecks[0]?.cards).toEqual(starterDeckJson.cards);
+        expect(snapshot.persistentStash.document?.deck).toEqual(starterDeckJson.cards);
         expect(snapshot.activeRun.keys).toEqual(createActiveRunCompatibilityKeys(undefined, SYNTHETIC_TARGET));
         expect(snapshot.activeRun.document?.runId).toBe(run.runId);
         expect(snapshot.activeRun.document?.carriedDeck).toContainEqual({ id: 'AR_001', count: 4 });
@@ -329,7 +315,7 @@ describe('SaveWorldStateSnapshot', () => {
 
     it('runs the compatibility migration hook chain on loaded snapshot documents without writing storage', () => {
         ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
             targetIdentity: DEFAULT_TARGET,
         });
@@ -371,13 +357,13 @@ describe('SaveWorldStateSnapshot', () => {
             activeRunLookup: createActiveRunRouteKey(DEFAULT_TARGET),
         });
 
-        expect(syntheticSnapshot.activeRun.keys.routeKey).toBe('expedition:synthetic-expedition:synthetic-map');
+        expect(syntheticSnapshot.activeRun.keys.routeKey).toBe(SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY);
         expect(syntheticSnapshot.activeRun.document?.runId).toBe(syntheticRun.runId);
-        expect(defaultSnapshot.activeRun.keys.routeKey).toBe('expedition:phase01-first-playable-expedition:phase01-prototype-map');
+        expect(defaultSnapshot.activeRun.keys.routeKey).toBe(DEFAULT_EXPEDITION_TARGET_ROUTE_KEY);
         expect(defaultSnapshot.activeRun.document?.runId).toBe(defaultRun.runId);
         expect(syntheticSnapshot.persistentStash.document?.stashId).toBe('phase01.starter-stash');
-        expect(syntheticSnapshot.persistentStash.document?.cards).toEqual(starterDeckJson.cards);
-        expect(syntheticSnapshot.persistentStash.document?.items).toEqual(initialWorldState.stash.items);
+        expect(syntheticSnapshot.persistentStash.document?.deck).toEqual(starterDeckJson.cards);
+        expect(syntheticSnapshot.persistentStash.document?.items).toEqual(initialWorldStateStashItems);
         expect(syntheticSnapshot.persistentStash.document?.spiritStones).toBe(initialWorldState.stash.spiritStones);
         expect(defaultSnapshot.persistentStash.document).toEqual(syntheticSnapshot.persistentStash.document);
     });

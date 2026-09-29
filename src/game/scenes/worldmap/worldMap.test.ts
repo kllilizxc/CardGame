@@ -8,7 +8,9 @@ import {
     clampWorldMapSurfacePosition,
     createWorldMapInitialSurfacePosition,
     createWorldMapReturnIntent,
+    createWorldMapDestinationPreviewText,
     createWorldMapDestinationIntent,
+    createWorldMapDestinationSelectionStatusText,
     getWorldMapDestinationSurfacePosition,
     shouldActivateWorldMapMarker,
     type WorldMapDestination,
@@ -433,6 +435,45 @@ describe('world map content contract', () => {
                 statusText: '从大地图进入青玉洞试炼。',
             },
         });
+    });
+
+    it('builds player-facing hover and selection copy without leaking scene classes or destination ids', () => {
+        const worldMap = validateWorldMapDefinition({
+            ...validWorldMapFixture,
+            destinations: [
+                {
+                    ...validWorldMapFixture.destinations[0],
+                    description: '进入测试 HubScene。',
+                },
+                {
+                    ...validWorldMapFixture.destinations[1],
+                    description: '进入测试 ExpeditionScene。',
+                },
+                {
+                    ...validWorldMapFixture.destinations[0],
+                    id: 'destination.test-teahouse',
+                    label: '测试茶棚',
+                    description: '直接前往测试 HubScene 茶棚。',
+                    targetLocationId: 'location.test-town.teahouse',
+                    statusText: undefined,
+                },
+            ],
+        });
+
+        expect(createWorldMapDestinationPreviewText(worldMap.destinations[0])).toBe(
+            '测试山脚 · 测试城镇\n点击进入测试城镇，查看当地行动。',
+        );
+        expect(createWorldMapDestinationPreviewText(worldMap.destinations[1])).toBe(
+            '测试秘境 · 测试秘境\n点击进入测试秘境，开始秘境探索。',
+        );
+        expect(createWorldMapDestinationPreviewText(worldMap.destinations[2])).toBe(
+            '测试山脚 · 测试茶棚\n点击前往测试茶棚，继续当地行动。',
+        );
+
+        expect(createWorldMapDestinationSelectionStatusText(worldMap.destinations[0])).toBe('从大地图进入测试城镇。');
+        expect(createWorldMapDestinationSelectionStatusText(worldMap.destinations[1])).toBe('从大地图进入测试秘境。');
+        expect(createWorldMapDestinationSelectionStatusText(worldMap.destinations[2])).toBe('正在前往测试茶棚。');
+        expect(createWorldMapDestinationSelectionStatusText(undefined)).toBe('正在前往选中的地点。');
     });
 
     it('rejects destinations that omit required target data files', () => {

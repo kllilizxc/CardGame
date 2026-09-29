@@ -1,35 +1,30 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 
 import initialWorldState from '../../../../public/data/world/initial-state.json';
-import jadeCaveMapJson from '../../../../public/data/mijing/jade-cave-map.json';
-import prototypeMapJson from '../../../../public/data/mijing/prototype-map.json';
 import starterDeckJson from '../../../../public/data/decks/starter-deck.json';
-import tutorialQingyunMapJson from '../../../../public/data/mijing/tutorial-qingyun-outer-mountain-map.json';
+import artifactsJson from '../../../../public/data/cards/artifacts.json';
+import itemsJson from '../../../../public/data/world/items.artifacts.json';
 
 import { resetRunPersistenceForTests } from '../../services/RunPersistence';
-import type { CardMetadataMap } from '../../state/CardCollectionViewModel';
 import { ExpeditionState } from '../../state/ExpeditionState';
-import { validateExpeditionLoadout } from './expeditionEntryFlow';
+import { createContentDisplayNames } from '../../content/contentDisplayNames';
 import {
-    createExpeditionArrivalCueSummary,
-    createExpeditionDepartureHandoffSummary,
-    createPreparationDeckCarouselSummary,
-    createPreparationDeckCardPreview,
-    createPreparationDeckContext,
-    createPreparationDeckHandoffSummary,
-    createExpeditionRouteBriefingSummary,
-    createPreparationSelectedLoadoutSummary,
+    createItemStack,
+    normalizeExpeditionWorldStateSeed,
+} from '../../testing/fixtures/expeditionWorldStateFixtures';
+import {
     createPostRunEntranceStatus,
     createPreparationSummary,
     createRunResolutionSummaryView,
     createRunSummary,
-    formatPreparationValidationLines,
 } from './entryFlowModel';
 
-const PREPARATION_CARD_METADATA: CardMetadataMap = {
-    AR_001: { name: '青云剑', kind: 'artifact' },
-    AR_002: { name: '流云符', kind: 'talisman' },
-    SX_YJZ_001: { name: '一剑斩', kind: 'skill' },
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
+const expectNoDebugIdentifiers = (text: string) => {
+    expect(text).not.toContain('public/data');
+    expect(text).not.toContain('dialogueId');
+    expect(text).not.toContain('nodeId');
+    expect(text).not.toContain('.json');
 };
 
 describe('entryFlowModel', () => {
@@ -39,380 +34,21 @@ describe('entryFlowModel', () => {
 
     it('summarizes the starter stash for the preparation panel', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
 
         expect(createPreparationSummary(state.persistentStash)).toEqual({
-            deckCount: 20,
+            deckCount: 16,
             itemCount: 3,
             spiritStones: 36,
-            statusText: '储物袋已备好：20 张卡、3 件道具、36 枚灵石。',
+            statusText: '储物袋已备好：16 张卡、3 件道具、36 枚灵石。',
         });
-    });
-
-    it('builds a quiet route breadcrumb from the expedition map and current shell step', () => {
-        expect(createExpeditionRouteBriefingSummary(prototypeMapJson, 'preparation')).toEqual({
-            mode: 'preparation',
-            shellRouteLabel: '大地图 / 青云外山试炼 · 山门入口',
-            shellSupportLabel: '返回大地图 / 青云外山试炼 · 山门入口',
-        });
-    });
-
-    it('keeps the same route identity in deck management without extra shell narration', () => {
-        expect(createExpeditionRouteBriefingSummary(jadeCaveMapJson, 'deckManager')).toEqual({
-            mode: 'deckManager',
-            shellRouteLabel: '大地图 / 青玉洞试炼 · 青玉洞口',
-            shellSupportLabel: '返回大地图 / 青玉洞试炼 · 青玉洞口',
-        });
-    });
-
-    it('keeps tutorial maps on the same quiet breadcrumb shape even with longer routes', () => {
-        expect(createExpeditionRouteBriefingSummary(tutorialQingyunMapJson, 'preparation')).toMatchObject({
-            shellRouteLabel: '大地图 / 教程 · 青云外山试炼 · 外山入口',
-            shellSupportLabel: '返回大地图 / 教程 · 青云外山试炼 · 外山入口',
-        });
-    });
-
-    it('builds a departure handoff that carries route and deck context into the first run reveal', () => {
-        const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
-            starterDeck: structuredClone(starterDeckJson),
-        });
-        const run = state.createRunSnapshot({
-            expeditionId: 'phase01-first-playable-expedition',
-            mapId: 'phase01-prototype-map',
-            entryNodeId: 'entrance.mountain-gate',
-        });
-
-        expect(createExpeditionDepartureHandoffSummary(
-            prototypeMapJson,
-            state.persistentStash,
-            run,
-            { currentNodeLabel: '山门入口' },
-        )).toEqual({
-            badgeLabel: '出发',
-            headline: '青云外山试炼 · 山门入口',
-            detail: '带入已锁定',
-            routeLine: '首层：雾林伏击 / 弃置行囊',
-            loadoutLine: '「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石',
-            revealStatusText: '已进入青云外山试炼 · 山门入口 · 「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石。',
-        });
-    });
-
-    it('builds an arrival cue that keeps route and loadout context readable into the first run reveal', () => {
-        const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
-            starterDeck: structuredClone(starterDeckJson),
-        });
-        const run = state.createRunSnapshot({
-            expeditionId: 'phase01-first-playable-expedition',
-            mapId: 'phase01-prototype-map',
-            entryNodeId: 'entrance.mountain-gate',
-        });
-
-        expect(createExpeditionArrivalCueSummary(
-            prototypeMapJson,
-            state.persistentStash,
-            run,
-            { currentNodeLabel: '山门入口' },
-        )).toEqual({
-            badgeLabel: '抵达',
-            headline: '青云外山试炼 · 山门入口',
-            detail: '首层已高亮',
-            routeLine: '首层：雾林伏击 / 弃置行囊',
-            loadoutLine: '「功能测试卡组」 · 20 张卡 · 3 件道具 · 36 枚灵石',
-        });
-    });
-
-    it('summarizes the currently selected preparation loadout for quick scanning', () => {
-        const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
-            starterDeck: structuredClone(starterDeckJson),
-        });
-
-        expect(createPreparationSelectedLoadoutSummary(state.persistentStash)).toMatchObject({
-            selectedDeckName: '功能测试卡组',
-            deckCount: 20,
-            uniqueCardCount: 8,
-            itemCount: 3,
-            spiritStones: 36,
-            readiness: 'ready',
-            readinessLabel: '已满足带入要求',
-            headline: '可以直接确认出发',
-            detail: '张数与库存都已核对。',
-            footer: '确认时会按当前清单带入 20 张卡、3 件道具与 36 枚灵石。',
-            shortageCardKinds: 0,
-            shortageCardCopies: 0,
-            kindSummaryLine: '8 种卡 · 共 20 张',
-            kindBreakdownLines: ['未分类 20 张'],
-            compositionLine: 'SX_YJZ_001 ×3 · SX_YJS_001 ×3 · SX_TY_001 ×3 · SX_JXTM_001 ×2 · …另 4 项',
-            focusSummaryLine: '库存齐备，可直接确认出发。',
-            focusChip: { label: '状态', value: '齐备' },
-            issuePreviewLines: [],
-            readinessChecklistLines: [
-                '张数 20 张，符合 20-40 张范围。',
-                '8 种卡牌已完成库存核对。',
-            ],
-            guidanceLines: [
-                '确认后立即创建本次秘境快照。',
-                '按当前清单带入 20 张卡、3 件道具与 36 枚灵石。',
-            ],
-            deckPreviewLines: [
-                'SX_YJZ_001 ×3',
-                'SX_YJS_001 ×3',
-                'SX_TY_001 ×3',
-                'SX_JXTM_001 ×2',
-                'SX_JYNX_001 ×1',
-                'AR_001 ×3',
-                'AR_002 ×2',
-                'AR_004 ×3',
-            ],
-            itemPreviewLines: [
-                'tool.return-rope ×1',
-                'consumable.spirit-salve ×2',
-            ],
-        });
-    });
-
-    it('summarizes saved-deck carousel position and roster readiness counts', () => {
-        const stash = {
-            stashId: 'phase01.starter-stash',
-            cards: [
-                { id: 'AR_001', count: 22 },
-                { id: 'AR_002', count: 1 },
-            ],
-            savedDecks: [
-                {
-                    id: 'ready',
-                    name: '可出发卡组',
-                    cards: [{ id: 'AR_001', count: 20 }],
-                },
-                {
-                    id: 'short',
-                    name: '缺张卡组',
-                    cards: [{ id: 'AR_001', count: 18 }],
-                },
-                {
-                    id: 'overflow',
-                    name: '超限卡组',
-                    cards: [{ id: 'AR_001', count: 41 }],
-                },
-                {
-                    id: 'shortage',
-                    name: '缺库存卡组',
-                    cards: [
-                        { id: 'AR_001', count: 18 },
-                        { id: 'AR_002', count: 2 },
-                    ],
-                },
-            ],
-            selectedDeckId: 'shortage',
-            items: [],
-            spiritStones: 18,
-            lastRunSummary: null,
-        };
-
-        expect(createPreparationDeckCarouselSummary(stash)).toEqual({
-            savedDeckCount: 4,
-            selectedDeckName: '缺库存卡组',
-            selectedDeckPosition: 4,
-            selectedDeckStatusLabel: '缺少库存卡牌',
-            positionLabel: '第 4 / 4 套',
-            readyDeckCount: 1,
-            tooFewDeckCount: 1,
-            tooManyDeckCount: 1,
-            insufficientCopiesDeckCount: 1,
-            invalidDeckCount: 3,
-            rosterSummaryLine: '卡组总览：就绪 1 套 · 缺张 1 套 · 超限 1 套 · 缺库存 1 套',
-        });
-    });
-
-    it('keeps the carousel summary actionable when no saved decks exist yet', () => {
-        expect(createPreparationDeckCarouselSummary({
-            stashId: 'phase01.starter-stash',
-            cards: [],
-            savedDecks: [],
-            selectedDeckId: null,
-            items: [],
-            spiritStones: 0,
-            lastRunSummary: null,
-        })).toEqual({
-            savedDeckCount: 0,
-            selectedDeckName: '未选择卡组',
-            selectedDeckPosition: 0,
-            selectedDeckStatusLabel: '未选择卡组',
-            positionLabel: '等待创建',
-            readyDeckCount: 0,
-            tooFewDeckCount: 0,
-            tooManyDeckCount: 0,
-            insufficientCopiesDeckCount: 0,
-            invalidDeckCount: 0,
-            rosterSummaryLine: '卡组总览：暂无存档卡组，先去管理卡组整理一套。',
-        });
-    });
-
-    it('highlights inventory shortages in the selected preparation loadout summary', () => {
-        const stash = {
-            stashId: 'phase01.starter-stash',
-            cards: [
-                { id: 'AR_001', count: 3 },
-                { id: 'AR_002', count: 2 },
-            ],
-            savedDecks: [{
-                id: 'shortage',
-                name: '缺牌卡组',
-                cards: [
-                    { id: 'AR_001', count: 4 },
-                    { id: 'AR_002', count: 3 },
-                    { id: 'AR_003', count: 13 },
-                ],
-            }],
-            selectedDeckId: 'shortage',
-            items: [],
-            spiritStones: 18,
-            lastRunSummary: null,
-        };
-
-        expect(createPreparationSelectedLoadoutSummary(stash)).toMatchObject({
-            selectedDeckName: '缺牌卡组',
-            deckCount: 20,
-            uniqueCardCount: 3,
-            readiness: 'insufficient-copies',
-            readinessLabel: '缺少库存卡牌',
-            headline: '库存还缺 15 张',
-            detail: '先补齐 3 种缺牌，再回来确认。',
-            footer: '补齐库存卡牌后，会按当前所示卡组与物资进入秘境。',
-            shortageCardKinds: 3,
-            shortageCardCopies: 15,
-            kindSummaryLine: '3 种卡 · 共 20 张',
-            kindBreakdownLines: ['未分类 20 张'],
-            compositionLine: 'AR_001 ×4 · AR_002 ×3 · AR_003 ×13',
-            focusSummaryLine: '库存共缺 15 张目标卡牌，涉及 3 种。',
-            focusChip: { label: '缺口', value: '15 张' },
-            issuePreviewLines: [
-                'AR_003 还差 13 张',
-                'AR_001 还差 1 张',
-                'AR_002 还差 1 张',
-            ],
-            readinessChecklistLines: [
-                'AR_003 还差 13 张',
-                'AR_001 还差 1 张',
-                'AR_002 还差 1 张',
-            ],
-            guidanceLines: [
-                '先补齐 3 种缺牌，共 15 张。',
-                '返回这里后才能确认带入。',
-            ],
-        });
-    });
-
-    it('uses metadata-backed card names in selected-loadout previews and falls back to raw ids when missing', () => {
-        const stash = {
-            stashId: 'phase01.starter-stash',
-            cards: [
-                { id: 'AR_001', count: 3 },
-                { id: 'AR_002', count: 2 },
-                { id: 'AR_003', count: 13 },
-            ],
-            savedDecks: [{
-                id: 'named-preview',
-                name: '带名卡组',
-                cards: [
-                    { id: 'AR_001', count: 3 },
-                    { id: 'AR_002', count: 2 },
-                    { id: 'AR_003', count: 13 },
-                ],
-            }],
-            selectedDeckId: 'named-preview',
-            items: [],
-            spiritStones: 18,
-            lastRunSummary: null,
-        };
-
-        expect(createPreparationSelectedLoadoutSummary(stash, PREPARATION_CARD_METADATA)).toMatchObject({
-            kindSummaryLine: '3 种卡 · 法宝 3 · 符箓 2',
-            kindBreakdownLines: ['未分类 13 张', '法宝 3 张', '符箓 2 张'],
-            compositionLine: '青云剑 ×3 · 流云符 ×2 · AR_003 ×13',
-            deckPreviewLines: [
-                '青云剑 ×3',
-                '流云符 ×2',
-                'AR_003 ×13',
-            ],
-        });
-    });
-
-    it('builds compact deck-card previews with composition and shortage details', () => {
-        const deck = {
-            id: 'shortage',
-            name: '缺牌卡组',
-            cards: [
-                { id: 'AR_001', count: 4 },
-                { id: 'AR_002', count: 3 },
-                { id: 'AR_003', count: 13 },
-            ],
-        };
-
-        expect(createPreparationDeckCardPreview(
-            deck,
-            [
-                { id: 'AR_001', count: 3 },
-                { id: 'AR_002', count: 2 },
-            ],
-            PREPARATION_CARD_METADATA,
-        )).toEqual({
-            deckCount: 20,
-            uniqueCardCount: 3,
-            readiness: 'insufficient-copies',
-            readinessLabel: '缺少库存卡牌',
-            kindSummaryLine: '3 种卡 · 法宝 4 · 符箓 3',
-            kindBreakdownLines: ['未分类 13 张', '法宝 4 张', '符箓 3 张'],
-            compositionLine: '青云剑 ×4 · 流云符 ×3 · AR_003 ×13',
-            focusSummaryLine: '库存共缺 15 张目标卡牌，涉及 3 种。',
-            focusChip: { label: '缺口', value: '15 张' },
-            issuePreviewLine: '缺牌：AR_003 -13 · 流云符 -1 · …另 1 项',
-            shortagePreviewLines: [
-                'AR_003 还差 13 张',
-                '流云符 还差 1 张',
-            ],
-        });
-    });
-
-    it('uses metadata-backed card names in preparation validation copy with raw-id fallback', () => {
-        const stash = {
-            stashId: 'phase01.starter-stash',
-            cards: [
-                { id: 'AR_001', count: 3 },
-                { id: 'AR_002', count: 2 },
-            ],
-            savedDecks: [{
-                id: 'shortage',
-                name: '缺牌卡组',
-                cards: [
-                    { id: 'AR_001', count: 4 },
-                    { id: 'AR_002', count: 3 },
-                    { id: 'AR_003', count: 13 },
-                ],
-            }],
-            selectedDeckId: 'shortage',
-            items: [],
-            spiritStones: 18,
-            lastRunSummary: null,
-        };
-
-        expect(formatPreparationValidationLines(
-            validateExpeditionLoadout(stash),
-            PREPARATION_CARD_METADATA,
-        )).toEqual([
-            '卡牌 青云剑 数量不足（需要 4 张，储物袋中仅有 3 张）',
-            '卡牌 流云符 数量不足（需要 3 张，储物袋中仅有 2 张）',
-            '卡牌 AR_003 数量不足（需要 13 张，储物袋中仅有 0 张）',
-        ]);
     });
 
     it('summarizes an active run for the HUD and resume status copy', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
         const run = state.createRunSnapshot({
@@ -423,17 +59,17 @@ describe('entryFlowModel', () => {
 
         expect(createRunSummary(run)).toEqual({
             currentNodeId: 'entrance.mountain-gate',
-            currentNodeLabel: 'entrance.mountain-gate',
-            carriedDeckCount: 20,
+            currentNodeLabel: '当前节点',
+            carriedDeckCount: 16,
             carriedItemCount: 3,
             spiritStones: 36,
-            statusText: '已继续探索：当前位置 entrance.mountain-gate，携带 20 张卡、3 件道具、36 枚灵石。',
+            statusText: '已继续探索：当前位置 当前节点，携带 16 张卡、3 件道具、36 枚灵石。',
         });
     });
 
     it('uses a readable node label when the expedition scene provides one', () => {
         const state = ExpeditionState.bootstrap({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
         const run = state.createRunSnapshot({
@@ -448,10 +84,10 @@ describe('entryFlowModel', () => {
         })).toEqual({
             currentNodeId: 'entrance.mountain-gate',
             currentNodeLabel: '山门入口',
-            carriedDeckCount: 20,
+            carriedDeckCount: 16,
             carriedItemCount: 3,
             spiritStones: 36,
-            statusText: '已进入秘境：当前位置 山门入口，携带 20 张卡、3 件道具、36 枚灵石。',
+            statusText: '已进入秘境：当前位置 山门入口，携带 16 张卡、3 件道具、36 枚灵石。',
         });
     });
 
@@ -462,12 +98,12 @@ describe('entryFlowModel', () => {
             endedAt: '2026-05-08T12:00:00.000Z',
             kept: {
                 cards: [{ id: 'AR_001', count: 1 }],
-                items: [{ id: 'artifact_fly_sword_basic', itemType: 'artifact' as const, count: 1 }],
+                items: [createItemStack('artifact_fly_sword_basic', 'artifact', 1)],
                 spiritStones: 12,
             },
             lost: {
                 cards: [{ id: 'TL_002', count: 1 }],
-                items: [{ id: 'tool_talisman_basic', itemType: 'tool' as const, count: 1 }],
+                items: [createItemStack('tool_talisman_basic', 'tool', 1)],
                 spiritStones: 6,
             },
         };
@@ -492,13 +128,125 @@ describe('entryFlowModel', () => {
         );
     });
 
+    it('uses content names in the post-run summary without changing the saved reward IDs', () => {
+        const displayNames = createContentDisplayNames([
+            { kind: 'card', data: artifactsJson },
+            { kind: 'item', data: itemsJson },
+        ]);
+        const summary = {
+            runId: 'run-display-names',
+            outcome: 'extract' as const,
+            finalNodeId: 'extract.cliff-rope',
+            endedAt: '2026-05-08T12:00:00.000Z',
+            kept: {
+                cards: [{ id: 'AR_001', count: 1 }],
+                items: [createItemStack('artifact_fly_sword_basic', 'artifact', 1)],
+                spiritStones: 12,
+            },
+            lost: { cards: [], items: [], spiritStones: 0 },
+        };
+
+        const view = createRunResolutionSummaryView(summary, displayNames);
+        expect(view.keptCards).toEqual(['青云剑 ×1']);
+        expect(view.keptItems).toEqual(['青云飞剑 ×1']);
+        expect(summary.kept.cards[0].id).toBe('AR_001');
+    });
+
+    it('sanitizes settlement final node text for non-combat terminal summaries', () => {
+        const baseSummary = {
+            runId: 'run-summary-test',
+            finalNodeId: 'public/data/mijing/prototype-map.json#extract.cliff-rope',
+            endedAt: '2026-05-08T12:00:00.000Z',
+            kept: {
+                cards: [{ id: 'AR_001', count: 1 }],
+                items: [createItemStack('artifact_fly_sword_basic', 'artifact', 1)],
+                spiritStones: 12,
+            },
+            lost: {
+                cards: [{ id: 'TL_002', count: 1 }],
+                items: [createItemStack('tool_talisman_basic', 'tool', 1)],
+                spiritStones: 6,
+            },
+        };
+        const view = createRunResolutionSummaryView({ ...baseSummary, outcome: 'extract' });
+
+        expect(view.finalNodeId).toBe('extract.cliff-rope');
+        expect(view.finalNodeId).not.toContain('public/data');
+        expect(view.finalNodeId).not.toContain('nodeId');
+        expect(view.finalNodeId).not.toContain('dialogueId');
+        expect(view.finalNodeId).not.toContain('.json');
+    });
+
+    it('sanitizes settlement final node text for combat terminal summaries', () => {
+        const baseSummary = {
+            runId: 'run-summary-test',
+            finalNodeId: 'public/data/mijing/prototype-events.json:encounter/boss.sealed-guardian',
+            endedAt: '2026-05-08T12:00:00.000Z',
+            kept: {
+                cards: [{ id: 'AR_001', count: 1 }],
+                items: [createItemStack('artifact_fly_sword_basic', 'artifact', 1)],
+                spiritStones: 12,
+            },
+            lost: {
+                cards: [{ id: 'TL_002', count: 1 }],
+                items: [createItemStack('tool_talisman_basic', 'tool', 1)],
+                spiritStones: 6,
+            },
+        };
+        const defeat = createRunResolutionSummaryView({ ...baseSummary, outcome: 'defeat' });
+        const bossClear = createRunResolutionSummaryView({ ...baseSummary, outcome: 'boss-clear' });
+
+        expect(defeat.finalNodeId).toBe('boss.sealed-guardian');
+        expect(defeat.finalNodeId).not.toContain('public/data');
+        expect(defeat.finalNodeId).not.toContain('nodeId');
+        expect(defeat.finalNodeId).not.toContain('dialogueId');
+        expect(defeat.finalNodeId).not.toContain('.json');
+        expect(bossClear.finalNodeId).toBe('boss.sealed-guardian');
+        expect(bossClear.finalNodeId).not.toContain('public/data');
+        expect(bossClear.finalNodeId).not.toContain('nodeId');
+        expect(bossClear.finalNodeId).not.toContain('dialogueId');
+        expect(bossClear.finalNodeId).not.toContain('.json');
+    });
+
+    it('returns settlement summary copy that is safe for HUD and player-visible text', () => {
+        const baseSummary = {
+            runId: 'run-summary-test',
+            finalNodeId:
+                'public/data/mijing/prototype-events.json#dialogueId:encounter/boss.sealed-guardian?nodeId=extract.cliff-rope',
+            endedAt: '2026-05-08T12:00:00.000Z',
+            kept: {
+                cards: [{ id: 'AR_001', count: 1 }],
+                items: [createItemStack('artifact_fly_sword_basic', 'artifact', 1)],
+                spiritStones: 12,
+            },
+            lost: {
+                cards: [{ id: 'TL_002', count: 1 }],
+                items: [createItemStack('tool_talisman_basic', 'tool', 1)],
+                spiritStones: 6,
+            },
+        };
+
+        const extractSummary = createRunResolutionSummaryView({ ...baseSummary, outcome: 'extract' });
+        const defeatSummary = createRunResolutionSummaryView({ ...baseSummary, outcome: 'defeat' });
+        const bossClearSummary = createRunResolutionSummaryView({ ...baseSummary, outcome: 'boss-clear' });
+        const settlementLine = (summary: typeof extractSummary) =>
+            `结算终点：${summary.finalNodeId}`;
+
+        [extractSummary, defeatSummary, bossClearSummary].forEach((summary) => {
+            expect(summary.finalNodeId).toBe('boss.sealed-guardian');
+            expectNoDebugIdentifiers(summary.finalNodeId);
+            expectNoDebugIdentifiers(summary.subtitle);
+            expectNoDebugIdentifiers(summary.title);
+            expectNoDebugIdentifiers(settlementLine(summary));
+        });
+    });
+
     it('summarizes the entrance state after acknowledging a terminal run result', () => {
         const stash = {
             stashId: 'phase01.starter-stash',
-            cards: [{ id: 'AR_001', count: 2 }],
-            savedDecks: [{ id: 'starter-deck', name: 'starter-deck', cards: [{ id: 'AR_001', count: 2 }] }],
-            selectedDeckId: 'starter-deck',
-            items: [{ id: 'tool_talisman_basic', itemType: 'tool' as const, count: 1 }],
+            deckRef: 'starter-deck',
+            deck: [{ id: 'AR_001', count: 2 }],
+            items: [createItemStack('tool_talisman_basic', 'tool', 1)],
             spiritStones: 24,
             lastRunSummary: null,
         };
@@ -512,127 +260,7 @@ describe('entryFlowModel', () => {
         };
 
         expect(createPostRunEntranceStatus(stash, summary)).toBe(
-            '储物袋已备好：2 张卡、1 件道具、24 枚灵石。\n上次结果：撤离成功（extract.cliff-rope）。可立即开始新的秘境探索。',
+            '储物袋已备好：2 张卡、1 件道具、24 枚灵石。\n上次结果：撤离成功。可立即开始新的秘境探索。',
         );
-    });
-
-    it('summarizes a post-edit return when the selected deck changed during deck management', () => {
-        const before = createPreparationDeckContext({
-            stashId: 'phase01.starter-stash',
-            cards: [{ id: 'AR_001', count: 24 }],
-            savedDecks: [
-                { id: 'main', name: '主力卡组', cards: [{ id: 'AR_001', count: 20 }] },
-                { id: 'alt', name: '候补卡组', cards: [{ id: 'AR_001', count: 18 }] },
-            ],
-            selectedDeckId: 'main',
-            items: [],
-            spiritStones: 24,
-            lastRunSummary: null,
-        });
-        const after = createPreparationDeckContext({
-            stashId: 'phase01.starter-stash',
-            cards: [{ id: 'AR_001', count: 24 }],
-            savedDecks: [
-                { id: 'main', name: '主力卡组', cards: [{ id: 'AR_001', count: 20 }] },
-                { id: 'alt', name: '候补卡组·改', cards: [{ id: 'AR_001', count: 22 }] },
-            ],
-            selectedDeckId: 'alt',
-            items: [],
-            spiritStones: 24,
-            lastRunSummary: null,
-        });
-
-        expect(createPreparationDeckHandoffSummary(before, after)).toEqual({
-            title: '当前带入已切换',
-            detail: '当前带入「候补卡组·改」：22 张，已满足带入要求。离开前为「主力卡组」：20 张，已满足带入要求。',
-            tone: 'positive',
-        });
-    });
-
-    it('summarizes a post-edit return when the selected deck did not change', () => {
-        const before = createPreparationDeckContext({
-            stashId: 'phase01.starter-stash',
-            cards: [{ id: 'AR_001', count: 24 }],
-            savedDecks: [{ id: 'main', name: '旧名字', cards: [{ id: 'AR_001', count: 18 }] }],
-            selectedDeckId: 'main',
-            items: [],
-            spiritStones: 24,
-            lastRunSummary: null,
-        });
-        const after = createPreparationDeckContext({
-            stashId: 'phase01.starter-stash',
-            cards: [{ id: 'AR_001', count: 24 }],
-            savedDecks: [{ id: 'main', name: '新名字', cards: [{ id: 'AR_001', count: 20 }] }],
-            selectedDeckId: 'main',
-            items: [],
-            spiritStones: 24,
-            lastRunSummary: null,
-        });
-
-        expect(createPreparationDeckHandoffSummary(before, after)).toEqual({
-            title: '卡组改动已同步',
-            detail: '当前带入「新名字」：20 张，已满足带入要求。离开前为「旧名字」：18 张，张数不足。卡牌构成也已更新。',
-            tone: 'positive',
-        });
-    });
-
-    it('acknowledges composition-only edits when the selected deck id, name, count, and readiness stay the same', () => {
-        const before = createPreparationDeckContext({
-            stashId: 'phase01.starter-stash',
-            cards: [
-                { id: 'AR_001', count: 20 },
-                { id: 'AR_002', count: 20 },
-            ],
-            savedDecks: [{ id: 'main', name: '主力卡组', cards: [{ id: 'AR_001', count: 20 }] }],
-            selectedDeckId: 'main',
-            items: [],
-            spiritStones: 24,
-            lastRunSummary: null,
-        });
-        const after = createPreparationDeckContext({
-            stashId: 'phase01.starter-stash',
-            cards: [
-                { id: 'AR_001', count: 20 },
-                { id: 'AR_002', count: 20 },
-            ],
-            savedDecks: [{ id: 'main', name: '主力卡组', cards: [{ id: 'AR_002', count: 20 }] }],
-            selectedDeckId: 'main',
-            items: [],
-            spiritStones: 24,
-            lastRunSummary: null,
-        });
-
-        expect(createPreparationDeckHandoffSummary(before, after)).toEqual({
-            title: '卡组内容已调整',
-            detail: '当前带入「主力卡组」：20 张，已满足带入要求。卡牌构成已更新。',
-            tone: 'positive',
-        });
-    });
-
-    it('reports when the player returns from deck management without changing the selected deck context', () => {
-        const before = createPreparationDeckContext({
-            stashId: 'phase01.starter-stash',
-            cards: [{ id: 'AR_001', count: 24 }],
-            savedDecks: [{ id: 'main', name: '主力卡组', cards: [{ id: 'AR_001', count: 20 }] }],
-            selectedDeckId: 'main',
-            items: [],
-            spiritStones: 24,
-            lastRunSummary: null,
-        });
-        const after = createPreparationDeckContext({
-            stashId: 'phase01.starter-stash',
-            cards: [{ id: 'AR_001', count: 24 }],
-            savedDecks: [{ id: 'main', name: '主力卡组', cards: [{ id: 'AR_001', count: 20 }] }],
-            selectedDeckId: 'main',
-            items: [],
-            spiritStones: 24,
-            lastRunSummary: null,
-        });
-
-        expect(createPreparationDeckHandoffSummary(before, after)).toEqual({
-            title: '卡组未改动',
-            detail: '当前带入「主力卡组」：20 张，已满足带入要求。名称、构成、张数与带入状态均未变化。',
-            tone: 'neutral',
-        });
     });
 });

@@ -3,21 +3,28 @@ import { describe, expect, it } from 'bun:test';
 import initialWorldState from '../../../public/data/world/initial-state.json';
 import starterDeckJson from '../../../public/data/decks/starter-deck.json';
 
+import {
+    createItemStack,
+    normalizeExpeditionWorldStateSeed,
+    createItemStacksFromSeed,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 import { createPersistentStashFromWorldStateSeed } from './GameWorldStateSeed';
+
+const initialWorldStateStashItems = createItemStacksFromSeed(initialWorldState.stash.items);
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 describe('GameWorldStateSeed', () => {
     it('creates a persistent stash from the checked-in world seed and starter deck', () => {
         const stash = createPersistentStashFromWorldStateSeed({
-            worldState: structuredClone(initialWorldState),
+            worldState: createWorldStateSeed(),
             starterDeck: structuredClone(starterDeckJson),
         });
 
         expect(stash).toEqual({
             stashId: 'phase01.starter-stash',
-            cards: starterDeckJson.cards,
-            savedDecks: [{ id: 'starter-deck', name: starterDeckJson.name, cards: starterDeckJson.cards }],
-            selectedDeckId: 'starter-deck',
-            items: initialWorldState.stash.items,
+            deckRef: 'starter-deck',
+            deck: starterDeckJson.cards,
+            items: initialWorldStateStashItems,
             spiritStones: 36,
             lastRunSummary: null,
         });
@@ -33,12 +40,11 @@ describe('GameWorldStateSeed', () => {
 
         expect(stash).toEqual({
             stashId: 'phase01.starter-stash',
-            cards: [{ id: 'TEST_CARD', count: 2 }],
-            savedDecks: [{ id: 'starter-deck', name: 'Starter Deck', cards: [{ id: 'TEST_CARD', count: 2 }] }],
-            selectedDeckId: 'starter-deck',
+            deckRef: 'starter-deck',
+            deck: [{ id: 'TEST_CARD', count: 2 }],
             items: [
-                { id: 'tool.return-rope', itemType: 'tool', count: 1 },
-                { id: 'consumable.spirit-salve', itemType: 'consumable', count: 2 },
+                createItemStack('tool.return-rope', 'tool', 1),
+                createItemStack('consumable.spirit-salve', 'consumable', 2),
             ],
             spiritStones: 36,
             lastRunSummary: null,
@@ -48,7 +54,7 @@ describe('GameWorldStateSeed', () => {
     it('does not share mutable deck or item references with inputs or other seeded stashes', () => {
         const worldState = {
             stash: {
-                items: [{ id: 'tool.test', itemType: 'tool' as const, count: 1 }],
+                items: [createItemStack('tool.test', 'tool', 1)],
             },
         };
         const starterDeck = {
@@ -58,14 +64,12 @@ describe('GameWorldStateSeed', () => {
         const firstStash = createPersistentStashFromWorldStateSeed({ worldState, starterDeck });
         const secondStash = createPersistentStashFromWorldStateSeed({ worldState, starterDeck });
 
-        firstStash.cards[0].count = 99;
-        firstStash.savedDecks[0]!.cards[0]!.count = 77;
+        firstStash.deck[0].count = 99;
         firstStash.items[0].count = 88;
 
         expect(starterDeck.cards[0].count).toBe(1);
         expect(worldState.stash.items[0].count).toBe(1);
-        expect(secondStash.cards).toEqual([{ id: 'CARD_A', count: 1 }]);
-        expect(secondStash.savedDecks[0]?.cards).toEqual([{ id: 'CARD_A', count: 1 }]);
-        expect(secondStash.items).toEqual([{ id: 'tool.test', itemType: 'tool', count: 1 }]);
+        expect(secondStash.deck).toEqual([{ id: 'CARD_A', count: 1 }]);
+        expect(secondStash.items).toEqual([createItemStack('tool.test', 'tool', 1)]);
     });
 });

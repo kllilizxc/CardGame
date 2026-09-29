@@ -1,8 +1,14 @@
 import { GameObjects } from 'phaser';
+import type { AnyCard } from '@data/types/cards/all';
+import { watchCardFace, type CardFaceAppearance } from './cardFaceAppearance';
 
-import type { CardPreviewMetadata } from '../managers/common/cardPreviewProtocol';
-import { sceneTheme } from '../scenes/shared/sceneTheme';
-import { blendBattleColor, getBattleCardTextStyle } from '../ui/battle/battleTheme';
+type BattleSceneWithEffectManager = Phaser.Scene & {
+    battleContext?: {
+        effectManager?: {
+            returnCardToPosition(card: BaseCardSprite, x: number, y: number): void;
+        };
+    };
+};
 
 /**
  * 卡片显示模式
@@ -11,6 +17,8 @@ import { blendBattleColor, getBattleCardTextStyle } from '../ui/battle/battleThe
  * - deck: 卡组查看模式（完整信息，不包含描述）
  */
 export type CardDisplayMode = 'field' | 'hover' | 'deck';
+type VisibleCardPart = GameObjects.GameObject & { visible: boolean; setVisible(visible: boolean): unknown };
+const hasVisibility = (object: GameObjects.GameObject): object is VisibleCardPart => 'visible' in object && 'setVisible' in object;
 
 export abstract class BaseCardSprite extends GameObjects.Container {
     protected background!: GameObjects.Rectangle;
@@ -21,7 +29,9 @@ export abstract class BaseCardSprite extends GameObjects.Container {
     protected originalY: number = 0;
     protected currentDisplayMode: CardDisplayMode = 'field';
     protected isDraggingDisabled: boolean = false;
-    private previewMetadata: CardPreviewMetadata = {};
+    private genericFaceImage?: GameObjects.Image;
+    private genericFaceOriginal?: Array<{ object: VisibleCardPart; visible: boolean }>;
+    private genericFaceRelease?: () => void;
 
     // 卡牌标准尺寸
     protected readonly CARD_WIDTH = 180;
@@ -36,77 +46,21 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      * 创建卡牌背景
      */
     protected createBackground(color: number, strokeColor: number): void {
-        const shadow = this.scene.add.rectangle(6, 8, this.CARD_WIDTH, this.CARD_HEIGHT, sceneTheme.colors.shadow, 0.24);
-        this.add(shadow);
-
-        this.background = this.scene.add.rectangle(0, 0, this.CARD_WIDTH, this.CARD_HEIGHT, color, 0.98);
-        this.background.setStrokeStyle(3, strokeColor, 0.82);
+        this.background = this.scene.add.rectangle(0, 0, this.CARD_WIDTH, this.CARD_HEIGHT, color);
+        this.background.setStrokeStyle(3, strokeColor);
         this.add(this.background);
-
-        const inner = this.scene.add.rectangle(
-            0,
-            8,
-            this.CARD_WIDTH - 16,
-            this.CARD_HEIGHT - 28,
-            blendBattleColor(color, sceneTheme.colors.panelInner, 0.46),
-            0.94,
-        );
-        inner.setStrokeStyle(1, blendBattleColor(strokeColor, sceneTheme.colors.parchmentSoft, 0.24), 0.24);
-        this.add(inner);
-
-        const banner = this.scene.add.rectangle(
-            0,
-            -this.CARD_HEIGHT / 2 + 25,
-            this.CARD_WIDTH - 20,
-            30,
-            blendBattleColor(sceneTheme.colors.banner, strokeColor, 0.16),
-            0.9,
-        );
-        banner.setStrokeStyle(1, strokeColor, 0.24);
-        this.add(banner);
     }
 
     /**
      * 创建卡牌名称文本
      */
     protected createNameText(name: string, y: number = -110): void {
-        this.nameText = this.scene.add.text(0, y, name, getBattleCardTextStyle('name', {
-            wordWrap: { width: 148 },
-        })).setOrigin(0.5);
+        this.nameText = this.scene.add.text(0, y, name, {
+            fontSize: '16px',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
         this.add(this.nameText);
-    }
-
-    protected createCardText(
-        x: number,
-        y: number,
-        text: string,
-        role: 'meta' | 'body' | 'support' | 'accent' | 'stat' | 'tiny',
-        overrides: Phaser.Types.GameObjects.Text.TextStyle = {},
-    ): GameObjects.Text {
-        const textObject = this.scene.add.text(x, y, text, getBattleCardTextStyle(role, overrides)).setOrigin(0.5);
-        this.add(textObject);
-
-        return textObject;
-    }
-
-    protected createChip(
-        x: number,
-        y: number,
-        width: number,
-        height: number,
-        fillColor: number,
-        strokeColor: number,
-        label: string,
-        textStyle: Phaser.Types.GameObjects.Text.TextStyle,
-    ): { background: GameObjects.Rectangle; text: GameObjects.Text } {
-        const background = this.scene.add.rectangle(x, y, width, height, fillColor, 0.94);
-        background.setStrokeStyle(1, strokeColor, 0.72);
-        this.add(background);
-
-        const text = this.scene.add.text(x, y, label, textStyle).setOrigin(0.5);
-        this.add(text);
-
-        return { background, text };
     }
 
     /**
@@ -117,6 +71,24 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         this.setInteractive({ draggable: true, useHandCursor: true });
         this.setScale(this.cardScale);
         this.scene.add.existing(this);
+    }
+
+    /** Use the shared art surface for non-unit cards while retaining their container interactions. */
+    protected attachCardFace(card: { id: string; cardFace?: CardFaceAppearance }): void {
+        this.genericFaceOriginal = this.list.filter(hasVisibility).map(object => ({ object, visible: object.visible }));
+        this.genericFaceRelease?.();
+        this.genericFaceRelease = watchCardFace(this.scene, card, key => {
+            if (!this.active) return;
+            this.genericFaceImage?.destroy();
+            this.genericFaceImage = undefined;
+            for (const { object, visible } of this.genericFaceOriginal ?? []) if (object.active) object.setVisible(visible);
+            this.updateDisplayMode();
+            if (key) {
+                for (const { object } of this.genericFaceOriginal ?? []) if (object.active) object.setVisible(false);
+                this.genericFaceImage = this.scene.add.image(0, 0, key).setDisplaySize(this.CARD_WIDTH, this.CARD_HEIGHT);
+                this.addAt(this.genericFaceImage, 0);
+            }
+        });
     }
 
     /**
@@ -150,6 +122,7 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         // 拖拽开始
         this.on('dragstart', () => {
             this.isDragging = true;
+            this.scene.events.emit('hideCardPreview');
             this.originalX = this.x;
             this.originalY = this.y;
             this.setScale(this.cardScale * 1.2);
@@ -175,6 +148,7 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         // 拖拽结束
         this.on('dragend', () => {
             this.isDragging = false;
+            this.scene.events.emit('hideCardPreview');
             this.setScale(this.cardScale);
             this.setDepth(0);
             
@@ -194,17 +168,17 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      * 悬停时的处理（子类可重写）
      */
     protected onPointerOver(): void {
-        this.background.setStrokeStyle(4, sceneTheme.colors.goldSoft, 0.92);
-        this.scene.events.emit('showCardPreview', this, this.getPreviewMetadata());
+        this.background.setStrokeStyle(3, 0xffd700);
+        // 只发送预览事件，不改变原卡片的显示模式
+        this.scene.events.emit('showCardPreview', this);
     }
 
     /**
      * 离开时的处理（子类可重写）
      */
     protected onPointerOut(): void {
-        this.background.setStrokeStyle(3, this.getDefaultStrokeColor(), 0.82);
-        // 不再触发隐藏预览，让预览面板保持显示
-        // this.scene.events.emit('hideCardPreview');
+        this.background.setStrokeStyle(3, this.getDefaultStrokeColor());
+        this.scene.events.emit('hideCardPreview');
     }
 
     /**
@@ -216,14 +190,14 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      * 获取卡牌数据（子类需实现）
      * 返回具体的卡牌数据对象，用于类型安全的数据访问
      */
-    public abstract getCardData(): any;
+    public abstract getCardData(): AnyCard;
 
     /**
      * 返回原始位置
      */
     public returnToOriginalPosition(): void {
         // 尝试通过 BattleScene 获取 battleContext
-        const battleScene = this.scene as any;
+        const battleScene = this.scene as BattleSceneWithEffectManager;
         if (battleScene.battleContext?.effectManager) {
             battleScene.battleContext.effectManager.returnCardToPosition(
                 this,
@@ -264,14 +238,6 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         return this.cardScale;
     }
 
-    public setPreviewMetadata(metadata: CardPreviewMetadata): void {
-        this.previewMetadata = { ...metadata };
-    }
-
-    public getPreviewMetadata(): CardPreviewMetadata {
-        return { ...this.previewMetadata };
-    }
-
     /**
      * 禁用拖拽但保留hover交互
      */
@@ -288,11 +254,20 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         this.off('drag');
         this.off('dragend');
         
-        // 重新设置为非拖拽的交互模式，但保持 hit area
+        // 重新设置为非拖拽的交互模式，但保持hitArea
         if (this.input) {
             this.input.draggable = false;
-            this.input.cursor = 'pointer';
+            this.input.cursor = 'default';
         }
+        
+        // 确保hover事件存在
+        this.on('pointerover', () => {
+            this.onPointerOver();
+        });
+
+        this.on('pointerout', () => {
+            this.onPointerOut();
+        });
     }
 
     /**
@@ -302,6 +277,13 @@ export abstract class BaseCardSprite extends GameObjects.Container {
     public setDisplayMode(mode: CardDisplayMode): void {
         this.currentDisplayMode = mode;
         this.updateDisplayMode();
+        if (this.genericFaceImage) for (const { object } of this.genericFaceOriginal ?? []) if (object.active) object.setVisible(false);
+    }
+
+    public destroy(fromScene?: boolean): void {
+        this.genericFaceRelease?.();
+        this.genericFaceRelease = undefined;
+        super.destroy(fromScene);
     }
 
     /**

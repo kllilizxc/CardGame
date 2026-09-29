@@ -151,6 +151,13 @@ describe('hub town shell content', () => {
                 storyGraphFile: 'data/story/story-graph.json',
             }),
             expect.objectContaining({
+                id: 'action.start-tutorial-qingyun',
+                kind: 'startStory',
+                label: '序章·青云问道',
+                storyResourceId: 'story.tutorial-qingyun',
+                storyGraphFile: 'data/story/tutorial-story-graph.json',
+            }),
+            expect.objectContaining({
                 id: 'action.visit-town-teahouse',
                 kind: 'navigate',
                 label: '去茶棚打听消息',
@@ -189,6 +196,11 @@ describe('hub town shell content', () => {
                 storyGraphFile: 'data/story/story-graph.json',
             },
             {
+                id: 'action.start-tutorial-qingyun',
+                storyResourceId: 'story.tutorial-qingyun',
+                storyGraphFile: 'data/story/tutorial-story-graph.json',
+            },
+            {
                 id: 'action.start-teahouse-rumors-story',
                 storyResourceId: 'story.qingyun-teahouse-rumors',
                 storyGraphFile: 'data/story/qingyun-teahouse-rumors.json',
@@ -201,6 +213,7 @@ describe('hub town shell content', () => {
 
         expect(graphs.map((graph) => graph.storyId)).toEqual([
             'story.qingyun-entry',
+            'story.tutorial-qingyun',
             'story.qingyun-teahouse-rumors',
         ]);
     });
@@ -224,6 +237,11 @@ describe('hub town shell content', () => {
                 storyResourceId: 'story.qingyun-entry',
                 storyGraphFile: 'data/story/story-graph.json',
             },
+            {
+                id: 'action.qa-fog-fox',
+                storyResourceId: 'story.qa-fog-fox',
+                storyGraphFile: 'data/story/qa-fog-fox.json',
+            },
         ]);
 
         const graph = validatePlayableStoryGraph(readPublicJsonFile(startStoryActions[0].storyGraphFile));
@@ -244,7 +262,7 @@ describe('hub town shell content', () => {
 
     it('creates a StoryScene launch intent from data without hard-coding the story graph in the hub scene', () => {
         const town = validateHubTownDefinition(townShellJson);
-        const action = town.locations[0].actions[0];
+        const action = getStartStoryAction(town, 'action.start-qingyun-entry-story');
 
         expect(createHubActionIntent(action)).toEqual({
             kind: 'startScene',
@@ -263,7 +281,8 @@ describe('hub town shell content', () => {
     it('creates navigation intents and applies in-memory location state transitions', () => {
         const town = validateHubTownDefinition(townShellJson);
         const initialState = createInitialHubNavigationState(town);
-        const navigateForward = town.locations[0].actions[1];
+        const navigateForward = town.locations[0].actions[2];
+        const teahouseIntent = createHubActionIntent(navigateForward);
 
         expect(initialState).toEqual({
             currentLocationId: 'location.qingyun-town.gate-market',
@@ -274,11 +293,11 @@ describe('hub town shell content', () => {
             statusText: '你穿过集市，来到茶棚边听散修议论今日试炼。',
         });
 
-        const teahouseState = applyHubNavigationIntent(
-            town,
-            initialState,
-            createHubActionIntent(navigateForward),
-        );
+        expect(navigateForward).toEqual(expect.objectContaining({ kind: 'navigate' }));
+        if (teahouseIntent.kind !== 'navigateLocation') {
+            throw new Error('Expected a navigation intent.');
+        }
+        const teahouseState = applyHubNavigationIntent(town, teahouseIntent);
 
         expect(teahouseState).toEqual({
             currentLocationId: 'location.qingyun-town.teahouse',
@@ -286,7 +305,11 @@ describe('hub town shell content', () => {
         });
 
         const navigateBack = town.locations[1].actions[0];
-        expect(applyHubNavigationIntent(town, teahouseState, createHubActionIntent(navigateBack))).toEqual({
+        const backIntent = createHubActionIntent(navigateBack);
+        if (backIntent.kind !== 'navigateLocation') {
+            throw new Error('Expected a navigation intent.');
+        }
+        expect(applyHubNavigationIntent(town, backIntent)).toEqual({
             currentLocationId: 'location.qingyun-town.gate-market',
             statusText: '你回到山门集市，试炼告示仍贴在茶棚旁。',
         });
@@ -338,7 +361,7 @@ describe('hub town shell content', () => {
 
     it('creates a StoryScene launch intent that resumes the saved runtime for the same Hub action and graph', () => {
         const town = validateHubTownDefinition(townShellJson);
-        const action = town.locations[0].actions[0];
+        const action = getStartStoryAction(town, 'action.start-qingyun-entry-story');
         const savedStoryState = {
             storyId: 'story.qingyun-entry',
             currentLocationId: 'location.qingyun-gate',
@@ -603,9 +626,7 @@ describe('hub town shell content', () => {
             targetLocationId: 'location.qingyun-town.teahouse',
             statusText: '已选定前往：集市茶棚。',
         });
-        expect(applyHubNavigationIntent(town, {
-            currentLocationId: 'location.qingyun-town.gate-market',
-        }, markerIntent)).toEqual({
+        expect(applyHubNavigationIntent(town, markerIntent)).toEqual({
             currentLocationId: 'location.qingyun-town.teahouse',
             statusText: '已选定前往：集市茶棚。',
         });
@@ -642,9 +663,15 @@ describe('hub town shell content', () => {
     });
 
     it('rejects navigation actions that point to missing town locations', () => {
-        const brokenTown = structuredClone(townShellJson) as typeof townShellJson;
-        brokenTown.locations[0].actions[1] = {
-            ...brokenTown.locations[0].actions[1],
+        const brokenTown = validateHubTownDefinition(townShellJson);
+        const navigationAction = brokenTown.locations[0].actions[2];
+
+        if (navigationAction.kind !== 'navigate') {
+            throw new Error('Expected the third gate-market action to be a navigate action.');
+        }
+
+        brokenTown.locations[0].actions[2] = {
+            ...navigationAction,
             targetLocationId: 'location.qingyun-town.missing',
         };
 
@@ -663,5 +690,37 @@ describe('hub town shell content', () => {
         expect(() => validateHubTownDefinition(brokenTown)).toThrow(
             'Hub action action.start-qingyun-entry-story uses unsupported kind: startBattle',
         );
+    });
+
+    it('throws for unsupported Hub action kinds in action intent dispatch', () => {
+        expect(() => createHubActionIntent({
+            id: 'action.unsupported',
+            kind: 'startBattle',
+            label: '未知行动',
+            description: '不受支持的行动类型',
+            hubId: 'hub.qingyun-town',
+            storyGraphFile: 'data/story/story-graph.json',
+        } as never)).toThrow(
+            'Hub action action.unsupported has unsupported kind: startBattle',
+        );
+    });
+
+    it('throws for unsupported hub navigation intents instead of silently ignoring them', () => {
+        const town = validateHubTownDefinition(townShellJson);
+
+        expect(() => applyHubNavigationIntent(
+            town,
+            {
+                kind: 'startScene',
+                sceneKey: 'StoryScene',
+                payload: {
+                    source: 'hub',
+                    hubId: 'hub.qingyun-town',
+                    actionId: 'action.start-qingyun-entry-story',
+                    storyResourceId: 'story.qingyun-entry',
+                    storyGraphFile: 'data/story/story-graph.json',
+                },
+            } as never,
+        )).toThrow('Hub navigation intent has unsupported kind: startScene');
     });
 });

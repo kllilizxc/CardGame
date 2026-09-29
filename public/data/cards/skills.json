@@ -78,7 +78,8 @@
           "actions": [
             {
               "type": "modifyAttack",
-              "value": 2
+              "value": 2,
+              "duration": "turn"
             }
           ],
           "text": "本场战斗中，你可以发动一次：使所有己方灵兽本回合内攻击力+2。",

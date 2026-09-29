@@ -14,6 +14,8 @@ export interface HubSceneLaunchData {
     hubFile?: string;
     targetLocationId?: string;
     statusText?: string;
+    startActionId?: string;
+    startStoryResourceId?: string;
 }
 
 export interface NormalizedHubSceneLaunchData {
@@ -25,6 +27,8 @@ export interface NormalizedHubSceneLaunchData {
     hubCacheKey: string;
     targetLocationId?: string;
     statusText?: string;
+    startActionId?: string;
+    startStoryResourceId?: string;
 }
 
 export interface ResolvedHubSceneCatalogResource {
@@ -53,6 +57,8 @@ export function normalizeHubSceneLaunchData(data?: HubSceneLaunchData | null): N
     const hubResourceId = normalizeString(data?.hubResourceId, '');
     const targetLocationId = normalizeString(data?.targetLocationId, '');
     const statusText = normalizeString(data?.statusText, '');
+    const startActionId = normalizeString(data?.startActionId, '');
+    const startStoryResourceId = normalizeString(data?.startStoryResourceId, '');
 
     return {
         ...(source ? { source } : {}),
@@ -63,6 +69,7 @@ export function normalizeHubSceneLaunchData(data?: HubSceneLaunchData | null): N
         hubCacheKey: createHubTownCacheKey(hubFile),
         ...(targetLocationId ? { targetLocationId } : {}),
         ...(statusText ? { statusText } : {}),
+        ...(startActionId && startStoryResourceId ? { startActionId, startStoryResourceId } : {}),
     };
 }
 

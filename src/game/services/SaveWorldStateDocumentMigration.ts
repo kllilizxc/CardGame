@@ -1,8 +1,8 @@
 import {
+    cloneSaveWorldStateDocument,
     SAVE_WORLD_STATE_DOCUMENT_CONTENT_TYPE,
     SAVE_WORLD_STATE_DOCUMENT_SCHEMA_VERSION,
     SAVE_WORLD_STATE_DOCUMENT_SOURCE,
-    validateSaveWorldStateDocument,
     type SaveWorldStateDocument,
 } from './SaveWorldStateDocument';
 import type { SaveCompatibilityOwner } from './SaveCompatibility';
@@ -87,7 +87,7 @@ export function migrateSaveWorldStateDocumentToCurrentSchema(
 ): SaveWorldStateDocumentMigrationResult {
     assertCurrentDocumentMigrationEnvelope(document);
 
-    const migratedDocument = validateSaveWorldStateDocument(document);
+    const migratedDocument = cloneSaveWorldStateDocument(document as SaveWorldStateDocument);
 
     return {
         pipelineId: SAVE_WORLD_STATE_DOCUMENT_MIGRATION_PIPELINE_ID,

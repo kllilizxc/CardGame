@@ -380,6 +380,46 @@ export function createWorldMapReturnIntent(payload: WorldMapReturnPayload): Worl
     };
 }
 
+function getWorldMapDestinationTravelVerb(destination: WorldMapDestination): '进入' | '前往' {
+    if (destination.kind === 'hub' && destination.targetLocationId) {
+        return '前往';
+    }
+
+    return '进入';
+}
+
+function getWorldMapDestinationTravelHint(destination: WorldMapDestination): string {
+    if (destination.kind === 'expedition') {
+        return '开始秘境探索。';
+    }
+
+    if (destination.kind === 'hub' && destination.targetLocationId) {
+        return '继续当地行动。';
+    }
+
+    return '查看当地行动。';
+}
+
+export function createWorldMapDestinationPreviewText(destination: WorldMapDestination): string {
+    const verb = getWorldMapDestinationTravelVerb(destination);
+
+    return `${destination.presentation.regionLabel} · ${destination.label}\n点击${verb}${destination.label}，${getWorldMapDestinationTravelHint(destination)}`;
+}
+
+export function createWorldMapDestinationSelectionStatusText(
+    destination?: WorldMapDestination,
+): string {
+    if (destination?.statusText) {
+        return destination.statusText;
+    }
+
+    if (!destination) {
+        return '正在前往选中的地点。';
+    }
+
+    return `正在${getWorldMapDestinationTravelVerb(destination)}${destination.label}。`;
+}
+
 export function getWorldMapDestinationSurfacePosition(
     worldMap: WorldMapDefinition,
     destination: WorldMapDestination,

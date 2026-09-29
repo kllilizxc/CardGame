@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "quests": [
+    {
+      "id": "quest.qa-fog-heal-fox",
+      "title": "救治狐爷爷",
+      "summary": "可采药请医师照料，也可在懂医术时亲自施针。",
+      "actorIds": [
+        "npc.qa-fog-fox"
+      ],
+      "stages": [
+        {
+          "id": "available",
+          "status": "available",
+          "label": "药铺求助",
+          "objective": "到山门药铺问清狐爷爷的伤势。"
+        },
+        {
+          "id": "gather",
+          "status": "active",
+          "label": "雾林采药",
+          "objective": "采得白叶草，选择普通救治或备针施治。"
+        },
+        {
+          "id": "completed",
+          "status": "completed",
+          "label": "救治完成",
+          "objective": "狐爷爷已获救；第三章可再问旧药方。"
+        }
+      ]
+    }
+  ]
+}

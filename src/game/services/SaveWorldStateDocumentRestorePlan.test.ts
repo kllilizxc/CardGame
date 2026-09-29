@@ -7,6 +7,7 @@ import { ExpeditionState } from '../state/ExpeditionState';
 import type { StoryState } from '../types/story';
 import {
     ACTIVE_RUN_STORAGE_KEY,
+    createActiveRunRouteKey,
     createActiveRunStorageKey,
     resetRunPersistenceForTests,
     STASH_STORAGE_KEY,
@@ -25,16 +26,16 @@ import {
     type SaveWorldStateDocument,
 } from './SaveWorldStateDocument';
 import { createSaveWorldStateDocumentRestorePlan } from './SaveWorldStateDocumentRestorePlan';
+import {
+    DEFAULT_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
+    normalizeExpeditionWorldStateSeed,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
-const DEFAULT_TARGET = {
-    expeditionId: 'phase01-first-playable-expedition',
-    mapId: 'phase01-prototype-map',
-};
-
-const SYNTHETIC_TARGET = {
-    expeditionId: 'synthetic-expedition',
-    mapId: 'synthetic-map',
-};
+const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
+const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -114,7 +115,7 @@ function startRun(
     entryNodeId = targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'entrance.mountain-gate' : 'entrance.synthetic',
 ): string {
     const state = ExpeditionState.bootstrap({
-        worldState: structuredClone(initialWorldState),
+        worldState: createWorldStateSeed(),
         starterDeck: structuredClone(starterDeckJson),
         targetIdentity,
     });
@@ -172,14 +173,14 @@ describe('SaveWorldStateDocumentRestorePlan', () => {
             {
                 operation: 'removeItem',
                 owner: 'activeRun',
-                routeKey: 'expedition:phase01-first-playable-expedition:phase01-prototype-map',
+                routeKey: createActiveRunRouteKey(DEFAULT_TARGET),
                 storageKey: createActiveRunStorageKey(DEFAULT_TARGET),
                 reason: 'document-null',
             },
             {
                 operation: 'no-op',
                 owner: 'activeRun',
-                routeKey: 'expedition:phase01-first-playable-expedition:phase01-prototype-map',
+                routeKey: createActiveRunRouteKey(DEFAULT_TARGET),
                 storageKey: ACTIVE_RUN_STORAGE_KEY,
                 reason: 'legacy-active-run-write-disabled',
             },
@@ -252,14 +253,14 @@ describe('SaveWorldStateDocumentRestorePlan', () => {
             {
                 operation: 'setItem',
                 owner: 'activeRun',
-                routeKey: 'expedition:synthetic-expedition:synthetic-map',
+                routeKey: SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
                 storageKey: createActiveRunStorageKey(SYNTHETIC_TARGET),
                 value: JSON.stringify(document.worldState.activeRun.document),
             },
             {
                 operation: 'no-op',
                 owner: 'activeRun',
-                routeKey: 'expedition:synthetic-expedition:synthetic-map',
+                routeKey: SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
                 storageKey: ACTIVE_RUN_STORAGE_KEY,
                 reason: 'legacy-active-run-write-disabled',
             },

@@ -4,17 +4,27 @@ import prototypeEventsJson from '../../../../public/data/mijing/prototype-events
 import prototypeShopJson from '../../../../public/data/mijing/prototype-shop.json';
 import initialWorldState from '../../../../public/data/world/initial-state.json';
 import starterDeckJson from '../../../../public/data/decks/starter-deck.json';
+import artifactsJson from '../../../../public/data/cards/artifacts.json';
+import itemsJson from '../../../../public/data/world/items.artifacts.json';
 
 import { ExpeditionState } from '../../state/ExpeditionState';
+import { createContentDisplayNames } from '../../content/contentDisplayNames';
+import type {
+    PrototypeEventDefinition,
+    PrototypeShopDefinition,
+} from '../../types/expedition';
+import { normalizeExpeditionWorldStateSeed } from '../../testing/fixtures/expeditionWorldStateFixtures';
 import {
     createEventNodeView,
     createExtractNodeView,
     createShopNodeView,
 } from './nonCombatNodeFlow';
 
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
+
 function createStartedRun() {
     const state = ExpeditionState.bootstrap({
-        worldState: structuredClone(initialWorldState),
+        worldState: createWorldStateSeed(),
         starterDeck: structuredClone(starterDeckJson),
     });
 
@@ -30,13 +40,13 @@ function createStartedRun() {
 describe('nonCombatNodeFlow', () => {
     it('creates a concrete event view from the prototype event pool and marks claimed events', () => {
         const { state, run } = createStartedRun();
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
 
         const unclaimedView = createEventNodeView(event, run, () => 0);
 
         expect(unclaimedView.title).toBe('弃置行囊');
         expect(unclaimedView.outcome.id).toBe('cache.spirit-stones');
-        expect(unclaimedView.rewardSummary).toBe('spiritStones +18');
+        expect(unclaimedView.rewardSummary).toBe('灵石 +18');
         expect(unclaimedView.claimed).toBe(false);
 
         state.claimEventNodeReward(event.nodeId, structuredClone(unclaimedView.outcome.rewards));
@@ -49,7 +59,7 @@ describe('nonCombatNodeFlow', () => {
 
     it('keeps weighted random event outcome selection when no fixed outcome is requested', () => {
         const { run } = createStartedRun();
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
 
         const view = createEventNodeView(event, run, () => 0.76);
 
@@ -57,9 +67,28 @@ describe('nonCombatNodeFlow', () => {
         expect(view.rewardSummary).toBe('AR_001 +1 · artifact_fly_sword_basic +1');
     });
 
+    it('uses catalog names for event and shop rewards while keeping stable IDs in the reward data', () => {
+        const { run } = createStartedRun();
+        const displayNames = createContentDisplayNames([
+            { kind: 'card', data: artifactsJson },
+            { kind: 'item', data: itemsJson },
+        ]);
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
+        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'] as unknown as PrototypeShopDefinition;
+
+        const eventView = createEventNodeView(event, run, () => 0.76, { displayNames });
+        const shopView = createShopNodeView(shop, run, displayNames);
+
+        expect(eventView.rewardSummary).toBe('青云剑 +1 · 青云飞剑 +1');
+        expect(eventView.outcome.rewards.cards[0].id).toBe('AR_001');
+        expect(shopView.offers[0].costText).toBe('灵石 24');
+        expect(shopView.offers[0].rewardSummary).toBe('青云剑 +1');
+        expect(shopView.offers[2].rewardSummary).toBe('青云飞剑 +1');
+    });
+
     it('uses an opt-in fixed event outcome and keeps reward and claimed state derived from that outcome', () => {
         const { state, run } = createStartedRun();
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
 
         const unclaimedView = createEventNodeView(event, run, () => {
             throw new Error('fixed event outcome selection should not call random');
@@ -71,7 +100,7 @@ describe('nonCombatNodeFlow', () => {
         });
 
         expect(unclaimedView.outcome.id).toBe('cache.talisman-roll');
-        expect(unclaimedView.rewardSummary).toBe('TL_002 +1 · tool_talisman_basic +1 · spiritStones +6');
+        expect(unclaimedView.rewardSummary).toBe('TL_002 +1 · tool_talisman_basic +1 · 灵石 +6');
         expect(unclaimedView.claimed).toBe(false);
 
         state.claimEventNodeReward(event.nodeId, structuredClone(unclaimedView.outcome.rewards));
@@ -91,7 +120,7 @@ describe('nonCombatNodeFlow', () => {
 
     it('fails actionably instead of falling back to random when a fixed event outcome is missing', () => {
         const { run } = createStartedRun();
-        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'];
+        const event = prototypeEventsJson.eventsByNodeId['event.abandoned-cache'] as unknown as PrototypeEventDefinition;
 
         expect(() => createEventNodeView(event, run, () => 0, {
             outcomeSelection: {
@@ -103,7 +132,7 @@ describe('nonCombatNodeFlow', () => {
 
     it('creates shop offer views that expose affordability and purchased state', () => {
         const { state } = createStartedRun();
-        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'];
+        const shop = prototypeShopJson.shopsByNodeId['shop.wandering-peddler'] as unknown as PrototypeShopDefinition;
         const swordOffer = shop.offers[0];
         const charmOffer = shop.offers[2];
 

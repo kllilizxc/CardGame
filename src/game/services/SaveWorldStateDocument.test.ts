@@ -35,16 +35,17 @@ import {
     SAVE_WORLD_STATE_DOCUMENT_SCHEMA_VERSION,
     validateSaveWorldStateDocument,
 } from './SaveWorldStateDocument';
+import {
+    DEFAULT_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET,
+    normalizeExpeditionWorldStateSeed,
+    createItemStacksFromSeed,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
-const DEFAULT_TARGET = {
-    expeditionId: 'phase01-first-playable-expedition',
-    mapId: 'phase01-prototype-map',
-};
-
-const SYNTHETIC_TARGET = {
-    expeditionId: 'synthetic-expedition',
-    mapId: 'synthetic-map',
-};
+const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
+const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
+const initialWorldStateStashItems = createItemStacksFromSeed(initialWorldState.stash.items);
+const createWorldStateSeed = () => normalizeExpeditionWorldStateSeed(structuredClone(initialWorldState));
 
 class MemoryStorage implements Storage {
     private readonly values = new Map<string, string>();
@@ -145,7 +146,7 @@ function startRun(
     entryNodeId = targetIdentity.mapId === DEFAULT_TARGET.mapId ? 'entrance.mountain-gate' : 'entrance.synthetic',
 ): string {
     const state = ExpeditionState.bootstrap({
-        worldState: structuredClone(initialWorldState),
+        worldState: createWorldStateSeed(),
         starterDeck: structuredClone(starterDeckJson),
         targetIdentity,
     });
@@ -271,9 +272,8 @@ describe('SaveWorldStateDocument', () => {
             migrationHooks: [],
         });
         expect(document.worldState.persistentStash.document).toEqual(loadPersistentStash());
-        expect(document.worldState.persistentStash.document?.cards).toEqual(starterDeckJson.cards);
-        expect(document.worldState.persistentStash.document?.savedDecks[0]?.cards).toEqual(starterDeckJson.cards);
-        expect(document.worldState.persistentStash.document?.items).toEqual(initialWorldState.stash.items);
+        expect(document.worldState.persistentStash.document?.deck).toEqual(starterDeckJson.cards);
+        expect(document.worldState.persistentStash.document?.items).toEqual(initialWorldStateStashItems);
         expect(document.worldState.activeRun.compatibility).toMatchObject({
             owner: 'activeRun',
             canonicalStorageKeyPrefix: 'cardgame.active-run.v1:',
@@ -326,7 +326,7 @@ describe('SaveWorldStateDocument', () => {
         expect(Object.keys(document.worldState.storyHubSession.document.stories)).toEqual([
             'hub.qingyun-town|action.start-qingyun-entry-story|data%2Fstory%2Fstory-graph.json',
         ]);
-        expect(document.worldState.persistentStash.document?.cards).toEqual(starterDeckJson.cards);
+        expect(document.worldState.persistentStash.document?.deck).toEqual(starterDeckJson.cards);
         expect(document.worldState.activeRun.keys).toEqual(createActiveRunCompatibilityKeys(undefined, SYNTHETIC_TARGET));
         expect(document.worldState.activeRun.document?.runId).toBe(syntheticRunId);
         expect(document.worldState.activeRun.document?.carriedDeck).toContainEqual({ id: 'AR_001', count: 4 });

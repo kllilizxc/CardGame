@@ -1,15 +1,27 @@
 import { Scene } from 'phaser';
+import { getWenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
 import { CardSprite } from '../../objects/CardSprite';
 import { ArtifactSprite } from '../../objects/ArtifactSprite';
 import { TalismanSprite } from '../../objects/TalismanSprite';
 import { FieldSprite } from '../../objects/FieldSprite';
-import type { UnitCard } from '../../../../public/data/types/cards/unit';
-import type { ArtifactCard } from '../../../../public/data/types/cards/artifact';
-import type { TalismanCard } from '../../../../public/data/types/cards/talisman';
-import type { FieldCard } from '../../../../public/data/types/cards/field';
+import type { UnitCard } from '@data/types/cards/unit';
+import type { ArtifactCard } from '@data/types/cards/artifact';
+import type { TalismanCard } from '@data/types/cards/talisman';
+import type { FieldCard } from '@data/types/cards/field';
 import type { BattleLayoutConfig } from '../../config/LayoutConfig';
 import type { BattleLog } from '../../ui/battle/BattleLog';
 import type { BattleAnimationManager } from './BattleAnimationManager';
+import type { BaseCardSprite } from '../../objects/BaseCardSprite';
+
+type DrawCardData = UnitCard | ArtifactCard | TalismanCard | FieldCard;
+type CardSpriteData = CardSprite | ArtifactSprite | TalismanSprite | FieldSprite;
+type HandSprite = CardSprite | ArtifactSprite | TalismanSprite | FieldSprite;
+
+type PlayCardToFieldResult = {
+    success: boolean;
+    hand: HandSprite[];
+    playerField: CardSprite[];
+};
 
 export class CardManager {
     private scene: Scene;
@@ -37,33 +49,45 @@ export class CardManager {
 
     // 抽一张卡
     public drawCard(
-        deck: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[],
-        hand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[]
-    ): { deck: (UnitCard | ArtifactCard | TalismanCard | FieldCard)[]; hand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[] } {
+        deck: DrawCardData[],
+        hand: CardSpriteData[]
+    ): { deck: DrawCardData[]; hand: CardSpriteData[] } {
         if (deck.length === 0) {
             console.log('牌库已空');
             this.battleLog.addLog('牌库已空，无法抽卡');
             return { deck, hand };
         }
 
-        const cardData = deck.shift() as UnitCard | ArtifactCard | TalismanCard | FieldCard;
-        let sprite: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite;
-        
-        if (cardData.kind === 'unit') {
-            sprite = new CardSprite(this.scene, 0, 0, cardData as UnitCard, this.cardScale);
-            this.battleLog.addLog(`抽取了一张【${cardData.name}】`, [sprite]);
-        } else if (cardData.kind === 'artifact') {
-            sprite = new ArtifactSprite(this.scene, 0, 0, cardData as ArtifactCard, this.cardScale);
-            this.battleLog.addLog(`抽取了【${cardData.name}】`, [sprite]);
-        } else if (cardData.kind === 'talisman') {
-            sprite = new TalismanSprite(this.scene, 0, 0, cardData as TalismanCard, this.cardScale);
-            this.battleLog.addLog(`抽取了【${cardData.name}】`, [sprite]);
-        } else if (cardData.kind === 'field') {
-            sprite = new FieldSprite(this.scene, 0, 0, cardData as FieldCard, this.cardScale);
-            this.battleLog.addLog(`抽取了场地卡【${cardData.name}】`, [sprite]);
-        } else {
-            console.warn(`不支持的卡牌类型: ${cardData.kind}`);
+        const cardData = deck.shift();
+
+        if (!cardData) {
+            console.log('牌库已空');
+            this.battleLog.addLog('牌库已空，无法抽卡');
             return { deck, hand };
+        }
+
+        let sprite: CardSpriteData;
+
+        switch (cardData.kind) {
+            case 'unit':
+                sprite = new CardSprite(this.scene, 0, 0, cardData, this.cardScale);
+                this.battleLog.addLog(`抽取了一张【${cardData.name}】`, [sprite]);
+                break;
+            case 'artifact':
+                sprite = new ArtifactSprite(this.scene, 0, 0, cardData, this.cardScale);
+                this.battleLog.addLog(`抽取了【${cardData.name}】`, [sprite]);
+                break;
+            case 'talisman':
+                sprite = new TalismanSprite(this.scene, 0, 0, cardData, this.cardScale);
+                this.battleLog.addLog(`抽取了【${cardData.name}】`, [sprite]);
+                break;
+            case 'field':
+                sprite = new FieldSprite(this.scene, 0, 0, cardData, this.cardScale);
+                this.battleLog.addLog(`抽取了场地卡【${cardData.name}】`, [sprite]);
+                break;
+            default:
+                console.warn(`不支持的卡牌类型: ${(cardData as { kind?: string }).kind ?? 'unknown'}`);
+                return { deck, hand };
         }
         
         hand.push(sprite);
@@ -71,7 +95,8 @@ export class CardManager {
     }
 
     // 排列手牌
-    public arrangeHand(hand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[]): void {
+    public arrangeHand(hand: BaseCardSprite[]): void {
+        hand.forEach(card => { if (card instanceof CardSprite) card.setBattlePresentation(); });
         const layoutZone = this.layout?.handZone;
         if (layoutZone) {
             const y = layoutZone.y;
@@ -122,6 +147,8 @@ export class CardManager {
 
     // 排列玩家场地
     public arrangePlayerField(playerField: CardSprite[]): void {
+        const stage = getWenxinBattleStage(this.scene);
+        if (stage) { stage.arrange(playerField, 'me'); return; }
         const layoutZone = this.layout?.playerFieldZone;
         if (layoutZone) {
             const y = layoutZone.y;
@@ -172,6 +199,8 @@ export class CardManager {
 
     // 排列敌方场地
     public arrangeEnemyField(enemyField: CardSprite[]): void {
+        const stage = getWenxinBattleStage(this.scene);
+        if (stage) { stage.arrange(enemyField, 'foe'); return; }
         const layoutZone = this.layout?.enemyFieldZone;
         if (layoutZone) {
             const y = layoutZone.y;
@@ -227,23 +256,27 @@ export class CardManager {
     // 打出卡牌到场地
     public playCardToField(
         card: CardSprite,
-        hand: CardSprite[],
-        playerField: CardSprite[]
-    ): { success: boolean; hand: CardSprite[]; playerField: CardSprite[] } {
-        if (playerField.length < 3 && hand.includes(card)) {
-            // 从手牌移除
-            const index = hand.indexOf(card);
-            hand.splice(index, 1);
+        hand: readonly HandSprite[],
+        playerField: readonly CardSprite[]
+    ): PlayCardToFieldResult {
+        const nextHand: HandSprite[] = [...hand];
+        const nextPlayerField = [...playerField];
 
-            // 添加到场地
-            playerField.push(card);
-
-            console.log('卡牌已打出:', card.getCardData().name);
-            this.battleLog.addLog(`召唤了【${card.getCardData().name}】`, [card]);
-            
-            return { success: true, hand, playerField };
+        const handIndex = nextHand.indexOf(card);
+        if (playerField.length >= 3 || handIndex === -1) {
+            return { success: false, hand: nextHand, playerField: nextPlayerField };
         }
-        return { success: false, hand, playerField };
+
+        // 从手牌移除
+        nextHand.splice(handIndex, 1);
+
+        // 添加到场地
+        nextPlayerField.push(card);
+
+        console.log('卡牌已打出:', card.getCardData().name);
+        this.battleLog.addLog(`召唤了【${card.getCardData().name}】`, [card]);
+
+        return { success: true, hand: nextHand, playerField: nextPlayerField };
     }
 
     private calculateSpacing(cardCount: number, availableWidth: number): number {

@@ -45,7 +45,14 @@ export function cloneStoryState(state: StoryState): StoryState {
         triggeredDialogueIds: cloneStringArray(state.triggeredDialogueIds),
         flags: cloneBooleanMap(state.flags),
         attributes: cloneNumberMap(state.attributes),
+        ...(state.equipmentModifiers ? { equipmentModifiers: cloneNumberMap(state.equipmentModifiers) } : {}),
         relations: cloneNumberMap(state.relations),
+        ...(state.actorAbilities ? { actorAbilities: Object.fromEntries(Object.entries(state.actorAbilities).map(([actorId, abilities]) => [actorId, cloneNumberMap(abilities)])) } : {}),
+        ...(state.knowledge ? { knowledge: Object.fromEntries(Object.entries(state.knowledge).map(([actorId, ids]) => [actorId, [...ids]])) } : {}),
+        ...(state.questStages ? { questStages: { ...state.questStages } } : {}),
+        ...(state.settledEventIds ? { settledEventIds: [...state.settledEventIds] } : {}),
+        ...(state.itemTransactions ? { itemTransactions: state.itemTransactions.map(item => ({ ...item })) } : {}),
+        ...(state.itemCounts ? { itemCounts: { ...state.itemCounts } } : {}),
     };
 }
 

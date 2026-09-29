@@ -3,13 +3,7 @@ import {
     DEFAULT_EXPEDITION_MAP_ID,
 } from '../config/ExpeditionDefaults';
 import type { ExpeditionRouteIdentity, PersistentStash, RunSnapshot } from '../types/expedition';
-import {
-    cloneDeckCardStacks,
-    cloneSavedDecks,
-    createSavedDeck,
-    DEFAULT_SAVED_DECK_ID,
-    resolveSelectedDeckId,
-} from '../state/PersistentStashDecks';
+import { gameStorage } from './PreviewStorage';
 
 export const STASH_STORAGE_KEY = 'cardgame.persistent-stash.v1';
 export const ACTIVE_RUN_STORAGE_KEY = 'cardgame.active-run.v1';
@@ -27,7 +21,7 @@ function getStorageAdapter(storage?: RunPersistenceStorageAdapter): RunPersisten
     }
 
     if (typeof globalThis.localStorage !== 'undefined') {
-        return globalThis.localStorage;
+        return gameStorage(globalThis.localStorage);
     }
 
     return {
@@ -39,6 +33,12 @@ function getStorageAdapter(storage?: RunPersistenceStorageAdapter): RunPersisten
             memoryStorage.delete(key);
         },
     };
+}
+
+export function resolveRunPersistenceStorageAdapter(
+    storage?: RunPersistenceStorageAdapter,
+): RunPersistenceStorageAdapter {
+    return getStorageAdapter(storage);
 }
 
 function readStoredJson<T>(key: string, storage = getStorageAdapter()): T | null {
@@ -54,148 +54,6 @@ function readStoredJson<T>(key: string, storage = getStorageAdapter()): T | null
         storage.removeItem(key);
         return null;
     }
-}
-
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isNonEmptyString(value: unknown): value is string {
-    return typeof value === 'string' && value.trim().length > 0;
-}
-
-function isOptionalNullableString(value: unknown): value is string | null | undefined {
-    return value === undefined || value === null || typeof value === 'string';
-}
-
-function isNumber(value: unknown): value is number {
-    return typeof value === 'number' && Number.isFinite(value);
-}
-
-function isCardStacks(value: unknown): value is PersistentStash['cards'] {
-    return Array.isArray(value)
-        && value.every((stack) => isRecord(stack) && isNonEmptyString(stack.id) && isNumber(stack.count));
-}
-
-function isItemStacks(value: unknown): value is PersistentStash['items'] {
-    return Array.isArray(value)
-        && value.every((stack) => isRecord(stack)
-            && isNonEmptyString(stack.id)
-            && typeof stack.itemType === 'string'
-            && isNumber(stack.count));
-}
-
-function isRewardBundle(value: unknown): boolean {
-    return isRecord(value)
-        && isCardStacks(value.cards)
-        && isItemStacks(value.items)
-        && isNumber(value.spiritStones);
-}
-
-function isRunResolutionSummary(value: unknown): boolean {
-    return value === null || (isRecord(value)
-        && isNonEmptyString(value.runId)
-        && (value.outcome === 'defeat' || value.outcome === 'extract' || value.outcome === 'boss-clear')
-        && isNonEmptyString(value.finalNodeId)
-        && isRewardBundle(value.kept)
-        && isRewardBundle(value.lost)
-        && isNonEmptyString(value.endedAt));
-}
-
-function normalizeLastRunSummary(value: unknown): PersistentStash['lastRunSummary'] {
-    if (value === undefined) {
-        return undefined;
-    }
-
-    return isRunResolutionSummary(value) ? JSON.parse(JSON.stringify(value)) as PersistentStash['lastRunSummary'] : undefined;
-}
-
-function normalizeCurrentPersistentStash(value: JsonRecord): PersistentStash | null {
-    if (!isNonEmptyString(value.stashId)
-        || !isCardStacks(value.cards)
-        || !Array.isArray(value.savedDecks)
-        || !isItemStacks(value.items)
-        || !isNumber(value.spiritStones)
-        || !isOptionalNullableString(value.selectedDeckId)) {
-        return null;
-    }
-
-    const savedDecks = value.savedDecks
-        .filter((savedDeck): savedDeck is JsonRecord => isRecord(savedDeck))
-        .filter((savedDeck) => isNonEmptyString(savedDeck.id) && isNonEmptyString(savedDeck.name) && isCardStacks(savedDeck.cards))
-        .map((savedDeck) => ({
-            id: savedDeck.id as string,
-            name: savedDeck.name as string,
-            cards: cloneDeckCardStacks(savedDeck.cards as PersistentStash['cards']),
-        }));
-
-    if (savedDecks.length !== value.savedDecks.length) {
-        return null;
-    }
-
-    const normalizedStash: PersistentStash = {
-        stashId: value.stashId,
-        cards: cloneDeckCardStacks(value.cards),
-        savedDecks: cloneSavedDecks(savedDecks),
-        selectedDeckId: resolveSelectedDeckId(value.selectedDeckId, savedDecks),
-        items: JSON.parse(JSON.stringify(value.items)) as PersistentStash['items'],
-        spiritStones: value.spiritStones,
-    };
-    const lastRunSummary = normalizeLastRunSummary(value.lastRunSummary);
-
-    if (value.lastRunSummary !== undefined && lastRunSummary === undefined) {
-        return null;
-    }
-
-    if (lastRunSummary !== undefined) {
-        normalizedStash.lastRunSummary = lastRunSummary;
-    }
-
-    return normalizedStash;
-}
-
-function normalizeLegacyPersistentStash(value: JsonRecord): PersistentStash | null {
-    if (!isNonEmptyString(value.stashId)
-        || !isCardStacks(value.deck)
-        || !isItemStacks(value.items)
-        || !isNumber(value.spiritStones)) {
-        return null;
-    }
-
-    const starterSavedDeck = createSavedDeck(
-        isNonEmptyString(value.deckRef) ? value.deckRef : DEFAULT_SAVED_DECK_ID,
-        isNonEmptyString(value.deckRef) ? value.deckRef : undefined,
-        value.deck,
-    );
-    const normalizedStash: PersistentStash = {
-        stashId: value.stashId,
-        cards: cloneDeckCardStacks(value.deck),
-        savedDecks: [starterSavedDeck],
-        selectedDeckId: starterSavedDeck.id,
-        items: JSON.parse(JSON.stringify(value.items)) as PersistentStash['items'],
-        spiritStones: value.spiritStones,
-    };
-    const lastRunSummary = normalizeLastRunSummary(value.lastRunSummary);
-
-    if (value.lastRunSummary !== undefined && lastRunSummary === undefined) {
-        return null;
-    }
-
-    if (lastRunSummary !== undefined) {
-        normalizedStash.lastRunSummary = lastRunSummary;
-    }
-
-    return normalizedStash;
-}
-
-function normalizePersistentStashDocument(value: unknown): PersistentStash | null {
-    if (!isRecord(value)) {
-        return null;
-    }
-
-    return normalizeCurrentPersistentStash(value) ?? normalizeLegacyPersistentStash(value);
 }
 
 function normalizeIdentityValue(value: string | undefined, fallback: string): string {
@@ -427,36 +285,7 @@ function removeAllActiveRunStorageKeys(): void {
 }
 
 export function loadPersistentStash(storage?: RunPersistenceStorageAdapter): PersistentStash | null {
-    const storageAdapter = getStorageAdapter(storage);
-    const rawValue = storageAdapter.getItem(STASH_STORAGE_KEY);
-
-    if (!rawValue) {
-        return null;
-    }
-
-    let parsedValue: unknown;
-
-    try {
-        parsedValue = JSON.parse(rawValue);
-    } catch {
-        storageAdapter.removeItem(STASH_STORAGE_KEY);
-        return null;
-    }
-
-    const normalizedStash = normalizePersistentStashDocument(parsedValue);
-
-    if (!normalizedStash) {
-        storageAdapter.removeItem(STASH_STORAGE_KEY);
-        return null;
-    }
-
-    const normalizedRawValue = JSON.stringify(normalizedStash);
-
-    if (normalizedRawValue !== rawValue) {
-        storageAdapter.setItem(STASH_STORAGE_KEY, normalizedRawValue);
-    }
-
-    return normalizedStash;
+    return readStoredJson<PersistentStash>(STASH_STORAGE_KEY, getStorageAdapter(storage));
 }
 
 export function savePersistentStash(

@@ -101,7 +101,7 @@ export class BattleStateChecker {
      * 检查胜负条件
      */
     private checkVictoryCondition(
-        playerField: CardSprite[],
+        _playerField: CardSprite[],
         enemyField: CardSprite[],
         playerHealth: number,
         onBattleEnd: (victory: boolean) => void

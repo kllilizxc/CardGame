@@ -10,27 +10,23 @@ import {
     mergeItemStacks,
     subtractStartingLoadoutFromStash,
 } from './GameWorldStateStashOperations';
-import { getSelectedDeckCards } from './PersistentStashDecks';
+import {
+    createItemStack,
+    createRunSnapshot as createRunSnapshotFixture,
+    createTestRewardBundle,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
 function createPersistentStash(overrides: Partial<PersistentStash> = {}): PersistentStash {
     return {
         stashId: 'test-stash',
-        cards: [
+        deckRef: 'test-deck',
+        deck: [
             { id: 'CARD_A', count: 2 },
             { id: 'CARD_B', count: 1 },
         ],
-        savedDecks: [{
-            id: 'test-deck',
-            name: 'test-deck',
-            cards: [
-                { id: 'CARD_A', count: 2 },
-                { id: 'CARD_B', count: 1 },
-            ],
-        }],
-        selectedDeckId: 'test-deck',
         items: [
-            { id: 'item.rope', itemType: 'tool', count: 1 },
-            { id: 'item.salve', itemType: 'consumable', count: 2 },
+            createItemStack('item.rope', 'tool', 1),
+            createItemStack('item.salve', 'consumable', 2),
         ],
         spiritStones: 5,
         lastRunSummary: null,
@@ -39,15 +35,14 @@ function createPersistentStash(overrides: Partial<PersistentStash> = {}): Persis
 }
 
 function createRunSnapshot(overrides: Partial<RunSnapshot> = {}): RunSnapshot {
-    return {
-        runId: 'run-test',
+    return createRunSnapshotFixture({
         expeditionId: 'expedition-test',
         mapId: 'map-test',
-        status: 'inProgress',
+        runId: 'run-test',
         currentNodeId: 'entrance',
         startingLoadout: {
             cards: [{ id: 'CARD_A', count: 2 }],
-            items: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
+            items: [createItemStack('item.rope', 'tool', 1)],
             spiritStones: 5,
         },
         carriedDeck: [
@@ -55,11 +50,10 @@ function createRunSnapshot(overrides: Partial<RunSnapshot> = {}): RunSnapshot {
             { id: 'CARD_C', count: 1 },
         ],
         carriedItems: [
-            { id: 'item.rope', itemType: 'tool', count: 1 },
-            { id: 'item.charm', itemType: 'artifact', count: 1 },
+            createItemStack('item.rope', 'tool', 1),
+            createItemStack('item.charm', 'artifact', 1),
         ],
         spiritStones: 8,
-        visitedNodeIds: ['entrance'],
         nodeStates: {
             entrance: {
                 nodeId: 'entrance',
@@ -68,9 +62,11 @@ function createRunSnapshot(overrides: Partial<RunSnapshot> = {}): RunSnapshot {
                 rewardClaimed: true,
             },
         },
+        status: 'inProgress',
         startedAt: '2026-05-10T00:00:00.000Z',
+        visitedNodeIds: ['entrance'],
         ...overrides,
-    };
+    });
 }
 
 describe('GameWorldStateStashOperations', () => {
@@ -81,11 +77,11 @@ describe('GameWorldStateStashOperations', () => {
         const carriedBundle = createCarriedBundleFromRun(run);
 
         expect(startingLoadout).toEqual({
-            cards: getSelectedDeckCards(stash),
+            cards: stash.deck,
             items: stash.items,
             spiritStones: stash.spiritStones,
         });
-        expect(startingLoadout.cards[0]).not.toBe(stash.savedDecks[0]?.cards[0]);
+        expect(startingLoadout.cards[0]).not.toBe(stash.deck[0]);
         expect(startingLoadout.items[0]).not.toBe(stash.items[0]);
 
         expect(carriedBundle).toEqual({
@@ -99,7 +95,7 @@ describe('GameWorldStateStashOperations', () => {
         startingLoadout.cards[0].count = 99;
         carriedBundle.items[0].count = 99;
 
-        expect(stash.savedDecks[0]?.cards[0]?.count).toBe(2);
+        expect(stash.deck[0].count).toBe(2);
         expect(run.carriedItems[0].count).toBe(1);
     });
 
@@ -125,40 +121,40 @@ describe('GameWorldStateStashOperations', () => {
 
         expect(mergeItemStacks(
             [
-                { id: 'shared', itemType: 'artifact', count: 2 },
-                { id: 'shared', itemType: 'artifact', count: 1 },
-                { id: 'shared', itemType: 'tool', count: 5 },
-                { id: 'stale', itemType: 'quest', count: 0 },
+                createItemStack('shared', 'artifact', 2),
+                createItemStack('shared', 'artifact', 1),
+                createItemStack('shared', 'tool', 5),
+                createItemStack('stale', 'quest', 0),
             ],
             [
-                { id: 'shared', itemType: 'artifact', count: 3 },
-                { id: 'shared', itemType: 'tool', count: 1 },
-                { id: 'salve', itemType: 'consumable', count: 2 },
-                { id: 'salve', itemType: 'consumable', count: 1 },
-                { id: 'ignored', itemType: 'quest', count: -1 },
+                createItemStack('shared', 'artifact', 3),
+                createItemStack('shared', 'tool', 1),
+                createItemStack('salve', 'consumable', 2),
+                createItemStack('salve', 'consumable', 1),
+                createItemStack('ignored', 'quest', -1),
             ],
         )).toEqual([
-            { id: 'shared', itemType: 'artifact', count: 6 },
-            { id: 'shared', itemType: 'tool', count: 6 },
-            { id: 'salve', itemType: 'consumable', count: 3 },
+            createItemStack('shared', 'artifact', 6),
+            createItemStack('shared', 'tool', 6),
+            createItemStack('salve', 'consumable', 3),
         ]);
     });
 
     it('subtracts a starting loadout from a stash without negative stacks or spirit stones', () => {
         const stash = createPersistentStash({
-            cards: [
+            deck: [
                 { id: 'CARD_A', count: 2 },
                 { id: 'CARD_B', count: 1 },
                 { id: 'CARD_ZERO', count: 0 },
                 { id: 'CARD_NEGATIVE', count: -1 },
             ],
             items: [
-                { id: 'item.rope', itemType: 'tool', count: 1 },
-                { id: 'item.salve', itemType: 'consumable', count: 2 },
+                createItemStack('item.rope', 'tool', 1),
+                createItemStack('item.salve', 'consumable', 2),
             ],
             spiritStones: 5,
         });
-        const startingLoadout: RunRewardBundle = {
+        const startingLoadout: RunRewardBundle = createTestRewardBundle({
             cards: [
                 { id: 'CARD_A', count: 5 },
                 { id: 'CARD_B', count: 1 },
@@ -166,28 +162,23 @@ describe('GameWorldStateStashOperations', () => {
                 { id: 'CARD_NEGATIVE', count: -1 },
             ],
             items: [
-                { id: 'item.rope', itemType: 'tool', count: 3 },
-                { id: 'item.salve', itemType: 'consumable', count: 1 },
-                { id: 'item.missing', itemType: 'quest', count: 1 },
-                { id: 'item.ignored', itemType: 'quest', count: -1 },
+                createItemStack('item.rope', 'tool', 3),
+                createItemStack('item.salve', 'consumable', 1),
+                createItemStack('item.missing', 'quest', 1),
+                createItemStack('item.ignored', 'quest', -1),
             ],
             spiritStones: 9,
-        };
+        });
 
         const updatedStash = subtractStartingLoadoutFromStash(stash, startingLoadout);
 
         expect(updatedStash).toEqual({
             ...stash,
-            cards: [],
-            savedDecks: [{
-                id: 'test-deck',
-                name: 'test-deck',
-                cards: [],
-            }],
-            items: [{ id: 'item.salve', itemType: 'consumable', count: 1 }],
+            deck: [],
+            items: [createItemStack('item.salve', 'consumable', 1)],
             spiritStones: 0,
         });
-        expect(stash.cards).toEqual([
+        expect(stash.deck).toEqual([
             { id: 'CARD_A', count: 2 },
             { id: 'CARD_B', count: 1 },
             { id: 'CARD_ZERO', count: 0 },
@@ -196,30 +187,30 @@ describe('GameWorldStateStashOperations', () => {
     });
 
     it('adds rewards and carried bundles by pure stash math without mutating inputs', () => {
-        const carried: RunRewardBundle = {
+        const carried: RunRewardBundle = createTestRewardBundle({
             cards: [
                 { id: 'CARD_A', count: 2 },
                 { id: 'CARD_ZERO', count: 0 },
             ],
-            items: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
+            items: [createItemStack('item.rope', 'tool', 1)],
             spiritStones: 5,
-        };
-        const rewards: RunRewardBundle = {
+        });
+        const rewards: RunRewardBundle = createTestRewardBundle({
             cards: [
                 { id: 'CARD_A', count: 1 },
                 { id: 'CARD_B', count: 1 },
                 { id: 'CARD_B', count: 2 },
             ],
             items: [
-                { id: 'item.rope', itemType: 'tool', count: 1 },
-                { id: 'item.charm', itemType: 'artifact', count: 1 },
+                createItemStack('item.rope', 'tool', 1),
+                createItemStack('item.charm', 'artifact', 1),
             ],
             spiritStones: 3,
-        };
+        });
         const rewardedCarried = addRewardBundleToCarriedBundle(carried, rewards);
         const stash = createPersistentStash({
-            cards: [{ id: 'CARD_A', count: 1 }],
-            items: [{ id: 'item.rope', itemType: 'tool', count: 1 }],
+            deck: [{ id: 'CARD_A', count: 1 }],
+            items: [createItemStack('item.rope', 'tool', 1)],
             spiritStones: 7,
         });
 
@@ -231,37 +222,29 @@ describe('GameWorldStateStashOperations', () => {
                 { id: 'CARD_B', count: 3 },
             ],
             items: [
-                { id: 'item.rope', itemType: 'tool', count: 2 },
-                { id: 'item.charm', itemType: 'artifact', count: 1 },
+                createItemStack('item.rope', 'tool', 2),
+                createItemStack('item.charm', 'artifact', 1),
             ],
             spiritStones: 8,
         });
         expect(updatedStash).toEqual({
             ...stash,
-            cards: [
+            deck: [
                 { id: 'CARD_A', count: 4 },
                 { id: 'CARD_B', count: 3 },
             ],
-            savedDecks: [{
-                id: 'test-deck',
-                name: 'test-deck',
-                cards: [
-                    { id: 'CARD_A', count: 4 },
-                    { id: 'CARD_B', count: 3 },
-                ],
-            }],
             items: [
-                { id: 'item.rope', itemType: 'tool', count: 3 },
-                { id: 'item.charm', itemType: 'artifact', count: 1 },
+                createItemStack('item.rope', 'tool', 3),
+                createItemStack('item.charm', 'artifact', 1),
             ],
             spiritStones: 15,
         });
         expect(rewardedCarried.cards[0]).not.toBe(carried.cards[0]);
-        expect(updatedStash.cards[0]).not.toBe(stash.cards[0]);
+        expect(updatedStash.deck[0]).not.toBe(stash.deck[0]);
         expect(carried.cards).toEqual([
             { id: 'CARD_A', count: 2 },
             { id: 'CARD_ZERO', count: 0 },
         ]);
-        expect(stash.cards).toEqual([{ id: 'CARD_A', count: 1 }]);
+        expect(stash.deck).toEqual([{ id: 'CARD_A', count: 1 }]);
     });
 });

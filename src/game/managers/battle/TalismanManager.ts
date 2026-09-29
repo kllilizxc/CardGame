@@ -1,19 +1,16 @@
-import { Scene } from 'phaser';
 import { TalismanSprite } from '../../objects/TalismanSprite';
 import { CardSprite } from '../../objects/CardSprite';
 import { GameActionHandler } from '../../handlers/battle/GameActionHandler';
 import type { BattleContext } from '../../context/BattleContext';
-import type { TalismanCard } from '../../../../public/data/types/cards/talisman';
+import type { TalismanCard } from '@data/types/cards/talisman';
 
 export class TalismanManager {
-    private scene: Scene;
     private battleContext: BattleContext;
     private selectedTalisman: TalismanSprite | null = null;
     private isSelectingTarget: boolean = false;
     private gameActionHandler: GameActionHandler | null = null;
 
-    constructor(scene: Scene, battleContext: BattleContext) {
-        this.scene = scene;
+    constructor(battleContext: BattleContext) {
         this.battleContext = battleContext;
     }
 

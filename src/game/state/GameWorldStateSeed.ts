@@ -1,5 +1,6 @@
 import type {
     ExpeditionCardStack,
+    ExpeditionItemType,
     ExpeditionItemStack,
     PersistentStash,
 } from '../types/expedition';
@@ -13,10 +14,17 @@ export interface StarterDeckSeed {
     cards: ExpeditionCardStack[];
 }
 
+export interface WorldStateItemStackSeed {
+    id: string;
+    itemType: ExpeditionItemType;
+    count: number;
+}
+
 export interface WorldStateStashSeed {
     stashId?: string;
     deckRef?: string;
-    items?: ExpeditionItemStack[];
+    items?: WorldStateItemStackSeed[];
+    itemSlotCapacity?: number;
     spiritStones?: number;
 }
 
@@ -40,8 +48,12 @@ function cloneCardStacks(stacks: ExpeditionCardStack[]): ExpeditionCardStack[] {
     return stacks.map((stack) => ({ ...stack }));
 }
 
-function cloneItemStacks(stacks: ExpeditionItemStack[]): ExpeditionItemStack[] {
-    return stacks.map((stack) => ({ ...stack }));
+function cloneItemStacks(stacks: WorldStateItemStackSeed[]): ExpeditionItemStack[] {
+    return stacks.map((stack) => ({
+        id: stack.id,
+        itemType: stack.itemType,
+        count: stack.count,
+    }));
 }
 
 export function createPersistentStashFromWorldStateSeed({
@@ -61,6 +73,7 @@ export function createPersistentStashFromWorldStateSeed({
         savedDecks: [starterSavedDeck],
         selectedDeckId: starterSavedDeck.id,
         items: cloneItemStacks(stashSeed?.items ?? DEFAULT_STARTER_ITEMS),
+        ...(stashSeed?.itemSlotCapacity ? { itemSlotCapacity: stashSeed.itemSlotCapacity } : {}),
         spiritStones: stashSeed?.spiritStones ?? DEFAULT_STARTER_SPIRIT_STONES,
         lastRunSummary: null,
     };

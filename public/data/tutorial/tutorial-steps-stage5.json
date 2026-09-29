@@ -1,0 +1,52 @@
+[
+  {
+    "id": "stage5_step1_enemy_effects",
+    "guideText": "敌方阵容：玄冰龟的「寒冰甲」功法使它在受到伤害时，对攻击者反伤3点。\n外门师兄的「激励」功法在每个我方回合开始时，为全体灵兽攻击力+1。\n先看清敌人的功法效果，切勿盲目攻击玄冰龟！",
+    "textPosition": "top",
+    "showArrow": true,
+    "arrowFromPctX": 50,
+    "arrowFromPctY": 8,
+    "arrowToPctX": 50,
+    "arrowToPctY": 30,
+    "__zoneRef": "enemyFieldZone",
+    "__completesOn": "end_turn"
+  },
+  {
+    "id": "stage5_step2_summon_gongfa",
+    "guideText": "你的每个单位都自带「功法」——在登场、回合结束等特定时机自动触发。\n例如「内门弟子·御剑者」登场时会搜寻剑器卡牌，「外门弟子·引剑者」回合结束时回收剑器。\n将手牌中带功法的单位召唤至场上。",
+    "textPosition": "top",
+    "showArrow": true,
+    "arrowFromPctX": 50,
+    "arrowFromPctY": 8,
+    "arrowToPctX": 50,
+    "arrowToPctY": 90,
+    "__zoneRef": "handZone",
+    "__completesOn": "card_played"
+  },
+  {
+    "id": "stage5_step3_artifact_gongfa",
+    "guideText": "法宝卡可与单位的功法产生协同——装备剑器时可能触发功法中的额外攻击或护甲效果。\n将手牌中的法宝卡（如青云剑、烈焰法杖）拖到己方单位上装备。",
+    "textPosition": "top",
+    "showArrow": true,
+    "arrowFromPctX": 50,
+    "arrowFromPctY": 8,
+    "arrowToPctX": 50,
+    "arrowToPctY": 65,
+    "__zoneRef": "playerFieldZone",
+    "__completesOn": "equip_artifact"
+  },
+  {
+    "id": "stage5_step4_counter_tactics",
+    "guideText": "玄冰龟的反伤让直接攻击代价高昂——优先使用符箓远程打击，或依赖功法效果造成伤害。\n外门师兄的增益让敌方越战越强——尽早解决他是关键。\n灵活运用功法协同，逐个击破！",
+    "textPosition": "center",
+    "showArrow": false,
+    "__completesOn": "end_turn"
+  },
+  {
+    "id": "stage5_step5_field_card",
+    "guideText": "功法是单位自带的被动之力，而「场地卡」能改变整个战场的规则，\n影响场上所有单位——日后获得场地卡时，记得在关键时刻使用它扭转战局。\n\n现在，运用你的功法协同与策略，击败玄冰龟和外门师兄吧！",
+    "textPosition": "center",
+    "showArrow": false,
+    "__completesOn": "end_turn"
+  }
+]

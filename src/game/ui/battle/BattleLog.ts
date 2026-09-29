@@ -2,13 +2,11 @@ import { Scene } from 'phaser';
 import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 import { GongfaTooltip } from '../common/GongfaTooltip';
 import type { PanelConfig } from '../../config/LayoutConfig';
-import { battleTheme, blendBattleColor } from './battleTheme';
-import { sceneTheme } from '../../scenes/shared/sceneTheme';
-import type { CardPreviewMetadata } from '../../managers/common/cardPreviewProtocol';
+import type { AnyCard } from '@data/types/cards/all';
 
 interface LogEntry {
     text: string;
-    cardRefs: Array<{ name: string; card: BaseCardSprite; cardData: any }>;
+    cardRefs: Array<{ name: string; card: BaseCardSprite; cardData: AnyCard }>;
     timestamp: number;
     gongfaInfo?: { name: string; description: string };
 }
@@ -18,7 +16,8 @@ export class BattleLog {
     private container: Phaser.GameObjects.Container;
     private background: Phaser.GameObjects.Rectangle;
     private logEntries: LogEntry[] = [];
-    private logObjects: Phaser.GameObjects.GameObject[] = [];
+    private logTexts: Phaser.GameObjects.Text[] = [];
+    private logHitAreas: Phaser.GameObjects.Rectangle[] = [];
     private scrollOffset: number = 0;
     private maxScrollOffset: number = 0;
     private isVisible: boolean = true;
@@ -29,10 +28,6 @@ export class BattleLog {
     private bottomHint: Phaser.GameObjects.Text;
     private isScrolling: boolean = false;
     private gongfaTooltip: GongfaTooltip;
-    private readonly previewMetadata: CardPreviewMetadata = {
-        contextId: 'battle-log',
-        sourceLabel: '战斗日志',
-    };
 
     private readonly MAX_ENTRIES = 50;
     private readonly LOG_WIDTH: number;
@@ -53,35 +48,17 @@ export class BattleLog {
         this.container = scene.add.container(this.LOG_X, this.LOG_Y);
         this.container.setDepth(1500);
 
-        const shadow = scene.add.rectangle(10, 12, this.LOG_WIDTH, this.LOG_HEIGHT, sceneTheme.colors.shadow, 0.24);
-        this.background = scene.add.rectangle(0, 0, this.LOG_WIDTH, this.LOG_HEIGHT, sceneTheme.colors.panel, 0.96);
-        this.background.setStrokeStyle(3, sceneTheme.colors.gold, 0.72);
+        // 背景
+        this.background = scene.add.rectangle(0, 0, this.LOG_WIDTH, this.LOG_HEIGHT, 0x1a1a2e, 0.9);
+        this.background.setStrokeStyle(3, 0xf39c12);
         this.background.setInteractive();
-        const inner = scene.add.rectangle(
-            0,
-            0,
-            this.LOG_WIDTH - 22,
-            this.LOG_HEIGHT - 22,
-            blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jade, 0.08),
-            0.94,
-        );
-        inner.setStrokeStyle(1, sceneTheme.colors.jadeBright, 0.22);
-        const banner = scene.add.rectangle(
-            0,
-            -this.LOG_HEIGHT / 2 + 34,
-            this.LOG_WIDTH - 34,
-            42,
-            blendBattleColor(sceneTheme.colors.banner, sceneTheme.colors.gold, 0.14),
-            0.9,
-        );
-        banner.setStrokeStyle(1, sceneTheme.colors.goldSoft, 0.22);
-        this.container.add([shadow, this.background, inner, banner]);
+        this.container.add(this.background);
 
         // 标题
         const title = scene.add.text(0, -this.LOG_HEIGHT / 2 + 20, '战斗日志', {
-            fontFamily: sceneTheme.fonts.display,
-            fontSize: Math.max(28, Math.floor(scene.scale.height * 0.026)) + 'px',
-            color: battleTheme.colors.textPrimary,
+            fontSize: Math.floor(scene.scale.height * 0.02) + 'px',
+            color: '#f39c12',
+            fontStyle: 'bold'
         }).setOrigin(0.5);
         this.container.add(title);
 
@@ -94,19 +71,17 @@ export class BattleLog {
 
         // 滚动提示（左侧）
         const scrollHint = scene.add.text(-this.LOG_WIDTH / 2 + 80, this.LOG_HEIGHT / 2 - 15, '[ 滚轮滚动 ]', {
-            fontFamily: sceneTheme.fonts.ui,
-            fontSize: Math.max(18, Math.floor(scene.scale.height * 0.017)) + 'px',
-            color: battleTheme.colors.textSupport,
-            fontStyle: 'italic',
+            fontSize: Math.floor(scene.scale.height * 0.012) + 'px',
+            color: '#95a5a6',
+            fontStyle: 'italic'
         }).setOrigin(0.5);
         this.container.add(scrollHint);
 
         // 位置提示（右侧）
         this.bottomHint = scene.add.text(this.LOG_WIDTH / 2 - 80, this.LOG_HEIGHT / 2 - 15, '✓ 已到最新', {
-            fontFamily: sceneTheme.fonts.ui,
-            fontSize: Math.max(18, Math.floor(scene.scale.height * 0.017)) + 'px',
-            color: battleTheme.colors.textPositive,
-            fontStyle: 'bold',
+            fontSize: Math.floor(scene.scale.height * 0.012) + 'px',
+            color: '#2ecc71',
+            fontStyle: 'bold'
         }).setOrigin(0.5);
         this.bottomHint.setVisible(true);
         this.container.add(this.bottomHint);
@@ -127,32 +102,25 @@ export class BattleLog {
     private createToggleButton() {
         const { width, height } = this.scene.scale;
         
-        this.toggleButton = this.scene.add.container(width - width * 0.02 - 56, height * 0.5 - this.LOG_HEIGHT / 2 - 40);
+        this.toggleButton = this.scene.add.container(
+            width - width * 0.02 - 25,
+            height * 0.5 - this.LOG_HEIGHT / 2 - 40
+        );
         this.toggleButton.setDepth(1501);
 
-        const buttonShadow = this.scene.add.rectangle(4, 6, 100, 48, sceneTheme.colors.shadow, 0.22);
-        const btnBg = this.scene.add.rectangle(
-            0,
-            0,
-            100,
-            48,
-            blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.gold, 0.18),
-            0.96,
-        );
-        btnBg.setStrokeStyle(2, sceneTheme.colors.goldSoft, 0.56);
+        const btnBg = this.scene.add.rectangle(0, 0, 50, 30, 0xf39c12);
         btnBg.setInteractive({ useHandCursor: true });
-        this.toggleButton.add([buttonShadow, btnBg]);
+        this.toggleButton.add(btnBg);
 
         const btnText = this.scene.add.text(0, 0, '日志', {
-            fontFamily: sceneTheme.fonts.ui,
-            fontSize: '18px',
-            color: battleTheme.colors.textPrimary,
-            fontStyle: 'bold',
+            fontSize: '14px',
+            color: '#ffffff',
+            fontStyle: 'bold'
         }).setOrigin(0.5);
         this.toggleButton.add(btnText);
 
-        btnBg.on('pointerover', () => btnBg.setFillStyle(blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.gold, 0.28), 1));
-        btnBg.on('pointerout', () => btnBg.setFillStyle(blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.gold, 0.18), 0.96));
+        btnBg.on('pointerover', () => btnBg.setFillStyle(0xffd700));
+        btnBg.on('pointerout', () => btnBg.setFillStyle(0xf39c12));
         btnBg.on('pointerdown', () => this.toggle());
     }
 
@@ -176,27 +144,12 @@ export class BattleLog {
         const barY = 0;
 
         // 滚动条背景
-        this.scrollBar = this.scene.add.rectangle(
-            barX,
-            barY,
-            barWidth,
-            barHeight,
-            blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jade, 0.14),
-            0.56,
-        );
+        this.scrollBar = this.scene.add.rectangle(barX, barY, barWidth, barHeight, 0x34495e, 0.5);
         this.container.add(this.scrollBar);
 
         // 滚动条滑块
         const thumbHeight = 50;
-        this.scrollThumb = this.scene.add.rectangle(
-            barX,
-            barY - barHeight / 2 + thumbHeight / 2,
-            barWidth,
-            thumbHeight,
-            sceneTheme.colors.goldSoft,
-            0.88,
-        );
-        this.scrollThumb.setStrokeStyle(1, sceneTheme.colors.gold, 0.48);
+        this.scrollThumb = this.scene.add.rectangle(barX, barY - barHeight / 2 + thumbHeight / 2, barWidth, thumbHeight, 0xf39c12, 0.8);
         this.scrollThumb.setInteractive({ useHandCursor: true, draggable: true });
         this.container.add(this.scrollThumb);
 
@@ -239,6 +192,7 @@ export class BattleLog {
             y: -targetOffset,
             duration: 200,
             ease: 'Quad.easeOut',
+            onUpdate: () => this.updateVisibleHitAreas(),
             onComplete: () => {
                 this.isScrolling = false;
                 this.updateScrollBar();
@@ -251,7 +205,18 @@ export class BattleLog {
         const targetOffset = this.maxScrollOffset * percent;
         this.scrollOffset = targetOffset;
         this.logContainer.y = -targetOffset;
+        this.updateVisibleHitAreas();
         this.updateBottomHint();
+    }
+
+    private updateVisibleHitAreas() {
+        const top = -this.LOG_HEIGHT / 2 + 50;
+        const bottom = this.LOG_HEIGHT / 2 - 30;
+        for (const hitArea of this.logHitAreas) {
+            if (!hitArea.input) continue;
+            const y = hitArea.y + this.logContainer.y;
+            hitArea.input.enabled = this.isVisible && y - hitArea.height / 2 >= top && y + hitArea.height / 2 <= bottom;
+        }
     }
 
     private updateScrollBar() {
@@ -285,10 +250,10 @@ export class BattleLog {
         // 更新提示文字
         if (isAtTop && this.maxScrollOffset > 0) {
             this.bottomHint.setText('✓ 已到最早');
-            this.bottomHint.setColor(battleTheme.colors.textSupport);
+            this.bottomHint.setColor('#95a5a6');
         } else if (isAtBottom) {
             this.bottomHint.setText('✓ 已到最新');
-            this.bottomHint.setColor(battleTheme.colors.textPositive);
+            this.bottomHint.setColor('#2ecc71');
         }
     }
 
@@ -345,14 +310,16 @@ export class BattleLog {
     }
 
     private refreshLog() {
-        this.logObjects.forEach((object) => object.destroy());
-        this.logObjects = [];
+        // 日志行包含透明交互区和下划线，刷新时一并清除。
+        this.logContainer.removeAll(true);
+        this.logTexts = [];
+        this.logHitAreas = [];
 
         const { height } = this.scene.scale;
-        const fontSize = Math.max(18, Math.floor(height * 0.017)) + 'px';
-        const lineGap = Math.max(12, Math.floor(height * 0.012));
-        const startY = -this.LOG_HEIGHT / 2 + 60;
-        const maxWidth = this.LOG_WIDTH - 46;
+        const fontSize = Math.floor(height * 0.014) + 'px';
+        const lineHeight = height * 0.025;
+        const startY = -this.LOG_HEIGHT / 2 + 50;
+        const maxWidth = this.LOG_WIDTH - 30;
 
         // 从最旧到最新顺序显示（所有记录，不限制数量）
         let currentY = startY;
@@ -390,17 +357,18 @@ export class BattleLog {
             );
 
             // 使用实际高度而不是估算
-            currentY += actualHeight + lineGap;
+            currentY += actualHeight + lineHeight;
         }
 
         // 计算最大滚动距离（加一些缓冲）
         const visibleHeight = this.LOG_HEIGHT - 130;
-        const totalContentHeight = currentY - startY + lineGap * 2;
+        const totalContentHeight = currentY - startY + lineHeight * 2; // 额外缓冲
         this.maxScrollOffset = Math.max(0, totalContentHeight - visibleHeight);
         
         // 自动滚动到底部（最新消息）
         this.scrollOffset = this.maxScrollOffset;
         this.logContainer.y = -this.scrollOffset;
+        this.updateVisibleHitAreas();
         
         // 更新滚动条
         this.updateScrollBar();
@@ -411,7 +379,7 @@ export class BattleLog {
         x: number,
         y: number,
         text: string,
-        cardRefs: Array<{ name: string; card: BaseCardSprite; cardData: any }>,
+        cardRefs: Array<{ name: string; card: BaseCardSprite; cardData: AnyCard }>,
         gongfaInfo: { name: string; description: string } | undefined,
         fontSize: string,
         maxWidth: number
@@ -421,7 +389,7 @@ export class BattleLog {
             text: string; 
             isCard: boolean; 
             isGongfa: boolean;
-            cardRef?: { name: string; card: BaseCardSprite; cardData: any };
+            cardRef?: { name: string; card: BaseCardSprite; cardData: AnyCard };
             gongfaInfo?: { name: string; description: string };
         }> = [];
         let remaining = text;
@@ -505,20 +473,18 @@ export class BattleLog {
         let maxHeight = 0;
         
         parts.forEach(part => {
-            const textColor = part.isCard || part.isGongfa ? battleTheme.colors.textPrimary : battleTheme.colors.textBody;
+            const textColor = part.isCard || part.isGongfa ? '#f39c12' : '#ecf0f1';
             const textStyle = part.isCard || part.isGongfa ? 'bold' : 'normal';
             
             const textObj = this.scene.add.text(currentX, currentLineY, part.text, {
-                fontFamily: part.isCard || part.isGongfa ? sceneTheme.fonts.ui : sceneTheme.fonts.body,
                 fontSize: fontSize,
                 color: textColor,
                 fontStyle: textStyle,
-                lineSpacing: 4,
                 wordWrap: { width: maxWidth - lineWidth }
             });
             textObj.setOrigin(0, 0);
             this.logContainer.add(textObj);
-            this.logObjects.push(textObj);
+            this.logTexts.push(textObj);
             
             // 记录最大高度
             maxHeight = Math.max(maxHeight, textObj.height);
@@ -527,28 +493,27 @@ export class BattleLog {
             if (part.isCard && part.cardRef) {
                 const hitArea = this.scene.add.rectangle(
                     currentX + textObj.width / 2,
-                    currentLineY + textObj.height / 2,
+                    currentLineY + 8,
                     textObj.width,
-                    Math.max(20, textObj.height),
-                    sceneTheme.colors.goldSoft,
+                    16,
+                    0xffd700,
                     0
                 );
                 hitArea.setInteractive({ useHandCursor: true });
                 hitArea.setOrigin(0.5, 0.5);
                 this.logContainer.add(hitArea);
-                this.logObjects.push(hitArea);
+                this.logHitAreas.push(hitArea);
                 
                 // 下划线
                 const underline = this.scene.add.rectangle(
                     hitArea.x,
-                    hitArea.y + textObj.height / 2 - 1,
+                    hitArea.y + 8,
                     textObj.width,
                     2,
-                    sceneTheme.colors.goldSoft,
+                    0xffd700,
                     0
                 );
                 this.logContainer.add(underline);
-                this.logObjects.push(underline);
                 
                 const cardRef = part.cardRef;
                 hitArea.on('pointerover', () => {
@@ -556,18 +521,22 @@ export class BattleLog {
                     // 安全检查：如果精灵还活着且场景存在，使用精灵；否则使用卡片数据
                     try {
                         if (cardRef.card && cardRef.card.active && cardRef.card.scene) {
-                            this.scene.events.emit('showCardPreview', cardRef.card, this.previewMetadata);
+                            // 精灵存在、激活且有场景，可以安全使用
+                            this.scene.events.emit('showCardPreview', cardRef.card);
                         } else {
-                            this.scene.events.emit('showCardPreviewFromData', cardRef.cardData, this.previewMetadata);
+                            // 精灵已销毁或不可用，使用卡片数据显示预览
+                            this.scene.events.emit('showCardPreviewFromData', cardRef.cardData);
                         }
                     } catch (e) {
+                        // 如果访问精灵出错，直接使用数据
                         console.warn('Error accessing card sprite, using card data instead:', e);
-                        this.scene.events.emit('showCardPreviewFromData', cardRef.cardData, this.previewMetadata);
+                        this.scene.events.emit('showCardPreviewFromData', cardRef.cardData);
                     }
                 });
                 
                 hitArea.on('pointerout', () => {
                     underline.setAlpha(0);
+                    this.scene.events.emit('hideCardPreview');
                 });
                 
                 // 让滚轮事件穿透到背景
@@ -586,28 +555,27 @@ export class BattleLog {
             if (part.isGongfa && part.gongfaInfo) {
                 const hitArea = this.scene.add.rectangle(
                     currentX + textObj.width / 2,
-                    currentLineY + textObj.height / 2,
+                    currentLineY + 8,
                     textObj.width,
-                    Math.max(20, textObj.height),
-                    sceneTheme.colors.goldSoft,
+                    16,
+                    0xffd700,
                     0
                 );
                 hitArea.setInteractive({ useHandCursor: true });
                 hitArea.setOrigin(0.5, 0.5);
                 this.logContainer.add(hitArea);
-                this.logObjects.push(hitArea);
+                this.logHitAreas.push(hitArea);
                 
                 // 下划线
                 const underline = this.scene.add.rectangle(
                     hitArea.x,
-                    hitArea.y + textObj.height / 2 - 1,
+                    hitArea.y + 8,
                     textObj.width,
                     2,
-                    sceneTheme.colors.goldSoft,
+                    0xffd700,
                     0
                 );
                 this.logContainer.add(underline);
-                this.logObjects.push(underline);
                 
                 const gongfaInfo = part.gongfaInfo;
                 hitArea.on('pointerover', () => {
@@ -646,25 +614,23 @@ export class BattleLog {
 
     public toggle() {
         this.isVisible = !this.isVisible;
-        if (!this.isVisible) {
-            this.scene.events.emit('clearCardPreviewContext', this.previewMetadata.contextId);
-        }
         this.container.setVisible(this.isVisible);
+        this.updateVisibleHitAreas();
     }
 
     public show() {
         this.isVisible = true;
         this.container.setVisible(true);
+        this.updateVisibleHitAreas();
     }
 
     public hide() {
         this.isVisible = false;
-        this.scene.events.emit('clearCardPreviewContext', this.previewMetadata.contextId);
         this.container.setVisible(false);
+        this.updateVisibleHitAreas();
     }
 
     public destroy() {
-        this.scene.events.emit('clearCardPreviewContext', this.previewMetadata.contextId);
         this.gongfaTooltip.destroy();
         this.container.destroy();
         this.toggleButton.destroy();

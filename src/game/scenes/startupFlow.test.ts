@@ -17,7 +17,7 @@ describe('startup scene flow', () => {
     });
 
     it('registers WorldMapScene before Hub and Expedition scenes so the map shell can launch content', () => {
-        const mainConfig = read('src/game/main.ts');
+        const mainConfig = read('src/game/main.ts').replace(/\r\n/g, '\n');
 
         expect(mainConfig).toContain("import { WorldMapScene } from './scenes/worldmap/WorldMapScene'");
         expect(mainConfig).toContain("import { HubScene } from './scenes/hub/HubScene'");
@@ -59,11 +59,15 @@ describe('startup scene flow', () => {
         expect(worldMapScene).toContain('this.load.json(WORLD_MAP_CACHE_KEY, worldMapResource.publicPath)');
         expect(worldMapScene).not.toContain("this.load.json(WORLD_MAP_CACHE_KEY, 'data/world/world-map.json')");
         expect(worldMapScene).toContain('createWorldMapDestinationIntent');
+        expect(worldMapScene).toContain('createWorldMapDestinationPreviewText');
+        expect(worldMapScene).toContain('createWorldMapDestinationSelectionStatusText');
         expect(worldMapScene).toContain('createWorldMapInitialSurfacePosition');
         expect(worldMapScene).toContain('createDestinationMarker');
         expect(worldMapScene).toContain('handleMapPointerMove');
         expect(worldMapScene).toContain('this.scene.start(intent.sceneKey, intent.payload)');
         expect(worldMapScene).not.toContain('createDestinationButton');
+        expect(worldMapScene).not.toContain("const sceneLabel = destination.kind === 'hub' ? 'HubScene' : 'ExpeditionScene'");
+        expect(worldMapScene).not.toContain('`正在前往 ${destinationId}。`');
         expect(worldMapModel).toContain("sceneKey: 'HubScene'");
         expect(worldMapModel).toContain("sceneKey: 'ExpeditionScene'");
         expect(worldMapModel).toContain('presentation');
@@ -101,5 +105,19 @@ describe('startup scene flow', () => {
 
         expect(worldMapScene).toContain('init(data?: WorldMapReturnPayload)');
         expect(worldMapScene).toContain('returnStatusText');
+    });
+
+    it('routes runtime Story/Hub session writes through the GameWorldState write boundary without adding restore UI', () => {
+        const hubScene = read('src/game/scenes/hub/HubScene.ts');
+        const storyScene = read('src/game/scenes/story/StoryScene.ts');
+
+        expect(hubScene).toContain('writeGameWorldStateHubSessionSnapshotWithFallbackStorage');
+        expect(hubScene).not.toContain('saveHubSessionSnapshot');
+        expect(storyScene).toContain('writeGameWorldStateStoryRuntimeSessionWithFallbackStorage');
+        expect(storyScene).toContain('clearGameWorldStateStoryRuntimeSessionWithFallbackStorage');
+        expect(storyScene).not.toContain('saveStoryRuntimeSession');
+        expect(storyScene).not.toContain('clearStoryRuntimeSession');
+        expect(hubScene).not.toContain('恢复存档');
+        expect(storyScene).not.toContain('恢复存档');
     });
 });

@@ -6,7 +6,8 @@ export type ExpeditionContentNodeType = Extract<ExpeditionNodeType, 'event' | 's
 export type TerminalRunOutcome = 'defeat' | 'extract' | 'boss-clear';
 export type RunStatus = 'inProgress' | TerminalRunOutcome;
 export type RunNodeStatus = 'hidden' | 'reachable' | 'cleared';
-export type ExpeditionItemType = 'artifact' | 'tool' | 'consumable' | 'quest';
+export type ExpeditionItemType = 'artifact' | 'tool' | 'consumable' | 'material' | 'quest';
+export type EquippedItems = Record<string, string>;
 
 export interface ExpeditionCardStack {
     id: string;
@@ -56,6 +57,10 @@ export interface PersistentStash {
     savedDecks: SavedDeck[];
     selectedDeckId: string | null;
     items: ExpeditionItemStack[];
+    itemSlotCapacity?: number;
+    equippedItems?: EquippedItems;
+    claimedStoryGrantIds?: string[];
+    settledStoryItemTransactionIds?: string[];
     spiritStones: number;
     lastRunSummary?: RunResolutionSummary | null;
 }

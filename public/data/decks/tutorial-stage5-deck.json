@@ -1,0 +1,16 @@
+{
+  "name": "教学第五阶段卡组",
+  "description": "功法试炼：运用功法技能和场地卡进行协同作战。初始手牌包含带有功法的单位和场地卡。",
+  "cards": [
+    { "id": "SX_YJS_001", "count": 1 },
+    { "id": "FD_005", "count": 1 },
+    { "id": "AR_001", "count": 1 },
+    { "id": "SX_TY_001", "count": 1 },
+    { "id": "SX_JXTM_001", "count": 1 },
+    { "id": "SX_YJZ_001", "count": 1 },
+    { "id": "FD_001", "count": 1 },
+    { "id": "AR_004", "count": 1 },
+    { "id": "TL_001", "count": 1 },
+    { "id": "PL_001", "count": 1 }
+  ]
+}

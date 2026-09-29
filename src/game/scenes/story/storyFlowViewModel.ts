@@ -3,6 +3,7 @@ import {
     applyStoryEffects,
     createInitialStoryState,
     evaluateStoryCondition,
+    getEffectiveStoryAttribute,
     goToStoryNode,
 } from '../../state/StoryState';
 import type {
@@ -14,6 +15,7 @@ import type {
     StoryInitialStateSeed,
     StoryState,
 } from '../../types/story';
+import type { StoryDialogueLine } from './storyFlow';
 
 export interface StoryAiHints {
     tone?: string;
@@ -27,10 +29,12 @@ export interface StoryNodeDefinition {
     title: string;
     summary: string;
     detail: string;
+    dialogues?: StoryDialogueLine[];
     tags: string[];
     chapter?: string;
     location?: string;
     timeHint?: string;
+    backgroundAsset?: string;
     sublocation?: string;
     locationId?: string;
     sublocationId?: string;
@@ -70,6 +74,7 @@ export interface StoryGraphDefinition {
     initialState?: StoryInitialStateSeed;
     nodes: StoryNodeDefinition[];
     choices: StoryChoiceDefinition[];
+    shareFactsAcrossStories?: boolean;
 }
 
 export interface StoryWorldState {
@@ -93,11 +98,13 @@ export interface StoryNodeView {
     title: string;
     summary: string;
     detail: string;
+    dialogues?: StoryDialogueLine[];
     subtitle: string;
     tags: string[];
     chapter?: string;
     location?: string;
     timeHint?: string;
+    backgroundAsset?: string;
     sublocation?: string;
     locationId?: string;
     sublocationId?: string;
@@ -170,8 +177,25 @@ function appendUnique(items: string[], item: string): string[] {
     return items.includes(item) ? [...items] : [...items, item];
 }
 
-function createNodeIndex(graph: StoryGraphDefinition): Map<string, StoryNodeDefinition> {
-    return new Map(graph.nodes.map((node) => [node.id, node]));
+/** Reuse the same lookup across dialogue pages and choices in one loaded story. */
+export interface StoryGraphIndex {
+    graph: StoryGraphDefinition;
+    nodesById: Map<string, StoryNodeDefinition>;
+    choicesByNodeId: Map<string, StoryChoiceDefinition[]>;
+}
+
+export function indexStoryGraph(graph: StoryGraphDefinition): StoryGraphIndex {
+    const choicesByNodeId = new Map<string, StoryChoiceDefinition[]>();
+    for (const choice of graph.choices) {
+        const choices = choicesByNodeId.get(choice.from);
+        if (choices) choices.push(choice);
+        else choicesByNodeId.set(choice.from, [choice]);
+    }
+    return {
+        graph,
+        nodesById: new Map(graph.nodes.map((node) => [node.id, node])),
+        choicesByNodeId,
+    };
 }
 
 function findNode(graph: StoryGraphDefinition, nodeId: string): StoryNodeDefinition | undefined {
@@ -185,11 +209,13 @@ function createStoryNodeView(node: StoryNodeDefinition): StoryNodeView {
         title: node.title,
         summary: node.summary,
         detail: node.detail,
+        ...(node.dialogues ? { dialogues: node.dialogues.map(line => ({ ...line })) } : {}),
         subtitle: createNodeSubtitle(node),
         tags: [...node.tags],
         ...(node.chapter ? { chapter: node.chapter } : {}),
         ...(node.location ? { location: node.location } : {}),
         ...(node.timeHint ? { timeHint: node.timeHint } : {}),
+        ...(node.backgroundAsset ? { backgroundAsset: node.backgroundAsset } : {}),
         ...(node.sublocation ? { sublocation: node.sublocation } : {}),
         ...(node.locationId ? { locationId: node.locationId } : {}),
         ...(node.sublocationId ? { sublocationId: node.sublocationId } : {}),
@@ -284,7 +310,7 @@ function createChoiceView(
         disabledReason,
         conditionSummary: createConditionSummary(choice, storyState),
         worldStateHint: choice.condition?.worldStateHint ?? null,
-        effectSummary: createEffectSummary(choice.effects),
+        effectSummary: createEffectSummary(choice.effects, storyState),
         ...(choice.visibleWhen ? { visibleWhen: choice.visibleWhen } : {}),
         ...(choice.enabledWhen ? { enabledWhen: choice.enabledWhen } : {}),
         effects: choiceEffects,
@@ -293,11 +319,30 @@ function createChoiceView(
     };
 }
 
-function createEffectSummary(effects: StoryChoiceEffects | StoryEffect[] | undefined): string {
+function createEffectSummary(effects: StoryChoiceEffects | StoryEffect[] | undefined, storyState: StoryState): string {
     if (Array.isArray(effects)) {
-        return effects.length > 0
-            ? effects.map((effect) => effect.kind).join(' / ')
-            : '无状态变化。';
+        const labels = effects.flatMap((effect): string[] => {
+            switch (effect.kind) {
+                case 'once': return storyState.settledEventIds?.includes(effect.eventId)
+                    ? ['此前已完成']
+                    : [...effect.effects.flatMap(nested => createEffectSummary([nested], storyState).split('、')).filter(label => label !== '无状态变化。'), '仅首次'];
+                case 'grantCard': return [`获得卡牌 ×${effect.count}`];
+                case 'grantItem': return [`获得道具 ×${effect.count}`];
+                case 'consumeItem': return [`消耗道具 ×${effect.count}`];
+                case 'learnKnowledge': return ['获得线索'];
+                case 'setQuestStage': return ['任务推进'];
+                case 'startBattle': return ['进入战斗'];
+                case 'adjustAttribute':
+                case 'setAttribute': return [`${effect.attribute}变化`];
+                case 'adjustRelation':
+                case 'setRelation': return ['人际关系变化'];
+                case 'setFlag': return ['推进剧情'];
+                case 'moveTo':
+                case 'goToNode': return ['前往新地点'];
+                default: return ['剧情变化'];
+            }
+        });
+        return labels.length > 0 ? [...new Set(labels)].join('、') : '无状态变化。';
     }
 
     const parts = [effects?.worldChangeHint, effects?.relationChangeHint].filter((part): part is string => Boolean(part));
@@ -321,6 +366,9 @@ function createFallbackInitialStateSeed(
         flags: graph.initialState?.flags,
         attributes: graph.initialState?.attributes,
         relations: graph.initialState?.relations,
+        knowledge: graph.initialState?.knowledge,
+        questStages: graph.initialState?.questStages,
+        settledEventIds: graph.initialState?.settledEventIds,
     };
 }
 
@@ -384,7 +432,7 @@ function createDisabledReason(params: {
     storyState: StoryState;
 }): string | null {
     if (!params.targetExists) {
-        return `后续剧情节点未配置：${params.choice.to}`;
+        return '这条后续剧情暂未开放。';
     }
 
     if (!params.visible && params.choice.visibleWhen) {
@@ -410,24 +458,53 @@ function createConditionSummary(choice: StoryChoiceDefinition, storyState: Story
 
 function describeStructuredCondition(condition: StoryCondition, storyState: StoryState): string {
     switch (condition.kind) {
-        case 'attribute':
-            return `${condition.attribute} ${storyState.attributes[condition.attribute] ?? 0} ${condition.operator} ${condition.value}`;
+        case 'always':
+            return '无特殊条件。';
+        case 'attribute': {
+            const actual = getEffectiveStoryAttribute(storyState, condition.attribute);
+            return actual !== undefined
+                ? `${condition.attribute} ${actual} ${normalizeOperatorForCopy(condition.operator)} ${condition.value}`
+                : `缺少属性 ${condition.attribute}`;
+        }
+        case 'relation':
+            return Object.prototype.hasOwnProperty.call(storyState.relations, condition.relationId)
+                ? `关系 ${condition.relationId} ${storyState.relations[condition.relationId]} ${normalizeOperatorForCopy(condition.operator)} ${condition.value}`
+                : `缺少关系 ${condition.relationId}`;
+        case 'actorAbility': {
+            const abilities = storyState.actorAbilities?.[condition.actorId];
+            return abilities && Object.prototype.hasOwnProperty.call(abilities, condition.ability)
+                ? `人物能力 ${condition.ability} ${abilities[condition.ability]} ${normalizeOperatorForCopy(condition.operator)} ${condition.value}`
+                : `缺少人物能力 ${condition.ability}`;
+        }
+        case 'itemCount':
+            return `持有 ${condition.itemId} ×${storyState.itemCounts?.[condition.itemId] ?? 0} ${normalizeOperatorForCopy(condition.operator)} ${condition.value}`;
+        case 'knowledge':
+            return condition.expected === false
+                ? '需要避开相关线索'
+                : '需要掌握相关线索';
+        case 'questStage':
+            return '先推进相关任务';
         case 'flag':
             return condition.expected === false
-                ? `未设置标记 ${condition.flag}`
-                : `需要标记 ${condition.flag}`;
+                ? '尚未触发相关前情'
+                : '先完成相关铺垫';
         case 'visitedNode':
             return condition.expected === false
-                ? `未访问节点 ${condition.nodeId}`
-                : `需要访问节点 ${condition.nodeId}`;
+                ? '尚未经历相关前情'
+                : '先经历相关前情';
         case 'triggeredDialogue':
             return condition.expected === false
-                ? `未触发对话 ${condition.dialogueId}`
-                : `需要触发对话 ${condition.dialogueId}`;
+                ? '尚未听过相关消息'
+                : '先听过相关消息';
         case 'all':
-            return '需要所有条件满足';
+            return condition.conditions.every(child => evaluateStoryCondition(storyState, child))
+                ? '所有条件已满足'
+                : condition.conditions.filter(child => !evaluateStoryCondition(storyState, child))
+                    .map(child => describeStructuredCondition(child, storyState)).join('；');
         case 'any':
-            return '需要任一条件满足';
+            return condition.conditions.some(child => evaluateStoryCondition(storyState, child))
+                ? '已有可行条件'
+                : `需要满足以下任一条件：${condition.conditions.map(child => describeStructuredCondition(child, storyState)).join('；')}`;
         case 'not':
             return `不能满足：${describeStructuredCondition(condition.condition, storyState)}`;
     }
@@ -473,7 +550,7 @@ function evaluateAttributeRecommendation(
     recommendation: AttributeRecommendation,
     storyState: StoryState,
 ): { recommended: boolean; reason: string | null } {
-    const actualValue = storyState.attributes[recommendation.attribute];
+    const actualValue = getEffectiveStoryAttribute(storyState, recommendation.attribute);
 
     if (typeof actualValue !== 'number') {
         return {
@@ -555,15 +632,19 @@ function createStatusText(currentNode: StoryNodeView, choices: StoryChoiceView[]
     return `当前剧情：${currentNode.title}（${currentNode.subtitle}）。可见选项 ${visibleChoiceCount} 个，推荐 ${recommendedChoiceCount} 个。`;
 }
 
-function createStateLine(storyState: StoryState): string {
-    return `当前位置：${storyState.currentLocationId} / ${storyState.currentSublocationId}`;
+function createStateLine(node: StoryNodeView): string {
+    const place = [node.location, node.sublocation].filter(Boolean).join(' · ');
+    if (!place) return '身在当前剧情';
+    return `身在${place}${node.timeHint ? `（${node.timeHint}）` : ''}`;
 }
 
 export function createStoryFlowViewModel(
     graph: StoryGraphDefinition,
     state: StoryFlowRuntimeState = {},
+    index?: StoryGraphIndex,
 ): StoryFlowViewModel {
-    const nodesById = createNodeIndex(graph);
+    const indexed = index?.graph === graph ? index : indexStoryGraph(graph);
+    const nodesById = indexed.nodesById;
     const requestedNodeId = state.currentNodeId ?? state.storyState?.currentNodeId ?? graph.entryNodeId;
     const entryNode = nodesById.get(graph.entryNodeId);
     const requestedNode = nodesById.get(requestedNodeId);
@@ -575,18 +656,17 @@ export function createStoryFlowViewModel(
 
     const warnings = requestedNode
         ? []
-        : [`当前剧情节点未配置：${requestedNodeId}，已回退到入口节点 ${currentNode.id}。`];
+        : ['当前剧情进度出现异常，已回到故事开端。'];
     const storyState = createRuntimeStoryState(graph, state, requestedNodeId);
     const currentStoryState = storyState.currentNodeId === currentNode.id
         ? storyState
         : goToStoryNode(storyState, currentNode.id);
-    const choices = graph.choices
-        .filter((choice) => choice.from === currentNode.id)
+    const choices = (indexed.choicesByNodeId.get(currentNode.id) ?? [])
         .map((choice) => {
             const targetNode = nodesById.get(choice.to);
 
             if (!targetNode) {
-                warnings.push(`选项 ${choice.id} 指向未配置节点 ${choice.to}。`);
+                if (!warnings.includes('有一段后续剧情暂未开放。')) warnings.push('有一段后续剧情暂未开放。');
             }
 
             return createChoiceView(choice, targetNode, currentStoryState);
@@ -602,7 +682,7 @@ export function createStoryFlowViewModel(
         visitedNodeIds: currentStoryState.visitedNodeIds,
         selectedChoiceIds: state.selectedChoiceIds ? [...state.selectedChoiceIds] : [],
         storyState: currentStoryState,
-        stateLine: createStateLine(currentStoryState),
+        stateLine: createStateLine(currentNodeView),
     };
 }
 
@@ -624,7 +704,7 @@ export function createStoryChoiceTransition(
         return {
             status: 'blocked',
             choiceId,
-            reason: `选项当前不可见：${choiceId}`,
+            reason: '当前还无法触发这段行动。',
         };
     }
 

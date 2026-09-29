@@ -6,11 +6,8 @@ import type {
 } from '@data/types/gongfa';
 import { EffectConditionType } from '@data/types/gongfa';
 import { getStarFromGradeId } from '../../utils/ArtifactHelper';
-import { getUnitStar } from '../../utils/RealmHelper';
-import {
-    evaluateGongfaNumberExpression,
-    type GongfaExpressionContext
-} from './gongfaExpression';
+import { evaluateGongfaNumberExpression } from './gongfaExpression';
+import { buildGongfaExpressionContext } from './gongfaExpressionContext';
 import { extractGongfaWeaponTypeFromLabels } from './gongfaCardFilter';
 
 export interface GongfaConditionCardSource {
@@ -153,7 +150,10 @@ function evaluateGongfaConditionExpression(
     expression: string,
     context: GongfaConditionRuntimeContext
 ): number {
-    const expressionContext = buildGongfaConditionExpressionContext(context);
+    const expressionContext = buildGongfaExpressionContext({
+        triggerUnit: context.triggerUnit?.getCardData(),
+        equippedArtifact: context.equippedArtifact
+    });
     if (!expressionContext) {
         console.warn(`表达式计算需要 triggerUnit: ${expression}`);
         return 0;
@@ -165,20 +165,4 @@ function evaluateGongfaConditionExpression(
         console.error(`表达式计算失败: ${expression}`, error);
         return 0;
     }
-}
-
-function buildGongfaConditionExpressionContext(
-    context: GongfaConditionRuntimeContext
-): GongfaExpressionContext | undefined {
-    if (!context.triggerUnit) {
-        return undefined;
-    }
-
-    const unitData = context.triggerUnit.getCardData();
-    return {
-        cardStar: getUnitStar(unitData),
-        artifactStar: context.equippedArtifact
-            ? getStarFromGradeId(context.equippedArtifact.gradeId)
-            : 0
-    };
 }

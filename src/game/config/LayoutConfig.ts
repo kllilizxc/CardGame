@@ -38,9 +38,14 @@ export interface BattleLayoutConfig {
     
     // 卡组按钮
     deckButton: { x: number; y: number; width: number; height: number };
-    
+
     // 弃牌堆按钮
     discardPileButton: { x: number; y: number; width: number; height: number };
+
+    // 右侧操作按钮
+    drawButton: { x: number; y: number; width: number; height: number };
+    endTurnButton: { x: number; y: number; width: number; height: number };
+    speedButton: { x: number; y: number; width: number; height: number };
     
     // 丹药槽位UI
     pillSlots: { x: number; y: number };
@@ -93,33 +98,33 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
         // 手牌区域 - 底部中央
         handZone: {
             x: width * 0.5,
-            y: height * 0.9,
+            y: height * 0.865,
             width: width * 0.6,
             height: height * 0.16
         },
         
         // 玩家场地区域 - 中下部
         playerFieldZone: {
-            x: width * 0.5,
-            y: height * 0.65,
-            width: width * 0.6,
-            height: height * 0.3
+            x: width * 0.76,
+            y: height * 0.50,
+            width: width * 0.43,
+            height: height * 0.44
         },
         
         // 敌方场地区域 - 中上部
         enemyFieldZone: {
-            x: width * 0.5,
-            y: height * 0.25,
-            width: width * 0.6,
-            height: height * 0.3
+            x: width * 0.24,
+            y: height * 0.50,
+            width: width * 0.43,
+            height: height * 0.44
         },
         
         // 场地卡区域 - 中央
         fieldCardZone: {
-            x: width * 0.25,
-            y: height * 0.45,
-            width: width * 0.1,
-            height: height * 0.2
+            x: width * 0.055,
+            y: height * 0.72,
+            width: width * 0.075,
+            height: height * 0.12
         },
         
         // 卡组按钮 - 左下角
@@ -137,17 +142,37 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
             width: 148,
             height: 108
         },
+
+        // 右侧操作按钮
+        drawButton: {
+            x: width * 0.93,
+            y: height * 0.03,
+            width: width * 0.075,
+            height: height * 0.045
+        },
+        endTurnButton: {
+            x: width * 0.93,
+            y: height * 0.09,
+            width: width * 0.075,
+            height: height * 0.045
+        },
+        speedButton: {
+            x: width * 0.93,
+            y: height * 0.15,
+            width: width * 0.075,
+            height: height * 0.045
+        },
         
         // 丹药槽位 - 左下角，卡组按钮上方
         pillSlots: {
-            x: width * 0.08,
+            x: width * 0.105,
             y: height - height * 0.18
         },
         
         // 技能UI
         skillUI: {
-            x: width * 0.75,
-            y: height * 0.45
+            x: width * 0.5,
+            y: height * 0.72
         },
         
         // 深度配置（从低到高）
@@ -158,7 +183,7 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
             uiButtons: 100,            // UI 按钮
             uiText: 200,               // 统计信息文本
             cardToDiscardAnimation: 2000,  // 卡牌飞向弃牌堆动画
-            cardPreview: 6100,         // 卡牌预览
+            cardPreview: 6000,         // 卡牌预览
             pillTooltip: 7000          // 丹药提示框
         }
     };

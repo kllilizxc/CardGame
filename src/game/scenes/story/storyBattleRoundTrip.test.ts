@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'bun:test';
 
 import tutorialEntryStoryJson from '../../../../public/data/story/tutorial-qingyun-entry.json';
+import type { StoryBattleLaunchMetadata } from '../../types/story';
 import { validatePlayableStoryGraph } from './storyFlow';
-import { createInitialStoryRuntime, createStoryChoiceTransition, createStoryFlowViewModel, type StoryGraphDefinition } from './storyFlowViewModel';
+import {
+    createInitialStoryRuntime,
+    createStoryChoiceTransition,
+    createStoryFlowViewModel,
+    type StoryChoiceTransition,
+    type StoryGraphDefinition,
+} from './storyFlowViewModel';
 import {
     applyStoryBattleResultToRuntime,
     createStoryBattleCompleteEvent,
@@ -97,7 +104,14 @@ function createBattleGraph(): StoryGraphDefinition {
     };
 }
 
-function createBattleTransition() {
+type StoryBattleChoiceTransition = Extract<StoryChoiceTransition, { status: 'selected' }> & {
+    battleLaunch: StoryBattleLaunchMetadata;
+};
+
+function createBattleTransition(): {
+    graph: StoryGraphDefinition;
+    transition: StoryBattleChoiceTransition;
+} {
     const graph = createBattleGraph();
     const view = createStoryFlowViewModel(graph, {
         storyState: createInitialStoryRuntime(graph),
@@ -109,13 +123,23 @@ function createBattleTransition() {
         throw new Error('Expected start_to_duel to produce battle launch metadata.');
     }
 
-    return { graph, transition };
+    return {
+        graph,
+        transition: {
+            ...transition,
+            battleLaunch: transition.battleLaunch,
+        },
+    };
 }
 
 describe('storyBattleRoundTrip', () => {
     it('creates a StoryScene transition intent that starts BattleScene from pure battleLaunch metadata', () => {
         const { transition } = createBattleTransition();
         const intent = createStorySceneTransitionIntent(transition, '以卡匣应战');
+
+        if (intent.kind !== 'startBattleScene') {
+            throw new Error('Expected startBattleScene intent.');
+        }
 
         expect(intent).toEqual({
             kind: 'startBattleScene',

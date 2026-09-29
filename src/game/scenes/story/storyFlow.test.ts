@@ -5,7 +5,7 @@ import storyGraphJson from '../../../../public/data/story/story-graph.json';
 import tutorialEntryStoryJson from '../../../../public/data/story/tutorial-qingyun-entry.json';
 import tutorialTeahouseStoryJson from '../../../../public/data/story/tutorial-qingyun-teahouse-rumor.json';
 
-import { validatePlayableStoryGraph } from './storyFlow';
+import { validatePlayableStoryGraph, type StoryGraph } from './storyFlow';
 
 describe('storyFlow', () => {
     it('keeps the compact authoring example valid against the playable StoryState schema', () => {
@@ -187,7 +187,7 @@ describe('storyFlow', () => {
             'Story graph choices[1].enabledWhen.operator must be one of >, >=, <, <=, ==, !=.',
         );
 
-        const brokenEffectGraph = structuredClone(storyGraphJson);
+        const brokenEffectGraph = structuredClone(storyGraphJson) as { choices: Array<{ effects: unknown[] }> };
         brokenEffectGraph.choices[0].effects[0] = {
             kind: 'setFlag',
         };
@@ -198,7 +198,7 @@ describe('storyFlow', () => {
     });
 
     it('validates story battle trigger effects and their explicit result nodes', () => {
-        const battleGraph = structuredClone(compactStoryGraphJson);
+        const battleGraph = structuredClone(compactStoryGraphJson) as unknown as StoryGraph;
         battleGraph.storyId = 'story.example.battle-trigger';
         battleGraph.nodes = [
             ...battleGraph.nodes,
@@ -292,14 +292,26 @@ describe('storyFlow', () => {
         ]);
 
         const brokenGraph = structuredClone(battleGraph);
-        brokenGraph.choices[0].effects[0].battle.onVictoryNodeId = 'missing_victory_node';
+        const firstBattleEffect = brokenGraph.choices[0].effects[0];
+        if (firstBattleEffect.kind !== 'startBattle') {
+            throw new Error('Expected the first compact battle choice effect to be startBattle.');
+        }
+
+        firstBattleEffect.battle.onVictoryNodeId = 'missing_victory_node';
 
         expect(() => validatePlayableStoryGraph(brokenGraph)).toThrow(
             'Story graph choices[0].effects[0].battle.onVictoryNodeId must reference an existing node: missing_victory_node',
         );
 
         const brokenSetupGraph = structuredClone(battleGraph);
-        brokenSetupGraph.choices[0].effects[0].battle.deterministicBattleSetup.deckOrder = 'debug-no-shuffle';
+        const setupEffect = brokenSetupGraph.choices[0].effects[0];
+        if (setupEffect.kind !== 'startBattle') {
+            throw new Error('Expected the first compact battle choice effect to be startBattle.');
+        }
+        if (!setupEffect.battle.deterministicBattleSetup) {
+            throw new Error('Expected deterministic battle setup.');
+        }
+        (setupEffect.battle.deterministicBattleSetup as { deckOrder: string }).deckOrder = 'debug-no-shuffle';
 
         expect(() => validatePlayableStoryGraph(brokenSetupGraph)).toThrow(
             'Story graph choices[0].effects[0].battle.deterministicBattleSetup.deckOrder must be preserve-json-order when deterministic battle setup is provided.',

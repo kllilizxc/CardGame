@@ -11,6 +11,7 @@ import { UnitEffectManager } from './UnitEffectManager';
 import { TurnManager } from './TurnManager';
 import { BattleStateChecker } from './BattleStateChecker';
 import { BattleTickManager } from './BattleTickManager';
+import { EffectResolver } from './EffectResolver';
 import { ArtifactManager } from './ArtifactManager';
 import { TalismanManager } from './TalismanManager';
 import { FieldManager } from './FieldManager';
@@ -19,6 +20,7 @@ import { SacrificeManager } from './SacrificeManager';
 import { BattleEventManager } from './BattleEventManager';
 import type { CardSprite } from '../../objects/CardSprite';
 import type { BattleLayoutConfig } from '../../config/LayoutConfig';
+import type { Gongfa } from '@data/types/gongfa';
 
 /**
  * 管理器工厂配置
@@ -26,7 +28,7 @@ import type { BattleLayoutConfig } from '../../config/LayoutConfig';
 export interface ManagerFactoryConfig {
     layout: BattleLayoutConfig;
     cardScale: number;
-    gongfaData?: any[];
+    gongfaData?: readonly Gongfa[];
     statusDefinitionsData?: unknown;
     fieldAccessors: {
         getPlayerField: () => CardSprite[];
@@ -115,13 +117,21 @@ export class ManagerFactory {
         );
         battleContext.setBattleTickManager(battleTickManager);
 
-        // 11. 初始化其他管理器
-        const artifactManager = new ArtifactManager(scene, battleContext);
+        // 12. 初始化 EffectResolver
+        const effectResolver = new EffectResolver(battleContext);
+        battleContext.setEffectResolver(effectResolver);
+
+        // 13. 初始化其他管理器
+        const artifactManager = new ArtifactManager(scene, battleContext, effectResolver);
         artifactManager.setUnitEffectManager(unitEffectManager);
 
-        const talismanManager = new TalismanManager(scene, battleContext);
-        const fieldManager = new FieldManager(scene, battleContext);
-        const pillManager = new PillManager(scene, battleContext, 3);
+        const talismanManager = new TalismanManager(battleContext);
+        const fieldManager = new FieldManager(scene, battleContext, effectResolver);
+        battleContext.setFieldManager(fieldManager);
+
+        const pillManager = new PillManager(scene, battleContext, 3, effectResolver);
+        battleContext.setPillManager(pillManager);
+
         const sacrificeManager = new SacrificeManager(battleContext);
 
         const eventManager = new BattleEventManager(

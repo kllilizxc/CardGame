@@ -1,5 +1,6 @@
 #game-app {
   position: relative;
+  box-sizing: border-box;
   width: 100%;
   min-height: 100vh;
   display: flex;
@@ -37,6 +38,8 @@
   position: relative;
   flex: 0 0 auto;
   width: min(1920px, calc(100vw - 112px), calc((100vh - 160px) * 16 / 9));
+  height: min(1080px, calc((100vw - 112px) * 9 / 16), calc(100vh - 160px));
+  min-height: 0;
   aspect-ratio: 16 / 9;
   border-radius: 18px;
   isolation: isolate;
@@ -92,6 +95,7 @@
 
   #game-container {
     width: min(1920px, calc(100vw - 56px), calc((100vh - 112px) * 16 / 9));
+    height: min(1080px, calc((100vw - 56px) * 9 / 16), calc(100vh - 112px));
   }
 
   #game-container::before {

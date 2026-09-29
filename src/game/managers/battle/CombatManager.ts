@@ -1,6 +1,8 @@
+import { getWenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
 import type { CardSprite } from '../../objects/CardSprite';
 import type { ArtifactSprite } from '../../objects/ArtifactSprite';
 import type { BattleContext } from '../../context/BattleContext';
+import { isLegacyCardEffect } from '@data/types/cards/effects';
 
 export class CombatManager {
     private battleContext: BattleContext;
@@ -24,6 +26,7 @@ export class CombatManager {
 
         // 创建攻击动画序列
         let delay = 0;
+        const attackStep = getWenxinBattleStage(this.battleContext.scene) ? 1000 : 600;
         
         // 创建防御者的临时生命值映射，用于预判死亡
         const tempHealth = new Map<CardSprite, number>();
@@ -51,10 +54,16 @@ export class CombatManager {
                     `【${attacker.getCardData().name}】攻击【${targetCard.name}】，造成${attackValue}点伤害`,
                     [attacker, target]
                 );
-                
-                // 复用 performSingleAttack
+
+                // 触发攻击者法器 onAttack 效果
+                const battleScene = this.battleContext.scene as any;
+                if (battleScene.artifactManager) {
+                    battleScene.artifactManager.onUnitAttack(attacker, target);
+                }
+
+                // 复用 performSingleAttack（内部会触发 onUnitDamaged）
                 this.performSingleAttack(attacker, target, attackValue, delay, false);
-                delay += 600; // 每个攻击间隔600ms
+                delay += attackStep; // 为立绘攻击与归位预留完整时间
             } else {
                 // 没有存活的防御单位，直接攻击玩家本体（如果是敌人回合）
                 if (!isPlayerTurn) {
@@ -73,7 +82,7 @@ export class CombatManager {
                         delay,
                         onPlayerDamaged
                     );
-                    delay += 600;
+                    delay += attackStep;
                 }
                 // 玩家方无目标时不造成伤害（敌人没有本体生命）
             }
@@ -97,13 +106,14 @@ export class CombatManager {
     }
 
     // 对单位造成伤害
-    public damageUnit(unit: CardSprite, damage: number): void {
+    public damageUnit(unit: CardSprite, damage: number): boolean {
         // 检查单位是否还存活（未被销毁）
         if (!unit.active) {
-            return;
+            return false;
         }
         
         const cardData = unit.getCardData();
+        const wasAlive = cardData.health > 0;
         
         // 通过 StatusManager 处理伤害（会先消耗护甲）
         const finalDamage = this.battleContext.statusManager.processDamage(cardData.id, damage);
@@ -121,6 +131,35 @@ export class CombatManager {
         unit.updateStats();
         const statuses = this.battleContext.statusManager.getUnitStatuses(cardData.id);
         unit.updateStatusDisplay(statuses);
+        return wasAlive && cardData.health === 0;
+    }
+
+    /** Trigger kill effects only for a living unit defeated by this attack. */
+    private triggerOnKill(attacker: CardSprite, defeated: CardSprite): void {
+        const battleScene = this.battleContext.scene as any;
+        const playerField: CardSprite[] = battleScene.playerField || [];
+        const enemyField: CardSprite[] = battleScene.enemyField || [];
+        const playerKill = playerField.includes(attacker) && enemyField.includes(defeated);
+        const enemyKill = enemyField.includes(attacker) && playerField.includes(defeated);
+        if (!playerKill && !enemyKill) return;
+
+        if (playerKill) {
+            this.battleContext.fieldManager?.onPlayerUnitKill(attacker, playerField, enemyField);
+        }
+
+        const allyField = playerKill ? playerField : enemyField;
+        const opposingField = playerKill ? enemyField : playerField;
+        for (const effect of attacker.getCardData().effects || []) {
+            if (!isLegacyCardEffect(effect) || effect.timing !== 'onKill') continue;
+            this.battleContext.effectResolver.executeEffect(effect, {
+                playerField: allyField,
+                enemyField: opposingField,
+                triggerUnit: attacker,
+                attackTarget: defeated,
+                sourceCard: attacker,
+                sourceName: attacker.getCardData().name,
+            });
+        }
     }
 
     /**
@@ -138,6 +177,8 @@ export class CombatManager {
         delay: number = 0,
         isAOE: boolean = false
     ): void {
+        const battleScene = this.battleContext.scene as any;
+
         if (isAOE && Array.isArray(target)) {
             // AOE攻击：攻击所有目标
             target.forEach((t, index) => {
@@ -148,20 +189,41 @@ export class CombatManager {
                         t,
                         damage,
                         delay + index * 200, // 每个目标间隔200ms
-                        (unit, dmg) => this.damageUnit(unit, dmg)
+                        (unit, dmg) => {
+                            const killed = this.damageUnit(unit, dmg);
+                            if (battleScene.artifactManager) {
+                                battleScene.artifactManager.onUnitDamaged(unit, attacker);
+                            }
+                            if (killed && unit.getCardData().health === 0) this.triggerOnKill(attacker, unit);
+                        }
                     );
                 }
             });
+            // 触发攻击者法器 onAttack 效果（AOE 仅触发一次）
+            if (battleScene.artifactManager) {
+                battleScene.artifactManager.onUnitAttack(attacker);
+            }
         } else if (!Array.isArray(target)) {
             // 单体攻击
             const targetData = target.getCardData();
             if (targetData.health > 0) {
+                // 触发攻击者法器 onAttack 效果
+                if (battleScene.artifactManager) {
+                    battleScene.artifactManager.onUnitAttack(attacker, target);
+                }
+
                 this.battleContext.animationManager.addAttackAnimation(
                     attacker,
                     target,
                     damage,
                     delay,
-                    (unit, dmg) => this.damageUnit(unit, dmg)
+                    (unit, dmg) => {
+                        const killed = this.damageUnit(unit, dmg);
+                        if (battleScene.artifactManager) {
+                            battleScene.artifactManager.onUnitDamaged(unit, attacker);
+                        }
+                        if (killed && unit.getCardData().health === 0) this.triggerOnKill(attacker, unit);
+                    }
                 );
             }
         }

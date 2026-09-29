@@ -1,17 +1,13 @@
 import { describe, expect, it } from 'bun:test';
 
-import type { PersistentStash, RunSnapshot } from '../types/expedition';
+import type { RunSnapshot } from '../types/expedition';
 import {
     ACTIVE_RUN_STORAGE_KEY,
     createActiveRunRouteKey,
     createActiveRunStorageKey,
     STASH_STORAGE_KEY,
 } from './RunPersistence';
-import {
-    STORY_HUB_SESSION_SCHEMA_VERSION,
-    STORY_HUB_SESSION_STORAGE_KEY,
-    type StoryHubSessionDocument,
-} from './StoryHubSessionPersistence';
+import { STORY_HUB_SESSION_STORAGE_KEY } from './StoryHubSessionPersistence';
 import {
     exportSaveWorldStateDocumentFromStorage,
     restoreSaveWorldStateDocumentToStorage,
@@ -20,16 +16,18 @@ import {
     restoreAndVerifySaveWorldStateDocumentToStorage,
     verifySaveWorldStateDocumentTransferReadback,
 } from './SaveWorldStateDocumentTransferVerification';
+import {
+    createRunSnapshot,
+    createItemStack,
+    createTestPersistentStash,
+    createTestStoryHubDocument,
+    DEFAULT_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET,
+    SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
+} from '../testing/fixtures/expeditionWorldStateFixtures';
 
-const DEFAULT_TARGET = {
-    expeditionId: 'phase01-first-playable-expedition',
-    mapId: 'phase01-prototype-map',
-};
-
-const SYNTHETIC_TARGET = {
-    expeditionId: 'synthetic-expedition',
-    mapId: 'synthetic-map',
-};
+const DEFAULT_TARGET = DEFAULT_EXPEDITION_TARGET;
+const SYNTHETIC_TARGET = SYNTHETIC_EXPEDITION_TARGET;
 
 type StorageCall =
     | readonly ['getItem', string]
@@ -112,45 +110,12 @@ function withThrowingAmbientLocalStorage<T>(callback: () => T): T {
     }
 }
 
-function createStoryHubDocument(statusText: string): StoryHubSessionDocument {
-    return {
-        schemaVersion: STORY_HUB_SESSION_SCHEMA_VERSION,
-        hubs: {
-            'hub.source': {
-                hubId: 'hub.source',
-                currentLocationId: 'location.source',
-                statusText,
-                updatedAt: '2026-05-10T00:00:00.000Z',
-            },
-        },
-        stories: {},
-    };
-}
-
-function createPersistentStash(): PersistentStash {
-    return {
-        stashId: 'stash.source',
-        cards: [{ id: 'SRC_CARD', count: 2 }],
-        savedDecks: [{ id: 'deck.source', name: 'deck.source', cards: [{ id: 'SRC_CARD', count: 2 }] }],
-        selectedDeckId: 'deck.source',
-        items: [{ id: 'source-tool', itemType: 'tool', count: 1 }],
-        spiritStones: 88,
-        lastRunSummary: null,
-    };
-}
-
-function createRunSnapshot(
+function createTransferRunSnapshot(
     identity: typeof DEFAULT_TARGET,
     runId: string,
 ): RunSnapshot {
-    const routeKey = createActiveRunRouteKey(identity);
-
-    return {
+    return createRunSnapshot(identity, {
         runId,
-        routeKey,
-        expeditionId: identity.expeditionId,
-        mapId: identity.mapId,
-        status: 'inProgress',
         currentNodeId: 'entrance.source',
         startingLoadout: {
             cards: [{ id: 'SRC_CARD', count: 1 }],
@@ -170,7 +135,7 @@ function createRunSnapshot(
             },
         },
         startedAt: '2026-05-10T00:01:00.000Z',
-    };
+    });
 }
 
 function seedCompleteWorldState(
@@ -178,10 +143,16 @@ function seedCompleteWorldState(
     identity: typeof DEFAULT_TARGET,
     runId: string,
 ): RunSnapshot {
-    const run = createRunSnapshot(identity, runId);
+    const run = createTransferRunSnapshot(identity, runId);
 
-    storage.seed(STORY_HUB_SESSION_STORAGE_KEY, JSON.stringify(createStoryHubDocument(`story for ${runId}`)));
-    storage.seed(STASH_STORAGE_KEY, JSON.stringify(createPersistentStash()));
+    storage.seed(STORY_HUB_SESSION_STORAGE_KEY, JSON.stringify(createTestStoryHubDocument(`story for ${runId}`)));
+    storage.seed(STASH_STORAGE_KEY, JSON.stringify(createTestPersistentStash({
+        stashId: 'stash.source',
+        deckRef: 'deck.source',
+        deck: [{ id: 'SRC_CARD', count: 2 }],
+        items: [createItemStack('source-tool', 'tool', 1)],
+        spiritStones: 88,
+    })));
     storage.seed(createActiveRunStorageKey(identity), JSON.stringify(run));
 
     return run;
@@ -202,7 +173,7 @@ describe('SaveWorldStateDocumentTransferVerification', () => {
         const syntheticRun = seedCompleteWorldState(sourceStorage, SYNTHETIC_TARGET, 'run-synthetic-source');
         sourceStorage.seed(
             createActiveRunStorageKey(DEFAULT_TARGET),
-            JSON.stringify(createRunSnapshot(DEFAULT_TARGET, 'run-default-source')),
+            JSON.stringify(createTransferRunSnapshot(DEFAULT_TARGET, 'run-default-source')),
         );
         targetStorage.seed(ACTIVE_RUN_STORAGE_KEY, 'target legacy active run must remain untouched');
         const document = exportSaveWorldStateDocumentFromStorage({
@@ -220,7 +191,7 @@ describe('SaveWorldStateDocumentTransferVerification', () => {
         expect(result.verification.status).toBe('verified');
         expect(result.verification.differences).toEqual([]);
         expect(result.verification.actualDocument.worldState.activeRun.keys.routeKey).toBe(
-            'expedition:synthetic-expedition:synthetic-map',
+            SYNTHETIC_EXPEDITION_TARGET_ROUTE_KEY,
         );
         expect(result.verification.actualDocument.worldState.activeRun.document?.runId).toBe(syntheticRun.runId);
         expect(parseStoredJson(targetStorage.peek(createActiveRunStorageKey(SYNTHETIC_TARGET)))).toMatchObject({
@@ -235,12 +206,12 @@ describe('SaveWorldStateDocumentTransferVerification', () => {
         const sourceStorage = new RecordingStorage({ failOnSet: true, failOnRemove: true });
         const targetStorage = new RecordingStorage();
         const activeRunStorageKey = createActiveRunStorageKey(DEFAULT_TARGET);
-        sourceStorage.seed(STORY_HUB_SESSION_STORAGE_KEY, JSON.stringify(createStoryHubDocument('empty source')));
+        sourceStorage.seed(STORY_HUB_SESSION_STORAGE_KEY, JSON.stringify(createTestStoryHubDocument('empty source')));
         targetStorage.seed(STASH_STORAGE_KEY, 'old target stash');
         targetStorage.seed(activeRunStorageKey, 'old target active run');
         targetStorage.seed(
             ACTIVE_RUN_STORAGE_KEY,
-            JSON.stringify(createRunSnapshot(SYNTHETIC_TARGET, 'legacy-other-run')),
+            JSON.stringify(createTransferRunSnapshot(SYNTHETIC_TARGET, 'legacy-other-run')),
         );
         const document = exportSaveWorldStateDocumentFromStorage({
             sourceStorage,
@@ -275,7 +246,7 @@ describe('SaveWorldStateDocumentTransferVerification', () => {
         restoreSaveWorldStateDocumentToStorage(document, { targetStorage });
         targetStorage.seed(
             createActiveRunStorageKey(DEFAULT_TARGET),
-            JSON.stringify(createRunSnapshot(DEFAULT_TARGET, 'run-target-mismatch')),
+            JSON.stringify(createTransferRunSnapshot(DEFAULT_TARGET, 'run-target-mismatch')),
         );
 
         const verification = withThrowingAmbientLocalStorage(() => verifySaveWorldStateDocumentTransferReadback(

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "stage1_step1_hand",
+    "guideText": "这是你的手牌区域。点击\"抽一张卡\"按钮或直接将手牌中的单位卡拖放到场上。",
+    "textPosition": "top",
+    "showArrow": true,
+    "arrowFromPctX": 50,
+    "arrowFromPctY": 8,
+    "arrowToPctX": 50,
+    "arrowToPctY": 90,
+    "__zoneRef": "handZone",
+    "__completesOn": "card_drawn"
+  },
+  {
+    "id": "stage1_step2_summon",
+    "guideText": "将手牌中的一张单位卡牌拖放到己方场地上进行召唤。",
+    "textPosition": "top",
+    "showArrow": true,
+    "arrowFromPctX": 50,
+    "arrowFromPctY": 8,
+    "arrowToPctX": 50,
+    "arrowToPctY": 65,
+    "__zoneRef": "playerFieldZone",
+    "__completesOn": "card_played"
+  },
+  {
+    "id": "stage1_step3_endturn",
+    "guideText": "操作完成后，点击右侧\"结束回合\"按钮结束你的回合。",
+    "textPosition": "top",
+    "showArrow": true,
+    "arrowFromPctX": 50,
+    "arrowFromPctY": 8,
+    "arrowToPctX": 93,
+    "arrowToPctY": 9,
+    "__zoneRef": "endTurnButton",
+    "__completesOn": "end_turn"
+  }
+]

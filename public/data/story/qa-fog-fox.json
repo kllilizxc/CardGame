@@ -1,0 +1,5140 @@
+{
+  "storyId": "story.qa-fog-fox",
+  "title": "雾林药铺",
+  "entryNodeId": "scene.qa-fog.entry",
+  "initialState": {
+    "locationId": "location.qingyun-sect-gate.archway",
+    "sublocationId": "sublocation.fog-clinic",
+    "attributes": {
+      "口才": 4,
+      "洞察": 5,
+      "医术": 2
+    },
+    "relations": {
+      "npc.qa-fog-fox": 20
+    },
+    "flags": {
+      "qa-fog.alive": true,
+      "qa-fog.hand-injured": false
+    },
+    "questStages": {
+      "quest.qa-fog-heal-fox": "available"
+    }
+  },
+  "nodes": [
+    {
+      "id": "scene.qa-fog.entry",
+      "type": "story",
+      "title": "雾林药铺",
+      "summary": "药铺紧邻雾林入口。屋檐下的老人抬头望向来客。",
+      "detail": "药铺紧邻雾林入口。屋檐下的老人抬头望向来客。",
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-exterior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.first",
+      "type": "story",
+      "title": "药铺初见",
+      "summary": "狐爷爷扶住门框，手边的药篓还空着。",
+      "detail": "狐爷爷扶住门框，手边的药篓还空着。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.first",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "雾林的白叶草能救急，可我今日走不开。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "qa-fog.met",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.revisit",
+      "type": "story",
+      "title": "再访药铺",
+      "summary": "老人记得你来过。他先看了看药篓，才继续说话。",
+      "detail": "老人记得你来过。他先看了看药篓，才继续说话。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.revisit",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "你已经听过我的请求。今日又有什么发现？"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-exterior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.secret",
+      "type": "story",
+      "title": "失窃的药方",
+      "summary": "老人说旧药方被盗，随后承认自己曾是隐姓埋名的医师。",
+      "detail": "老人说旧药方被盗，随后承认自己曾是隐姓埋名的医师。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.secret",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "若有人知道我的旧身份，药方就再也保不住。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "learnKnowledge",
+          "actorId": "player",
+          "knowledgeId": "qa-fog.recipe-stolen"
+        },
+        {
+          "kind": "learnKnowledge",
+          "actorId": "player",
+          "knowledgeId": "qa-fog.fox-identity"
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.diagnosis",
+      "type": "story",
+      "title": "察觉中毒",
+      "summary": "他的手指发抖，腕上有细浅的紫痕。你意识到他中了毒。",
+      "detail": "他的手指发抖，腕上有细浅的紫痕。你意识到他中了毒。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.diagnosis",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "你看出来了。若要施针，还得有银针与白叶草。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "learnKnowledge",
+          "actorId": "player",
+          "knowledgeId": "qa-fog.poisoned"
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.gather",
+      "type": "story",
+      "title": "雾林采药",
+      "summary": "你在林边找到两株白叶草，药铺伙计借给你一根银针。银针用于检查，不会随施针消耗。",
+      "detail": "你在林边找到两株白叶草，药铺伙计借给你一根银针。银针用于检查，不会随施针消耗。",
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.gather-supplies",
+          "effects": [
+            {
+              "kind": "grantItem",
+              "transactionId": "tx.qa-fog.needle",
+              "itemId": "tool.qa-fog-silver-needle",
+              "itemType": "tool",
+              "count": 1
+            },
+            {
+              "kind": "grantItem",
+              "transactionId": "tx.qa-fog.herbs",
+              "itemId": "consumable.qa-fog-white-leaf",
+              "itemType": "consumable",
+              "count": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.reproach",
+      "type": "story",
+      "title": "被问起告密",
+      "summary": "狐爷爷没有忘记守卫来访。他感谢你仍肯救人，却不再向你托付秘密。",
+      "detail": "狐爷爷没有忘记守卫来访。他感谢你仍肯救人，却不再向你托付秘密。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.reproach",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "药可以交给我；至于旧事，就别再说你会守口如瓶。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.chapter3",
+      "type": "story",
+      "title": "第三章求助",
+      "summary": "夜里雾林的路再度封住。你来问狐爷爷可有旧药方留下的线索。",
+      "detail": "夜里雾林的路再度封住。你来问狐爷爷可有旧药方留下的线索。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.chapter3",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "我记得你做过什么，也记得你答应过什么。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第三章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "夜晚",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.promised",
+      "type": "story",
+      "title": "守密承诺",
+      "summary": "狐爷爷终于松开攥着药方的手，答应把所需药材告诉你。",
+      "detail": "狐爷爷终于松开攥着药方的手，答应把所需药材告诉你。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.promised",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "此事只让你知道。山路边能找到白叶草。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.guard",
+      "type": "story",
+      "title": "告知守卫",
+      "summary": "守卫听完旧医师的身份，当即记下此事。狐爷爷后来知道是你说的。",
+      "detail": "守卫听完旧医师的身份，当即记下此事。狐爷爷后来知道是你说的。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.guard",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我会核实药方的来历，但不会假装没有听见。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.report-to-guard",
+          "effects": [
+            {
+              "kind": "learnKnowledge",
+              "actorId": "npc.qa-fog-guard",
+              "knowledgeId": "qa-fog.fox-identity"
+            },
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.reported",
+              "value": true
+            },
+            {
+              "kind": "adjustRelation",
+              "relationId": "npc.qa-fog-fox",
+              "delta": -20
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.healed",
+      "type": "story",
+      "title": "委托完成",
+      "summary": "药草发挥了作用。狐爷爷慢慢稳住呼吸，送你一张灵狐卡作为谢礼。",
+      "detail": "药草发挥了作用。狐爷爷慢慢稳住呼吸，送你一张灵狐卡作为谢礼。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.healed",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "这份恩情我记得，卡牌请你收下。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.quest-complete",
+          "effects": [
+            {
+              "kind": "setQuestStage",
+              "questId": "quest.qa-fog-heal-fox",
+              "stage": "completed"
+            },
+            {
+              "kind": "grantCard",
+              "grantId": "grant.qa-fog.fox-card",
+              "cardId": "CR_001",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.pulse-lesson",
+      "type": "story",
+      "title": "药柜边的辨脉课",
+      "summary": "狐爷爷扶着药柜，教你从呼吸、腕脉和指尖的颜色判断毒势。学会辨脉后，你的医术提升 2 点；真正施针仍需银针和白叶草。",
+      "detail": "狐爷爷扶着药柜，教你从呼吸、腕脉和指尖的颜色判断毒势。学会辨脉后，你的医术提升 2 点；真正施针仍需银针和白叶草。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.pulse-lesson.001",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "先别急着拿针。看我的呼吸，是急，还是乱？"
+        },
+        {
+          "id": "line.qa-fog.pulse-lesson.002",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "呼吸不急，可每隔几下就会停顿。"
+        },
+        {
+          "id": "line.qa-fog.pulse-lesson.003",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "再看指尖。紫色只到第一节，毒还没有走到心口。"
+        },
+        {
+          "id": "line.qa-fog.pulse-lesson.004",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "难怪手会发抖，脉却还稳得住。"
+        },
+        {
+          "id": "line.qa-fog.pulse-lesson.005",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "你看明白了。记住，下针之前还要备好银针和白叶草。"
+        },
+        {
+          "id": "line.qa-fog.pulse-lesson.006",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我先去采药，再回来试。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.pulse-lesson",
+          "effects": [
+            {
+              "kind": "adjustAttribute",
+              "attribute": "医术",
+              "delta": 2
+            },
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.learned-pulse",
+              "value": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.mist-fox",
+      "type": "story",
+      "title": "雾中野狐",
+      "summary": "被折断的白叶草一路伸向林内。雾气里，一只野狐守着散落的药篓，前爪缠着细细的蓝线。它没有扑上来，却也不肯放你过去。",
+      "detail": "被折断的白叶草一路伸向林内。雾气里，一只野狐守着散落的药篓，前爪缠着细细的蓝线。它没有扑上来，却也不肯放你过去。\n\n你认得这不是药铺里的老人。野狐闻到你怀中的白叶草，压低身子，像是在防备又一次被夺走东西。",
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "白叶草林地",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.trusted",
+      "type": "story",
+      "title": "旧药方的山路",
+      "summary": "狐爷爷指给你一条避开毒雾的小径，并托你护好药方。",
+      "detail": "狐爷爷指给你一条避开毒雾的小径，并托你护好药方。",
+      "tags": [],
+      "chapter": "第三章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "夜晚",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.trusted-help",
+          "effects": [
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.chapter3-help",
+              "value": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.alternative",
+      "type": "story",
+      "title": "另寻帮助",
+      "summary": "狐爷爷婉拒说出隐路。你可以从集市寻找熟悉雾林的同行者，旅程没有就此中断。",
+      "detail": "狐爷爷婉拒说出隐路。你可以从集市寻找熟悉雾林的同行者，旅程没有就此中断。",
+      "tags": [],
+      "chapter": "第三章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "夜晚",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "setFlag",
+          "flag": "qa-fog.chapter3-alternative",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.blue-thread",
+      "type": "story",
+      "title": "蓝线留下的路",
+      "summary": "你把那截蓝线放在灯下。狐爷爷认出封包上的草灰，却不认线的染法。他说往山路去的商贩会在青云镇集市歇脚，或许有人见过同样的药篓。",
+      "detail": "你把那截蓝线放在灯下。狐爷爷认出封包上的草灰，却不认线的染法。他说往山路去的商贩会在青云镇集市歇脚，或许有人见过同样的药篓。\n\n你得到一条可追的线索，不必靠狐爷爷的信任才能继续寻找偷药人。",
+      "tags": [],
+      "chapter": "第三章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "夜晚",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.ch3.guard-copy",
+      "type": "story",
+      "title": "守卫手里的账页",
+      "summary": "守卫照着你白天给的压痕，已经派人守住了旧桥上游。",
+      "detail": "守卫照着你白天给的压痕，已经派人守住了旧桥上游。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch3.guard-copy.001",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我记得你交来的只有压痕，不是嫌疑人的名字。"
+        },
+        {
+          "id": "line.qa-fog.ch3.guard-copy.002",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "残页显出蓝线的来路，桥下还有人活动。"
+        },
+        {
+          "id": "line.qa-fog.ch3.guard-copy.003",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我让人守上游，不去堵桥洞的出口。"
+        },
+        {
+          "id": "line.qa-fog.ch3.guard-copy.004",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "给那个人留退路？"
+        },
+        {
+          "id": "line.qa-fog.ch3.guard-copy.005",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "也给我们留问话的机会。你从药草坡看蓝线，我在河岸接应。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第三章",
+      "location": "青云宗山门",
+      "sublocation": "青云宗山门",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.qingyun-sect-gate.archway",
+      "timeHint": "夜晚",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-exterior-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.ch3.guard-patrol",
+          "effects": [
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.ch3.guard-patrol",
+              "value": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.ch3.kept-page",
+      "type": "story",
+      "title": "狐爷爷的旧桥印",
+      "summary": "你把一直收在袖中的压痕交给狐爷爷，他在灯下认出旧桥印的另一半。",
+      "detail": "你把一直收在袖中的压痕交给狐爷爷，他在灯下认出旧桥印的另一半。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch3.kept-page.001",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "你没有拿未查实的字去换别人的判断。"
+        },
+        {
+          "id": "line.qa-fog.ch3.kept-page.002",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "现在残页和桥印都对上了，我需要你的判断。"
+        },
+        {
+          "id": "line.qa-fog.ch3.kept-page.003",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "这半枚印是给夜行医者认路的，另一半在上游石阶。"
+        },
+        {
+          "id": "line.qa-fog.ch3.kept-page.004",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "蓝线能带我找到石阶吗？"
+        },
+        {
+          "id": "line.qa-fog.ch3.kept-page.005",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "能。但若看见有人受伤，先救人，再问他为何藏在那里。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第三章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "夜晚",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.ch3.fox-map",
+          "effects": [
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.ch3.fox-map",
+              "value": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.ch3.reed-route",
+      "type": "story",
+      "title": "芦苇岸的退路",
+      "summary": "你依照阿渡留下的三点记号，绕开正在涨水的旧桥河床。",
+      "detail": "你依照阿渡留下的三点记号，绕开正在涨水的旧桥河床。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch3.reed-route.001",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "第一点在坡口，第二点在高石后。"
+        },
+        {
+          "id": "line.qa-fog.ch3.reed-route.002",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "第三点不是让人向前，是提醒人能从这里退回。"
+        },
+        {
+          "id": "line.qa-fog.ch3.reed-route.003",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "桥下的铃又响了，但我们不必下河床。"
+        },
+        {
+          "id": "line.qa-fog.ch3.reed-route.004",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "阿渡说过，活着回来的人才能补上名册的横线。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第三章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药草坡",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.qa-fog.whiteleaf-clearing",
+      "timeHint": "夜晚",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.ch3.reed-route",
+          "effects": [
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.ch3.reed-route",
+              "value": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.ch2.invitation",
+      "type": "story",
+      "title": "雨前的一页账",
+      "summary": "狐爷爷退烧后的第一场雨还没落下。药铺里多了一只空着的账盒。",
+      "detail": "狐爷爷退烧后的第一场雨还没落下。药铺里多了一只空着的账盒。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch2.invitation.001",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "你来得正好，先把门闩搭上。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.002",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "天还亮着，药铺也要避人吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.003",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "不是避人，是避风。今晨有人把窗纸掀开过。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.004",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "窗边的药屉没动。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.005",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "药屉里没什么值得偷的，少的是账盒里的末页。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.006",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你昨日才醒，怎么知道少了哪一页？"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.007",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "我给每页都缝了不同颜色的线，末页用的是蓝线。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.008",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "盒盖上还留着断线头。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.009",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "那页记的是入山采药的人，不是药方。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.010",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "有人不想让你记得他们的名字。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.011",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "也可能有人想知道我记得谁。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.012",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你愿意让我看其余账页吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.013",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "愿意，但先答应只照纸上的字查，不替我猜罪名。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.014",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我可以答应。若查到危险，也会告诉你。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.015",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "比一句永远守口如瓶实在。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.016",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "昨夜还有谁进过铺子？"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.017",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "青禾收了最后一锅药，守卫来问过雾林的路。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.018",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你把账盒交给了谁？"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.019",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "没交。窗开时它就在我枕边。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.020",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "那么拿走末页的人知道你睡得很沉。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.021",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "也知道我醒后会数线头。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.022",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我先看账，再去问人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.023",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "别急着追脚印，今天的雨会把旧印洗成新印。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.024",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "先记下现在能确定的东西。"
+        },
+        {
+          "id": "line.qa-fog.ch2.invitation.025",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "账盒、断线、半开的窗；其余留给证据说话。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第二章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "雨前",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.battle-pending",
+      "type": "story",
+      "title": "雾中交锋",
+      "summary": "卡匣展开，野狐跃上石头。若交锋中断，你还可以退回林缘照料伤者；胜负会由战斗结算。",
+      "detail": "卡匣展开，野狐跃上石头。若交锋中断，你还可以退回林缘照料伤者；胜负会由战斗结算。",
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "白叶草林地",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.ch2.ledger",
+      "type": "story",
+      "title": "药名之间的空白",
+      "summary": "账页按月份缝成薄册，末尾却露出一截新鲜的纸纤维。青禾正把药碗一只只倒扣。",
+      "detail": "账页按月份缝成薄册，末尾却露出一截新鲜的纸纤维。青禾正把药碗一只只倒扣。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch2.ledger.001",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "师父说今天不开门，我还以为你们在算药钱。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.002",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我们在找一本账少掉的末页。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.003",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "蓝线那页？昨夜我见它还在。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.004",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "你什么时候见的？"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.005",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "收灯以前。您让我把湿药材搬去火边。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.006",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你碰过账盒吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.007",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我只替它垫了块干布，怕桌上的水洇进去。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.008",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "这笔字是你补的？"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.009",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "是。白叶草少了两束，我写在月末。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.010",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "旁边却多了一个没有药名的数量。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.011",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "那是我照旧账抄的，不知道该填什么。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.012",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "旧账原本写着河边铃草。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.013",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "现在只剩一个空格和三枚墨点。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.014",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "墨点是师父的记号：第一枚是采集，第二枚是晾晒。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.015",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "第三枚呢？"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.016",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "交给走夜路的人。那一格本不该出现在今天。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.017",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我没改日期，真的。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.018",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "纸背的压痕能看出原来的笔画。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.019",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "把灯斜过来，别拿水去拓。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.020",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "这里像一个桥字，下面还有一道横线。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.021",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "不是桥，是桥下两个字的开头。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.022",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "末页若被拿走，拿它的人还会找那座桥。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.023",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "山门外的旧石桥已经封了半年。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.024",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "封桥的人是谁？"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.025",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "守卫。说桥下的水会把雾带进镇子。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.026",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "他有他的理由，先听完再判断。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.027",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我带着压痕去问守卫，不带走原账。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.028",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我把空格旁的墨晾干，等你回来核对。"
+        },
+        {
+          "id": "line.qa-fog.ch2.ledger.029",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "账盒留在这里，窗闩也由我来守。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第二章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "雨前",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.battle-victory",
+      "type": "story",
+      "title": "雾狐退让",
+      "summary": "你挡住野狐的扑击，却没有再追。它退到树根后，前爪上的蓝线被枝条勾下一截。线头沾着药铺封包才会用的草灰；有人带着药材来过这里。",
+      "detail": "你挡住野狐的扑击，却没有再追。它退到树根后，前爪上的蓝线被枝条勾下一截。线头沾着药铺封包才会用的草灰；有人带着药材来过这里。\n\n野狐叼走空药篓，雾中留下一条向山路延伸的足迹。你把蓝线收好，先带白叶草回药铺。",
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "白叶草林地",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.mist-fox-victory",
+          "effects": [
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.mist-fox-resolved",
+              "value": true
+            },
+            {
+              "kind": "learnKnowledge",
+              "actorId": "player",
+              "knowledgeId": "qa-fog.blue-thread"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.battle-defeat",
+      "type": "story",
+      "title": "退回林缘",
+      "summary": "野狐占住药篓，你只得避开它，退到林边。好在怀中的两株白叶草没有丢失，救治狐爷爷仍来得及。",
+      "detail": "野狐占住药篓，你只得避开它，退到林边。好在怀中的两株白叶草没有丢失，救治狐爷爷仍来得及。\n\n等雾散了再查药篓也不迟。眼下先把药草送回去。",
+      "tags": [],
+      "chapter": "第一章",
+      "location": "青云宗山门",
+      "sublocation": "白叶草林地",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "白天",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.mist-fox-defeat",
+          "effects": [
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.mist-fox-resolved",
+              "value": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.ch2.gate",
+      "type": "story",
+      "title": "山门前的问答",
+      "summary": "守卫把一张受潮的封桥告示压在石狮下。告示的日期比药铺账页早了半年。",
+      "detail": "守卫把一张受潮的封桥告示压在石狮下。告示的日期比药铺账页早了半年。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch2.gate.001",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "药铺的人今天走得勤，老人可好些了？"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.002",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "退了烧，能自己整理旧账。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.003",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "那就好。你看告示，是想走桥？"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.004",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我想知道为什么封桥。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.005",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "桥没断，是桥下有人点过引雾的灯。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.006",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "什么灯能引来雾？"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.007",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "蓝色的灯芯，烧完留一种细线似的灰。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.008",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你见过那灰吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.009",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "见过，擦不掉，遇水反倒更亮。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.010",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "账页上也提到一条蓝线。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.011",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "你的话到这儿停住了。是你还没查实，还是不愿说？"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.012",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "两样都有。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.013",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我不会逼你把猜测当证词。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.014",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "桥封了以后还有人过吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.015",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "有。有人夜里把警绳解开，天亮又系回去。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.016",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你为何不守在桥边？"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.017",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "守过三夜，只见水往上游走。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.018",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "水不可能倒流。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.019",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "所以我没把这句写进公文。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.020",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "封桥告示是谁签的？"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.021",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "是我。要是判断错了，也该我担。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.022",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你愿意陪我重看桥下吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.023",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "愿意，但先说清你希望我知道多少。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.024",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我还要想一想。"
+        },
+        {
+          "id": "line.qa-fog.ch2.gate.025",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "可以。决定前先看脚下的雨痕，别看我的脸色。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第二章",
+      "location": "青云宗山门",
+      "sublocation": "青云宗山门",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.qingyun-sect-gate.archway",
+      "timeHint": "雨前",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-exterior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.ch2.share",
+      "type": "story",
+      "title": "两个人的证词",
+      "summary": "你摊开压痕，守卫把封桥告示放在一旁。他没有伸手去拿药铺的账。",
+      "detail": "你摊开压痕，守卫把封桥告示放在一旁。他没有伸手去拿药铺的账。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch2.share.001",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我只能证明账上有桥下两个字的压痕。"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.002",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "足够让我知道该去哪里看，不足以定谁的罪。"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.003",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "末页今晨不见了。"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.004",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "药铺里的人都知道这件事？"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.005",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "知道的人只有我们几个。"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.006",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "那我也算进去了。"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.007",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你不问老人为何记夜路人的名字？"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.008",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "等找到那个人，我会当面问。"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.009",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "封桥的警绳还在吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.010",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "在，我给你看上面的新结。"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.011",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "这结的末端朝河，不像从路上系的。"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.012",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "有人站在桥下，把绳拉回原位。"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.013",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "看来守在桥面等不到他。"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.014",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我从上游绕过去，你从药草坡下去。"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.015",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "若先见到可疑的人呢？"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.016",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "问名字，别把他逼进涨水的河里。"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.017",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你肯让他先解释？"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.018",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我守门，不守偏见。"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.019",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "这句话我会转告狐爷爷。"
+        },
+        {
+          "id": "line.qa-fog.ch2.share.020",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "原话转告，别替我说得更好听。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第二章",
+      "location": "青云宗山门",
+      "sublocation": "青云宗山门",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.qingyun-sect-gate.archway",
+      "timeHint": "雨前",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-exterior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.ch2.hold",
+      "type": "story",
+      "title": "没有交出的压痕",
+      "summary": "你把纸折回袖中，只向守卫问了封桥的位置。守卫没有追问。",
+      "detail": "你把纸折回袖中，只向守卫问了封桥的位置。守卫没有追问。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch2.hold.001",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我先沿药草坡走，桥下若有危险再回来报。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.002",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "坡口的旧木牌倒了，认第三棵白桦。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.003",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "雨前的河水会涨多少？"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.004",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "一炷香能漫过最低的石阶。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.005",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "那我不会在河床久留。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.006",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "你袖里那张纸怕水，收紧一点。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.007",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你看见了？"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.008",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "看见你护着它，没看见纸上写什么。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.009",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我答应过先查实再说。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.010",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "这样的答应要靠证据来守，不靠沉默。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.011",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "若桥下真有线索，我会带回来。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.012",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "带不回来也没关系，记住人是从哪边走的。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.013",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你为何总问退路？"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.014",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "去年有人只想着追，忘了看涨水。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.015",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "那人后来呢？"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.016",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "活着。腿伤好了以后，再不肯走旧桥。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.017",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我会比他慢一点。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.018",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "慢一点才看得到脚印的方向。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.019",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你守着山门，我去看坡下。"
+        },
+        {
+          "id": "line.qa-fog.ch2.hold.020",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "雨一落就回来，别和河水争快。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第二章",
+      "location": "青云宗山门",
+      "sublocation": "青云宗山门",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.qingyun-sect-gate.archway",
+      "timeHint": "雨前",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-exterior-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.ch2.clearing",
+      "type": "story",
+      "title": "白叶草坡",
+      "summary": "草坡仍有新长的白叶草，旧桥的石栏在雾里露出半截。雨点先落在叶背。",
+      "detail": "草坡仍有新长的白叶草，旧桥的石栏在雾里露出半截。雨点先落在叶背。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch2.clearing.001",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "脚下的泥有两层，一层干，一层刚被水盖住。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.002",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "等一下！师父叫我给你送防潮布。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.003",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你怎么知道我会来坡上？"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.004",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "他看见你往山门走，猜到你会问旧桥。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.005",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "药铺的窗闩修好了？"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.006",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "修了。师父说别把所有动静都当贼。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.007",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你带来的布有一股草木灰味。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.008",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "炉边熏过，遇雾不会立刻湿透。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.009",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "这片草叶下压着蓝色细丝。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.010",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "像缝账页的线，却比棉线亮。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.011",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "别碰，先用布包起来。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.012",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "它在布里还会发光。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.013",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "守卫说灯芯的灰遇水会更亮。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.014",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "所以账上的蓝线可能不只是线。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.015",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "也可能有人故意让我们这么想。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.016",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "你看草根，泥被人从下往上翻过。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.017",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "有人从桥下爬到坡上，鞋底还沾着河沙。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.018",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "脚印只有一双，返程却有两条拖痕。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.019",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "他带走了什么重东西？"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.020",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "也许不是东西，是扶着一个人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.021",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "这道短痕像拐杖落地。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.022",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "桥下藏的人可能走不了快路。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.023",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "先不追，沿痕找到能避雨的地方。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.024",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我把草坡的记号留给守卫看。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.025",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "只留方向，不写猜到的名字。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.026",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "明白，证据先于故事。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.027",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "桥下的铃声响了，声音却从上游传来。"
+        },
+        {
+          "id": "line.qa-fog.ch2.clearing.028",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "雨还没下大，先去看一眼。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第二章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药草坡",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.qa-fog.whiteleaf-clearing",
+      "timeHint": "雨前",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.ch2.bell",
+      "type": "story",
+      "title": "桥下的倒铃",
+      "summary": "旧石桥下没有点灯的人。半只铜铃挂在水面上方，蓝丝从铃舌穿过石缝。",
+      "detail": "旧石桥下没有点灯的人。半只铜铃挂在水面上方，蓝丝从铃舌穿过石缝。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch2.bell.001",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "铃声从上游来，铃却挂在这里。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.002",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "水流牵着蓝丝，铃舌才会反着摆。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.003",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "谁把它装在桥下？"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.004",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "石缝边的灰还新，至少不是半年前。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.005",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "这块石头上刻着药铺的旧印。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.006",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "只是半个印，另一半被凿掉了。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.007",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "师父的药箱上也有这样的纹。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.008",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "先照样描下，别在雨里硬抠。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.009",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "桥洞那边有人留下干燥的脚布。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.010",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "脚布下面压着一张空白纸。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.011",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "纸空白，边缘却有缝线孔。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.012",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "像从账册上拆下来的末页。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.013",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "偷页的人把字洗掉了？"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.014",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "水洗不掉墨，只能洗掉用草汁写的字。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.015",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "师父教过显草汁的法子，用药炉温热纸背。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.016",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "先把纸放进防潮布，别在桥下点火。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.017",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "铃舌上还有一小块木签。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.018",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "写着一个夜字，后半已经泡烂。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.019",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "也许是夜路人的交接记号。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.020",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "也许只是某个人的名字，回去再问。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.021",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "河水已经碰到第一阶。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.022",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "把描纸收好，从高处退。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.023",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "你听，铃忽然停了。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.024",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "蓝丝被上游的人剪断了。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.025",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "他知道我们发现了纸。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.026",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "先护住证据，再找看见他的人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.027",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "守卫应该就在上游。"
+        },
+        {
+          "id": "line.qa-fog.ch2.bell.028",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "可以先回药铺显字，也可以沿断线看看上游。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第二章",
+      "location": "青云宗山门",
+      "sublocation": "旧石桥",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.qa-fog.old-stone-bridge",
+      "timeHint": "雨前",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.ch2.return",
+      "type": "story",
+      "title": "纸背现字",
+      "summary": "雨终于落下。药炉的小火烘着残页，字迹从背面缓慢浮出。",
+      "detail": "雨终于落下。药炉的小火烘着残页，字迹从背面缓慢浮出。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch2.return.001",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "纸边的蓝线孔还在，你们找到末页了。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.002",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "字被草汁藏起来，青禾说你知道显影的办法。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.003",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我只记得温火，火太近会把纸烤碎。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.004",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "把炉盖挪开半寸。你们先说桥下所见。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.005",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "铜铃、蓝丝、半个旧印，还有一张脚布。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.006",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "半个旧印本来就在桥下。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.007",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "您以前去过？"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.008",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "在桥还没封时，我在那里接过夜路人的药箱。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.009",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "纸上显出第一行了：雨前勿渡。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.010",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "第二行是药名吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.011",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "不是，是人名，只剩一个夜字。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.012",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "那个字和铃舌木签上的相同。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.013",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "末页记录的是谁要过桥。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.014",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "记录的是谁需要有人等他回来。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.015",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "他没有回来吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.016",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "我以为没有。后来有人替他把铃挂回去了。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.017",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "所以有人偷页，不一定为了藏罪。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.018",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "也可能为了让等人的位置不被发现。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.019",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "你们把线索带回来了，也把问题带回来了。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.020",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "蓝丝遇水发亮，能从桥边追到上游。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.021",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "雨停后还能看到吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.022",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "只要它还留在草叶背面。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.023",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "第三章若还要入山，先记住这条线。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.024",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我会记，也会记住守卫说的退路。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.025",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我把残页和账册重新缝好，不遮住空格。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.026",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "空格留下，等见到那个人再填。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.027",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "今夜先把窗闩搭牢。"
+        },
+        {
+          "id": "line.qa-fog.ch2.return.028",
+          "speakerId": "npc.qa-fog-fox",
+          "speakerName": "狐爷爷",
+          "text": "这一次，我会自己听着雨。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第二章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药铺",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.fog-clinic",
+      "timeHint": "雨前",
+      "backgroundAsset": "assets/story/qa-fog/apothecary-interior-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.ch2.read-page",
+          "effects": [
+            {
+              "kind": "learnKnowledge",
+              "actorId": "player",
+              "knowledgeId": "qa-fog.blue-thread"
+            },
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.ch2.read-page",
+              "value": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene.qa-fog.ch2.upstream",
+      "type": "story",
+      "title": "逆水的蓝线",
+      "summary": "你们没有立刻回药铺，而是沿被剪断的蓝丝往上游追。雨水把石桥下的低路逐寸淹没。",
+      "detail": "你们没有立刻回药铺，而是沿被剪断的蓝丝往上游追。雨水把石桥下的低路逐寸淹没。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch2.upstream.001",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "铃声停了，蓝线却还在石缝里颤。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.002",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "剪断的是上游那一端，水在替人拉扯剩下的线。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.003",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "脚下这级石阶比刚才湿了一半。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.004",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "先往高处走，别为了线索留在河床。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.005",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "你看墙上，线从水里爬到了干石上。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.006",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "有人把它系在石钉上，绕过一段险滩。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.007",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "这不像仓促逃走，更像常用的路标。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.008",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "路标为什么要藏在桥底？"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.009",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "不想让封桥的人看见吧。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.010",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "也可能是给不敢走桥面的人看的。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.011",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "这一结和师父缝账页的结不同。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.012",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你能辨出是谁打的？"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.013",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "只能说是左手绕线，线尾压在结里。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.014",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "别把手法当名字，先记下来。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.015",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我用炭笔画结，不去解它。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.016",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "对岸有新折的芦苇，像有人扶着岸走。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.017",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "芦苇根旁的泥被踩成一道浅沟。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.018",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "昨夜的脚布可能属于扶人的那一个。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.019",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "那另一个人的脚印呢？"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.020",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "被水盖住了，也可能从高处绕行。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.021",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "蓝线上的灰遇雨变亮，像细细的星。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.022",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "能让夜行的人看见，不至于踩空。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.023",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "守卫说它是引雾的灯芯灰。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.024",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "同一种灰可以做坏事，也可以救人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.025",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "石钉旁有三道刀痕，间隔一样。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.026",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "像每隔几日有人来换一次线。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.027",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "封桥半年，换线的人却没停。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.028",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "说明他们从没把告示当终点。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.029",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "你听到木头敲石头了吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.030",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "两短一长，从上游破屋那边来。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.031",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "会不会是守卫发的信号？"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.032",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "他的铜哨声更尖，这声像木槌。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.033",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "坡上的小屋原是看桥人住的。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.034",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "门边还挂着旧锁，锁孔朝里。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.035",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "有人在屋里把门反锁了。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.036",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "先敲门，别直接闯。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.037",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "屋里没有答话，木槌声也停了。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.038",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "门缝有火光，不像空屋。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.039",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "这块踏板松了，站上去会响。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.040",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "绕到石墙边，别踩出追人的动静。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.041",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "窗台上摆着两个药瓶，一个空的。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.042",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "瓶底印着雾林药铺的记号。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.043",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "师父卖出的瓶子常会被重复装药。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.044",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "所以瓶子不能证明屋里的人去过药铺。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.045",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "屋檐下有条干布，和桥洞那块一样。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.046",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "有人从水边把布带上来了。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.047",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "门口留下拐杖尖的小圆孔。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.048",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "他走得慢，却有时间把脚印擦掉。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.049",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我们不如再敲一次。"
+        },
+        {
+          "id": "line.qa-fog.ch2.upstream.050",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "先告诉屋里的人，我们带着药，不带追捕文书。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第二章",
+      "location": "青云宗山门",
+      "sublocation": "旧石桥",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.qa-fog.old-stone-bridge",
+      "timeHint": "雨中",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.ch2.stonehouse",
+      "type": "story",
+      "title": "看桥人的空屋",
+      "summary": "破屋的门没有打开。窗纸背后有人挪动，桌上的木槌再次轻敲两短一长。",
+      "detail": "破屋的门没有打开。窗纸背后有人挪动，桌上的木槌再次轻敲两短一长。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch2.stonehouse.001",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "屋里的人听得见，我把药瓶放在门槛上。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.002",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "这是退烧用的空瓶，不能当现成的药。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.003",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我知道。我只想让他认出药铺的记号。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.004",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "别把瓶子推过门槛，地上有水。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.005",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "你听得出我们是谁？"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.006",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "听得出一个学徒，另一个没穿守卫的甲。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.007",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我们在找被拿走的账页，不急着认罪人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.008",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "账页不在我手里。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.009",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "可你用过药铺的瓶子。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.010",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "用过许多次，瓶子不会替我说话。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.011",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我同意。你能告诉我们谁敲木槌吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.012",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "我敲的，叫走水边的人别上桥。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.013",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "两短一长是警讯？"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.014",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "短声说水，长声说人还在岸上。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.015",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你为什么不开门？"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.016",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "门轴被雨泡歪，里头只剩半根木闩。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.017",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "听起来像有人怕我们进来。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.018",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "听起来也像有人怕门倒下来。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.019",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "窗边石墙有一段干地，我们从那里谈。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.020",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "别碰墙缝里的蓝线，它不是绳索。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.021",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我们已经见过桥下的铃。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.022",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "铃还响吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.023",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "不响了，上游那端刚被剪断。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.024",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "那就别追剪线的人，他是在给屋里人留时间。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.025",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "留什么时间？"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.026",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "把水烧开，把血止住。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.027",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "有人受伤了？"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.028",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "不是我，我只是守着火。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.029",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我们会处理伤口，至少能先压住血。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.030",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "先别拿针，听他自己答应没有。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.031",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "他能听见我们吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.032",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "能。他一直醒着，只是不想让人看见脸。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.033",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "不看脸也能包扎腿。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.034",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "你们从窗下递布，我去问他。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.035",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我把防潮布折成两层，干净的一面朝里。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.036",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "师父让我带它来，看来没有白跑。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.037",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "他点头了。把布放在木槌旁。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.038",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你先说他的伤在何处，流血有多久。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.039",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "左脚踝擦破，伤口沾了河沙。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.040",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "先用清水冲掉沙，不要把草灰塞进去。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.041",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "屋里有水，火上烧着。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.042",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你说自己只是守火，真正守桥的是谁？"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.043",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "以前有个看桥人，后来桥封了，他没回来。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.044",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "屋里留下的名册还能看吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.045",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "桌上有半本，另一半被雨泡坏。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.046",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我们不拿它走，只借光读几行。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.047",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "等伤口包好再说。纸比人等得起。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.048",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "这话像狐爷爷会说的。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.049",
+          "speakerId": "npc.qa-fog-watchkeeper",
+          "speakerName": "屋内人",
+          "text": "他教过看桥人，怎么把药送过水。"
+        },
+        {
+          "id": "line.qa-fog.ch2.stonehouse.050",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "那我们先把伤者照看好。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第二章",
+      "location": "青云宗山门",
+      "sublocation": "旧石桥",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.qa-fog.old-stone-bridge",
+      "timeHint": "雨中",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.ch2.witness",
+      "type": "story",
+      "title": "不肯报姓名的夜行人",
+      "summary": "木闩移开后，一个裹着旧披风的年轻人坐在火边。他自称阿渡，左脚踝绑着潮湿的布。",
+      "detail": "木闩移开后，一个裹着旧披风的年轻人坐在火边。他自称阿渡，左脚踝绑着潮湿的布。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch2.witness.001",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "我让他开门，不是让你们问个没完。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.002",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "先处理脚踝，问题可以等你能走再说。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.003",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "我能走，只是慢一点。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.004",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "慢一点也会把湿布磨进伤口。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.005",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "你像药铺里的人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.006",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我是青禾，狐爷爷的学徒。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.007",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "他还活着？"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.008",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "退了烧，正等我们带回账页的消息。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.009",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "那张纸不该让他再看见。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.010",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "纸已经找到，但字还没有显出来。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.011",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "字若显出来，先遮住最下面一行。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.012",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "最下面写的是谁？"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.013",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "我不知道全名，知道那人不想被找。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.014",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "你刚说纸不该让师父看，现在又说你不知道。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.015",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "我知道纸能让谁害怕，不知道纸是谁偷的。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.016",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你看见拿纸的人了吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.017",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "只看见背影和一只湿靴。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.018",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "鞋底有河沙吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.019",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "有，和这屋前的泥一样，不能凭这个认人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.020",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你愿意让青禾换掉湿布吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.021",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "你们不借伤口逼我作证，我就答应。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.022",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我只问疼在哪里，碰之前会告诉你。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.023",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "脚踝外侧，骨头没折。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.024",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "先松开旧结，疼就说。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.025",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "疼，但比河水灌进靴里轻。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.026",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你为什么在桥下？"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.027",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "等一个送药的人。那人今夜没来。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.028",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "是看桥人吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.029",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "看桥人已经不在了，我等的是他的徒弟。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.030",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你认识徒弟的名字？"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.031",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "认识一个外号，叫夜雀。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.032",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "木签上的夜字也许是他的记号。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.033",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "夜雀不用铜铃，他敲木头。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.034",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "那么剪断蓝线的人未必是他。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.035",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "我听见剪线声时正扶着墙，没看见脸。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.036",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "你扶墙留下的拐杖印在草坡。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.037",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "那是我，拖痕是这位守火的人扶我。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.038",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "至少两条痕有了来历。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.039",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "别把每条痕都算到同一个人身上。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.040",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "师父教我分药，也是这个道理。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.041",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你担心谁看到末页？"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.042",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "山上的采药队。他们会按名单找夜路人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.043",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "采药队为何要找送药的人？"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.044",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "有人借他们的名义把药卖高价。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.045",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你亲眼见过交易吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.046",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "见过药篓和钱袋，没看清交钱的人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.047",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "这也还不足以指认。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.048",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "所以我只说我看见的。"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.049",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "等脚踝包好，你可愿陪我们读旧名册？"
+        },
+        {
+          "id": "line.qa-fog.ch2.witness.050",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "愿意，但把火挪远，纸比我的布更怕烫。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第二章",
+      "location": "青云宗山门",
+      "sublocation": "旧石桥",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.qa-fog.old-stone-bridge",
+      "timeHint": "雨中",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.ch2.route",
+      "type": "story",
+      "title": "封桥告示背后的路",
+      "summary": "守卫从上游小路赶到，看见阿渡的伤便先放下湿透的封桥告示。屋里暂时有了四个人的证词。",
+      "detail": "守卫从上游小路赶到，看见阿渡的伤便先放下湿透的封桥告示。屋里暂时有了四个人的证词。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch2.route.001",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "桥下的水涨得快，屋里还有人能走吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.002",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "能走，青禾刚把我的脚包好。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.003",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "能走不等于该立刻走，先让布结干一会儿。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.004",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我不是来催他上路，是来看出口有没有被水堵住。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.005",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你从上游绕来，见过剪断蓝线的人吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.006",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "只见一截湿线漂下来，岸边没有人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.007",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "我也没看见脸。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.008",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "那就先不把他写进案卷。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.009",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "屋里的名册还有半本。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.010",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "看桥人留下的？"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.011",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "是。上面记哪天有人安全过桥。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.012",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "封桥以后也记？"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.013",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "越是封桥，越得知道谁从水边走。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.014",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我签的告示挡不住急着送药的人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.015",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你知道这件事？"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.016",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "猜过。看见有人解警绳，却没有等到求助。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.017",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "求助会让收药的人知道我们的路。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.018",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我守的是人命，不是他们的买卖。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.019",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "我听见了，但得看你怎么做。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.020",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "药铺的账页也记录夜路人的名字。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.021",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我知道有账页，不知道里面写谁。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.022",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "现在先核对日子，名字仍留在纸上。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.023",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "可以。公文先写封桥后的险情。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.024",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "屋后有条芦苇岸，涨水时比桥洞高。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.025",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我看到那里有新折的草。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.026",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "是我折的，给后来的人指方向。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.027",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "折草容易被风吹乱，得再留一处标志。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.028",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "药炉的灰遇水发亮，可以画在石上。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.029",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "灰若太多，会让雾里的行人误以为是灯。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.030",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "只画三点，不画一条引人的路。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.031",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "三点表示退路，不表示继续前进。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.032",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "这规矩要告诉所有夜行人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.033",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "夜雀知道，他从前就是这样教我的。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.034",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "夜雀在哪里？"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.035",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "我不知道。他没有按约定来送药。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.036",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "若有人失踪，先把最后见他的时间写清。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.037",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "昨夜二更，桥北的矮松旁。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.038",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "那时末页还在药铺账盒里。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.039",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我收灯以前看见过它。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.040",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "两件事未必相连，时间却可以放在一起查。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.041",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "你没有问我的姓。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.042",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "救人不用先知道姓，报案才需要。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.043",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "等我能确定夜雀出了事，我会来报。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.044",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我陪你走芦苇岸，确认它还通。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.045",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我走在后面，若路窄就先扶伤者。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.046",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "名册留在屋里吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.047",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "先带到高处。雨把这屋的地脚泡软了。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.048",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "用防潮布包纸，别让伤口的布又湿。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.049",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我有第二块干布，拿去。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.050",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "你准备得像常走这条路。"
+        },
+        {
+          "id": "line.qa-fog.ch2.route.051",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我守山门，也该认得山门外的退路。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第二章",
+      "location": "青云宗山门",
+      "sublocation": "旧石桥",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.qa-fog.old-stone-bridge",
+      "timeHint": "雨中",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.ch2.record",
+      "type": "story",
+      "title": "名册上留白的人",
+      "summary": "几人沿芦苇岸登上草坡。阿渡把旧名册摊在防潮布上，纸边的空白恰好能容下两个人的名字。",
+      "detail": "几人沿芦苇岸登上草坡。阿渡把旧名册摊在防潮布上，纸边的空白恰好能容下两个人的名字。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch2.record.001",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "这页从前由看桥人记，后来换我记。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.002",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "为什么有些日子只有一点，没有名字？"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.003",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "那天有人过桥，却不愿让名字留在册上。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.004",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "若他失踪，点就不足以帮人寻找。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.005",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "所以旁边另有一处记号，只有同伴认得。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.006",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "三点连成折线，指向不同的岸。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.007",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "你看懂得比我想的快。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.008",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "是你刚才说了三点表示退路。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.009",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "看桥人说过，谁走得远，谁更要知道怎么回。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.010",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "药铺账上也有三枚墨点。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.011",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "第一枚采集，第二枚晾晒，第三枚交接。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.012",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "两个记法相似，不代表由同一人写。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.013",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "他教狐医记药，也教我们记过桥。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.014",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "师父没说过看桥人是他的学生。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.015",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "他不爱把别人的事讲给学徒听。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.016",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "这里有夜雀的记号吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.017",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "有，昨夜这一点就是他留下的。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.018",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "点旁没有归来的横线。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.019",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "他本该在天亮前补上。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.020",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "他可能去了别的岸。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.021",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "也可能是伤了，藏在我们找不到的地方。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.022",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "先记最后一处确认的地点：桥北矮松。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.023",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我会让山门的人从高路查，不进河床。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.024",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "我不想让采药队跟着他们去。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.025",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "巡路的人可以只报平安与危险，不报你们的药路。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.026",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "这需要你担责。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.027",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "封桥告示是我签的，路上的人也归我管。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.028",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "名册上的空格还要填吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.029",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "等人自己回来写。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.030",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "药铺的空格也先留着。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.031",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "狐医知道我用过那半枚印吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.032",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "他看见桥下的印，会知道有人还在守约。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.033",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "约定原本是把药送到，不是把自己藏起来。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.034",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "有时藏起来才能送到，但不能一直靠运气。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.035",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "我们先把能公开的险情写清。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.036",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "桥洞水位、松动的踏板、芦苇岸的高路。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.037",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "再加一条：蓝线断了之后别跟水走。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.038",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "我会写在告示背面，挂在坡口。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.039",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "药路的名字则留给当事人决定。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.040",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "我愿意留下自己的名，别人的等他们点头。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.041",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "阿渡，两个字比一个点好找。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.042",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "也比一双湿靴容易背负。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.043",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "写下名字不等于把罪按在你身上。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.044",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "这句我想听第二遍。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.045",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "写下名字，是为了在你没回来时有人知道要找谁。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.046",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "纸有两种用法，记路，也记人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.047",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我们带回去的残页两样都记着。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.048",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "那就先烘干它，再决定谁能读。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.049",
+          "speakerId": "npc.qa-fog-guard",
+          "speakerName": "守卫",
+          "text": "雨小了，我送你们到药草坡口。"
+        },
+        {
+          "id": "line.qa-fog.ch2.record.050",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "芦苇岸这条退路我记住了。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第二章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药草坡",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.qa-fog.whiteleaf-clearing",
+      "timeHint": "雨中",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": []
+    },
+    {
+      "id": "scene.qa-fog.ch2.rainwalk",
+      "type": "story",
+      "title": "雨停之前的同行",
+      "summary": "雨仍细细落着。山门守卫去改告示，阿渡扶着青禾送来的短杖，与主角沿草坡回药铺。",
+      "detail": "雨仍细细落着。山门守卫去改告示，阿渡扶着青禾送来的短杖，与主角沿草坡回药铺。",
+      "dialogues": [
+        {
+          "id": "line.qa-fog.ch2.rainwalk.001",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "你脚踝的布还干吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.002",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "干，比我预想的轻快。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.003",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "别急着证明能走，石阶还滑。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.004",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "我知道。今日有人替我看着脚下。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.005",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "师父看见你会先问疼不疼。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.006",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "他以前也是这样问看桥人的。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.007",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你愿意让他知道你在旧屋里？"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.008",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "愿意，但别让他以为我是来讨债。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.009",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "药铺没有欠夜行人的钱。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.010",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "欠过几句没来得及说的话。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.011",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "这些话可以留到你见他时再说。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.012",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "你不打算替我传？"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.013",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "证词可以传，心里的话还是你自己说。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.014",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "师父听到有人沿旧路送药，会难过吗？"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.015",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "也许。他教人的本意是让我们不必冒险。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.016",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "路封了之后，愿意求助的人却更少。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.017",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "因为告示上只写禁止，没有写哪里安全。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.018",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "守卫已经去改了。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.019",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "一张告示不能替一条路开灯。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.020",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "但能让下一位过桥的人先停下来问。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.021",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "你为何把蓝线系得那么低？"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.022",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "不是我系的。我只按三点记号走高岸。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.023",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "那截被剪断的线仍然无人认领。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.024",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "等夜雀回来，也许他会知道。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.025",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "也许他就是剪线的人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.026",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "我不会因为想见他，就把猜测当事实。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.027",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你们都开始学会留空格了。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.028",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "空格不是忘记，是等证据。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.029",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "有些空格还得等本人愿意开口。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.030",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "药铺里那张残页将会显出字。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.031",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "最底下那行请先让狐医一个人看。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.032",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "若它写的是危险的人呢？"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.033",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "他会告诉你们该避开什么。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.034",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "若他不愿说名字，我会问理由。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.035",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "这比抢过纸直接读更难。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.036",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "坡上的白叶草刚被雨洗过。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.037",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "不要摘，药铺还有备用。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.038",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "你们救狐医时摘过这里的草？"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.039",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "摘过，也借了银针。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.040",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "那你们知道他不轻易收人情。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.041",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "他送过一张卡牌作谢礼。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.042",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "像他。宁可把能用的东西给人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.043",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "卡牌不能替他把账缝好。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.044",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "今天我们带着线和残页回来。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.045",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "也带着一个需要换干布的人。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.046",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "药铺门前的灯还亮着。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.047",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "你先在门廊避雨，青禾和我进去把残页烘干。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.048",
+          "speakerId": "npc.qa-fog-courier",
+          "speakerName": "阿渡",
+          "text": "我在这里等。夜雀的事，等纸干了再由我自己说。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.049",
+          "speakerId": "npc.qa-fog-apprentice",
+          "speakerName": "青禾",
+          "text": "我会把纸放在离火最合适的位置。"
+        },
+        {
+          "id": "line.qa-fog.ch2.rainwalk.050",
+          "speakerId": "player",
+          "speakerName": "主角",
+          "text": "旧桥那条芦苇岸记在心里，今夜不走河床。"
+        }
+      ],
+      "tags": [],
+      "chapter": "第二章",
+      "location": "青云宗山门",
+      "sublocation": "雾林药草坡",
+      "locationId": "location.qingyun-sect-gate.archway",
+      "sublocationId": "sublocation.qa-fog.whiteleaf-clearing",
+      "timeHint": "雨中",
+      "backgroundAsset": "assets/story/qa-fog/whiteleaf-clearing-v1.png",
+      "onEnter": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.ch2.reed-route",
+          "effects": [
+            {
+              "kind": "learnKnowledge",
+              "actorId": "player",
+              "knowledgeId": "qa-fog.ch2.reed-route"
+            },
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.ch2.met-courier",
+              "value": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "choices": [
+    {
+      "id": "choice.qa-fog.entry.first",
+      "from": "scene.qa-fog.entry",
+      "to": "scene.qa-fog.first",
+      "text": "初次向老人打招呼",
+      "description": "初次向老人打招呼",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.met",
+        "expected": false
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.entry.return",
+      "from": "scene.qa-fog.entry",
+      "to": "scene.qa-fog.revisit",
+      "text": "再次走进药铺",
+      "description": "再次走进药铺",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.met",
+        "expected": true
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.first.ask-secret",
+      "from": "scene.qa-fog.first",
+      "to": "scene.qa-fog.secret",
+      "text": "问起失窃的药方",
+      "description": "问起失窃的药方",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.first.observe",
+      "from": "scene.qa-fog.first",
+      "to": "scene.qa-fog.diagnosis",
+      "text": "留意他颤抖的手",
+      "description": "留意他颤抖的手",
+      "enabledWhen": {
+        "kind": "attribute",
+        "attribute": "洞察",
+        "operator": ">=",
+        "value": 5
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.first.gather",
+      "from": "scene.qa-fog.first",
+      "to": "scene.qa-fog.gather",
+      "text": "答应入林采药",
+      "description": "答应入林采药",
+      "enabledWhen": {
+        "kind": "all",
+        "conditions": [
+          {
+            "kind": "questStage",
+            "questId": "quest.qa-fog-heal-fox",
+            "stage": "available"
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.alive",
+            "expected": true
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "setQuestStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "gather"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.revisit.reproach",
+      "from": "scene.qa-fog.revisit",
+      "to": "scene.qa-fog.reproach",
+      "text": "听他质问告密一事",
+      "description": "听他质问告密一事",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.reported",
+        "expected": true
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.revisit.secret",
+      "from": "scene.qa-fog.revisit",
+      "to": "scene.qa-fog.secret",
+      "text": "再谈旧药方",
+      "description": "再谈旧药方",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.reported",
+        "expected": false
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.revisit.gather",
+      "from": "scene.qa-fog.revisit",
+      "to": "scene.qa-fog.gather",
+      "text": "继续寻找救治办法",
+      "description": "继续寻找救治办法",
+      "visibleWhen": {
+        "kind": "not",
+        "condition": {
+          "kind": "questStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "completed"
+        }
+      },
+      "effects": [
+        {
+          "kind": "setQuestStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "gather"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.revisit.chapter3",
+      "from": "scene.qa-fog.revisit",
+      "to": "scene.qa-fog.chapter3",
+      "text": "第三章再来求助",
+      "description": "第三章再来求助",
+      "visibleWhen": {
+        "kind": "questStage",
+        "questId": "quest.qa-fog-heal-fox",
+        "stage": "completed"
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.secret.promise",
+      "from": "scene.qa-fog.secret",
+      "to": "scene.qa-fog.promised",
+      "text": "答应保守他的秘密",
+      "description": "答应保守他的秘密",
+      "visibleWhen": {
+        "kind": "all",
+        "conditions": [
+          {
+            "kind": "knowledge",
+            "actorId": "player",
+            "knowledgeId": "qa-fog.recipe-stolen"
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.reported",
+            "expected": false
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.promised",
+            "expected": false
+          },
+          {
+            "kind": "not",
+            "condition": {
+              "kind": "questStage",
+              "questId": "quest.qa-fog-heal-fox",
+              "stage": "completed"
+            }
+          }
+        ]
+      },
+      "enabledWhen": {
+        "kind": "attribute",
+        "attribute": "口才",
+        "operator": ">=",
+        "value": 6
+      },
+      "effects": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.promise",
+          "effects": [
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.promised",
+              "value": true
+            },
+            {
+              "kind": "adjustRelation",
+              "relationId": "npc.qa-fog-fox",
+              "delta": 10
+            }
+          ]
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.secret.report",
+      "from": "scene.qa-fog.secret",
+      "to": "scene.qa-fog.guard",
+      "text": "将身份告诉守卫",
+      "description": "将身份告诉守卫",
+      "visibleWhen": {
+        "kind": "knowledge",
+        "actorId": "player",
+        "knowledgeId": "qa-fog.fox-identity"
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.secret.leave",
+      "from": "scene.qa-fog.secret",
+      "to": "scene.qa-fog.gather",
+      "text": "先去采药",
+      "description": "先去采药",
+      "visibleWhen": {
+        "kind": "not",
+        "condition": {
+          "kind": "questStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "completed"
+        }
+      },
+      "effects": [
+        {
+          "kind": "setQuestStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "gather"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.secret.return",
+      "from": "scene.qa-fog.secret",
+      "to": "scene.qa-fog.revisit",
+      "text": "先离开药方话题",
+      "description": "先离开药方话题",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.diagnosis.needle",
+      "from": "scene.qa-fog.diagnosis",
+      "to": "scene.qa-fog.healed",
+      "text": "当场施针救治",
+      "description": "当场施针救治",
+      "visibleWhen": {
+        "kind": "knowledge",
+        "actorId": "player",
+        "knowledgeId": "qa-fog.poisoned"
+      },
+      "enabledWhen": {
+        "kind": "all",
+        "conditions": [
+          {
+            "kind": "attribute",
+            "attribute": "医术",
+            "operator": ">=",
+            "value": 4
+          },
+          {
+            "kind": "itemCount",
+            "itemId": "tool.qa-fog-silver-needle",
+            "operator": ">=",
+            "value": 1
+          },
+          {
+            "kind": "itemCount",
+            "itemId": "consumable.qa-fog-white-leaf",
+            "operator": ">=",
+            "value": 1
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.hand-injured",
+            "expected": false
+          },
+          {
+            "kind": "questStage",
+            "questId": "quest.qa-fog-heal-fox",
+            "stage": "gather"
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.alive",
+            "expected": true
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.needle-treatment",
+          "effects": [
+            {
+              "kind": "consumeItem",
+              "transactionId": "tx.qa-fog.needle-herb",
+              "itemId": "consumable.qa-fog-white-leaf",
+              "itemType": "consumable",
+              "count": 1
+            },
+            {
+              "kind": "adjustRelation",
+              "relationId": "npc.qa-fog-fox",
+              "delta": 8
+            },
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.needle-route",
+              "value": true
+            }
+          ]
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.diagnosis.pulse-lesson",
+      "from": "scene.qa-fog.diagnosis",
+      "to": "scene.qa-fog.pulse-lesson",
+      "text": "请狐爷爷教我辨脉",
+      "description": "请狐爷爷教我辨脉",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.learned-pulse",
+        "expected": false
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.diagnosis.prepare",
+      "from": "scene.qa-fog.diagnosis",
+      "to": "scene.qa-fog.gather",
+      "text": "采药并借来银针",
+      "description": "采药并借来银针",
+      "visibleWhen": {
+        "kind": "not",
+        "condition": {
+          "kind": "questStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "completed"
+        }
+      },
+      "effects": [
+        {
+          "kind": "setQuestStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "gather"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.diagnosis.return",
+      "from": "scene.qa-fog.diagnosis",
+      "to": "scene.qa-fog.revisit",
+      "text": "先退回药铺门口",
+      "description": "先退回药铺门口",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.gather.regular",
+      "from": "scene.qa-fog.gather",
+      "to": "scene.qa-fog.healed",
+      "text": "交药草请医师照料",
+      "description": "交药草请医师照料",
+      "enabledWhen": {
+        "kind": "all",
+        "conditions": [
+          {
+            "kind": "itemCount",
+            "itemId": "consumable.qa-fog-white-leaf",
+            "operator": ">=",
+            "value": 1
+          },
+          {
+            "kind": "questStage",
+            "questId": "quest.qa-fog-heal-fox",
+            "stage": "gather"
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.alive",
+            "expected": true
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.regular-treatment",
+          "effects": [
+            {
+              "kind": "consumeItem",
+              "transactionId": "tx.qa-fog.regular-herb",
+              "itemId": "consumable.qa-fog-white-leaf",
+              "itemType": "consumable",
+              "count": 1
+            },
+            {
+              "kind": "adjustRelation",
+              "relationId": "npc.qa-fog-fox",
+              "delta": 5
+            },
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.regular-route",
+              "value": true
+            }
+          ]
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.gather.needle",
+      "from": "scene.qa-fog.gather",
+      "to": "scene.qa-fog.diagnosis",
+      "text": "回药铺尝试施针",
+      "description": "回药铺尝试施针",
+      "enabledWhen": {
+        "kind": "knowledge",
+        "actorId": "player",
+        "knowledgeId": "qa-fog.poisoned"
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.gather.track",
+      "from": "scene.qa-fog.gather",
+      "to": "scene.qa-fog.mist-fox",
+      "text": "追查林中拖走药草的脚印",
+      "description": "追查林中拖走药草的脚印",
+      "visibleWhen": {
+        "kind": "all",
+        "conditions": [
+          {
+            "kind": "questStage",
+            "questId": "quest.qa-fog-heal-fox",
+            "stage": "gather"
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.mist-fox-resolved",
+            "expected": false
+          }
+        ]
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.reproach.help",
+      "from": "scene.qa-fog.reproach",
+      "to": "scene.qa-fog.gather",
+      "text": "继续采药",
+      "description": "继续采药",
+      "visibleWhen": {
+        "kind": "not",
+        "condition": {
+          "kind": "questStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "completed"
+        }
+      },
+      "effects": [
+        {
+          "kind": "setQuestStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "gather"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.reproach.chapter3",
+      "from": "scene.qa-fog.reproach",
+      "to": "scene.qa-fog.chapter3",
+      "text": "第三章再来求助",
+      "description": "第三章再来求助",
+      "visibleWhen": {
+        "kind": "questStage",
+        "questId": "quest.qa-fog-heal-fox",
+        "stage": "completed"
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.chapter3.trusted",
+      "from": "scene.qa-fog.chapter3",
+      "to": "scene.qa-fog.trusted",
+      "text": "请他指出隐秘山路",
+      "description": "请他指出隐秘山路",
+      "visibleWhen": {
+        "kind": "all",
+        "conditions": [
+          {
+            "kind": "questStage",
+            "questId": "quest.qa-fog-heal-fox",
+            "stage": "completed"
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.alive",
+            "expected": true
+          },
+          {
+            "kind": "relation",
+            "relationId": "npc.qa-fog-fox",
+            "operator": ">=",
+            "value": 30
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.promised",
+            "expected": true
+          },
+          {
+            "kind": "flag",
+            "flag": "qa-fog.reported",
+            "expected": false
+          },
+          {
+            "kind": "actorAbility",
+            "actorId": "npc.qa-fog-fox",
+            "ability": "医术",
+            "operator": ">=",
+            "value": 6
+          }
+        ]
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.chapter3.alternative",
+      "from": "scene.qa-fog.chapter3",
+      "to": "scene.qa-fog.alternative",
+      "text": "另寻同行者",
+      "description": "另寻同行者",
+      "visibleWhen": {
+        "kind": "not",
+        "condition": {
+          "kind": "all",
+          "conditions": [
+            {
+              "kind": "questStage",
+              "questId": "quest.qa-fog-heal-fox",
+              "stage": "completed"
+            },
+            {
+              "kind": "flag",
+              "flag": "qa-fog.alive",
+              "expected": true
+            },
+            {
+              "kind": "relation",
+              "relationId": "npc.qa-fog-fox",
+              "operator": ">=",
+              "value": 30
+            },
+            {
+              "kind": "flag",
+              "flag": "qa-fog.promised",
+              "expected": true
+            },
+            {
+              "kind": "flag",
+              "flag": "qa-fog.reported",
+              "expected": false
+            },
+            {
+              "kind": "actorAbility",
+              "actorId": "npc.qa-fog-fox",
+              "ability": "医术",
+              "operator": ">=",
+              "value": 6
+            }
+          ]
+        }
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.chapter3.blue-thread",
+      "from": "scene.qa-fog.chapter3",
+      "to": "scene.qa-fog.blue-thread",
+      "text": "沿雾狐身上的蓝线寻找偷药人",
+      "description": "沿雾狐身上的蓝线寻找偷药人",
+      "visibleWhen": {
+        "kind": "knowledge",
+        "actorId": "player",
+        "knowledgeId": "qa-fog.blue-thread"
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.chapter3.guard-copy",
+      "from": "scene.qa-fog.chapter3",
+      "to": "scene.qa-fog.ch3.guard-copy",
+      "text": "与守卫核对第二章的账页",
+      "description": "与守卫核对第二章的账页",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.ch2.shared-ledger",
+        "expected": true
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.chapter3.kept-page",
+      "from": "scene.qa-fog.chapter3",
+      "to": "scene.qa-fog.ch3.kept-page",
+      "text": "带私存的线索请狐爷爷指路",
+      "description": "带私存的线索请狐爷爷指路",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.ch2.held-ledger",
+        "expected": true
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.chapter3.reed-route",
+      "from": "scene.qa-fog.chapter3",
+      "to": "scene.qa-fog.ch3.reed-route",
+      "text": "沿第二章探明的芦苇岸避险",
+      "description": "沿第二章探明的芦苇岸避险",
+      "visibleWhen": {
+        "kind": "knowledge",
+        "actorId": "player",
+        "knowledgeId": "qa-fog.ch2.reed-route"
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.promised.gather",
+      "from": "scene.qa-fog.promised",
+      "to": "scene.qa-fog.gather",
+      "text": "备好银针并去采药",
+      "description": "备好银针并去采药",
+      "visibleWhen": {
+        "kind": "not",
+        "condition": {
+          "kind": "questStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "completed"
+        }
+      },
+      "effects": [
+        {
+          "kind": "setQuestStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "gather"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.promised.observe",
+      "from": "scene.qa-fog.promised",
+      "to": "scene.qa-fog.diagnosis",
+      "text": "再查看他的伤势",
+      "description": "再查看他的伤势",
+      "enabledWhen": {
+        "kind": "attribute",
+        "attribute": "洞察",
+        "operator": ">=",
+        "value": 5
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.guard.return",
+      "from": "scene.qa-fog.guard",
+      "to": "scene.qa-fog.revisit",
+      "text": "回药铺面对狐爷爷",
+      "description": "回药铺面对狐爷爷",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.guard.help",
+      "from": "scene.qa-fog.guard",
+      "to": "scene.qa-fog.gather",
+      "text": "仍去采药救人",
+      "description": "仍去采药救人",
+      "visibleWhen": {
+        "kind": "not",
+        "condition": {
+          "kind": "questStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "completed"
+        }
+      },
+      "effects": [
+        {
+          "kind": "setQuestStage",
+          "questId": "quest.qa-fog-heal-fox",
+          "stage": "gather"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.healed.chapter2",
+      "from": "scene.qa-fog.healed",
+      "to": "scene.qa-fog.ch2.invitation",
+      "text": "第二章查清雨前旧账",
+      "description": "第二章查清雨前旧账",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.healed.chapter3",
+      "from": "scene.qa-fog.healed",
+      "to": "scene.qa-fog.chapter3",
+      "text": "第三章前来求助",
+      "description": "第三章前来求助",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.healed.entry",
+      "from": "scene.qa-fog.healed",
+      "to": "scene.qa-fog.entry",
+      "text": "回药铺门口再访",
+      "description": "回药铺门口再访",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.pulse-lesson.return",
+      "from": "scene.qa-fog.pulse-lesson",
+      "to": "scene.qa-fog.diagnosis",
+      "text": "记住要领，回到药柜前",
+      "description": "记住要领，回到药柜前",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.mist-fox.fight",
+      "from": "scene.qa-fog.mist-fox",
+      "to": "scene.qa-fog.battle-pending",
+      "text": "护住药草，以卡匣挡开野狐",
+      "description": "护住药草，以卡匣挡开野狐",
+      "effects": [
+        {
+          "kind": "startBattle",
+          "battle": {
+            "battleId": "battle.qa-fog.mist-fox",
+            "encounterId": "test_encounter_01",
+            "encounterFile": "data/encounters/test-enemy.json",
+            "deckFile": "data/decks/starter-deck.json",
+            "onVictoryNodeId": "scene.qa-fog.battle-victory",
+            "onDefeatNodeId": "scene.qa-fog.battle-defeat",
+            "encounterResourceId": "test_encounter_01",
+            "deckResourceId": "deck.starter",
+            "launchText": "野狐从雾中跃出。先稳住卡匣，再护住药草。"
+          }
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.mist-fox.retreat",
+      "from": "scene.qa-fog.mist-fox",
+      "to": "scene.qa-fog.gather",
+      "text": "不惊动它，带药草退回林缘",
+      "description": "不惊动它，带药草退回林缘",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.blue-thread.seek-help",
+      "from": "scene.qa-fog.blue-thread",
+      "to": "scene.qa-fog.alternative",
+      "text": "带线索去找熟悉雾林的同行者",
+      "description": "带线索去找熟悉雾林的同行者",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch3.guard-copy.blue-thread",
+      "from": "scene.qa-fog.ch3.guard-copy",
+      "to": "scene.qa-fog.blue-thread",
+      "text": "循河岸的蓝线前行",
+      "description": "循河岸的蓝线前行",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch3.kept-page.blue-thread",
+      "from": "scene.qa-fog.ch3.kept-page",
+      "to": "scene.qa-fog.blue-thread",
+      "text": "循蓝线寻找上游石阶",
+      "description": "循蓝线寻找上游石阶",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch3.reed-route.blue-thread",
+      "from": "scene.qa-fog.ch3.reed-route",
+      "to": "scene.qa-fog.blue-thread",
+      "text": "沿高岸追看蓝线",
+      "description": "沿高岸追看蓝线",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.invitation.ledger",
+      "from": "scene.qa-fog.ch2.invitation",
+      "to": "scene.qa-fog.ch2.ledger",
+      "text": "翻看留下的账页",
+      "description": "翻看留下的账页",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.battle-pending.retreat",
+      "from": "scene.qa-fog.battle-pending",
+      "to": "scene.qa-fog.gather",
+      "text": "退回林缘",
+      "description": "退回林缘",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.battle-pending.victory",
+      "from": "scene.qa-fog.battle-pending",
+      "to": "scene.qa-fog.battle-victory",
+      "text": "战斗胜利后继续",
+      "description": "战斗胜利后继续",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.manual-battle-result",
+        "expected": true
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.battle-pending.defeat",
+      "from": "scene.qa-fog.battle-pending",
+      "to": "scene.qa-fog.battle-defeat",
+      "text": "战斗失利后继续",
+      "description": "战斗失利后继续",
+      "visibleWhen": {
+        "kind": "flag",
+        "flag": "qa-fog.manual-battle-result",
+        "expected": true
+      },
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.ledger.gate",
+      "from": "scene.qa-fog.ch2.ledger",
+      "to": "scene.qa-fog.ch2.gate",
+      "text": "带着线索去山门",
+      "description": "带着线索去山门",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.battle-victory.return",
+      "from": "scene.qa-fog.battle-victory",
+      "to": "scene.qa-fog.gather",
+      "text": "回药铺照料伤者",
+      "description": "回药铺照料伤者",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.battle-defeat.return",
+      "from": "scene.qa-fog.battle-defeat",
+      "to": "scene.qa-fog.gather",
+      "text": "回药铺照料伤者",
+      "description": "回药铺照料伤者",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.gate.share",
+      "from": "scene.qa-fog.ch2.gate",
+      "to": "scene.qa-fog.ch2.share",
+      "text": "把账页的压痕交给守卫核对",
+      "description": "把账页的压痕交给守卫核对",
+      "effects": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.ch2.share-ledger",
+          "effects": [
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.ch2.shared-ledger",
+              "value": true
+            },
+            {
+              "kind": "learnKnowledge",
+              "actorId": "npc.qa-fog-guard",
+              "knowledgeId": "qa-fog.ch2.ledger-clue"
+            }
+          ]
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.gate.hold",
+      "from": "scene.qa-fog.ch2.gate",
+      "to": "scene.qa-fog.ch2.hold",
+      "text": "先收好压痕，自己探路",
+      "description": "先收好压痕，自己探路",
+      "effects": [
+        {
+          "kind": "once",
+          "eventId": "event.qa-fog.ch2.hold-ledger",
+          "effects": [
+            {
+              "kind": "setFlag",
+              "flag": "qa-fog.ch2.held-ledger",
+              "value": true
+            },
+            {
+              "kind": "adjustRelation",
+              "relationId": "npc.qa-fog-fox",
+              "delta": 5
+            }
+          ]
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.share.clearing",
+      "from": "scene.qa-fog.ch2.share",
+      "to": "scene.qa-fog.ch2.clearing",
+      "text": "循药草坡到旧桥",
+      "description": "循药草坡到旧桥",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.hold.clearing",
+      "from": "scene.qa-fog.ch2.hold",
+      "to": "scene.qa-fog.ch2.clearing",
+      "text": "循药草坡到旧桥",
+      "description": "循药草坡到旧桥",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.clearing.bell",
+      "from": "scene.qa-fog.ch2.clearing",
+      "to": "scene.qa-fog.ch2.bell",
+      "text": "循铃声走向桥下",
+      "description": "循铃声走向桥下",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.bell.return",
+      "from": "scene.qa-fog.ch2.bell",
+      "to": "scene.qa-fog.ch2.return",
+      "text": "带着残页回药铺",
+      "description": "带着残页回药铺",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.bell.upstream",
+      "from": "scene.qa-fog.ch2.bell",
+      "to": "scene.qa-fog.ch2.upstream",
+      "text": "沿断线追查上游的夜路",
+      "description": "沿断线追查上游的夜路",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.return.chapter3",
+      "from": "scene.qa-fog.ch2.return",
+      "to": "scene.qa-fog.chapter3",
+      "text": "雨夜前来求助",
+      "description": "雨夜前来求助",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.upstream.stonehouse",
+      "from": "scene.qa-fog.ch2.upstream",
+      "to": "scene.qa-fog.ch2.stonehouse",
+      "text": "敲开看桥人的空屋",
+      "description": "敲开看桥人的空屋",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.stonehouse.witness",
+      "from": "scene.qa-fog.ch2.stonehouse",
+      "to": "scene.qa-fog.ch2.witness",
+      "text": "照看伤者并听他的证词",
+      "description": "照看伤者并听他的证词",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.witness.route",
+      "from": "scene.qa-fog.ch2.witness",
+      "to": "scene.qa-fog.ch2.route",
+      "text": "与守卫核对封桥后的药路",
+      "description": "与守卫核对封桥后的药路",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.route.record",
+      "from": "scene.qa-fog.ch2.route",
+      "to": "scene.qa-fog.ch2.record",
+      "text": "沿芦苇岸细看旧名册",
+      "description": "沿芦苇岸细看旧名册",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.record.rainwalk",
+      "from": "scene.qa-fog.ch2.record",
+      "to": "scene.qa-fog.ch2.rainwalk",
+      "text": "带着名册线索走回药铺",
+      "description": "带着名册线索走回药铺",
+      "effects": [],
+      "flags": []
+    },
+    {
+      "id": "choice.qa-fog.ch2.rainwalk.return",
+      "from": "scene.qa-fog.ch2.rainwalk",
+      "to": "scene.qa-fog.ch2.return",
+      "text": "进药铺烘干残页",
+      "description": "进药铺烘干残页",
+      "effects": [],
+      "flags": []
+    }
+  ],
+  "shareFactsAcrossStories": true
+}

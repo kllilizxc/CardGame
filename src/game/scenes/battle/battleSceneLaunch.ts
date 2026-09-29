@@ -11,6 +11,14 @@ import {
     createContentCatalogResolver,
     type ContentResourceKind,
 } from '../../content/contentCatalog';
+import type { ArtifactCard } from '@data/types/cards/artifact';
+import type { FieldCard } from '@data/types/cards/field';
+import type { PillCard } from '@data/types/cards/pill';
+import type { SkillCard } from '@data/types/cards/skill';
+import { skillPlayabilityIssue } from '../../content/skillPlayability';
+import type { TalismanCard } from '@data/types/cards/talisman';
+import type { UnitCard } from '@data/types/cards/unit';
+import type { Gongfa } from '@data/types/gongfa';
 import type {
     StoryBattleLaunchMetadata,
     StoryBattleSceneLaunchPayload,
@@ -26,6 +34,7 @@ export const DEFAULT_BATTLE_DECK_FILE = 'data/decks/starter-deck.json';
 export const BATTLE_STATUS_DEFINITIONS_CACHE_KEY = 'statusDefinitions';
 export const BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY = 'combatBaselineConfig';
 export const BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY = 'artifactGradeConfig';
+export const BATTLE_LOADOUT_CONFIG_CACHE_KEY = 'battleLoadoutConfig';
 
 export interface StarterDeckData {
     cards: ExpeditionCardStack[];
@@ -68,6 +77,7 @@ export type BattleRequiredSharedRuntimeResourceCacheKey =
     | 'fieldCards'
     | 'skillCards'
     | 'gongfaList'
+    | typeof BATTLE_LOADOUT_CONFIG_CACHE_KEY
     | typeof BATTLE_STATUS_DEFINITIONS_CACHE_KEY;
 
 export type BattleOptionalSharedRuntimeResourceCacheKey =
@@ -87,6 +97,70 @@ export interface BattleSharedRuntimeResource {
 export type BattleSharedRuntimeResources =
     & Record<BattleRequiredSharedRuntimeResourceCacheKey, BattleSharedRuntimeResource>
     & Partial<Record<BattleOptionalSharedRuntimeResourceCacheKey, BattleSharedRuntimeResource>>;
+
+export interface BattleSharedUnitCardsData {
+    readonly units: readonly UnitCard[];
+}
+
+export interface BattleSharedArtifactCardsData {
+    readonly artifacts: readonly ArtifactCard[];
+}
+
+export interface BattleSharedTalismanCardsData {
+    readonly talismans: readonly TalismanCard[];
+}
+
+export interface BattleSharedPillCardsData {
+    readonly pills: readonly PillCard[];
+}
+
+export interface BattleSharedFieldCardsData {
+    readonly fields: readonly FieldCard[];
+}
+
+export interface BattleSharedSkillCardsData {
+    readonly skills: readonly SkillCard[];
+}
+
+export interface BattleLoadoutConfig {
+    schemaVersion: 1;
+    pillIds: string[];
+    skillIds: string[];
+}
+
+/** Resolve the exact battle slots from the same config changed by card candidates. */
+export function resolveBattleLoadout(
+    rawConfig: unknown,
+    pills: readonly PillCard[],
+    skills: readonly SkillCard[],
+): { pills: PillCard[]; skills: SkillCard[] } {
+    const config = rawConfig as Partial<BattleLoadoutConfig> | null;
+    if (!config || config.schemaVersion !== 1) throw new Error('战斗初始配置版本无效');
+    const select = <T extends { id: string }>(ids: unknown, cards: readonly T[], label: string): T[] => {
+        if (!Array.isArray(ids) || ids.length > 3
+            || ids.some(id => typeof id !== 'string' || !id.trim())
+            || new Set(ids).size !== ids.length) throw new Error(`战斗初始配置的 ${label} 无效`);
+        const byId = new Map(cards.map(card => [card.id, card]));
+        return ids.map(id => {
+            const card = byId.get(id);
+            if (!card) throw new Error(`战斗初始配置引用了不存在的${label}：${id}`);
+            return card;
+        });
+    };
+    const selectedSkills = select(config.skillIds, skills, '技能');
+    for (const skill of selectedSkills) {
+        const issue = skillPlayabilityIssue(skill);
+        if (issue) throw new Error(`战斗初始配置引用了不可执行的技能：${issue}`);
+    }
+    return {
+        pills: select(config.pillIds, pills, '丹药'),
+        skills: selectedSkills,
+    };
+}
+
+export interface BattleSharedGongfaListData {
+    readonly gongfa: readonly Gongfa[];
+}
 
 interface BattleSharedRuntimeResourceRequest {
     cacheKey: BattleSharedRuntimeResourceCacheKey;
@@ -131,6 +205,12 @@ const BATTLE_SHARED_RUNTIME_RESOURCE_REQUESTS: BattleSharedRuntimeResourceReques
         resourceId: 'cards.skills',
         expectedKind: 'card',
         compatibilityPublicPath: 'data/cards/skills.json',
+    },
+    {
+        cacheKey: BATTLE_LOADOUT_CONFIG_CACHE_KEY,
+        resourceId: 'config.battle-loadout',
+        expectedKind: 'config',
+        compatibilityPublicPath: 'data/config/battle-loadout.json',
     },
     {
         cacheKey: 'gongfaList',
@@ -444,6 +524,7 @@ export function normalizeStoryBattleLaunchPayload(data: unknown): StoryBattleSce
         selectedChoiceIds: [...data.selectedChoiceIds],
         ...(data.storyGraphFile ? { storyGraphFile: data.storyGraphFile } : {}),
         ...(data.hubSession ? { hubSession: { ...data.hubSession } } : {}),
+        ...(data.tutorial === true ? { tutorial: true } : {}),
     };
 }
 

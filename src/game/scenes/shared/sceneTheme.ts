@@ -8,9 +8,9 @@ const THEME_COLORS = {
     night: 0x0d1320,
     nightSoft: 0x172133,
     ink: 0x22180f,
-    panel: 0x1f1912,
-    panelInner: 0x2d2419,
-    banner: 0x493824,
+    panel: 0x202e2a,
+    panelInner: 0x303e38,
+    banner: 0x42554c,
     jade: 0x4f7a62,
     jadeBright: 0x72a68a,
     gold: 0xd3b27b,
@@ -125,12 +125,20 @@ export function getSceneTextStyle(
     return {
         ...styles[role],
         ...overrides,
+        ...(overrides.wordWrap ? { wordWrap: { useAdvancedWrap: true, ...overrides.wordWrap } } : {}),
     };
 }
 
 export function createSceneBackdrop(scene: Scene): Phaser.GameObjects.GameObject[] {
     const { width, height } = scene.scale;
     const sky = scene.add.rectangle(width / 2, height / 2, width, height, THEME_COLORS.night, 1);
+    const artKey = scene.scene.key === 'HubScene' ? 'wenxin:gallery' : 'wenxin:story';
+    if (scene.textures.exists(artKey)) {
+        const art = scene.add.image(width / 2, height / 2, artKey).setDisplaySize(width, height);
+        const shade = scene.add.rectangle(width / 2, height / 2, width, height, 0x20282e, .35);
+        const border = scene.add.rectangle(width / 2, height / 2, width - 64, height - 64).setStrokeStyle(3, THEME_COLORS.gold, .5);
+        return [sky, art, shade, border];
+    }
     const glaze = scene.add.rectangle(width / 2, height / 2, width, height, THEME_COLORS.nightSoft, 0.45);
     const leftGlow = scene.add.circle(width * 0.2, height * 0.24, 280, THEME_COLORS.jade, 0.12);
     const moon = scene.add.circle(width * 0.82, height * 0.18, 124, THEME_COLORS.goldSoft, 0.12);
@@ -238,7 +246,9 @@ export function createSceneButton(
     );
 
     const textX = align === 'left' ? config.x - config.width / 2 + 28 : config.x;
-    const labelY = config.description ? config.y - 14 : config.y;
+    const labelY = config.description
+        ? config.y - (config.height >= 120 ? 34 : 14)
+        : config.y;
     const label = scene.add.text(
         textX,
         labelY,

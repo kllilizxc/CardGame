@@ -107,12 +107,14 @@
 
 ## 3. 结构化效果系统（effects）
 
-效果由 5 部分组成：
-1. 触发时机 `timing`
-2. 目标 `target`
-3. 条件 `conditions`
-4. 动作 `actions`
-5. 文本与脚本 `text` / `scriptId`
+卡牌效果分为两条并行域（仅类型收敛，运行时未改）：
+- **legacy 域（兼容保留）**：当前现网卡牌仍使用 `timing / target / conditions / actions`。
+- **schema 域（迁移目标）**：新增并行 `schema` 字段表达，统一 `event / conditions / actions`。
+
+收敛策略：
+- `兼容保留`：继续以 legacy 语义驱动运行，确保现有战斗行为不变。
+- `domain union 拆分`：`CardEffect = LegacyCardEffect | SchemaCardEffect`，禁止混用字段。
+- `adapter 迁移路径`：`adaptLegacyCardEffectToSchema` 输出 `CardEffectMigrationReport`，用于离线迁移评估（含阻断项 warning）。
 
 ### 3.1 触发时机（EffectTiming）
 
@@ -206,7 +208,7 @@ export interface EffectAction {
 
 ### 3.5 整体效果结构（CardEffect）
 
-完整结构：
+legacy 完整结构：
 
 ```json
 {
@@ -228,6 +230,33 @@ export interface EffectAction {
       "value": 1
     }
   ],
+  "text": "我方回合开始时：若你场上存在至少1张灵兽卡，则本回合内所有己方灵兽攻击力+1。",
+  "scriptId": "effect.CR_002.turnStart.buffBeasts"
+}
+```
+
+schema 完整结构（迁移目标）：
+
+```json
+{
+  "schema": {
+    "event": {
+      "type": "TurnStart",
+      "side": "Any"
+    },
+    "conditions": [
+      {
+        "type": "UnitOnField",
+        "requiredLabelsAnyOf": ["灵兽"]
+      }
+    ],
+    "actions": [
+      {
+        "type": "ModifyStats",
+        "attackDelta": 1
+      }
+    ]
+  },
   "text": "我方回合开始时：若你场上存在至少1张灵兽卡，则本回合内所有己方灵兽攻击力+1。",
   "scriptId": "effect.CR_002.turnStart.buffBeasts"
 }

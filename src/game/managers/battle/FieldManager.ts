@@ -2,7 +2,9 @@ import type { Scene } from 'phaser';
 import type { BattleContext } from '../../context/BattleContext';
 import { FieldSprite } from '../../objects/FieldSprite';
 import type { FieldCard } from '@data/types/cards/field';
+import { isLegacyCardEffect, type CardEffect, type LegacyCardEffect, type LegacyEffectAction } from '@data/types/cards/effects';
 import type { CardSprite } from '../../objects/CardSprite';
+import type { EffectResolver, EffectExecutionContext } from './EffectResolver';
 
 /**
  * 场地卡管理器
@@ -11,11 +13,13 @@ import type { CardSprite } from '../../objects/CardSprite';
 export class FieldManager {
     private scene: Scene;
     private battleContext: BattleContext;
+    private effectResolver: EffectResolver;
     private currentField: FieldSprite | null = null;
 
-    constructor(scene: Scene, battleContext: BattleContext) {
+    constructor(scene: Scene, battleContext: BattleContext, effectResolver: EffectResolver) {
         this.scene = scene;
         this.battleContext = battleContext;
+        this.effectResolver = effectResolver;
     }
 
     /**
@@ -69,7 +73,8 @@ export class FieldManager {
      */
     public removeCurrentField(): void {
         if (this.currentField) {
-            // 移除永续效果（需要在实际效果系统中实现）
+            this.effectResolver.clearFieldTurnStartEffects();
+            // 移除永续效果
             this.removeFieldPermanentEffects();
 
             // 销毁精灵
@@ -96,32 +101,58 @@ export class FieldManager {
     }
 
     /**
+     * 构建场地效果执行上下文
+     */
+    private buildFieldContext(): EffectExecutionContext | null {
+        if (!this.currentField) return null;
+
+        const battleScene = this.scene as any;
+        const playerField: CardSprite[] = battleScene.playerField || [];
+        const enemyField: CardSprite[] = battleScene.enemyField || [];
+        const fieldData = this.currentField.getCardData();
+
+        return {
+            playerField,
+            enemyField,
+            sourceCard: this.currentField,
+            sourceName: fieldData.name,
+        };
+    }
+
+    /**
      * 应用场地的永续效果
-     * @private
      */
     private applyFieldPermanentEffects(): void {
         if (!this.currentField) return;
 
+        const ctx = this.buildFieldContext();
+        if (!ctx) return;
+
         const fieldData = this.currentField.getCardData();
-        const permanentEffects = fieldData.effects?.filter(e => e.timing === 'permanent') || [];
+        const permanentEffects = (fieldData.effects?.filter(
+            (e: CardEffect) => e.timing === 'permanent',
+        ) || []) as LegacyCardEffect[];
 
         if (permanentEffects.length > 0) {
-            console.log(`应用场地【${fieldData.name}】的永续效果`);
-            // TODO: 实际应用效果到场上单位
-            // 这需要访问 BattleScene 的单位数组
+            this.battleContext.battleLog.addLog(
+                `应用场地【${fieldData.name}】的永续效果`,
+            );
+            this.effectResolver.applyFieldPermanentEffects(permanentEffects, ctx);
         }
     }
 
     /**
      * 移除场地的永续效果
-     * @private
      */
     private removeFieldPermanentEffects(): void {
         if (!this.currentField) return;
 
+        const ctx = this.buildFieldContext();
+        if (!ctx) return;
+
         const fieldData = this.currentField.getCardData();
-        console.log(`移除场地【${fieldData.name}】的效果`);
-        // TODO: 移除效果
+        this.battleContext.battleLog.addLog(`移除场地【${fieldData.name}】的效果`);
+        this.effectResolver.removeFieldPermanentEffects(ctx);
     }
 
     /**
@@ -137,10 +168,13 @@ export class FieldManager {
     ): void {
         if (!this.currentField) return;
 
-        const fieldData = this.currentField.getCardData();
-        const turnStartEffects = fieldData.effects?.filter(e => e.timing === 'turnStart') || [];
+        // 上一个回合的攻击修正仍覆盖了战斗阶段，此时先回退再应用新回合效果。
+        this.effectResolver.clearFieldTurnStartEffects();
 
-        turnStartEffects.forEach(effect => {
+        const fieldData = this.currentField.getCardData();
+        const turnStartEffects = fieldData.effects?.filter((e: CardEffect) => e.timing === 'turnStart') || [];
+
+        turnStartEffects.forEach((effect: CardEffect) => {
             this.applyFieldEffect(effect, isPlayerTurn, playerUnits, enemyUnits);
         });
     }
@@ -159,19 +193,38 @@ export class FieldManager {
         if (!this.currentField) return;
 
         const fieldData = this.currentField.getCardData();
-        const turnEndEffects = fieldData.effects?.filter(e => e.timing === 'turnEnd') || [];
+        const turnEndEffects = fieldData.effects?.filter((e: CardEffect) => e.timing === 'turnEnd') || [];
 
-        turnEndEffects.forEach(effect => {
+        turnEndEffects.forEach((effect: CardEffect) => {
             this.applyFieldEffect(effect, isPlayerTurn, playerUnits, enemyUnits);
         });
     }
 
+    /** Player-owned field effects fire once for each enemy defeated by a player unit. */
+    public onPlayerUnitKill(
+        killer: CardSprite,
+        playerUnits: CardSprite[],
+        enemyUnits: CardSprite[],
+    ): void {
+        if (!this.currentField || !playerUnits.includes(killer)) return;
+        const fieldData = this.currentField.getCardData();
+        for (const effect of fieldData.effects || []) {
+            if (!isLegacyCardEffect(effect) || effect.timing !== 'onKill') continue;
+            this.effectResolver.executeEffect(effect, {
+                playerField: playerUnits,
+                enemyField: enemyUnits,
+                triggerUnit: killer,
+                sourceCard: this.currentField,
+                sourceName: fieldData.name,
+            });
+        }
+    }
+
     /**
-     * 应用场地效果
-     * @private
+     * 应用场地效果（turnStart / turnEnd）
      */
     private applyFieldEffect(
-        effect: any,
+        effect: CardEffect,
         isPlayerTurn: boolean,
         playerUnits: CardSprite[],
         enemyUnits: CardSprite[]
@@ -185,49 +238,38 @@ export class FieldManager {
         // 根据作用范围选择目标
         if (scope === 'allUnits') {
             targetUnits = [...playerUnits, ...enemyUnits];
-        } else if (scope === 'allyUnits') {
+        } else if (scope === 'allyUnits' || scope === 'allAllies') {
             targetUnits = isPlayerTurn ? playerUnits : enemyUnits;
-        } else if (scope === 'enemyUnits') {
+        } else if (scope === 'enemyUnits' || scope === 'allEnemies') {
             targetUnits = isPlayerTurn ? enemyUnits : playerUnits;
         }
 
         // 对称场地效果对双方都生效
-        if (isSymmetric && (scope === 'allyUnits' || scope === 'enemyUnits')) {
+        if (isSymmetric && (
+            scope === 'allyUnits'
+            || scope === 'allAllies'
+            || scope === 'enemyUnits'
+            || scope === 'allEnemies'
+        )) {
             targetUnits = [...playerUnits, ...enemyUnits];
         }
 
-        // 应用效果动作
-        effect.actions?.forEach((action: any) => {
-            targetUnits.forEach(unit => {
-                this.applyAction(action, unit);
-            });
+        if (targetUnits.length === 0) return;
+
+        const ctx: EffectExecutionContext = {
+            playerField: playerUnits,
+            enemyField: enemyUnits,
+            sourceCard: this.currentField!,
+            sourceName: fieldData.name,
+        };
+
+        // 委托给 EffectResolver 执行每个动作
+        effect.actions?.forEach((action: LegacyEffectAction) => {
+            if (effect.timing === 'turnStart') {
+                this.effectResolver.applyFieldTurnStartAction(action, targetUnits, ctx);
+            } else {
+                this.effectResolver.executeAction(action, targetUnits, ctx);
+            }
         });
-    }
-
-    /**
-     * 应用单个动作到单位
-     * @private
-     */
-    private applyAction(action: any, unit: CardSprite): void {
-        const unitData = unit.getCardData();
-
-        switch (action.type) {
-            case 'modifyAttack':
-                unitData.attack += action.value || 0;
-                unit.updateStats();
-                break;
-            case 'modifyHealth':
-            case 'heal':
-                unitData.health += action.value || 0;
-                unit.updateStats();
-                break;
-            case 'dealDamage':
-                unitData.health -= action.value || 0;
-                if (unitData.health < 0) unitData.health = 0;
-                unit.updateStats();
-                break;
-        }
-
-        this.battleContext.battleTickManager.tick();
     }
 }

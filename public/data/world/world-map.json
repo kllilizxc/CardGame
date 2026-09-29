@@ -2,7 +2,7 @@
   "id": "worldmap.qingyun-region",
   "title": "青云山麓",
   "subtitle": "大地图 · 第一层入口",
-  "description": "青云宗山门外的第一张薄大地图。当前只负责把玩家从主菜单路由到青云镇 Hub、青云宗山门 Hub、集市茶棚 Hub 地点、青云外山试炼秘境和青玉洞试炼秘境，不拥有解锁、移动或世界状态。",
+  "description": "山风从云阶吹向青云镇。镇上、山门和两处试炼之地各有去路，今天的行程由你决定。",
   "defaultDestinationId": "destination.qingyun-town",
   "presentation": {
     "mapWidth": 1640,
@@ -17,7 +17,7 @@
       "id": "destination.qingyun-town",
       "kind": "hub",
       "label": "青云镇",
-      "description": "返回山门脚下的城镇壳层，继续主线、茶棚支线或后续城镇行动。",
+      "description": "到山脚小镇歇脚，看看试炼告示，顺道听听茶棚里的消息。",
       "presentation": {
         "position": {
           "x": 0.3,
@@ -35,7 +35,7 @@
       "id": "destination.qingyun-sect-gate",
       "kind": "hub",
       "label": "青云宗山门",
-      "description": "抵达云阶尽头的山门牌坊，以独立 Hub 身份进入既有青云宗入门故事。",
+      "description": "沿云阶抵达山门牌坊，向执事打听入宗试炼。",
       "presentation": {
         "position": {
           "x": 0.56,
@@ -53,7 +53,7 @@
       "id": "destination.qingyun-town-teahouse",
       "kind": "hub",
       "label": "集市茶棚",
-      "description": "直接前往青云镇茶棚地点，听取散修传闻或继续茶棚支线。",
+      "description": "到集市茶棚喝碗茶，听散修谈起山门近况。",
       "presentation": {
         "position": {
           "x": 0.38,
@@ -72,7 +72,7 @@
       "id": "destination.qingyun-outer-mountain-trial",
       "kind": "expedition",
       "label": "青云外山试炼",
-      "description": "进入现有秘境/ExpeditionScene，保留当前搜打撤地图、战斗和结算循环。",
+      "description": "踏入青云外山，在山路和遗迹间寻找机缘，遇敌时以卡匣应战。",
       "presentation": {
         "position": {
           "x": 0.68,
@@ -99,7 +99,7 @@
       "id": "destination.qingyun-jade-cave-trial",
       "kind": "expedition",
       "label": "青玉洞试炼",
-      "description": "以独立 Expedition/map 身份进入青玉洞支脉；当前复用原型事件、商店和战斗内容来验证多个秘境入口的 active-run 隔离。",
+      "description": "进入青玉洞支脉，探查洞窟里的灵石与旧迹。",
       "presentation": {
         "position": {
           "x": 0.78,
