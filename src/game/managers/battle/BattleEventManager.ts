@@ -147,7 +147,7 @@ export class BattleEventManager {
                 if (target) {
                     const targetHighlight = this.scene.add.graphics();
                     this.targetHighlight = targetHighlight;
-                    const color = targetSide === 'ally' ? 0x3498db : 0x00ff00;
+                    const color = targetSide === 'ally' ? 0x1f7a5a : 0x00ff00;
                     targetHighlight.lineStyle(4, color, 1);
                     targetHighlight.setDepth(999);
 

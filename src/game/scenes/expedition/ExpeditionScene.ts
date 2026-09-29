@@ -121,13 +121,13 @@ export class ExpeditionScene extends Scene {
         this.add.text(width / 2, 80, this.mapDefinition.name, {
             fontFamily: 'Arial',
             fontSize: '44px',
-            color: '#f8fafc',
+            color: '#f4ecd8',
             fontStyle: 'bold',
         }).setOrigin(0.5);
         this.add.text(width / 2, 126, '第一阶段 · 秘境入口流程', {
             fontFamily: 'Arial',
             fontSize: '22px',
-            color: '#93c5fd',
+            color: '#a0e8f8',
         }).setOrigin(0.5);
         this.createWorldMapReturnButton();
 
@@ -136,7 +136,7 @@ export class ExpeditionScene extends Scene {
         this.statusText = this.add.text(width / 2, height - 92, '', {
             fontFamily: 'Arial',
             fontSize: '20px',
-            color: '#cbd5e1',
+            color: '#cfc6dd',
             align: 'center',
             wordWrap: { width: width - 220 },
         }).setOrigin(0.5);
@@ -180,17 +180,17 @@ export class ExpeditionScene extends Scene {
         const { width } = this.scale;
         const x = width - 180;
         const y = 74;
-        const button = this.add.rectangle(x, y, 230, 54, 0x334155, 0.94);
-        button.setStrokeStyle(2, 0xffffff, 0.78);
+        const button = this.add.rectangle(x, y, 230, 54, 0x32285a, 0.94);
+        button.setStrokeStyle(2, 0xf4ecd8, 0.78);
         button.setInteractive({ useHandCursor: true });
-        button.on('pointerover', () => button.setFillStyle(0x475569, 1));
-        button.on('pointerout', () => button.setFillStyle(0x334155, 0.94));
+        button.on('pointerover', () => button.setFillStyle(0x4a3c7a, 1));
+        button.on('pointerout', () => button.setFillStyle(0x32285a, 0.94));
         button.on('pointerdown', () => this.returnToWorldMap());
 
         this.add.text(x, y, '返回大地图', {
             fontFamily: 'Arial',
             fontSize: '18px',
-            color: '#f8fafc',
+            color: '#f4ecd8',
             fontStyle: 'bold',
         }).setOrigin(0.5);
     }
@@ -286,7 +286,7 @@ export class ExpeditionScene extends Scene {
                 }
 
                 const isReachableEdge = isReachableNode(this.mapDefinition, activeRun, outgoingNodeId);
-                const lineColor = isReachableEdge ? 0xfacc15 : targetNode.visibility === 'cleared' ? 0x38bdf8 : 0x475569;
+                const lineColor = isReachableEdge ? 0xffc040 : targetNode.visibility === 'cleared' ? 0xffc040 : 0x4a3c7a;
                 const lineAlpha = isReachableEdge ? 0.95 : targetNode.visibility === 'silhouette' ? 0.3 : 0.72;
 
                 this.mapGraphics.lineStyle(isReachableEdge ? 4 : 3, lineColor, lineAlpha);
@@ -406,20 +406,20 @@ export class ExpeditionScene extends Scene {
         const panelY = 238;
         const panelWidth = Math.min(1080, width - 240);
         const panelHeight = 156;
-        const background = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x020617, 0.82);
-        background.setStrokeStyle(2, 0x38bdf8, 0.72);
+        const background = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x0b0714, 0.82);
+        background.setStrokeStyle(2, 0xffc040, 0.72);
 
         const title = this.add.text(panelX - panelWidth / 2 + 32, panelY - 54, '秘境非战斗节点', {
             fontFamily: 'Arial',
             fontSize: '24px',
-            color: '#e0f2fe',
+            color: '#cfc6dd',
             fontStyle: 'bold',
         });
 
         const subtitle = this.add.text(panelX - panelWidth / 2 + 32, panelY - 20, '事件、商店、撤离均在 ExpeditionScene 内处理；战斗和 BOSS 节点会切换到 BattleScene。', {
             fontFamily: 'Arial',
             fontSize: '17px',
-            color: '#cbd5e1',
+            color: '#cfc6dd',
         });
 
         menu.add([background, title, subtitle]);
@@ -446,7 +446,7 @@ export class ExpeditionScene extends Scene {
             const stateLabel = this.add.text(x, panelY + 78, stateText, {
                 fontFamily: 'Arial',
                 fontSize: '15px',
-                color: '#fde68a',
+                color: '#fff07a',
             }).setOrigin(0.5);
 
             menu.add([...button, stateLabel]);
@@ -538,7 +538,7 @@ export class ExpeditionScene extends Scene {
         const description = this.add.text(contentX, panelY - panelHeight / 2 + 120, view.description, {
             fontFamily: 'Arial',
             fontSize: '20px',
-            color: '#cbd5e1',
+            color: '#cfc6dd',
             wordWrap: { width: 860 },
         });
         const outcomeLabel = this.add.text(contentX, description.y + 84, view.outcome.label, {
@@ -550,18 +550,18 @@ export class ExpeditionScene extends Scene {
         const outcomeDescription = this.add.text(contentX, outcomeLabel.y + 42, view.outcome.description, {
             fontFamily: 'Arial',
             fontSize: '20px',
-            color: '#f8fafc',
+            color: '#f4ecd8',
             wordWrap: { width: 860 },
         });
         const rewardText = this.add.text(contentX, outcomeDescription.y + 76, `奖励：${view.rewardSummary}`, {
             fontFamily: 'Courier New',
             fontSize: '20px',
-            color: '#fde68a',
+            color: '#fff07a',
         });
         const messageText = this.add.text(contentX, rewardText.y + 44, message ?? (view.claimed ? '该事件奖励已经领取，无法重复获得。' : '领取后会立即写入 active run。'), {
             fontFamily: 'Arial',
             fontSize: '18px',
-            color: view.claimed ? '#fca5a5' : '#93c5fd',
+            color: view.claimed ? '#f8a8c8' : '#a0e8f8',
         });
         const claimButton = this.createButton({
             x: this.scale.width / 2,
@@ -569,7 +569,7 @@ export class ExpeditionScene extends Scene {
             width: 260,
             height: 56,
             label: view.claimed ? '已领取' : '领取事件奖励',
-            fillColor: view.claimed ? 0x475569 : 0x7c3aed,
+            fillColor: view.claimed ? 0x4a3c7a : 0x9a4cd0,
             disabled: view.claimed,
             onClick: () => {
                 const result = this.expeditionState.claimEventNodeReward(eventDefinition.nodeId, view.outcome.rewards);
@@ -603,14 +603,14 @@ export class ExpeditionScene extends Scene {
         const description = this.add.text(contentX, panelY - panelHeight / 2 + 116, `${view.description}\n当前 run spiritStones：${view.spiritStones}`, {
             fontFamily: 'Arial',
             fontSize: '20px',
-            color: '#cbd5e1',
+            color: '#cfc6dd',
             wordWrap: { width: 860 },
             lineSpacing: 8,
         });
         const messageText = this.add.text(contentX, description.y + 78, message ?? '选择一个可支付的商品；每个 offer 只能购买一次。', {
             fontFamily: 'Arial',
             fontSize: '18px',
-            color: message ? '#fde68a' : '#93c5fd',
+            color: message ? '#fff07a' : '#a0e8f8',
         });
 
         container.add([description, messageText]);
@@ -619,7 +619,7 @@ export class ExpeditionScene extends Scene {
             const offerText = this.add.text(contentX, offerY, this.formatShopOfferLine(offerView), {
                 fontFamily: 'Arial',
                 fontSize: '19px',
-                color: offerView.state === 'available' ? '#f8fafc' : '#94a3b8',
+                color: offerView.state === 'available' ? '#f4ecd8' : '#9a8fbf',
                 wordWrap: { width: 660 },
                 lineSpacing: 5,
             });
@@ -629,7 +629,7 @@ export class ExpeditionScene extends Scene {
                 width: 190,
                 height: 48,
                 label: this.getShopOfferButtonLabel(offerView),
-                fillColor: offerView.state === 'available' ? 0xd97706 : 0x475569,
+                fillColor: offerView.state === 'available' ? 0xf28a2e : 0x4a3c7a,
                 disabled: offerView.state !== 'available',
                 onClick: () => {
                     const result = this.expeditionState.purchaseShopOffer(
@@ -673,14 +673,14 @@ export class ExpeditionScene extends Scene {
         const description = this.add.text(contentX, panelY - panelHeight / 2 + 126, '确认后会立刻结束本次秘境探索，并将当前携带的卡牌、道具与 spiritStones 存入永久仓库。', {
             fontFamily: 'Arial',
             fontSize: '21px',
-            color: '#cbd5e1',
+            color: '#cfc6dd',
             wordWrap: { width: 860 },
             lineSpacing: 8,
         });
         const messageText = this.add.text(contentX, description.y + 108, message ?? (view.recorded ? '撤离已在本次探索中登记。' : '是否确认从该撤离点离开？'), {
             fontFamily: 'Arial',
             fontSize: '20px',
-            color: view.recorded ? '#86efac' : '#fde68a',
+            color: view.recorded ? '#a6ee8a' : '#fff07a',
         });
         const confirmButton = this.createButton({
             x: this.scale.width / 2,
@@ -688,7 +688,7 @@ export class ExpeditionScene extends Scene {
             width: 280,
             height: 56,
             label: '确认撤离并结算',
-            fillColor: 0x16a34a,
+            fillColor: 0x1f7a5a,
             onClick: () => {
                 const summary = resolveExtract({ finalNodeId: node.id, run: activeRun });
                 this.showTerminalSummary(summary);
@@ -783,20 +783,20 @@ export class ExpeditionScene extends Scene {
         const panelX = width / 2;
         const panelY = height / 2 + 68;
         const contentX = panelX - panelWidth / 2 + 56;
-        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.5);
-        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x111827, 0.98);
-        panel.setStrokeStyle(3, 0x38bdf8, 0.9);
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x0b0714, 0.3);
+        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x160f26, 0.98);
+        panel.setStrokeStyle(3, 0xffc040, 0.9);
 
         const title = this.add.text(contentX, panelY - panelHeight / 2 + 42, titleText, {
             fontFamily: 'Arial',
             fontSize: '34px',
-            color: '#f8fafc',
+            color: '#f4ecd8',
             fontStyle: 'bold',
         });
         const subtitle = this.add.text(contentX, title.y + 44, subtitleText, {
             fontFamily: 'Arial',
             fontSize: '18px',
-            color: '#93c5fd',
+            color: '#a0e8f8',
         });
         const closeButton = this.createButton({
             x: panelX + panelWidth / 2 - 52,
@@ -804,7 +804,7 @@ export class ExpeditionScene extends Scene {
             width: 64,
             height: 42,
             label: '×',
-            fillColor: 0x334155,
+            fillColor: 0x32285a,
             onClick: () => this.destroyActiveNodePanel(),
         });
 
@@ -825,7 +825,7 @@ export class ExpeditionScene extends Scene {
         disabled?: boolean;
     }): [Phaser.GameObjects.Rectangle, Phaser.GameObjects.Text] {
         const button = this.add.rectangle(config.x, config.y, config.width, config.height, config.fillColor, 1);
-        button.setStrokeStyle(2, 0xffffff, config.disabled ? 0.35 : 0.86);
+        button.setStrokeStyle(2, 0xf4ecd8, config.disabled ? 0.35 : 0.86);
 
         if (!config.disabled) {
             button.setInteractive({ useHandCursor: true });
@@ -839,7 +839,7 @@ export class ExpeditionScene extends Scene {
         const label = this.add.text(config.x, config.y, config.label, {
             fontFamily: 'Arial',
             fontSize: '18px',
-            color: '#f8fafc',
+            color: '#f4ecd8',
             fontStyle: 'bold',
         }).setOrigin(0.5);
 
@@ -883,11 +883,11 @@ export class ExpeditionScene extends Scene {
     private getNodeColor(node: NonCombatMapNode): number {
         switch (node.type) {
             case 'event':
-                return 0x7c3aed;
+                return 0x9a4cd0;
             case 'shop':
-                return 0xd97706;
+                return 0xf28a2e;
             case 'extract':
-                return 0x16a34a;
+                return 0x1f7a5a;
         }
     }
 

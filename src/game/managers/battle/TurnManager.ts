@@ -50,18 +50,18 @@ export class TurnManager {
         const overlayDepth = 10000;
 
         // 纯黑底遮罩，盖住所有 UI
-        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 1);
+        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x0b0714, 1);
         overlay.setDepth(overlayDepth).setInteractive();
 
         this.scene.add.text(width / 2, height / 2, '胜利！', {
             fontSize: '64px',
-            color: '#2ecc71',
+            color: '#3fbf7a',
             fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(overlayDepth + 1);
 
         this.scene.add.text(width / 2, height / 2 + 80, '点击任意位置继续', {
             fontSize: '20px',
-            color: '#ffffff'
+            color: '#f4ecd8'
         }).setOrigin(0.5).setDepth(overlayDepth + 1);
 
         this.scene.input.once('pointerdown', onContinue);
@@ -72,17 +72,17 @@ export class TurnManager {
         const { width, height } = this.scene.scale;
 
         // 半透明遮罩
-        this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7).setDepth(1999);
+        this.scene.add.rectangle(width / 2, height / 2, width, height, 0x0b0714, 0.7).setDepth(1999);
 
         this.scene.add.text(width / 2, height / 2, '失败！', {
             fontSize: '64px',
-            color: '#e74c3c',
+            color: '#ee4a3a',
             fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(2000);
 
         this.scene.add.text(width / 2, height / 2 + 80, '点击任意位置继续', {
             fontSize: '20px',
-            color: '#ffffff'
+            color: '#f4ecd8'
         }).setOrigin(0.5).setDepth(2000);
 
         this.scene.input.once('pointerdown', onContinue);
@@ -141,7 +141,7 @@ export class TurnManager {
 
                 // 等待死亡动画完成后切换到敌人回合
                 this.scene.time.delayedCall(600, () => {
-                this.showTurnAnimation('敌人回合', 0xe74c3c, () => {
+                this.showTurnAnimation('敌人回合', 0xee4a3a, () => {
                     this.startEnemyTurn(context);
                     });
                 });
@@ -200,7 +200,7 @@ export class TurnManager {
 
                     // 等待状态动画完成后切换到玩家回合
                     this.scene.time.delayedCall(800, () => {
-                        this.showTurnAnimation(`回合 ${context.turnNumber + 1}`, 0x2ecc71, () => {
+                        this.showTurnAnimation(`回合 ${context.turnNumber + 1}`, 0x3fbf7a, () => {
                             this.startPlayerTurn(context);
                         });
                     });

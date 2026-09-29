@@ -21,8 +21,8 @@ export class GameOver extends Scene
         this.background.setAlpha(0.5);
 
         this.gameOverText = this.add.text(512, 384, '游戏结束', {
-            fontFamily: 'Arial Black', fontSize: 64, color: '#ffffff',
-            stroke: '#000000', strokeThickness: 8,
+            fontFamily: 'Arial Black', fontSize: 64, color: '#f4ecd8',
+            stroke: '#0b0714', strokeThickness: 8,
             align: 'center'
         }).setOrigin(0.5).setDepth(100);
         

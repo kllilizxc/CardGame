@@ -71,8 +71,8 @@ export class CardPreviewManager {
         this.cardPreview.setDepth(depth);
 
         // 添加背景遮罩
-        const bgMask = this.scene.add.rectangle(0, 0, 220, 300, 0x000000, 0.8);
-        bgMask.setStrokeStyle(4, 0xffd700);
+        const bgMask = this.scene.add.rectangle(0, 0, 220, 300, 0x0b0714, 0.8);
+        bgMask.setStrokeStyle(4, 0xffc040);
         this.cardPreview.add(bgMask);
 
         // 添加克隆的卡片

@@ -32,6 +32,8 @@ export function installPixelText(): void {
         if (s.strokeThickness) s.strokeThickness = Math.max(4, Math.round(s.strokeThickness / 2) * 2);
         // Text-render resolution follows the canvas, no blurry supersampling.
         s.resolution = 1;
+        // CJK has no spaces to break on — wrap per glyph.
+        if (s.wordWrap && s.wordWrap.width) s.wordWrap = { ...s.wordWrap, useAdvancedWrap: true };
         return origSetStyle.call(this, s, updateText, setDefaults);
     };
 

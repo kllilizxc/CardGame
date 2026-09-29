@@ -41,75 +41,75 @@ export class PreparationPanel extends GameObjects.Container {
         const summary = createPreparationSummary(this.stash);
 
         const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x05070d, 0.76);
-        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x111827, 0.96);
-        panel.setStrokeStyle(3, 0x7c3aed, 0.9);
+        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x160f26, 0.96);
+        panel.setStrokeStyle(3, 0x9a4cd0, 0.9);
 
         const title = this.scene.add.text(leftColumnX, panelY - panelHeight / 2 + 42, '秘境入口 · 储物袋确认', {
             fontFamily: 'Arial',
             fontSize: '34px',
-            color: '#f8fafc',
+            color: '#f4ecd8',
             fontStyle: 'bold',
         });
 
         const subtitle = this.scene.add.text(leftColumnX, title.y + 46, '第一阶段暂不开放卡组构筑；确认当前储物袋后即可进入。', {
             fontFamily: 'Arial',
             fontSize: '20px',
-            color: '#cbd5e1',
+            color: '#cfc6dd',
             wordWrap: { width: panelWidth - 112 },
         });
 
         const loadoutSummaryText = this.scene.add.text(leftColumnX, subtitle.y + 52, `带入合计：${summary.deckCount} 张卡 · ${summary.itemCount} 件道具`, {
             fontFamily: 'Arial',
             fontSize: '20px',
-            color: '#93c5fd',
+            color: '#a0e8f8',
         });
 
         const spiritStonesText = this.scene.add.text(leftColumnX, loadoutSummaryText.y + 38, `灵石：${summary.spiritStones}`, {
             fontFamily: 'Arial',
             fontSize: '24px',
-            color: '#fde68a',
+            color: '#fff07a',
             fontStyle: 'bold',
         });
 
         const deckHeading = this.scene.add.text(leftColumnX, spiritStonesText.y + 52, '初始卡组', {
             fontFamily: 'Arial',
             fontSize: '24px',
-            color: '#93c5fd',
+            color: '#a0e8f8',
             fontStyle: 'bold',
         });
 
         const deckList = this.scene.add.text(leftColumnX, deckHeading.y + 36, this.stash.deck.map(formatCardLine).join('\n'), {
             fontFamily: 'Courier New',
             fontSize: '18px',
-            color: '#e2e8f0',
+            color: '#cfc6dd',
             lineSpacing: 8,
         });
 
         const itemsHeading = this.scene.add.text(panelX + 110, spiritStonesText.y + 52, '初始道具', {
             fontFamily: 'Arial',
             fontSize: '24px',
-            color: '#86efac',
+            color: '#a6ee8a',
             fontStyle: 'bold',
         });
 
         const itemsText = this.scene.add.text(panelX + 110, itemsHeading.y + 36, this.stash.items.map(formatItemLine).join('\n'), {
             fontFamily: 'Courier New',
             fontSize: '18px',
-            color: '#e2e8f0',
+            color: '#cfc6dd',
             lineSpacing: 8,
         });
 
-        this.confirmButton = this.scene.add.rectangle(panelX, panelY + panelHeight / 2 - 64, 280, 56, 0x2563eb, 1);
-        this.confirmButton.setStrokeStyle(2, 0xffffff, 0.9);
+        this.confirmButton = this.scene.add.rectangle(panelX, panelY + panelHeight / 2 - 64, 280, 56, 0x1f7a5a, 1);
+        this.confirmButton.setStrokeStyle(2, 0xf4ecd8, 0.9);
         this.confirmButton.setInteractive({ useHandCursor: true });
-        this.confirmButton.on('pointerover', () => this.confirmButton.setFillStyle(0x3b82f6));
-        this.confirmButton.on('pointerout', () => this.confirmButton.setFillStyle(0x2563eb));
+        this.confirmButton.on('pointerover', () => this.confirmButton.setFillStyle(0xffc040));
+        this.confirmButton.on('pointerout', () => this.confirmButton.setFillStyle(0x1f7a5a));
         this.confirmButton.on('pointerdown', () => this.confirmLoadout());
 
         const confirmLabel = this.scene.add.text(this.confirmButton.x, this.confirmButton.y, '确认带入当前储物袋', {
             fontFamily: 'Arial',
             fontSize: '22px',
-            color: '#f8fafc',
+            color: '#f4ecd8',
             fontStyle: 'bold',
         }).setOrigin(0.5);
 

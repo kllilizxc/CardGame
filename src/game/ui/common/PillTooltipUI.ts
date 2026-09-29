@@ -40,8 +40,8 @@ export class PillTooltipUI {
         // 背景
         const bgWidth = 250;
         const bgHeight = 180;
-        const bg = this.scene.add.rectangle(0, 0, bgWidth, bgHeight, 0x1a1a2e, 0.95);
-        bg.setStrokeStyle(3, 0x2ecc71);
+        const bg = this.scene.add.rectangle(0, 0, bgWidth, bgHeight, 0x160f26, 0.95);
+        bg.setStrokeStyle(3, 0x3fbf7a);
         this.tooltip.add(bg);
 
         // 丹药图标
@@ -53,28 +53,28 @@ export class PillTooltipUI {
         // 丹药名称
         const nameText = this.scene.add.text(0, -25, pill.name, {
             fontSize: '18px',
-            color: '#2ecc71',
+            color: '#3fbf7a',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.tooltip.add(nameText);
 
         // 品级
         const gradeColors: { [key: string]: string } = {
-            '下品': '#95a5a6',
-            '中品': '#3498db',
-            '上品': '#9b59b6',
-            '极品': '#f39c12'
+            '下品': '#9a8fbf',
+            '中品': '#4cb4f0',
+            '上品': '#9a4cd0',
+            '极品': '#f28a2e'
         };
         const gradeText = this.scene.add.text(0, 0, `品级：${pill.grade}`, {
             fontSize: '14px',
-            color: gradeColors[pill.grade] || '#95a5a6'
+            color: gradeColors[pill.grade] || '#9a8fbf'
         }).setOrigin(0.5);
         this.tooltip.add(gradeText);
 
         // 效果描述
         const descText = this.scene.add.text(0, 25, pill.description, {
             fontSize: '12px',
-            color: '#ecf0f1',
+            color: '#f4ecd8',
             align: 'center',
             wordWrap: { width: bgWidth - 20 }
         }).setOrigin(0.5);
@@ -89,7 +89,7 @@ export class PillTooltipUI {
             };
             const targetText = this.scene.add.text(0, 60, `目标：${targetLabels[pill.target] || pill.target}`, {
                 fontSize: '11px',
-                color: '#95a5a6'
+                color: '#9a8fbf'
             }).setOrigin(0.5);
             this.tooltip.add(targetText);
         }

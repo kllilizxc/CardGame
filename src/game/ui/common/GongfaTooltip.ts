@@ -38,7 +38,7 @@ export class GongfaTooltip {
         // 创建功法名文本（用于测量宽度）
         this.nameText = this.scene.add.text(0, 0, gongfaName, {
             fontSize: `${titleFontSize}px`,
-            color: '#ffd700',
+            color: '#ffc040',
             fontStyle: 'bold',
             wordWrap: { width: maxWidth - padding * 2 }
         });
@@ -46,7 +46,7 @@ export class GongfaTooltip {
         // 创建描述文本
         this.descriptionText = this.scene.add.text(0, 0, gongfaDescription, {
             fontSize: `${fontSize}px`,
-            color: '#ecf0f1',
+            color: '#f4ecd8',
             wordWrap: { width: maxWidth - padding * 2 }
         });
 
@@ -57,8 +57,8 @@ export class GongfaTooltip {
         const totalWidth = Math.max(this.nameText.width, this.descriptionText.width) + padding * 2;
 
         // 创建背景
-        this.background = this.scene.add.rectangle(0, 0, totalWidth, totalHeight, 0x2c3e50, 0.95);
-        this.background.setStrokeStyle(2, 0xffd700);
+        this.background = this.scene.add.rectangle(0, 0, totalWidth, totalHeight, 0x32285a, 0.95);
+        this.background.setStrokeStyle(2, 0xffc040);
         this.background.setOrigin(0, 0);
 
         // 定位文本

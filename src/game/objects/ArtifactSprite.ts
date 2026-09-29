@@ -73,7 +73,7 @@ export class ArtifactSprite extends BaseCardSprite {
         } else {
             this.bonusText = scene.add.text(0, 70, '', {
                 fontSize: '14px',
-                color: '#f1c40f'
+                color: '#ffc040'
             }).setOrigin(0.5);
             this.add(this.bonusText);
         }
@@ -81,7 +81,7 @@ export class ArtifactSprite extends BaseCardSprite {
         // 描述（不在小卡上显示，只在预览时显示）
         this.descriptionText = scene.add.text(0, 105, cardData.description, {
             fontSize: '10px',
-            color: '#bdc3c7',
+            color: '#cfc6dd',
             wordWrap: { width: 160 },
             align: 'center'
         }).setOrigin(0.5);

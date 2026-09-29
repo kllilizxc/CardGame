@@ -1,4 +1,5 @@
 import { ensureBackdrop } from '../../art/backdrop';
+import { bakeTerrain } from '../../art/terrain';
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
@@ -163,15 +164,15 @@ export class HubScene extends Scene {
         container.add(this.add.text(width / 2, 74, this.town.title, {
             fontFamily: 'Arial Black',
             fontSize: '48px',
-            color: '#f8fafc',
-            stroke: '#020617',
+            color: '#f4ecd8',
+            stroke: '#0b0714',
             strokeThickness: 8,
         }).setOrigin(0.5));
 
         container.add(this.add.text(width / 2, 126, this.town.subtitle, {
             fontFamily: 'Arial',
             fontSize: '22px',
-            color: '#bfdbfe',
+            color: '#a0e8f8',
         }).setOrigin(0.5));
 
         const panelWidth = Math.min(1520, width - 220);
@@ -192,21 +193,21 @@ export class HubScene extends Scene {
         const detailLeft = mapViewport.left + mapViewport.width + 54;
         const detailWidth = panelRight - detailLeft - 54;
 
-        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x111827, 0.96);
-        panel.setStrokeStyle(3, 0x38bdf8, 0.82);
+        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x160f26, 0.96);
+        panel.setStrokeStyle(3, 0xffc040, 0.82);
         container.add(panel);
 
         container.add(this.add.text(contentX, panelTop + 48, '地点子地图', {
             fontFamily: 'Arial',
             fontSize: '31px',
-            color: '#fef3c7',
+            color: '#f4ecd8',
             fontStyle: 'bold',
         }));
 
         container.add(this.add.text(contentX, panelTop + 94, '拖拽平移地图，点击标记选择 Hub 小地点。', {
             fontFamily: 'Arial',
             fontSize: '18px',
-            color: '#bae6fd',
+            color: '#a0e8f8',
             wordWrap: { width: mapViewport.width },
         }));
 
@@ -215,14 +216,14 @@ export class HubScene extends Scene {
         container.add(this.add.text(detailLeft, panelTop + 48, currentLocation.title, {
             fontFamily: 'Arial',
             fontSize: '36px',
-            color: '#fef3c7',
+            color: '#f4ecd8',
             fontStyle: 'bold',
         }));
 
         container.add(this.add.text(detailLeft, panelTop + 102, currentLocation.summary, {
             fontFamily: 'Arial',
             fontSize: '24px',
-            color: '#e0f2fe',
+            color: '#cfc6dd',
             fontStyle: 'bold',
             wordWrap: { width: detailWidth },
         }));
@@ -230,7 +231,7 @@ export class HubScene extends Scene {
         container.add(this.add.text(detailLeft, panelTop + 162, currentLocation.detail, {
             fontFamily: 'Arial',
             fontSize: '21px',
-            color: '#dbeafe',
+            color: '#cfc6dd',
             lineSpacing: 10,
             wordWrap: { width: detailWidth },
         }));
@@ -238,7 +239,7 @@ export class HubScene extends Scene {
         container.add(this.add.text(detailLeft, panelTop + 300, this.town.description, {
             fontFamily: 'Arial',
             fontSize: '18px',
-            color: '#c4b5fd',
+            color: '#f8a8c8',
             wordWrap: { width: detailWidth },
         }));
 
@@ -246,7 +247,7 @@ export class HubScene extends Scene {
         this.statusText = this.add.text(detailLeft, panelTop + 368, statusLine, {
             fontFamily: 'Arial',
             fontSize: '17px',
-            color: '#fef3c7',
+            color: '#f4ecd8',
             wordWrap: { width: detailWidth },
         });
         container.add(this.statusText);
@@ -278,10 +279,10 @@ export class HubScene extends Scene {
             viewportCenterY,
             viewport.width,
             viewport.height,
-            0x020617,
+            0x0b0714,
             1,
         );
-        viewportBackground.setStrokeStyle(2, 0x0ea5e9, 0.4);
+        viewportBackground.setStrokeStyle(2, 0xffc040, 0.4);
         container.add(viewportBackground);
 
         const initialSurfacePosition = createHubMapInitialSurfacePosition(this.town.presentation, viewport);
@@ -296,7 +297,7 @@ export class HubScene extends Scene {
         });
 
         const maskShape = this.add.graphics();
-        maskShape.fillStyle(0xffffff, 1);
+        maskShape.fillStyle(0xf4ecd8, 1);
         maskShape.fillRect(viewport.left, viewport.top, viewport.width, viewport.height);
         maskShape.setVisible(false);
         surface.setMask(maskShape.createGeometryMask());
@@ -309,17 +310,17 @@ export class HubScene extends Scene {
             viewportCenterY,
             viewport.width,
             viewport.height,
-            0x000000,
+            0x0b0714,
             0,
         );
-        frame.setStrokeStyle(4, 0x38bdf8, 0.74);
+        frame.setStrokeStyle(4, 0xffc040, 0.74);
         container.add(frame);
 
         const hint = this.add.text(viewport.left + 22, viewport.top + 18, '拖拽查看周边 · 点击地点标记', {
             fontFamily: 'Arial',
             fontSize: '16px',
-            color: '#bae6fd',
-            backgroundColor: '#0f172acc',
+            color: '#a0e8f8',
+            backgroundColor: '#160f26cc',
             padding: { x: 12, y: 7 },
         });
         container.add(hint);
@@ -329,39 +330,23 @@ export class HubScene extends Scene {
 
     private createHubMapSurfaceBackdrop(): Phaser.GameObjects.Rectangle {
         const { mapWidth, mapHeight } = this.town.presentation;
-        const backdrop = this.add.rectangle(0, 0, mapWidth, mapHeight, 0x0b1220, 1);
+        const backdrop = this.add.rectangle(0, 0, mapWidth, mapHeight, 0x160f26, 1);
         backdrop.setOrigin(0, 0);
-        backdrop.setStrokeStyle(6, 0x1e293b, 1);
+        backdrop.setStrokeStyle(6, 0x221a3d, 1);
 
         return backdrop;
     }
 
-    private createHubMapTerrainArtwork(): Phaser.GameObjects.Graphics {
+    private createHubMapTerrainArtwork(): Phaser.GameObjects.Image {
         const { mapWidth, mapHeight } = this.town.presentation;
-        const graphics = this.add.graphics();
-
-        graphics.fillStyle(0x0f2f2f, 0.48);
-        graphics.fillEllipse(mapWidth * 0.36, mapHeight * 0.68, mapWidth * 0.48, mapHeight * 0.34);
-        graphics.fillStyle(0x164e63, 0.36);
-        graphics.fillEllipse(mapWidth * 0.62, mapHeight * 0.42, mapWidth * 0.52, mapHeight * 0.36);
-        graphics.fillStyle(0x3f2d20, 0.34);
-        graphics.fillEllipse(mapWidth * 0.5, mapHeight * 0.54, mapWidth * 0.32, mapHeight * 0.24);
-
-        graphics.lineStyle(2, 0x7dd3fc, 0.1);
-        for (let x = 100; x < mapWidth; x += 140) {
-            graphics.lineBetween(x, 0, x, mapHeight);
-        }
-        for (let y = 90; y < mapHeight; y += 120) {
-            graphics.lineBetween(0, y, mapWidth, y);
-        }
-
-        return graphics;
+        const key = bakeTerrain(this, `hubterrain_${mapWidth}x${mapHeight}`, mapWidth, mapHeight, [], 21);
+        return this.add.image(0, 0, key).setOrigin(0, 0).setScale(4);
     }
 
     private createHubMapRouteArtwork(): Phaser.GameObjects.Graphics {
         const graphics = this.add.graphics();
 
-        graphics.lineStyle(5, 0x94a3b8, 0.26);
+        graphics.lineStyle(5, 0x9a8fbf, 0.26);
         this.town.locations.forEach((location) => {
             const sourcePosition = getHubLocationSurfacePosition(this.town, location);
 
@@ -390,32 +375,34 @@ export class HubScene extends Scene {
         const marker = this.add.container(position.x, position.y);
         const palette = this.getHubLocationMarkerPalette(location, selected);
 
-        const aura = this.add.circle(0, 0, selected ? 62 : 52, palette.fill, selected ? 0.24 : 0.16);
-        const pin = this.add.circle(0, 0, selected ? 36 : 31, palette.fill, 0.98);
-        pin.setStrokeStyle(selected ? 5 : 4, palette.stroke, 0.95);
+        const aura = this.add.rectangle(0, 0, selected ? 124 : 104, selected ? 124 : 104, palette.fill, selected ? 0.28 : 0.18);
+        this.tweens.add({ targets: aura, scale: 1.25, alpha: 0.04, duration: 1200, repeat: -1, ease: 'Stepped', easeParams: [4] });
+        const pin = this.add.rectangle(0, 0, selected ? 76 : 64, selected ? 76 : 64, palette.fill, 1);
+        (pin as unknown as { deco: boolean }).deco = true;
+        pin.setStrokeStyle(selected ? 6 : 4, palette.stroke, 1);
         pin.setInteractive({ useHandCursor: true });
 
         const glyph = this.add.text(0, -1, this.getHubLocationMarkerGlyph(location), {
             fontFamily: 'Arial Black',
             fontSize: selected ? '25px' : '23px',
-            color: '#f8fafc',
-            stroke: '#020617',
+            color: '#f4ecd8',
+            stroke: '#0b0714',
             strokeThickness: 4,
         }).setOrigin(0.5);
 
         const labelPanelWidth = Math.max(156, location.title.length * 25);
-        const labelPanel = this.add.rectangle(0, 60, labelPanelWidth, 60, 0x020617, 0.84);
+        const labelPanel = this.add.rectangle(0, 60, labelPanelWidth, 60, 0x0b0714, 0.84);
         labelPanel.setStrokeStyle(2, palette.stroke, selected ? 0.72 : 0.48);
         const label = this.add.text(0, 45, location.title, {
             fontFamily: 'Arial',
             fontSize: '19px',
-            color: selected ? '#fef3c7' : '#f8fafc',
+            color: selected ? '#f4ecd8' : '#f4ecd8',
             fontStyle: 'bold',
         }).setOrigin(0.5);
         const region = this.add.text(0, 70, location.presentation.regionLabel, {
             fontFamily: 'Arial',
             fontSize: '14px',
-            color: '#bae6fd',
+            color: '#a0e8f8',
         }).setOrigin(0.5);
 
         let pointerDownPosition: HubTownSurfacePosition | undefined;
@@ -455,7 +442,7 @@ export class HubScene extends Scene {
             }
         });
         pin.on('pointerout', () => {
-            pin.setFillStyle(palette.fill, 0.98);
+            pin.setFillStyle(palette.fill, 1);
             this.restoreDefaultStatusText();
         });
 
@@ -471,33 +458,33 @@ export class HubScene extends Scene {
     } {
         if (selected) {
             return {
-                fill: 0xd97706,
-                hoverFill: 0xf59e0b,
+                fill: 0xf28a2e,
+                hoverFill: 0xffc040,
                 stroke: 0xfef3c7,
             };
         }
 
         const iconPalette: Record<string, { fill: number; hoverFill: number; stroke: number }> = {
             'gate-market': {
-                fill: 0x2563eb,
-                hoverFill: 0x38bdf8,
+                fill: 0x1f7a5a,
+                hoverFill: 0xffc040,
                 stroke: 0xbfdbfe,
             },
             teahouse: {
-                fill: 0x16a34a,
-                hoverFill: 0x22c55e,
+                fill: 0x1f7a5a,
+                hoverFill: 0x3fbf7a,
                 stroke: 0xdcfce7,
             },
             'sect-gate': {
-                fill: 0x7c3aed,
+                fill: 0x9a4cd0,
                 hoverFill: 0xa78bfa,
                 stroke: 0xddd6fe,
             },
         };
 
         return iconPalette[location.presentation.icon] ?? {
-            fill: 0x475569,
-            hoverFill: 0x64748b,
+            fill: 0x4a3c7a,
+            hoverFill: 0x6c5f9c,
             stroke: 0xe2e8f0,
         };
     }
@@ -591,17 +578,17 @@ export class HubScene extends Scene {
     }
 
     private createWorldMapReturnButton(x: number, y: number): Phaser.GameObjects.GameObject[] {
-        const button = this.add.rectangle(x, y, 220, 52, 0x334155, 0.94);
-        button.setStrokeStyle(2, 0xffffff, 0.78);
+        const button = this.add.rectangle(x, y, 220, 52, 0x32285a, 0.94);
+        button.setStrokeStyle(2, 0xf4ecd8, 0.78);
         button.setInteractive({ useHandCursor: true });
-        button.on('pointerover', () => button.setFillStyle(0x475569, 1));
-        button.on('pointerout', () => button.setFillStyle(0x334155, 0.94));
+        button.on('pointerover', () => button.setFillStyle(0x4a3c7a, 1));
+        button.on('pointerout', () => button.setFillStyle(0x32285a, 0.94));
         button.on('pointerdown', () => this.returnToWorldMap());
 
         const label = this.add.text(x, y, '返回大地图', {
             fontFamily: 'Arial',
             fontSize: '18px',
-            color: '#f8fafc',
+            color: '#f4ecd8',
             fontStyle: 'bold',
         }).setOrigin(0.5);
 
@@ -609,25 +596,25 @@ export class HubScene extends Scene {
     }
 
     private createActionButton(action: HubTownAction, x: number, y: number, width: number): Phaser.GameObjects.GameObject[] {
-        const button = this.add.rectangle(x, y, width, 76, 0x1d4ed8, 0.94);
-        button.setStrokeStyle(3, 0xffffff, 0.82);
+        const button = this.add.rectangle(x, y, width, 76, 0x12403a, 0.94);
+        button.setStrokeStyle(3, 0xf4ecd8, 0.82);
         button.setInteractive({ useHandCursor: true });
-        button.on('pointerover', () => button.setFillStyle(0x2563eb, 1));
-        button.on('pointerout', () => button.setFillStyle(0x1d4ed8, 0.94));
+        button.on('pointerover', () => button.setFillStyle(0x1f7a5a, 1));
+        button.on('pointerout', () => button.setFillStyle(0x12403a, 0.94));
         button.on('pointerdown', () => this.handleAction(action));
 
         const textX = x - width / 2 + 30;
         const label = this.add.text(textX, y - 23, action.label, {
             fontFamily: 'Arial',
             fontSize: '23px',
-            color: '#f8fafc',
+            color: '#f4ecd8',
             fontStyle: 'bold',
         });
 
         const description = this.add.text(textX, y + 10, action.description, {
             fontFamily: 'Arial',
             fontSize: '17px',
-            color: '#bfdbfe',
+            color: '#a0e8f8',
             wordWrap: { width: width - 60 },
         });
 

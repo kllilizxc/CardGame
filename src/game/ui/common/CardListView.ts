@@ -53,7 +53,7 @@ export class CardListView extends GameObjects.Container {
         const { width, height } = this.scene.scale;
         
         // 半透明黑色背景遮罩（覆盖整个屏幕）
-        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7);
+        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x0b0714, 0.7);
         overlay.setInteractive();
         overlay.on('pointerdown', () => this.close());
         this.add(overlay);
@@ -64,15 +64,15 @@ export class CardListView extends GameObjects.Container {
         this.panelX = width / 2;
         this.panelY = height / 2;
 
-        this.background = this.scene.add.rectangle(this.panelX, this.panelY, this.panelWidth, this.panelHeight, 0x2c3e50);
-        this.background.setStrokeStyle(4, 0xf39c12);
+        this.background = this.scene.add.rectangle(this.panelX, this.panelY, this.panelWidth, this.panelHeight, 0x32285a);
+        this.background.setStrokeStyle(4, 0xf28a2e);
         this.background.setInteractive(); // 阻止点击穿透
         this.add(this.background);
 
         // 标题
         this.titleText = this.scene.add.text(this.panelX, this.panelY - this.panelHeight / 2 + 30, this.title, {
             fontSize: '24px',
-            color: '#f39c12',
+            color: '#f28a2e',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.add(this.titleText);
@@ -80,24 +80,24 @@ export class CardListView extends GameObjects.Container {
         // 卡片数量
         const countText = this.scene.add.text(this.panelX, this.panelY - this.panelHeight / 2 + 60, `共 ${this.cards.length} 张卡牌`, {
             fontSize: '16px',
-            color: '#ecf0f1'
+            color: '#f4ecd8'
         }).setOrigin(0.5);
         this.add(countText);
 
         // 关闭按钮
         const closeX = this.panelX + this.panelWidth / 2 - 40;
         const closeY = this.panelY - this.panelHeight / 2 + 30;
-        this.closeButton = this.scene.add.rectangle(closeX, closeY, 60, 40, 0xe74c3c);
-        this.closeButton.setStrokeStyle(2, 0xffffff);
+        this.closeButton = this.scene.add.rectangle(closeX, closeY, 60, 40, 0xee4a3a);
+        this.closeButton.setStrokeStyle(2, 0xf4ecd8);
         this.closeButton.setInteractive({ useHandCursor: true });
-        this.closeButton.on('pointerover', () => this.closeButton.setFillStyle(0xff6b6b));
-        this.closeButton.on('pointerout', () => this.closeButton.setFillStyle(0xe74c3c));
+        this.closeButton.on('pointerover', () => this.closeButton.setFillStyle(0xee4a3a));
+        this.closeButton.on('pointerout', () => this.closeButton.setFillStyle(0xee4a3a));
         this.closeButton.on('pointerdown', () => this.close());
         this.add(this.closeButton);
 
         const closeText = this.scene.add.text(closeX, closeY, '关闭', {
             fontSize: '16px',
-            color: '#ffffff'
+            color: '#f4ecd8'
         }).setOrigin(0.5);
         this.add(closeText);
 
@@ -112,7 +112,7 @@ export class CardListView extends GameObjects.Container {
 
         // 创建遮罩（在世界坐标系中）
         this.maskShape = this.scene.add.graphics();
-        this.maskShape.fillStyle(0xffffff);
+        this.maskShape.fillStyle(0xf4ecd8);
         this.maskShape.fillRect(this.contentLeft, this.contentTop, this.contentWidth, this.contentHeight);
         const mask = this.maskShape.createGeometryMask();
         this.scrollContainer.setMask(mask);
@@ -127,7 +127,7 @@ export class CardListView extends GameObjects.Container {
         if (this.maxScrollY > 0) {
             const scrollHint = this.scene.add.text(this.panelX, this.panelY + this.panelHeight / 2 - 20, '↕ 滚动查看更多', {
                 fontSize: '14px',
-                color: '#95a5a6'
+                color: '#9a8fbf'
             }).setOrigin(0.5);
             this.add(scrollHint);
         }

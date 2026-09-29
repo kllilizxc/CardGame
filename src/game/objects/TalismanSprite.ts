@@ -42,7 +42,7 @@ export class TalismanSprite extends BaseCardSprite {
         // 描述文字（默认隐藏）
         this.descriptionText = scene.add.text(0, 85, cardData.description, {
             fontSize: '11px',
-            color: '#95a5a6',
+            color: '#9a8fbf',
             align: 'center',
             wordWrap: { width: 150 }
         }).setOrigin(0.5);

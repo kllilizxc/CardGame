@@ -272,7 +272,7 @@ export class CardSprite extends BaseCardSprite {
                 y,
                 gongfaText.width + 10,
                 lineHeight,
-                0xffd700,
+                0xffc040,
                 0
             );
             hitArea.setInteractive({ useHandCursor: true });
@@ -285,7 +285,7 @@ export class CardSprite extends BaseCardSprite {
                 y + 6,
                 gongfaText.width,
                 1,
-                0xffd700,
+                0xffc040,
                 0
             );
             this.gongfaContainer.add(underline);
@@ -349,7 +349,7 @@ export class CardSprite extends BaseCardSprite {
             // 创建状态文本
             const text = this.scene.add.text(0, yPos, displayText, {
                 fontSize: '12px',
-                color: '#ffffff',
+                color: '#f4ecd8',
                 fontStyle: 'bold'
             }).setOrigin(0.5);
             this.statusContainer!.add(text);
@@ -406,14 +406,14 @@ export class CardSprite extends BaseCardSprite {
         this.statusTooltip.setDepth(99999);
         
         // 背景（根据文本实际大小调整）
-        const tooltipBg = this.scene.add.rectangle(0, 0, width, height, 0x2c3e50, 0.98);
-        tooltipBg.setStrokeStyle(3, 0xf39c12);
+        const tooltipBg = this.scene.add.rectangle(0, 0, width, height, 0x32285a, 0.98);
+        tooltipBg.setStrokeStyle(3, 0xf28a2e);
         this.statusTooltip.add(tooltipBg);
         
         // 文本（增大字体）
         const tooltipText = this.scene.add.text(-width/2 + padding, -height/2 + padding, fullDesc, {
             fontSize: '16px',
-            color: '#ecf0f1',
+            color: '#f4ecd8',
             fontStyle: 'bold',
             lineSpacing: 4,
             wordWrap: { width: maxWidth - padding * 2 }

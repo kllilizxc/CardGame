@@ -62,15 +62,15 @@ export class SkillUI extends GameObjects.Container {
 
         // 技能背景
         const canUse = this.canUseSkill(skillState);
-        const bgColor = canUse ? 0x3498db : 0x555555;
+        const bgColor = canUse ? 0x1f7a5a : 0x6c5f9c;
         const bg = this.scene.add.rectangle(0, 0, 120, 80, bgColor, 0.9);
-        bg.setStrokeStyle(3, canUse ? 0x2ecc71 : 0x7f8c8d);
+        bg.setStrokeStyle(3, canUse ? 0x3fbf7a : 0x7f8c8d);
         container.add(bg);
 
         // 技能名称
         const name = this.scene.add.text(0, -20, skill.name, {
             fontSize: '14px',
-            color: '#ffffff',
+            color: '#f4ecd8',
             fontStyle: 'bold',
             align: 'center',
             wordWrap: { width: 110 }
@@ -81,7 +81,7 @@ export class SkillUI extends GameObjects.Container {
         const cooldownText = this.getCooldownText(skillState);
         const statusText = this.scene.add.text(0, 10, cooldownText, {
             fontSize: '12px',
-            color: canUse ? '#2ecc71' : '#e74c3c',
+            color: canUse ? '#3fbf7a' : '#ee4a3a',
             align: 'center'
         }).setOrigin(0.5);
         container.add(statusText);
@@ -91,12 +91,12 @@ export class SkillUI extends GameObjects.Container {
             bg.setInteractive({ useHandCursor: true });
 
             bg.on('pointerover', () => {
-                bg.setStrokeStyle(4, 0xf39c12);
+                bg.setStrokeStyle(4, 0xf28a2e);
                 container.setScale(1.05);
             });
 
             bg.on('pointerout', () => {
-                bg.setStrokeStyle(3, 0x2ecc71);
+                bg.setStrokeStyle(3, 0x3fbf7a);
                 container.setScale(1.0);
             });
 

@@ -6,7 +6,7 @@ import { C, PX } from './palette';
  * cut corners, chunky bevel and gold studs. Hover recolours the game already does keep working
  * because the dressing is a separate Graphics that only draws bevels, never fills.
  */
-type DecoRect = Phaser.GameObjects.Rectangle & { noDeco?: boolean; __deco?: Phaser.GameObjects.Graphics };
+type DecoRect = Phaser.GameObjects.Rectangle & { noDeco?: boolean; deco?: boolean; __deco?: Phaser.GameObjects.Graphics };
 
 let installed = false;
 
@@ -62,7 +62,7 @@ export function installPixelRects(): void {
     const orig = proto.setStrokeStyle;
     proto.setStrokeStyle = function (this: DecoRect, lineWidth?: number, color?: number, alpha?: number) {
         const r = orig.call(this, lineWidth, color, alpha);
-        if (lineWidth && lineWidth >= 2 && !this.__deco && !this.noDeco && this.width >= 100 && this.height >= 40 && this.scene) {
+        if (lineWidth && lineWidth >= 2 && !this.__deco && !this.noDeco && ((this.width >= 100 && this.height >= 40) || this.deco) && this.scene) {
             this.scene.events.once(Phaser.Scenes.Events.POST_UPDATE, () => decorate(this));
         }
         return r;

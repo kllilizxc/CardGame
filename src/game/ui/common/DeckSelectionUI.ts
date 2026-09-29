@@ -102,7 +102,7 @@ export class DeckSelectionUI extends GameObjects.Container {
         const { width, height } = this.scene.scale;
         
         // 半透明黑色背景遮罩（覆盖整个屏幕）
-        this.overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8);
+        this.overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x0b0714, 0.8);
         this.overlay.setInteractive();
         this.overlay.on('pointerdown', () => this.hide(true)); // 点击背景取消
         this.add(this.overlay);
@@ -113,8 +113,8 @@ export class DeckSelectionUI extends GameObjects.Container {
         this.panelX = width / 2;
         this.panelY = height / 2;
 
-        this.background = this.scene.add.rectangle(this.panelX, this.panelY, this.panelWidth, this.panelHeight, 0x2c3e50);
-        this.background.setStrokeStyle(4, 0x3498db);
+        this.background = this.scene.add.rectangle(this.panelX, this.panelY, this.panelWidth, this.panelHeight, 0x32285a);
+        this.background.setStrokeStyle(4, 0x1f7a5a);
         this.background.setInteractive(); // 阻止点击穿透
         this.add(this.background);
 
@@ -124,7 +124,7 @@ export class DeckSelectionUI extends GameObjects.Container {
             : '从卡组中选择一张卡';
         this.titleText = this.scene.add.text(this.panelX, this.panelY - this.panelHeight / 2 + 30, titleText, {
             fontSize: '24px',
-            color: '#3498db',
+            color: '#4cb4f0',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.add(this.titleText);
@@ -135,24 +135,24 @@ export class DeckSelectionUI extends GameObjects.Container {
             : `共 ${this.cards.length} 张卡牌`;
         const countText = this.scene.add.text(this.panelX, this.panelY - this.panelHeight / 2 + 60, countInfo, {
             fontSize: '16px',
-            color: '#ecf0f1'
+            color: '#f4ecd8'
         }).setOrigin(0.5);
         this.add(countText);
 
         // 关闭按钮
         const closeX = this.panelX + this.panelWidth / 2 - 40;
         const closeY = this.panelY - this.panelHeight / 2 + 30;
-        this.closeButton = this.scene.add.rectangle(closeX, closeY, 60, 40, 0xe74c3c);
-        this.closeButton.setStrokeStyle(2, 0xffffff);
+        this.closeButton = this.scene.add.rectangle(closeX, closeY, 60, 40, 0xee4a3a);
+        this.closeButton.setStrokeStyle(2, 0xf4ecd8);
         this.closeButton.setInteractive({ useHandCursor: true });
-        this.closeButton.on('pointerover', () => this.closeButton.setFillStyle(0xff6b6b));
-        this.closeButton.on('pointerout', () => this.closeButton.setFillStyle(0xe74c3c));
+        this.closeButton.on('pointerover', () => this.closeButton.setFillStyle(0xee4a3a));
+        this.closeButton.on('pointerout', () => this.closeButton.setFillStyle(0xee4a3a));
         this.closeButton.on('pointerdown', () => this.hide(true)); // 点击关闭按钮取消
         this.add(this.closeButton);
 
         const closeText = this.scene.add.text(closeX, closeY, '取消', {
             fontSize: '16px',
-            color: '#ffffff'
+            color: '#f4ecd8'
         }).setOrigin(0.5);
         this.add(closeText);
 
@@ -160,17 +160,17 @@ export class DeckSelectionUI extends GameObjects.Container {
         if (this.isMultiSelect) {
             const confirmX = this.panelX;
             const confirmY = this.panelY + this.panelHeight / 2 - 50;
-            this.confirmButton = this.scene.add.rectangle(confirmX, confirmY, 120, 50, 0x27ae60);
-            this.confirmButton.setStrokeStyle(2, 0xffffff);
+            this.confirmButton = this.scene.add.rectangle(confirmX, confirmY, 120, 50, 0x1f7a5a);
+            this.confirmButton.setStrokeStyle(2, 0xf4ecd8);
             this.confirmButton.setInteractive({ useHandCursor: true });
-            this.confirmButton.on('pointerover', () => this.confirmButton.setFillStyle(0x2ecc71));
-            this.confirmButton.on('pointerout', () => this.confirmButton.setFillStyle(0x27ae60));
+            this.confirmButton.on('pointerover', () => this.confirmButton.setFillStyle(0x3fbf7a));
+            this.confirmButton.on('pointerout', () => this.confirmButton.setFillStyle(0x1f7a5a));
             this.confirmButton.on('pointerdown', () => this.confirmSelection());
             this.add(this.confirmButton);
 
             const confirmText = this.scene.add.text(confirmX, confirmY, '确认选择', {
                 fontSize: '18px',
-                color: '#ffffff',
+                color: '#f4ecd8',
                 fontStyle: 'bold'
             }).setOrigin(0.5);
             this.add(confirmText);
@@ -187,7 +187,7 @@ export class DeckSelectionUI extends GameObjects.Container {
 
         // 创建遮罩（在世界坐标系中）
         this.maskShape = this.scene.add.graphics();
-        this.maskShape.fillStyle(0xffffff);
+        this.maskShape.fillStyle(0xf4ecd8);
         this.maskShape.fillRect(this.contentLeft, this.contentTop, this.contentWidth, this.contentHeight);
         const mask = this.maskShape.createGeometryMask();
         this.scrollContainer.setMask(mask);
@@ -202,7 +202,7 @@ export class DeckSelectionUI extends GameObjects.Container {
         if (this.maxScrollY > 0) {
             const scrollHint = this.scene.add.text(this.panelX, this.panelY + this.panelHeight / 2 - 20, '↕ 滚动查看更多', {
                 fontSize: '14px',
-                color: '#95a5a6'
+                color: '#9a8fbf'
             }).setOrigin(0.5);
             this.add(scrollHint);
         }

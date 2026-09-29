@@ -21,8 +21,8 @@ export class Game extends Scene
         this.background.setAlpha(0.5);
 
         this.gameText = this.add.text(512, 384, '修仙卡牌原型\n欢迎进入秘境试炼', {
-            fontFamily: 'Arial Black', fontSize: 38, color: '#ffffff',
-            stroke: '#000000', strokeThickness: 8,
+            fontFamily: 'Arial Black', fontSize: 38, color: '#f4ecd8',
+            stroke: '#0b0714', strokeThickness: 8,
             align: 'center'
         }).setOrigin(0.5).setDepth(100);
 

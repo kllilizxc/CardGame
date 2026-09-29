@@ -32,7 +32,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
             height / 2,
             width,
             height,
-            0x000000,
+            0x0b0714,
             0.8
         );
         // 必须设置交互，否则用户可以继续操作其他卡牌
@@ -46,7 +46,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         // 标题
         this.titleText = scene.add.text(width / 2, height * 0.12, '献祭召唤', {
             fontSize: '28px',
-            color: '#9b59b6',
+            color: '#9a4cd0',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.add(this.titleText);
@@ -58,7 +58,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
             '请选择要献祭的单位',
             {
                 fontSize: '16px',
-                color: '#ffffff'
+                color: '#f4ecd8'
             }
         ).setOrigin(0.5);
         this.add(this.instructionText);
@@ -97,23 +97,23 @@ export class SacrificeSelectionUI extends GameObjects.Container {
     ): GameObjects.Container {
         const container = this.scene.add.container(x, y);
 
-        const bg = this.scene.add.rectangle(0, 0, 150, 50, 0x2c3e50);
-        bg.setStrokeStyle(2, 0xffffff);
+        const bg = this.scene.add.rectangle(0, 0, 150, 50, 0x32285a);
+        bg.setStrokeStyle(2, 0xf4ecd8);
         bg.setInteractive({ useHandCursor: true });
         container.add(bg);
 
         const label = this.scene.add.text(0, 0, text, {
             fontSize: '16px',
-            color: '#ffffff'
+            color: '#f4ecd8'
         }).setOrigin(0.5);
         container.add(label);
 
         bg.on('pointerover', () => {
-            bg.setFillStyle(0x34495e);
+            bg.setFillStyle(0x4a3c7a);
         });
 
         bg.on('pointerout', () => {
-            bg.setFillStyle(0x2c3e50);
+            bg.setFillStyle(0x32285a);
         });
 
         bg.on('pointerdown', onClick);
@@ -170,7 +170,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
                 unit.y,
                 cardWidth,
                 cardHeight,
-                0xffffff,
+                0xf4ecd8,
                 0.001 // 几乎完全透明，但必须有一点alpha才能交互
             );
             overlay.setDepth(5002); // 在卡牌之上
@@ -185,7 +185,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
             // 遮罩层悬停事件
             overlay.on('pointerover', () => {
                 if (!this.selectedUnits.includes(unit)) {
-                    this.highlightUnit(unit, 0xffd700, 0.5);
+                    this.highlightUnit(unit, 0xffc040, 0.5);
                 }
             });
             
@@ -209,13 +209,13 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         if (index > -1) {
             // 取消选择
             this.selectedUnits.splice(index, 1);
-            this.highlightUnit(unit, 0xffd700, 0.5); // 悬停色
+            this.highlightUnit(unit, 0xffc040, 0.5); // 悬停色
         } else {
             // 选择单位
             if (this.selectedUnits.length < this.requiredCount) {
                 // 还没选满，直接添加
                 this.selectedUnits.push(unit);
-                this.highlightUnit(unit, 0x9b59b6, 0.8); // 紫色选中
+                this.highlightUnit(unit, 0x9a4cd0, 0.8); // 紫色选中
             } else {
                 // 已经选满，移除第一个选择的单位，添加新的
                 const firstSelected = this.selectedUnits.shift();
@@ -225,7 +225,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
                 }
                 // 添加新选择的单位
                 this.selectedUnits.push(unit);
-                this.highlightUnit(unit, 0x9b59b6, 0.8); // 紫色选中
+                this.highlightUnit(unit, 0x9a4cd0, 0.8); // 紫色选中
             }
         }
 
@@ -283,7 +283,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         const buttonBg = this.confirmButton.list[0] as GameObjects.Rectangle;
         
         if (canConfirm) {
-            buttonBg.setFillStyle(0x27ae60);
+            buttonBg.setFillStyle(0x1f7a5a);
         } else {
             buttonBg.setFillStyle(0x95a5a6);
         }

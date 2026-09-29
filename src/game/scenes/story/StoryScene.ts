@@ -131,7 +131,7 @@ export class StoryScene extends Scene {
         this.add.text(width / 2, 72, this.storyGraph.title ?? '主线故事', {
             fontFamily: 'Arial',
             fontSize: '44px',
-            color: '#f8fafc',
+            color: '#f4ecd8',
             fontStyle: 'bold',
         }).setOrigin(0.5);
 
@@ -139,13 +139,13 @@ export class StoryScene extends Scene {
         this.add.text(width / 2, 120, `当前故事：${sceneTitle}`, {
             fontFamily: 'Arial',
             fontSize: '20px',
-            color: '#93c5fd',
+            color: '#a0e8f8',
         }).setOrigin(0.5);
 
         this.statusText = this.add.text(width / 2, height - 70, '', {
             fontFamily: 'Arial',
             fontSize: '20px',
-            color: '#fef3c7',
+            color: '#f4ecd8',
             align: 'center',
             wordWrap: { width: width - 260 },
         }).setOrigin(0.5);
@@ -175,32 +175,32 @@ export class StoryScene extends Scene {
         const contentX = panelX - panelWidth / 2 + 56;
         const container = this.add.container(0, 0);
 
-        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x111827, 0.96);
-        panel.setStrokeStyle(3, 0x38bdf8, 0.85);
+        const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x160f26, 0.96);
+        panel.setStrokeStyle(3, 0xffc040, 0.85);
 
         const title = this.add.text(contentX, panelY - panelHeight / 2 + 42, view.currentNode.title, {
             fontFamily: 'Arial',
             fontSize: '36px',
-            color: '#f8fafc',
+            color: '#f4ecd8',
             fontStyle: 'bold',
         });
 
         const metadata = this.add.text(contentX, title.y + 48, view.currentNode.subtitle, {
             fontFamily: 'Arial',
             fontSize: '19px',
-            color: '#93c5fd',
+            color: '#a0e8f8',
         });
 
         const tags = this.add.text(contentX, metadata.y + 36, view.currentNode.tags.join(' / '), {
             fontFamily: 'Arial',
             fontSize: '17px',
-            color: '#fde68a',
+            color: '#fff07a',
         });
 
         const summary = this.add.text(contentX, tags.y + 48, view.currentNode.summary, {
             fontFamily: 'Arial',
             fontSize: '24px',
-            color: '#e0f2fe',
+            color: '#cfc6dd',
             fontStyle: 'bold',
             wordWrap: { width: panelWidth - 112 },
         });
@@ -208,7 +208,7 @@ export class StoryScene extends Scene {
         const detail = this.add.text(contentX, summary.y + 72, view.currentNode.detail, {
             fontFamily: 'Arial',
             fontSize: '21px',
-            color: '#dbeafe',
+            color: '#cfc6dd',
             lineSpacing: 10,
             wordWrap: { width: panelWidth - 112 },
         });
@@ -220,7 +220,7 @@ export class StoryScene extends Scene {
         const hint = this.add.text(contentX, panelY + panelHeight / 2 - 72, locationHint, {
             fontFamily: 'Arial',
             fontSize: '17px',
-            color: '#c4b5fd',
+            color: '#f8a8c8',
             wordWrap: { width: panelWidth - 112 },
         });
 
@@ -232,7 +232,7 @@ export class StoryScene extends Scene {
             const terminal = this.add.text(panelX, height - 210, '已到达故事终点，当前分支可继续选择重开。', {
                 fontFamily: 'Arial',
                 fontSize: '22px',
-                color: '#bbf7d0',
+                color: '#a6ee8a',
                 align: 'center',
             }).setOrigin(0.5);
             const restartButton = this.createButton({
@@ -241,7 +241,7 @@ export class StoryScene extends Scene {
                 width: 280,
                 height: 58,
                 label: '重新开始故事',
-                fillColor: 0x2563eb,
+                fillColor: 0x1f7a5a,
                 onClick: () => {
                     this.storyState = createInitialStoryRuntime(this.storyGraph);
                     this.selectedChoiceIds = [];
@@ -267,10 +267,10 @@ export class StoryScene extends Scene {
         const buttonHeight = 82;
         const x = width / 2;
         const y = height - 265 + index * 108;
-        const fillColor = choice.selectable ? 0x1d4ed8 : 0x475569;
-        const hoverColor = choice.selectable ? 0x2563eb : 0x64748b;
+        const fillColor = choice.selectable ? 0x12403a : 0x4a3c7a;
+        const hoverColor = choice.selectable ? 0x1f7a5a : 0x6c5f9c;
         const button = this.add.rectangle(x, y, buttonWidth, buttonHeight, fillColor, 0.94);
-        button.setStrokeStyle(2, choice.selectable ? 0xffffff : 0x94a3b8, 0.78);
+        button.setStrokeStyle(2, choice.selectable ? 0xf4ecd8 : 0x9a8fbf, 0.78);
         button.setInteractive({ useHandCursor: choice.selectable });
         button.on('pointerover', () => button.setFillStyle(hoverColor, 1));
         button.on('pointerout', () => button.setFillStyle(fillColor, 0.94));
@@ -280,14 +280,14 @@ export class StoryScene extends Scene {
         const label = this.add.text(textX, y - 24, choice.text, {
             fontFamily: 'Arial',
             fontSize: '21px',
-            color: choice.selectable ? '#f8fafc' : '#cbd5e1',
+            color: choice.selectable ? '#f4ecd8' : '#cfc6dd',
             fontStyle: 'bold',
             wordWrap: { width: buttonWidth - 56 },
         });
         const description = this.add.text(textX, y + 10, this.createChoiceDescription(choice), {
             fontFamily: 'Arial',
             fontSize: '17px',
-            color: choice.selectable ? '#dbeafe' : '#cbd5e1',
+            color: choice.selectable ? '#cfc6dd' : '#cfc6dd',
             wordWrap: { width: buttonWidth - 56 },
         });
 
@@ -314,7 +314,7 @@ export class StoryScene extends Scene {
         onClick: () => void;
     }): Phaser.GameObjects.GameObject[] {
         const button = this.add.rectangle(config.x, config.y, config.width, config.height, config.fillColor, 1);
-        button.setStrokeStyle(2, 0xffffff, 0.86);
+        button.setStrokeStyle(2, 0xf4ecd8, 0.86);
         button.setInteractive({ useHandCursor: true });
         button.on('pointerover', () => button.setAlpha(0.86));
         button.on('pointerout', () => button.setAlpha(1));
@@ -323,7 +323,7 @@ export class StoryScene extends Scene {
         const label = this.add.text(config.x, config.y, config.label, {
             fontFamily: 'Arial',
             fontSize: '20px',
-            color: '#f8fafc',
+            color: '#f4ecd8',
             fontStyle: 'bold',
         }).setOrigin(0.5);
 

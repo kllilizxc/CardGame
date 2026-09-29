@@ -142,13 +142,13 @@ export function getElementsDisplayText(elements: ArtifactElement[]): string {
  */
 export function getElementColor(element: ArtifactElement): number {
   const colorMap: Record<ArtifactElement, number> = {
-    '金': 0xFFD700, // 金色
+    '金': 0xffc040, // 金色
     '木': 0x228B22, // 绿色
     '水': 0x1E90FF, // 蓝色
     '火': 0xFF4500, // 红色
     '土': 0x8B4513  // 棕色
   };
-  return colorMap[element] || 0xFFFFFF;
+  return colorMap[element] || 0xf4ecd8;
 }
 
 /**

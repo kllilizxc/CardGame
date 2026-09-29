@@ -40,7 +40,7 @@ export class PillSprite extends BaseCardSprite {
         const targetLabel = this.getTargetLabel();
         this.targetText = scene.add.text(0, 45, targetLabel, {
             fontSize: '12px',
-            color: '#95a5a6',
+            color: '#9a8fbf',
             fontStyle: 'italic'
         }).setOrigin(0.5);
         this.add(this.targetText);
@@ -49,7 +49,7 @@ export class PillSprite extends BaseCardSprite {
         const effectDesc = CardEffectFormatter.formatShort(cardData.effects);
         this.effectText = scene.add.text(0, 65, effectDesc, {
             fontSize: '13px',
-            color: '#2ecc71',
+            color: '#3fbf7a',
             fontStyle: 'bold',
             align: 'center',
             wordWrap: { width: 150 }
@@ -60,7 +60,7 @@ export class PillSprite extends BaseCardSprite {
         if (cardData.duration && cardData.duration > 0) {
             const durationText = scene.add.text(0, 95, `持续${cardData.duration}回合`, {
                 fontSize: '11px',
-                color: '#f39c12'
+                color: '#f28a2e'
             }).setOrigin(0.5);
             this.add(durationText);
         }
@@ -68,7 +68,7 @@ export class PillSprite extends BaseCardSprite {
         // 描述文字（默认隐藏，预览时显示）
         this.descriptionText = scene.add.text(0, 110, cardData.description, {
             fontSize: '10px',
-            color: '#bdc3c7',
+            color: '#cfc6dd',
             align: 'center',
             wordWrap: { width: 160 }
         }).setOrigin(0.5);

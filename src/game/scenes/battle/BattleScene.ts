@@ -452,7 +452,7 @@ export class BattleScene extends Scene {
         
         // 开始第一回合
         this.time.delayedCall(500, () => {
-            this.turnManager.showTurnAnimation(`回合 ${this.turnNumber}`, 0x2ecc71, () => {
+            this.turnManager.showTurnAnimation(`回合 ${this.turnNumber}`, 0x3fbf7a, () => {
                 this.turnManager.startPlayerTurn(this.getTurnContext());
             });
         });

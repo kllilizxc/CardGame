@@ -22,8 +22,8 @@ export class RunHud extends GameObjects.Container {
 
     private createHud(): void {
         const { width } = this.scene.scale;
-        const background = this.scene.add.rectangle(width / 2, 56, width - 96, 84, 0x020617, 0.9);
-        background.setStrokeStyle(2, 0x38bdf8, 0.85);
+        const background = this.scene.add.rectangle(width / 2, 56, width - 96, 84, 0x0b0714, 0.9);
+        background.setStrokeStyle(2, 0xffc040, 0.85);
 
         this.currentNodeValue = this.createValueText(150, '当前节点：-');
         this.carriedDeckValue = this.createValueText(560, '携带卡牌：0');
@@ -45,7 +45,7 @@ export class RunHud extends GameObjects.Container {
         return this.scene.add.text(x, 56, initialText, {
             fontFamily: 'Arial',
             fontSize: '24px',
-            color: '#e2e8f0',
+            color: '#cfc6dd',
             fontStyle: 'bold',
         }).setOrigin(0, 0.5);
     }
@@ -79,7 +79,7 @@ export class RunHud extends GameObjects.Container {
         const { width, height } = this.scene.scale;
         const view = createRunResolutionSummaryView(summary);
         const overlay = this.scene.add.container(0, 0);
-        const background = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.86);
+        const background = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x0b0714, 0.86);
         const panelWidth = Math.min(980, width * 0.78);
         const panelHeight = Math.min(760, height * 0.78);
         const panelX = width / 2;
@@ -91,27 +91,27 @@ export class RunHud extends GameObjects.Container {
         const lostCards = view.lostCards.join('\n');
         const lostItems = view.lostItems.join('\n');
 
-        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x111827, 0.98);
-        panel.setStrokeStyle(3, view.outcome === 'defeat' ? 0xef4444 : 0x22c55e, 0.95);
+        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x160f26, 0.98);
+        panel.setStrokeStyle(3, view.outcome === 'defeat' ? 0xee4a3a : 0x3fbf7a, 0.95);
 
         const title = this.scene.add.text(leftX, panelY - panelHeight / 2 + 42, view.title, {
             fontFamily: 'Arial',
             fontSize: '38px',
-            color: view.outcome === 'defeat' ? '#fecaca' : '#bbf7d0',
+            color: view.outcome === 'defeat' ? '#fecaca' : '#a6ee8a',
             fontStyle: 'bold',
         });
 
         const subtitle = this.scene.add.text(leftX, title.y + 52, view.subtitle, {
             fontFamily: 'Arial',
             fontSize: '22px',
-            color: '#e2e8f0',
+            color: '#cfc6dd',
             wordWrap: { width: panelWidth - 112 },
         });
 
         const keptHeading = this.scene.add.text(leftX, subtitle.y + 58, '保留 / 存入永久仓库', {
             fontFamily: 'Arial',
             fontSize: '24px',
-            color: '#86efac',
+            color: '#a6ee8a',
             fontStyle: 'bold',
         });
 
@@ -122,7 +122,7 @@ export class RunHud extends GameObjects.Container {
             {
                 fontFamily: 'Courier New',
                 fontSize: '18px',
-                color: '#e2e8f0',
+                color: '#cfc6dd',
                 lineSpacing: 6,
             },
         );
@@ -130,7 +130,7 @@ export class RunHud extends GameObjects.Container {
         const lostHeading = this.scene.add.text(rightX, keptHeading.y, '遗失 / 从本次探索中失去', {
             fontFamily: 'Arial',
             fontSize: '24px',
-            color: '#fca5a5',
+            color: '#f8a8c8',
             fontStyle: 'bold',
         });
 
@@ -141,22 +141,22 @@ export class RunHud extends GameObjects.Container {
             {
                 fontFamily: 'Courier New',
                 fontSize: '18px',
-                color: '#e2e8f0',
+                color: '#cfc6dd',
                 lineSpacing: 6,
             },
         );
 
-        const acknowledgeButton = this.scene.add.rectangle(panelX, panelY + panelHeight / 2 - 64, 320, 56, 0x2563eb, 1);
-        acknowledgeButton.setStrokeStyle(2, 0xffffff, 0.9);
+        const acknowledgeButton = this.scene.add.rectangle(panelX, panelY + panelHeight / 2 - 64, 320, 56, 0x1f7a5a, 1);
+        acknowledgeButton.setStrokeStyle(2, 0xf4ecd8, 0.9);
         acknowledgeButton.setInteractive({ useHandCursor: true });
-        acknowledgeButton.on('pointerover', () => acknowledgeButton.setFillStyle(0x3b82f6));
-        acknowledgeButton.on('pointerout', () => acknowledgeButton.setFillStyle(0x2563eb));
+        acknowledgeButton.on('pointerover', () => acknowledgeButton.setFillStyle(0xffc040));
+        acknowledgeButton.on('pointerout', () => acknowledgeButton.setFillStyle(0x1f7a5a));
         acknowledgeButton.on('pointerdown', onAcknowledge);
 
         const acknowledgeLabel = this.scene.add.text(acknowledgeButton.x, acknowledgeButton.y, '确认并返回入口', {
             fontFamily: 'Arial',
             fontSize: '22px',
-            color: '#f8fafc',
+            color: '#f4ecd8',
             fontStyle: 'bold',
         }).setOrigin(0.5);
 

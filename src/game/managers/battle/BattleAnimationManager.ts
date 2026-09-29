@@ -217,7 +217,7 @@ export class BattleAnimationManager {
             card.setDepth(5000);
 
             glow = scene.add.graphics();
-            glow.fillStyle(star >= 8 ? 0xffd700 : 0x9b59b6, 0.6);
+            glow.fillStyle(star >= 8 ? 0xffc040 : 0x9a4cd0, 0.6);
             glow.fillCircle(0, 0, 150 * intensity);
             glow.setPosition(finalX, finalY);
             glow.setAlpha(0);
@@ -225,7 +225,7 @@ export class BattleAnimationManager {
 
             for (let i = 0; i < 20 * intensity; i++) {
                 const particle = scene.add.graphics();
-                const color = star >= 8 ? 0xffd700 : 0x9b59b6;
+                const color = star >= 8 ? 0xffc040 : 0x9a4cd0;
                 particle.fillStyle(color, 1);
                 particle.fillCircle(0, 0, 3);
                 particle.setPosition(finalX, finalY);
@@ -693,7 +693,7 @@ export class BattleAnimationManager {
         }
 
         // 添加光效
-        const light = this.scene.add.circle(effectX, effectY, 0, 0x2ecc71, 0.7);
+        const light = this.scene.add.circle(effectX, effectY, 0, 0x3fbf7a, 0.7);
         light.setDepth(999);
         
         this.addTweens({
@@ -710,7 +710,7 @@ export class BattleAnimationManager {
         // 粒子效果
         for (let i = 0; i < 8; i++) {
             const angle = (Math.PI * 2 * i) / 8;
-            const particle = this.scene.add.circle(effectX, effectY, 4, 0x2ecc71, 0.8);
+            const particle = this.scene.add.circle(effectX, effectY, 4, 0x3fbf7a, 0.8);
             particle.setDepth(1000);
             
             this.addTweens({
@@ -738,7 +738,7 @@ export class BattleAnimationManager {
     public showHealEffect(
         x?: number,
         y?: number,
-        color: number = 0x2ecc71
+        color: number = 0x3fbf7a
     ): void {
         const { width, height } = this.scene.scale;
         const centerX = x ?? width / 2;
@@ -830,7 +830,7 @@ export class BattleAnimationManager {
         x: number,
         y: number,
         text: string,
-        color: string = '#ffffff',
+        color: string = '#f4ecd8',
         fontSize: number = 24
     ): void {
         const parsed = parseInt(color.replace('#', ''), 16);
@@ -880,7 +880,7 @@ export class BattleAnimationManager {
      */
     public showSacrificeEffect(x: number, y: number, count: number): void {
         // 紫色献祭光环
-        const circle = this.scene.add.circle(x, y, 0, 0x9b59b6, 0.6);
+        const circle = this.scene.add.circle(x, y, 0, 0x9a4cd0, 0.6);
         circle.setDepth(999);
 
         this.addTweens({
@@ -897,7 +897,7 @@ export class BattleAnimationManager {
         // 粒子效果
         for (let i = 0; i < count * 8; i++) {
             const angle = (Math.PI * 2 * i) / (count * 8);
-            const particle = this.scene.add.circle(x, y, 3, 0x9b59b6, 0.8);
+            const particle = this.scene.add.circle(x, y, 3, 0x9a4cd0, 0.8);
             particle.setDepth(1000);
 
             this.addTweens({
@@ -933,7 +933,7 @@ export class BattleAnimationManager {
             ease: 'Power2',
             onComplete: () => {
                 // 创建爆炸效果
-                const explosion = this.scene.add.circle(target.x, target.y, 30, 0xff6b6b, 0.8);
+                const explosion = this.scene.add.circle(target.x, target.y, 30, 0xee4a3a, 0.8);
                 explosion.setDepth(1500);
 
                 this.addTweens({

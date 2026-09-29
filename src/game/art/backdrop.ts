@@ -216,41 +216,53 @@ function paintHall(scene: Phaser.Scene) {
 function paintCave(scene: Phaser.Scene) {
     const bg = make(scene, 'bd_cave_bg');
     if (bg) {
-        bg.ramp(0, H, [C.void, C.ink, C.pine, C.deep, C.ink]);
+        bg.ramp(0, H, [C.night, C.deep, C.pine, C.moss, C.pine, C.deep]);
         const r = rng(77);
-        for (let i = 0; i < 18; i++) {
-            const x = Math.floor(r() * W); const y = 100 + Math.floor(r() * 150);
-            const h = 5 + Math.floor(r() * 9);
-            for (let j = 0; j < h; j++) { bg.px(x, y - j, j > h - 3 ? C.jade : C.moss); bg.px(x + 1, y - j, C.pine); }
+        // distant glowing crystal spires
+        for (let i = 0; i < 34; i++) {
+            const x = Math.floor(r() * W); const y = 120 + Math.floor(r() * 130);
+            const h = 6 + Math.floor(r() * 16);
+            const hue = r() < 0.5 ? [C.jade, C.moss, C.lime] : [C.sky, C.azure, C.ice];
+            for (let j = 0; j < h; j++) {
+                const wd = j < 3 ? 1 : 0;
+                for (let dx = -wd; dx <= wd; dx++) bg.px(x + dx, y - j, dx < 0 ? hue[1] : hue[0]);
+                bg.px(x + 1 + wd, y - j, C.night);
+            }
+            bg.px(x, y - h, hue[2]); bg.px(x, y - h - 1, C.paper);
         }
+        // hanging glow motes
+        for (let i = 0; i < 60; i++) bg.px(Math.floor(r() * W), 40 + Math.floor(r() * 180), i % 3 ? C.moss : C.ice);
         bg.done();
     }
     const top = make(scene, 'bd_cave_top');
     if (top) {
         const r = rng(19);
         for (let x = 0; x < W; x++) {
-            const h = Math.floor(18 + 26 * fbm(5, x * 0.05) + (r() < 0.03 ? r() * 40 : 0));
-            for (let y = 0; y < h; y++) top.px(x, y, y > h - 3 ? C.deep : y > h - 8 && ((x + y) & 1) ? C.pine : C.void);
-            if (h > 40) top.px(x, h, C.jade);
+            const h = Math.floor(16 + 26 * fbm(5, x * 0.05) + (r() < 0.03 ? r() * 40 : 0));
+            for (let y = 0; y < h; y++) top.px(x, y, y > h - 2 ? C.moss : y > h - 6 && ((x + y) & 1) ? C.deep : y > h - 12 && ((x + y) & 1) === 0 && r() < 0.4 ? C.night : C.ink);
+            if (h > 40) { top.px(x, h, C.jade); top.px(x, h + 1, C.pine); }
         }
         top.done();
     }
     const bot = make(scene, 'bd_cave_bot');
     if (bot) {
         for (let x = 0; x < W; x++) {
-            const y = Math.floor(232 - 22 * fbm(9, x * 0.04));
-            bot.px(x, y, C.moss);
-            for (let yy = y + 1; yy < H; yy++) bot.px(x, yy, yy < y + 3 ? C.pine : (bayer(x, yy) < 0.3 ? C.ink : C.void));
+            const y = Math.floor(236 - 20 * fbm(9, x * 0.04));
+            bot.px(x, y, C.lime);
+            for (let yy = y + 1; yy < H; yy++) bot.px(x, yy, yy < y + 3 ? C.moss : (bayer(x, yy) < 0.35 ? C.night : C.ink));
         }
         const r = rng(3);
-        for (let i = 0; i < 14; i++) {
-            const x = Math.floor(r() * W); const y = Math.floor(232 - 22 * fbm(9, x * 0.04));
-            const h = 8 + Math.floor(r() * 16);
+        for (let i = 0; i < 18; i++) {
+            const x = Math.floor(r() * W); const y = Math.floor(236 - 20 * fbm(9, x * 0.04));
+            const h = 8 + Math.floor(r() * 20);
+            const sky = r() < 0.4;
+            const c1 = sky ? C.sky : C.jade, c2 = sky ? C.azure : C.moss, c3 = sky ? C.ice : C.lime;
             for (let j = 0; j < h; j++) {
-                const wd = Math.max(0, 3 - Math.floor(j / 5));
-                for (let dx = -wd; dx <= wd; dx++) bot.px(x + dx, y - j, dx <= 0 ? C.jade : C.moss);
+                const wd = Math.max(0, 3 - Math.floor(j / 6));
+                for (let dx = -wd; dx <= wd; dx++) bot.px(x + dx, y - j, dx <= 0 ? c1 : c2);
+                bot.px(x - wd - 1, y - j, C.void); bot.px(x + wd + 1, y - j, C.void);
             }
-            bot.px(x, y - h, C.lime);
+            bot.px(x, y - h, c3); bot.px(x - 1, y - h + 1, c3);
         }
         bot.done();
     }
@@ -410,7 +422,7 @@ export function createBackdrop(scene: Phaser.Scene, theme: BackdropTheme, varian
         embers([C.gold, C.ember, C.glow], 520);
     } else if (theme === 'cave') {
         const [bg, top, bot] = paintCave(scene);
-        place(bg, D); mist(height * 0.7, D + 2, 'bd_mist_cave', 0.6, C.deep, 0.5);
+        place(bg, D); mist(height * 0.72, D + 2, 'bd_mist_cave', 0.6, C.moss, 0.45);
         place(top, D + 3); place(bot, D + 4);
         embers([C.jade, C.lime, C.ice, C.sky], 260);
     } else {

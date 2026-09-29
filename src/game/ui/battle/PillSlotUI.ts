@@ -63,7 +63,7 @@ export class PillSlotUI extends GameObjects.Container {
 
         // 槽位背景
         const bg = this.scene.add.rectangle(0, 0, slotSize, slotSize, 0x2f3a2f, 0.8);
-        bg.setStrokeStyle(2, slot.isEmpty ? 0x555555 : 0x27ae60);
+        bg.setStrokeStyle(2, slot.isEmpty ? 0x6c5f9c : 0x1f7a5a);
         container.add(bg);
         this.slotBackgrounds[index] = bg;
 
@@ -87,7 +87,7 @@ export class PillSlotUI extends GameObjects.Container {
             // 丹药名称（简短）
             const name = this.scene.add.text(0, 25, this.getShortName(slot.pill.name), {
                 fontSize: '10px',
-                color: '#2ecc71'
+                color: '#3fbf7a'
             }).setOrigin(0.5);
             container.add(name);
             this.pillNames[index] = name;
@@ -106,7 +106,7 @@ export class PillSlotUI extends GameObjects.Container {
         // 悬停效果
         bg.on('pointerover', () => {
             if (!slot.isEmpty) {
-                bg.setStrokeStyle(3, 0xffd700);
+                bg.setStrokeStyle(3, 0xffc040);
                 container.setScale(1.1);
                 
                 // 显示详细信息
@@ -117,7 +117,7 @@ export class PillSlotUI extends GameObjects.Container {
         });
 
         bg.on('pointerout', () => {
-            bg.setStrokeStyle(2, slot.isEmpty ? 0x555555 : 0x27ae60);
+            bg.setStrokeStyle(2, slot.isEmpty ? 0x6c5f9c : 0x1f7a5a);
             container.setScale(1.0);
             this.hidePillTooltip();
         });

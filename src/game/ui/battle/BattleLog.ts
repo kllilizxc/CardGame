@@ -48,15 +48,15 @@ export class BattleLog {
         this.container.setDepth(1500);
 
         // 背景
-        this.background = scene.add.rectangle(0, 0, this.LOG_WIDTH, this.LOG_HEIGHT, 0x1a1a2e, 0.9);
-        this.background.setStrokeStyle(3, 0xf39c12);
+        this.background = scene.add.rectangle(0, 0, this.LOG_WIDTH, this.LOG_HEIGHT, 0x160f26, 0.9);
+        this.background.setStrokeStyle(3, 0xf28a2e);
         this.background.setInteractive();
         this.container.add(this.background);
 
         // 标题
         const title = scene.add.text(0, -this.LOG_HEIGHT / 2 + 20, '战斗日志', {
             fontSize: Math.floor(scene.scale.height * 0.02) + 'px',
-            color: '#f39c12',
+            color: '#f28a2e',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.container.add(title);
@@ -71,7 +71,7 @@ export class BattleLog {
         // 滚动提示（左侧）
         const scrollHint = scene.add.text(-this.LOG_WIDTH / 2 + 80, this.LOG_HEIGHT / 2 - 15, '[ 滚轮滚动 ]', {
             fontSize: Math.floor(scene.scale.height * 0.012) + 'px',
-            color: '#95a5a6',
+            color: '#9a8fbf',
             fontStyle: 'italic'
         }).setOrigin(0.5);
         this.container.add(scrollHint);
@@ -79,7 +79,7 @@ export class BattleLog {
         // 位置提示（右侧）
         this.bottomHint = scene.add.text(this.LOG_WIDTH / 2 - 80, this.LOG_HEIGHT / 2 - 15, '✓ 已到最新', {
             fontSize: Math.floor(scene.scale.height * 0.012) + 'px',
-            color: '#2ecc71',
+            color: '#3fbf7a',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.bottomHint.setVisible(true);
@@ -107,25 +107,25 @@ export class BattleLog {
         );
         this.toggleButton.setDepth(1501);
 
-        const btnBg = this.scene.add.rectangle(0, 0, 50, 30, 0xf39c12);
+        const btnBg = this.scene.add.rectangle(0, 0, 50, 30, 0xf28a2e);
         btnBg.setInteractive({ useHandCursor: true });
         this.toggleButton.add(btnBg);
 
         const btnText = this.scene.add.text(0, 0, '日志', {
             fontSize: '14px',
-            color: '#ffffff',
+            color: '#f4ecd8',
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.toggleButton.add(btnText);
 
-        btnBg.on('pointerover', () => btnBg.setFillStyle(0xffd700));
-        btnBg.on('pointerout', () => btnBg.setFillStyle(0xf39c12));
+        btnBg.on('pointerover', () => btnBg.setFillStyle(0xffc040));
+        btnBg.on('pointerout', () => btnBg.setFillStyle(0xf28a2e));
         btnBg.on('pointerdown', () => this.toggle());
     }
 
     private setupMask() {
         const maskShape = this.scene.make.graphics({});
-        maskShape.fillStyle(0xffffff);
+        maskShape.fillStyle(0xf4ecd8);
         maskShape.fillRect(
             this.LOG_X - this.LOG_WIDTH / 2 + 10,
             this.LOG_Y - this.LOG_HEIGHT / 2 + 50,
@@ -143,12 +143,12 @@ export class BattleLog {
         const barY = 0;
 
         // 滚动条背景
-        this.scrollBar = this.scene.add.rectangle(barX, barY, barWidth, barHeight, 0x34495e, 0.5);
+        this.scrollBar = this.scene.add.rectangle(barX, barY, barWidth, barHeight, 0x4a3c7a, 0.5);
         this.container.add(this.scrollBar);
 
         // 滚动条滑块
         const thumbHeight = 50;
-        this.scrollThumb = this.scene.add.rectangle(barX, barY - barHeight / 2 + thumbHeight / 2, barWidth, thumbHeight, 0xf39c12, 0.8);
+        this.scrollThumb = this.scene.add.rectangle(barX, barY - barHeight / 2 + thumbHeight / 2, barWidth, thumbHeight, 0xf28a2e, 0.8);
         this.scrollThumb.setInteractive({ useHandCursor: true, draggable: true });
         this.container.add(this.scrollThumb);
 
@@ -237,10 +237,10 @@ export class BattleLog {
         // 更新提示文字
         if (isAtTop && this.maxScrollOffset > 0) {
             this.bottomHint.setText('✓ 已到最早');
-            this.bottomHint.setColor('#95a5a6');
+            this.bottomHint.setColor('#9a8fbf');
         } else if (isAtBottom) {
             this.bottomHint.setText('✓ 已到最新');
-            this.bottomHint.setColor('#2ecc71');
+            this.bottomHint.setColor('#3fbf7a');
         }
     }
 
@@ -458,7 +458,7 @@ export class BattleLog {
         let maxHeight = 0;
         
         parts.forEach(part => {
-            const textColor = part.isCard || part.isGongfa ? '#f39c12' : '#ecf0f1';
+            const textColor = part.isCard || part.isGongfa ? '#f28a2e' : '#f4ecd8';
             const textStyle = part.isCard || part.isGongfa ? 'bold' : 'normal';
             
             const textObj = this.scene.add.text(currentX, currentLineY, part.text, {
@@ -481,7 +481,7 @@ export class BattleLog {
                     currentLineY + 8,
                     textObj.width,
                     16,
-                    0xffd700,
+                    0xffc040,
                     0
                 );
                 hitArea.setInteractive({ useHandCursor: true });
@@ -494,7 +494,7 @@ export class BattleLog {
                     hitArea.y + 8,
                     textObj.width,
                     2,
-                    0xffd700,
+                    0xffc040,
                     0
                 );
                 this.logContainer.add(underline);
@@ -542,7 +542,7 @@ export class BattleLog {
                     currentLineY + 8,
                     textObj.width,
                     16,
-                    0xffd700,
+                    0xffc040,
                     0
                 );
                 hitArea.setInteractive({ useHandCursor: true });
@@ -555,7 +555,7 @@ export class BattleLog {
                     hitArea.y + 8,
                     textObj.width,
                     2,
-                    0xffd700,
+                    0xffc040,
                     0
                 );
                 this.logContainer.add(underline);

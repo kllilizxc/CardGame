@@ -143,7 +143,7 @@ export function getStatusFullDescription(instance: StatusInstance): string {
  */
 export function getStatusColor(statusId: string): string {
   const definition = getStatusDefinition(statusId);
-  return definition?.color ?? '#ffffff';
+  return definition?.color ?? '#f4ecd8';
 }
 
 /**
@@ -151,17 +151,17 @@ export function getStatusColor(statusId: string): string {
  */
 export function getStatusCategoryColor(statusId: string): number {
   const definition = getStatusDefinition(statusId);
-  if (!definition) return 0xffffff;
+  if (!definition) return 0xf4ecd8;
 
   switch (definition.category) {
     case 'buff':
-      return 0x2ecc71; // 绿色
+      return 0x3fbf7a; // 绿色
     case 'debuff':
-      return 0xe74c3c; // 红色
+      return 0xee4a3a; // 红色
     case 'special':
-      return 0xf39c12; // 橙色
+      return 0xf28a2e; // 橙色
     default:
-      return 0xffffff;
+      return 0xf4ecd8;
   }
 }
 
