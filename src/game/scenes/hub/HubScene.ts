@@ -583,7 +583,6 @@ export class HubScene extends Scene {
 
         this.navigationState = applyHubNavigationIntent(
             this.town,
-            this.navigationState,
             createHubLocationSelectionIntent(
                 location.id,
                 `已选定前往：${location.title}。`,
@@ -676,7 +675,7 @@ export class HubScene extends Scene {
         const intent = this.createActionIntent(action);
 
         if (intent.kind === 'navigateLocation') {
-            this.navigationState = applyHubNavigationIntent(this.town, this.navigationState, intent);
+            this.navigationState = applyHubNavigationIntent(this.town, intent);
             this.persistHubNavigationState();
             this.renderShell();
             return;

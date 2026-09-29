@@ -963,14 +963,14 @@ export class BattleScene extends Scene {
         // 启用手牌交互
         this.hand.forEach(card => {
             if (card.input) {
-                card.input.enabled = true;
+                this.input.enable(card);
             }
         });
         
         // 启用场上单位交互
         this.playerField.forEach(unit => {
             if (unit.input) {
-                unit.input.enabled = true;
+                this.input.enable(unit);
             }
         });
     }
@@ -982,14 +982,14 @@ export class BattleScene extends Scene {
         // 禁用手牌交互
         this.hand.forEach(card => {
             if (card.input) {
-                card.input.enabled = false;
+                this.input.disable(card);
             }
         });
         
         // 禁用场上单位交互
         this.playerField.forEach(unit => {
             if (unit.input) {
-                unit.input.enabled = false;
+                this.input.disable(unit);
             }
         });
     }
@@ -1087,6 +1087,7 @@ export class BattleScene extends Scene {
         }
 
         this.battleEndHandled = true;
+        this.input.resetPointers();
 
         if (this.storyLaunchPayload) {
             const result = createStoryBattleCompleteEvent(this.storyLaunchPayload, victory);

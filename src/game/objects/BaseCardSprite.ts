@@ -339,7 +339,7 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         
         // 重新设置为非拖拽的交互模式，但保持 hit area
         if (this.input) {
-            this.input.draggable = false;
+            this.scene.input.setDraggable(this, false);
             this.input.cursor = 'pointer';
         }
     }

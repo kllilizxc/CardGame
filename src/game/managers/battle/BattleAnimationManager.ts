@@ -137,7 +137,7 @@ export class BattleAnimationManager {
             onComplete: () => {
                 // 动画完成后确保交互性正常
                 if (artifact.input) {
-                    artifact.input.enabled = true;
+                    this.scene.input.enable(artifact);
                 }
                 if (onComplete) {
                     onComplete();
@@ -203,7 +203,7 @@ export class BattleAnimationManager {
             card.setAlpha(1);
             card.setDepth(originalDepth);
             if (card.input) {
-                (card.input as any).draggable = false;
+                scene.input.setDraggable(card, false);
             }
             if (glow) {
                 glow.destroy();

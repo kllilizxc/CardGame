@@ -509,6 +509,9 @@ export class BattleLog {
         parts.forEach(part => {
             const textColor = part.isCard || part.isGongfa ? battleTheme.colors.textPrimary : battleTheme.colors.textBody;
             const textStyle = part.isCard || part.isGongfa ? 'bold' : 'normal';
+            const fontSizePx = Number.parseFloat(fontSize) || 18;
+            const minimumWrapWidth = Math.max(32, Math.ceil(fontSizePx * 1.5));
+            const remainingWrapWidth = Math.max(minimumWrapWidth, maxWidth - lineWidth);
             
             const textObj = this.scene.add.text(currentX, currentLineY, part.text, {
                 fontFamily: part.isCard || part.isGongfa ? sceneTheme.fonts.ui : sceneTheme.fonts.body,
@@ -516,7 +519,7 @@ export class BattleLog {
                 color: textColor,
                 fontStyle: textStyle,
                 lineSpacing: 4,
-                wordWrap: { width: maxWidth - lineWidth }
+                wordWrap: { width: remainingWrapWidth }
             });
             textObj.setOrigin(0, 0);
             this.logContainer.add(textObj);
