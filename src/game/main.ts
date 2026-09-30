@@ -12,7 +12,7 @@ import { Preloader } from './scenes/Preloader';
 import { pixelViewportForBrowser } from './layout/gameViewport';
 import { PaletteFX, applyPaletteFX } from './art/PaletteFX';
 import { installPixelText } from './art/textPatch';
-import { inkIn, installSceneTransitions } from './art/transition';
+import { inkIn, installSceneTransitions, setBeforeSceneStart } from './art/transition';
 
 //  Find out more information about the Game Config at:
 //  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
@@ -55,6 +55,19 @@ const StartGame = (parent: string) => {
     const viewport = pixelViewportForBrowser(window.innerWidth, window.innerHeight);
     const game = new Game({ ...config, parent, width: viewport.width, height: viewport.height,
         scale: { ...config.scale, width: viewport.width, height: viewport.height } });
+
+    // The canvas width follows the window aspect. A resize is applied at the next scene change
+    // (every scene lays itself out from scale.width), so a fight is never re-laid out mid-turn.
+    let pending: { width: number; height: number } | null = null;
+    window.addEventListener('resize', () => {
+        const next = pixelViewportForBrowser(window.innerWidth, window.innerHeight);
+        pending = next.width !== game.scale.gameSize.width ? next : null;
+    });
+    setBeforeSceneStart(() => {
+        if (!pending) return;
+        game.scale.setGameSize(pending.width, pending.height);
+        pending = null;
+    });
 
     if (import.meta.env.DEV) {
         (window as unknown as { __game: Phaser.Game }).__game = game;

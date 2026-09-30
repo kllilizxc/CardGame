@@ -57,8 +57,6 @@ export class MainMenu extends Scene {
             this.cameras.main.shake(90, 0.003);
         } });
         this.logoTween = this.tweens.add({ targets: this.logo, y: logoY - PX * 2, duration: 1800, yoyo: true, repeat: -1, ease: 'Stepped', easeParams: [3], delay: 1200 });
-        tag.setAlpha(0);
-        this.tweens.add({ targets: tag, alpha: 1, duration: 400, delay: 1100, ease: 'Stepped', easeParams: [4] });
 
         // menu
         const menu: MenuItem[] = [
@@ -67,21 +65,18 @@ export class MainMenu extends Scene {
         ];
         const menuY = snap(height * 0.62);
         menu.forEach((item, i) => {
-            const t = ptext(this, width / 2, menuY + i * PX * 22, item.label, { size: 2, color: INK.bone, fx: 'outline', origin: [0.5, 0.5] })
+            const t = ptext(this, width / 2, menuY + i * PX * 30, item.label, { size: 2, color: INK.bone, fx: 'outline', origin: [0.5, 0.5] })
                 .setDepth(20).setInteractive({ useHandCursor: true });
             t.on('pointerover', () => this.select(i));
             t.on('pointerup', () => { this.select(i); this.activate(); });
-            t.setAlpha(0);
-            this.tweens.add({ targets: t, alpha: 1, duration: 300, delay: 1300 + i * 120, ease: 'Stepped', easeParams: [3] });
+            t.setX(snap(width / 2 + (i % 2 ? 1 : -1) * PX * 8));
+            this.tweens.add({ targets: t, x: snap(width / 2), duration: 220, delay: 100 + i * 80, ease: 'Stepped', easeParams: [3] });
             this.items.push({ text: t, item });
         });
         this.cursor = ptext(this, 0, 0, '▶', { size: 1, color: INK.vermilion, fx: 'outline', origin: [0.5, 0.5] }).setDepth(20);
         this.tweens.add({ targets: this.cursor, x: '+=' + PX * 2, duration: 300, yoyo: true, repeat: -1, ease: 'Stepped', easeParams: [2] });
-        this.hint = ptext(this, width / 2, menuY + menu.length * PX * 22 + PX * 2, '', { color: INK.mist, origin: [0.5, 0.5], fx: 'outline' }).setDepth(20);
+        this.hint = ptext(this, width / 2, menuY + menu.length * PX * 30 - PX * 4, '', { color: INK.mist, origin: [0.5, 0.5], fx: 'outline' }).setDepth(20);
         this.select(0);
-        this.cursor.setAlpha(0);
-        this.hint.setAlpha(0);
-        this.tweens.add({ targets: [this.cursor, this.hint], alpha: 1, duration: 200, delay: 1500 });
 
         ptext(this, width - PX * 6, height - PX * 6, 'v1.1 墨砂', { color: INK.slate, origin: [1, 1], fx: 'none' }).setDepth(20);
 

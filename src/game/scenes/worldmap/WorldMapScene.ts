@@ -143,6 +143,7 @@ export class WorldMapScene extends Scene {
         const surface = this.add.container(start.x, start.y);
         this.surface = surface;
         surface.add(this.add.image(0, 0, mapKey).setOrigin(0).setScale(PX));
+        this.addCloudShadows(surface, aw, ah);
         this.worldMap.destinations.forEach((destination, i) => this.createDestinationMarker(destination, sites[i], i));
         surface.add(this.add.image(0, 0, fringeKey).setOrigin(0).setScale(PX));
 
@@ -157,7 +158,6 @@ export class WorldMapScene extends Scene {
         surface.add(this.traveller);
         let f = 0;
         this.time.addEvent({ delay: 380, loop: true, callback: () => { f ^= 1; this.traveller?.setTexture(f ? t1 : t0); } });
-        this.addCloudShadows(surface, aw, ah);
         this.centerOn(tp.x, tp.y, false);
 
         this.renderHud();

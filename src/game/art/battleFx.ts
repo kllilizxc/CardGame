@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { numberFont } from './kit';
 import type { WenxinBattleStage } from './wenxin/WenxinBattleStage';
 import type { WenxinUnitView } from './wenxin/WenxinUnitView';
 import { C, FONT, hex, PX } from './palette';
@@ -89,13 +90,15 @@ export class BattleFx {
     // ---------------------------------------------------------------- combat
     damageNumber(x: number, y: number, dmg: number, blocked: boolean) {
         const s = this.scene;
-        const text = blocked ? '挡' : `-${dmg}`;
         const color = blocked ? C.mist : dmg >= 8 ? C.glow : C.paper;
-        const t = s.add.text(snap(x), snap(y), text, {
-            fontFamily: FONT, fontSize: blocked ? '48px' : dmg >= 8 ? '96px' : '72px', color: hex(color), stroke: hex(C.void), strokeThickness: 10,
-        }).setOrigin(0.5).setDepth(3100).setScale(2.2).setAngle((Math.random() - 0.5) * 10);
+        const k = blocked ? 1 : dmg >= 8 ? 4 : 3;
+        const t: Phaser.GameObjects.Text | Phaser.GameObjects.BitmapText = blocked
+            ? s.add.text(snap(x), snap(y), '挡', { fontFamily: FONT, fontSize: '72px', color: hex(color), stroke: hex(C.void), strokeThickness: 6 }).setOrigin(0.5)
+            : s.add.bitmapText(snap(x), snap(y), numberFont(s, color), `-${dmg}`).setOrigin(0.5).setLetterSpacing(-1);
+        const rest = blocked ? 1 : PX * k;
+        t.setDepth(3100).setScale(rest * 1.8);
         s.tweens.add({
-            targets: t, scale: 1, duration: 130, ease: 'Back.easeOut',
+            targets: t, scale: rest, duration: 130, ease: 'Back.easeOut',
             onComplete: () => s.tweens.add({ targets: t, y: t.y - 70, alpha: 0, duration: 520, delay: 320, ease: 'Quad.easeIn', onComplete: () => t.destroy() }),
         });
         if (!blocked && dmg > 0) {

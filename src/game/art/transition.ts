@@ -40,6 +40,12 @@ export function inkIn(scene: Phaser.Scene, ms = REVEAL_MS): void {
 
 let installed = false;
 type Pending = { args: unknown[] };
+let beforeStart: (() => void) | undefined;
+
+/** Run `fn` right before every scene change (used to apply a new canvas size between scenes). */
+export function setBeforeSceneStart(fn: () => void): void {
+    beforeStart = fn;
+}
 
 /** Wrap ScenePlugin.start so every scene change plays the ink cover first. */
 export function installSceneTransitions(): void {
@@ -54,7 +60,7 @@ export function installSceneTransitions(): void {
         const scene = this.scene;
         const running = scene?.sys?.settings.status === Phaser.Scenes.RUNNING && scene.sys.isVisible();
         const skip = typeof location !== 'undefined' && location.search.includes('notrans');
-        if (!running || skip || !scene.sys.game.renderer) return orig.apply(this, args);
+        if (!running || skip || !scene.sys.game.renderer) { beforeStart?.(); return orig.apply(this, args); }
         if (this.__pending) { this.__pending.args = args; return this; }
         const pending: Pending = { args };
         this.__pending = pending;
@@ -68,6 +74,7 @@ export function installSceneTransitions(): void {
             scene.events.off(Phaser.Scenes.Events.UPDATE, tick);
             plugin.__pending = undefined;
             if (scene.input) scene.input.enabled = true;
+            beforeStart?.();
             orig.apply(plugin, pending.args);
         };
         const tick = () => {

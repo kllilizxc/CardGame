@@ -107,13 +107,13 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         variant: 'primary' | 'secondary',
         onClick: () => void
     ): GameObjects.Container {
+        void description;
         const button = createSceneButton(this.scene, {
-            x,
+            x: x + (x < this.scene.scale.width / 2 ? -40 : 40),
             y,
-            width: 176,
-            height: 64,
+            width: 240,
+            height: 66,
             label: text,
-            description,
             variant,
             onClick,
         });

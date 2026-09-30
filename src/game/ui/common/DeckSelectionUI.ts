@@ -10,6 +10,9 @@ import type { ArtifactCard } from '@data/types/cards/artifact';
 import type { TalismanCard } from '@data/types/cards/talisman';
 import type { FieldCard } from '@data/types/cards/field';
 import type { PillCard } from '@data/types/cards/pill';
+import { INK, PX } from '../../art/palette';
+import { snap } from '../../art/pix';
+import { panel, pbutton, piconButton, ptext } from '../../art/kit';
 
 type AnyCardSprite = CardSprite | ArtifactSprite | TalismanSprite | FieldSprite | PillSprite;
 
@@ -22,7 +25,6 @@ export class DeckSelectionUI extends GameObjects.Container {
     private background!: GameObjects.Rectangle;
     private overlay!: GameObjects.Rectangle;
     private titleText!: GameObjects.Text;
-    private closeButton!: GameObjects.Rectangle;
     private scrollContainer!: GameObjects.Container;
     private cardSprites: AnyCardSprite[] = [];
     private maskShape!: GameObjects.Graphics;
@@ -32,7 +34,6 @@ export class DeckSelectionUI extends GameObjects.Container {
     private isMultiSelect: boolean = false;
     private maxSelectCount: number = 1;
     private selectedCards: Set<AnyCard> = new Set();
-    private confirmButton!: GameObjects.Rectangle;
     
     private scrollY: number = 0;
     private maxScrollY: number = 0;
@@ -100,113 +101,42 @@ export class DeckSelectionUI extends GameObjects.Container {
      */
     private createView(): void {
         const { width, height } = this.scene.scale;
-        
-        // 半透明黑色背景遮罩（覆盖整个屏幕）
-        this.overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x0b0714, 0.8);
+        this.overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, INK.void, 0.78);
         this.overlay.setInteractive();
-        this.overlay.on('pointerdown', () => this.hide(true)); // 点击背景取消
+        this.overlay.on('pointerdown', () => this.hide(true));
         this.add(this.overlay);
 
-        // 主面板
-        this.panelWidth = Math.min(800, width * 0.9);
-        this.panelHeight = Math.min(600, height * 0.85);
-        this.panelX = width / 2;
-        this.panelY = height / 2;
-
-        this.background = this.scene.add.rectangle(this.panelX, this.panelY, this.panelWidth, this.panelHeight, 0x32285a);
-        this.background.setStrokeStyle(4, 0x1f7a5a);
-        this.background.setInteractive(); // 阻止点击穿透
+        this.panelWidth = snap(Math.min(1400, width - PX * 60));
+        this.panelHeight = snap(height - PX * 40);
+        this.panelX = snap(width / 2);
+        this.panelY = snap(height / 2);
+        const left = this.panelX - this.panelWidth / 2, top = this.panelY - this.panelHeight / 2;
+        this.add(panel(this.scene, this.panelX, this.panelY, this.panelWidth, this.panelHeight, 'ink'));
+        this.background = this.scene.add.rectangle(this.panelX, this.panelY, this.panelWidth, this.panelHeight, 0, 0.001);
+        this.background.setInteractive();
         this.add(this.background);
 
-        // 标题
-        const titleText = this.isMultiSelect 
-            ? `从卡组中选择 ${this.maxSelectCount} 张卡`
-            : '从卡组中选择一张卡';
-        this.titleText = this.scene.add.text(this.panelX, this.panelY - this.panelHeight / 2 + 30, titleText, {
-            fontSize: '24px',
-            color: '#4cb4f0',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
+        const title = this.isMultiSelect ? `选择 ${this.maxSelectCount} 张卡` : '选择一张卡';
+        this.titleText = ptext(this.scene, left + PX * 12, top + PX * 8, title, { size: 2, color: INK.paper });
         this.add(this.titleText);
+        this.add(ptext(this.scene, left + PX * 12, top + PX * 34, `共 ${this.cards.length} 张`, { color: INK.mist }));
+        this.add(piconButton(this.scene, left + this.panelWidth - PX * 16, top + PX * 16, 'close', () => this.hide(true), 'slate', 16));
 
-        // 卡片数量
-        const countInfo = this.isMultiSelect
-            ? `共 ${this.cards.length} 张卡牌 | 已选择 ${this.selectedCards.size}/${this.maxSelectCount}`
-            : `共 ${this.cards.length} 张卡牌`;
-        const countText = this.scene.add.text(this.panelX, this.panelY - this.panelHeight / 2 + 60, countInfo, {
-            fontSize: '16px',
-            color: '#f4ecd8'
-        }).setOrigin(0.5);
-        this.add(countText);
-
-        // 关闭按钮
-        const closeX = this.panelX + this.panelWidth / 2 - 40;
-        const closeY = this.panelY - this.panelHeight / 2 + 30;
-        this.closeButton = this.scene.add.rectangle(closeX, closeY, 60, 40, 0xee4a3a);
-        this.closeButton.setStrokeStyle(2, 0xf4ecd8);
-        this.closeButton.setInteractive({ useHandCursor: true });
-        this.closeButton.on('pointerover', () => this.closeButton.setFillStyle(0xee4a3a));
-        this.closeButton.on('pointerout', () => this.closeButton.setFillStyle(0xee4a3a));
-        this.closeButton.on('pointerdown', () => this.hide(true)); // 点击关闭按钮取消
-        this.add(this.closeButton);
-
-        const closeText = this.scene.add.text(closeX, closeY, '取消', {
-            fontSize: '16px',
-            color: '#f4ecd8'
-        }).setOrigin(0.5);
-        this.add(closeText);
-
-        // 多选模式：添加确认按钮
         if (this.isMultiSelect) {
-            const confirmX = this.panelX;
-            const confirmY = this.panelY + this.panelHeight / 2 - 50;
-            this.confirmButton = this.scene.add.rectangle(confirmX, confirmY, 120, 50, 0x1f7a5a);
-            this.confirmButton.setStrokeStyle(2, 0xf4ecd8);
-            this.confirmButton.setInteractive({ useHandCursor: true });
-            this.confirmButton.on('pointerover', () => this.confirmButton.setFillStyle(0x3fbf7a));
-            this.confirmButton.on('pointerout', () => this.confirmButton.setFillStyle(0x1f7a5a));
-            this.confirmButton.on('pointerdown', () => this.confirmSelection());
-            this.add(this.confirmButton);
-
-            const confirmText = this.scene.add.text(confirmX, confirmY, '确认选择', {
-                fontSize: '18px',
-                color: '#f4ecd8',
-                fontStyle: 'bold'
-            }).setOrigin(0.5);
-            this.add(confirmText);
+            this.add(pbutton(this.scene, { x: this.panelX, y: top + this.panelHeight - PX * 18, width: PX * 80, height: PX * 22, label: '确认选择', style: 'seal', onClick: () => this.confirmSelection() }));
         }
 
-        // 创建滚动容器
-        this.contentLeft = this.panelX - this.panelWidth / 2 + 20;
-        this.contentTop = this.panelY - this.panelHeight / 2 + 110;
-        this.contentWidth = this.panelWidth - 40;
-        this.contentHeight = this.panelHeight - 160;
-
+        this.contentLeft = left + PX * 10;
+        this.contentTop = top + PX * 50;
+        this.contentWidth = this.panelWidth - PX * 20;
+        this.contentHeight = this.panelHeight - PX * (this.isMultiSelect ? 86 : 58);
         this.scrollContainer = this.scene.add.container(0, 0);
         this.add(this.scrollContainer);
-
-        // 创建遮罩（在世界坐标系中）
-        this.maskShape = this.scene.add.graphics();
-        this.maskShape.fillStyle(0xf4ecd8);
-        this.maskShape.fillRect(this.contentLeft, this.contentTop, this.contentWidth, this.contentHeight);
-        const mask = this.maskShape.createGeometryMask();
-        this.scrollContainer.setMask(mask);
-        
-        // 设置滚动容器的初始位置（左上角）
+        this.maskShape = this.scene.make.graphics({});
+        this.maskShape.fillStyle(0xffffff).fillRect(this.contentLeft, this.contentTop, this.contentWidth, this.contentHeight);
+        this.scrollContainer.setMask(this.maskShape.createGeometryMask());
         this.scrollContainer.setPosition(this.contentLeft, this.contentTop);
-
-        // 创建卡片网格
         this.createCardGrid(this.contentWidth);
-
-        // 滚动提示
-        if (this.maxScrollY > 0) {
-            const scrollHint = this.scene.add.text(this.panelX, this.panelY + this.panelHeight / 2 - 20, '↕ 滚动查看更多', {
-                fontSize: '14px',
-                color: '#9a8fbf'
-            }).setOrigin(0.5);
-            this.add(scrollHint);
-        }
-
         this.setDepth(6000);
     }
 
@@ -214,19 +144,20 @@ export class DeckSelectionUI extends GameObjects.Container {
      * 创建卡片网格
      */
     private createCardGrid(containerWidth: number): void {
-        const cardScale = 0.5;
-        const cardWidth = 180 * cardScale;
-        const cardHeight = 260 * cardScale;
-        const spacing = 20;
-        const cols = Math.floor(containerWidth / (cardWidth + spacing));
+        const cardScale = 1;
+        const cardWidth = 180;
+        const cardHeight = 258;
+        const spacing = PX * 6;
+        const cols = Math.max(1, Math.floor((containerWidth + spacing) / (cardWidth + spacing)));
+        const offsetX = snap((containerWidth - (cols * cardWidth + (cols - 1) * spacing)) / 2);
         
         this.cards.forEach((cardData, index) => {
             const col = index % cols;
             const row = Math.floor(index / cols);
             
             // 从左上角开始排列
-            const x = col * (cardWidth + spacing) + cardWidth / 2;
-            const y = row * (cardHeight + spacing) + cardHeight / 2;
+            const x = offsetX + col * (cardWidth + spacing) + cardWidth / 2;
+            const y = PX * 4 + row * (cardHeight + spacing) + cardHeight / 2;
 
             let sprite: AnyCardSprite;
             if (cardData.kind === 'unit') {
@@ -265,13 +196,8 @@ export class DeckSelectionUI extends GameObjects.Container {
             });
 
             // hover高亮
-            sprite.on('pointerover', () => {
-                sprite.setScale(cardScale * 1.1);
-            });
-
-            sprite.on('pointerout', () => {
-                sprite.setScale(cardScale);
-            });
+            sprite.on('pointerover', () => { sprite.y = y - PX * 4; });
+            sprite.on('pointerout', () => { sprite.y = y; });
             
             this.scrollContainer.add(sprite);
             this.cardSprites.push(sprite);

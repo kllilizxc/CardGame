@@ -83,7 +83,7 @@ export class TutorialOverlayController {
     private onStepChange: (() => void) | null = null;
 
     private static readonly OVERLAY_DEPTH = 5000;
-    private static readonly HIGHLIGHT_COLOR = 0xffc040;
+    private static readonly HIGHLIGHT_COLOR = 0xf5cf6a;
     private static readonly ARROW_HEAD_LEN = 14;
 
     /**
@@ -204,7 +204,7 @@ export class TutorialOverlayController {
 
         // 半透明遮罩（纯视觉层，不拦截输入）
         this.dimBg = this.scene.add.rectangle(
-            width / 2, height / 2, width, height, 0x0b0714, 0.4
+            width / 2, height / 2, width, height, 0x0a0a12, 0.45
         ).setDepth(d);
 
         // 高亮区域
@@ -232,15 +232,14 @@ export class TutorialOverlayController {
 
         // 引导文本
         const textPos = this.resolveTextPosition(step.textPosition, width, height);
-        const fontSize = Math.max(16, Math.floor(height * 0.025)) + 'px';
+        // Pixel scroll: 36px font (one font pixel = one art pixel), ink plate, gold text.
         this.guideTextObj = this.scene.add.text(textPos.x, textPos.y, step.guideText, {
-            fontSize,
-            color: '#ffc040',
-            fontStyle: 'bold',
-            stroke: '#0b0714',
-            strokeThickness: 4,
+            fontSize: '36px',
+            color: '#f5cf6a',
+            backgroundColor: '#15142a',
+            padding: { x: 24, y: 15 },
             align: 'center',
-            wordWrap: { width: width * 0.65 },
+            wordWrap: { width: width * 0.6 },
         }).setOrigin(0.5).setDepth(d + 2);
     }
 
