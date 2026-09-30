@@ -16,7 +16,7 @@ import {
 } from '../services/RunPersistence';
 import { resolveBattleDefeat, resolveExtract } from '../services/RunResolution';
 import { validateWorldMapDefinition } from '../scenes/worldmap/worldMap';
-import { getSelectedDeckCards } from './PersistentStashDecks';
+import { countDeckCards, getSelectedDeckCards } from './PersistentStashDecks';
 import { indexItemActionPolicies } from './ItemActionRules';
 import type { RunRewardBundle } from '../types/expedition';
 import type { ExpeditionWorldStateSeed } from './GameWorldStateSeed';
@@ -152,6 +152,36 @@ describe('ExpeditionState', () => {
 
         expect(restoredState.persistentStash).toEqual(existingStash);
         expect(loadPersistentStash()).toEqual(existingStash);
+    });
+
+    it('repairs an existing short default starter deck from the current seed without touching custom decks', () => {
+        const seededState = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+        });
+        const legacyCards = structuredClone(starterDeckJson.cards);
+        legacyCards.find((card) => card.id === 'SX_YJZ_001')!.count = 1;
+        legacyCards.find((card) => card.id === 'SX_YJS_001')!.count = 1;
+        const legacyStash = {
+            ...seededState.persistentStash,
+            cards: legacyCards,
+            savedDecks: [{
+                id: 'starter-deck',
+                name: starterDeckJson.name,
+                cards: legacyCards,
+            }],
+            selectedDeckId: 'starter-deck',
+        };
+        savePersistentStash(legacyStash);
+
+        const restoredState = ExpeditionState.bootstrap({
+            worldState: structuredClone(initialWorldState),
+            starterDeck: structuredClone(starterDeckJson),
+        });
+
+        expect(countDeckCards(getSelectedDeckCards(restoredState.persistentStash))).toBe(20);
+        expect(restoredState.persistentStash.cards).toEqual(starterDeckJson.cards);
+        expect(loadPersistentStash()).toEqual(restoredState.persistentStash);
     });
 
     it('persists seed-fallback stash and active runs through an injected storage adapter without touching ambient localStorage', () => {

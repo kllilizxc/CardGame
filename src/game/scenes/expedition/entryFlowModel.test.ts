@@ -39,10 +39,10 @@ describe('entryFlowModel', () => {
         });
 
         expect(createPreparationSummary(state.persistentStash)).toEqual({
-            deckCount: 16,
+            deckCount: 20,
             itemCount: 3,
             spiritStones: 36,
-            statusText: '储物袋已备好：16 张卡、3 件道具、36 枚灵石。',
+            statusText: '储物袋已备好：20 张卡、3 件道具、36 枚灵石。',
         });
     });
 
@@ -60,10 +60,10 @@ describe('entryFlowModel', () => {
         expect(createRunSummary(run)).toEqual({
             currentNodeId: 'entrance.mountain-gate',
             currentNodeLabel: '当前节点',
-            carriedDeckCount: 16,
+            carriedDeckCount: 20,
             carriedItemCount: 3,
             spiritStones: 36,
-            statusText: '已继续探索：当前位置 当前节点，携带 16 张卡、3 件道具、36 枚灵石。',
+            statusText: '已继续探索：当前位置 当前节点，携带 20 张卡、3 件道具、36 枚灵石。',
         });
     });
 
@@ -84,10 +84,10 @@ describe('entryFlowModel', () => {
         })).toEqual({
             currentNodeId: 'entrance.mountain-gate',
             currentNodeLabel: '山门入口',
-            carriedDeckCount: 16,
+            carriedDeckCount: 20,
             carriedItemCount: 3,
             spiritStones: 36,
-            statusText: '已进入秘境：当前位置 山门入口，携带 16 张卡、3 件道具、36 枚灵石。',
+            statusText: '已进入秘境：当前位置 山门入口，携带 20 张卡、3 件道具、36 枚灵石。',
         });
     });
 
