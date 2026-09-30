@@ -61,50 +61,25 @@ describe('expedition UI Chinese copy', () => {
         const model = read('src/game/scenes/expedition/entryFlowModel.ts');
         const loadoutCopy = `${panel}\n${model}`;
 
+        // One decision per screen: the deck, whether it can go, and three actions.
         expect(panel).toContain('出发前确认');
-        expect(panel).toContain('能出发就确认；不能就管理卡组。');
         expect(panel).toContain('管理卡组');
+        expect(panel).toContain('出 发');
+        expect(panel).toContain('暂不可出发');
+        expect(panel).toContain('Enter 出发 · M 管理卡组');
         expect(loadoutCopy).toContain('卡组符合要求，可以带入秘境。');
         expect(loadoutCopy).toContain('卡组数量不足');
         expect(loadoutCopy).toContain('卡组数量超限');
-        expect(panel).toContain('当前带入');
-        expect(loadoutCopy).toContain('卡组总览');
-        expect(panel).toContain('当前阻塞');
-        expect(panel).toContain('主操作');
-        expect(panel).toContain('快捷键：Enter 主操作 · M 管理卡组');
-        expect(panel).toContain('确认带入并出发');
-        expect(panel).toContain('暂不可确认带入');
-        expect(panel).toContain('去管理卡组补足');
-        expect(panel).toContain('现在可以直接确认带入并进入秘境。');
-        expect(panel).toContain('带入清单');
-        expect(loadoutCopy).toContain('大地图 /');
-        expect(loadoutCopy).toContain('首层');
-        expect(loadoutCopy).not.toContain('起步，先看');
-        expect(loadoutCopy).not.toContain('当前阶段：确认路线并选定本次带入');
-        expect(loadoutCopy).not.toContain('路线速览');
-        expect(panel).not.toContain('routeBriefing');
-        expect(panel).not.toContain('createRouteBriefingStrip');
-        expect(panel).not.toContain('measureRouteBriefingStripHeight');
-        expect(panel).not.toContain('路线简报');
-        expect(panel).not.toContain('分层速览');
-        expect(panel).not.toContain('开局');
-        expect(panel).not.toContain('收官');
-        expect(panel).not.toContain('先看当前卡组能否直接出发；需要调整时去管理卡组。');
-        expect(panel).not.toContain('换卡组');
-        expect(panel).not.toContain('补充明细');
-        expect(panel).not.toContain('需要时再看');
-        expect(panel).not.toContain('携带物资');
-        expect(panel).not.toContain('卡组构成');
-        expect(loadoutCopy).not.toContain('路线简报');
-        expect(loadoutCopy).not.toContain('分层速览');
-        expect(loadoutCopy).not.toContain('开局');
         expect(panel).toContain('物资：');
         expect(loadoutCopy).toContain('件道具');
         expect(panel).toContain('灵石');
-        expect(panel).not.toContain('第一阶段暂不开放卡组构筑');
+        expect(panel).not.toContain('routeBriefing');
+        expect(panel).not.toContain('路线简报');
+        expect(panel).not.toContain('开局');
         expect(panel).not.toContain('Starter Deck');
         expect(panel).not.toContain('Starter Items');
         expect(panel).not.toContain('spiritStones：');
+        expectNoDebugIdentifiers(panel);
     });
 
     it('uses Chinese labels in the deck workshop', () => {
@@ -141,23 +116,15 @@ describe('expedition UI Chinese copy', () => {
         const model = read('src/game/scenes/expedition/entryFlowModel.ts');
         const hudCopy = `${hud}\n${model}`;
 
-        expect(hud).toContain('当前节点：');
-        expect(hud).toContain('携带卡牌：0');
-        expect(hud).toContain('携带道具：0');
-        expect(hud).toContain('灵石：0');
+        // The HUD is icon chips; the Chinese labels live in their tooltips.
+        expect(hud).toContain('携带卡牌：');
+        expect(hud).toContain('灵石：');
         expect(hudCopy).toContain('抵达');
         expect(hudCopy).toContain('首层已高亮');
         expect(hudCopy).toContain('带入已锁定');
-        expect(hudCopy).not.toContain('首层分路已高亮；点按节点后收起。');
-        expect(hudCopy).not.toContain('首个分路已高亮；点按节点后收起此提示。');
         expect(hudCopy).not.toContain('抵达提示');
-        expect(hudCopy).not.toContain('带入：');
         expect(hud).not.toContain("'carriedDeck: 0'");
-        expect(hud).not.toContain("'carriedItems: 0'");
         expect(hud).not.toContain("'spiritStones: 0'");
-        expect(hud).not.toContain('`carriedDeck: ${carriedDeckCount}`');
-        expect(hud).not.toContain('`carriedItems: ${carriedItemCount}`');
-        expect(hud).not.toContain('`spiritStones: ${spiritStones}`');
         expectNoDebugIdentifiers(hud);
     });
 });

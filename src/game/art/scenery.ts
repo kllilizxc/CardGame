@@ -197,16 +197,16 @@ export function paintForest(ground: number, treeH: number, fill: number, rimC: n
 }
 
 function pine(p: Pix, x: number, ground: number, h: number, c: number): void {
-    const tiers = Math.max(3, Math.floor(h / 5));
+    const tiers = Math.max(2, Math.round(h / 10));
+    const trunk = Math.max(2, Math.round(h * 0.12));
+    const crown = h - trunk;
     for (let i = 0; i < tiers; i++) {
-        const ty = ground - h + Math.floor((i / tiers) * h);
-        const hw = 1 + Math.floor((i + 1) * (h / tiers) * 0.42);
-        for (let k = 0; k < Math.ceil(h / tiers) + 1; k++) {
-            const w = Math.max(0, Math.floor(hw * (k / (h / tiers + 1)) + 1));
-            p.rect(x - w, ty + k, w * 2 + 1, 1, c);
-        }
+        const top = ground - h + Math.round((i / tiers) * crown * 0.7);
+        const th = Math.round(crown / tiers) + 4;
+        const hw = 2 + Math.round(((i + 1) / tiers) * h * 0.26);
+        p.poly([[x + 0.5, top], [x + hw + 1, top + th], [x - hw, top + th]], c);
     }
-    p.rect(x, ground - 3, 1, 4, c);
+    p.rect(x, ground - trunk, 1, trunk + 1, c);
 }
 
 /* ---------------------------------------------------------------- props */
@@ -329,9 +329,9 @@ function layerSet(scene: Phaser.Scene, kind: BackdropKind, mood: SkyMood): Paral
             add('sky', () => paintSky(mood, 12, mood !== 'day'), 0.4, 0.01);
             add('range-far', () => paintRange({ base: 220, height: 80, count: 6, fill: far, lit: farLit, rim: farLit, seed: 33 }), 0, 0.02);
             add('trees-far', () => paintForest(230, 70, mid, midLit, 43, 5), 0, 0.04);
-            add('mist-1', () => paintMist(200, 60, cloudLit, 0.6, 44), 8, 0.05);
+            add('mist-1', () => paintMist(205, 40, cloud, 0.3, 44), 8, 0.05);
             add('trees-mid', () => paintForest(290, 100, dusk ? INK.plum : INK.pine, dusk ? INK.wine : INK.jade, 53, 8), 0, 0.08);
-            add('mist-2', () => paintMist(270, 50, cloud, 0.5, 64), 12, 0.1);
+            add('mist-2', () => paintMist(275, 30, cloud, 0.25, 64), 12, 0.1);
             add('trees-near', () => paintForest(345, 170, near, undefined, 73, 22), 0, 0.16);
             break;
         case 'cave':
@@ -432,6 +432,23 @@ function paintIsles(fill: number, lit: number): Pix {
     return p;
 }
 
+const opaqueTops = new Map<string, number>();
+function opaqueTopOf(scene: Phaser.Scene, key: string): number {
+    const cached = opaqueTops.get(key);
+    if (cached !== undefined) return cached;
+    const src = scene.textures.get(key).getSourceImage() as HTMLCanvasElement;
+    let top = 0;
+    const ctx = src.getContext?.('2d');
+    if (ctx) {
+        const d = ctx.getImageData(0, 0, src.width, src.height).data;
+        top = src.height;
+        outer: for (let y = 0; y < src.height; y++) for (let x = 0; x < src.width; x += 2) if (d[(y * src.width + x) * 4 + 3] > 0) { top = y; break outer; }
+        top = Math.max(0, Math.min(src.height - 1, top));
+    }
+    opaqueTops.set(key, top);
+    return top;
+}
+
 /**
  * Add a full-screen parallax backdrop. Layers tile horizontally, drift slowly, and follow the
  * pointer a touch for depth. Returns a handle for teardown.
@@ -442,8 +459,12 @@ export function addBackdrop(scene: Phaser.Scene, kind: BackdropKind, mood: SkyMo
     const baseDepth = opts.depth ?? -1000;
     const specs = layerSet(scene, kind, mood);
     const artOffsetY = Math.round((height / PX - ART_H) / 2);
-    const layers = specs.map((s, i) => scene.add.tileSprite(-PX, artOffsetY * PX, aw, ART_H, s.key)
-        .setOrigin(0, 0).setScale(PX).setDepth(baseDepth + i).setTilePosition(i * 97, 0));
+    const layers = specs.map((s, i) => {
+        // Only cover the rows that hold pixels: far less overdraw for mostly-empty layers.
+        const top = i === 0 ? 0 : opaqueTopOf(scene, s.key);
+        return scene.add.tileSprite(-PX, (artOffsetY + top) * PX, aw, ART_H - top, s.key)
+            .setOrigin(0, 0).setScale(PX).setDepth(baseDepth + i).setTilePosition(i * 97, top);
+    });
     const extras: Phaser.GameObjects.GameObject[] = [];
 
     let px = 0;

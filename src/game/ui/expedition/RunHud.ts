@@ -1,84 +1,79 @@
 import { GameObjects, Scene } from 'phaser';
 
+import { INK, PX } from '../../art/palette';
+import { snap } from '../../art/pix';
+import { PTooltip, clip, panel, pbar, pbutton, pchip, ptext, ptitle, ptoast } from '../../art/kit';
+import { addIcon } from '../../art/icons';
+import { pxBurst, pxShake } from '../../art/fx';
 import { countOccupiedItemSlots, resolveItemSlotCapacity } from '../../state/ItemCapacity';
 import {
     type ExpeditionArrivalCueSummary,
-    type RunResolutionSummaryView,
     type RunResolutionSummaryViewOptions,
     createRunResolutionSummaryView,
     createRunSummary,
 } from '../../scenes/expedition/entryFlowModel';
 import type { RunResolutionSummary, RunSnapshot } from '../../types/expedition';
-import { expeditionUiTheme } from '../common/expeditionUiTheme';
 import { getRunPlayerHealth, MAX_RUN_PLAYER_HEALTH } from '../../state/RunHealth';
-import { isPortraitGameViewport } from '../../layout/gameViewport';
-import { wrapQuestJournalText } from '../../state/QuestJournal';
 
+type Chip = GameObjects.Container & { setValue(v: string): void };
+
+/**
+ * The expedition's only persistent HUD: a strip of chips along the top edge —
+ * health bar, spirit stones, carried cards and a bag button. Everything else is on demand.
+ */
 export class RunHud extends GameObjects.Container {
-    private currentNodeValue!: GameObjects.Text;
-    private carriedDeckValue!: GameObjects.Text;
-    private carriedItemsValue!: GameObjects.Text;
-    private spiritStonesValue!: GameObjects.Text;
-    private arrivalCueOverlay?: GameObjects.Container;
+    private hpBar!: ReturnType<typeof pbar>;
+    private hpText!: GameObjects.Text;
+    private nodeText!: GameObjects.Text;
+    private stones!: Chip;
+    private deck!: Chip;
+    private bagText!: GameObjects.Text;
+    private tooltip: PTooltip;
+    private onInventory?: () => void;
     private summaryOverlay?: GameObjects.Container;
+    private lastHp = -1;
 
     constructor(scene: Scene) {
         super(scene, 0, 0);
-
+        this.tooltip = new PTooltip(scene, 440, 1600);
         this.createHud();
         scene.add.existing(this);
-    }
-
-    private createHud(): void {
-        const { width } = this.scene.scale;
-        const background = this.scene.add.rectangle(width / 2, 60, width - 96, 92, expeditionUiTheme.colors.overlay, 0.9);
-        background.setStrokeStyle(2, expeditionUiTheme.colors.jadeBright, 0.85);
-
-        this.currentNodeValue = this.createValueText(150, '当前节点：-');
-        this.carriedDeckValue = this.createValueText(560, '携带卡牌：0');
-        this.carriedItemsValue = this.createValueText(920, '携带道具：0').setFontSize(22);
-        this.spiritStonesValue = this.createValueText(1280, '生命：100/100 · 灵石：0').setFontSize(20);
-
-        this.add([
-            background,
-            this.currentNodeValue,
-            this.carriedDeckValue,
-            this.carriedItemsValue,
-            this.spiritStonesValue,
-        ]);
-
         this.setDepth(900);
     }
 
-    private createValueText(x: number, initialText: string): GameObjects.Text {
-        return this.scene.add.text(x, 60, initialText, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '26px',
-            color: '#f3ead3',
-            fontStyle: 'bold',
-        }).setOrigin(0, 0.5);
+    private createHud(): void {
+        const s = this.scene;
+        const { width } = s.scale;
+        const y = PX * 16;
+        // health
+        const heart = addIcon(s, PX * 16, y, 'heart');
+        this.hpBar = pbar(s, PX * 26, y - PX * 5, PX * 70, PX * 10, INK.cinnabar);
+        this.hpText = ptext(s, PX * 100, y, '100', { color: INK.paper, fx: 'outline', origin: [0, 0.5] });
+        this.stones = pchip(s, PX * 132, y, 'stone', '0', INK.spirit);
+        this.deck = pchip(s, PX * 178, y, 'deck', '0', INK.bone);
+        this.nodeText = ptext(s, width / 2, y, '', { color: INK.bone, fx: 'outline', origin: [0.5, 0.5] });
+
+        // bag button (right)
+        const bagBtn = pbutton(s, { x: width - PX * 76, y, width: PX * 64, height: PX * 20, icon: 'bag', label: '0/0', style: 'slate', onClick: () => this.onInventory?.() });
+        this.bagText = (bagBtn.list[1] as GameObjects.Container).list.find((o) => o instanceof GameObjects.Text) as GameObjects.Text;
+
+        this.add([heart, this.hpBar.g, this.hpText, this.stones, this.deck, this.nodeText, bagBtn]);
+        const tip = (o: GameObjects.GameObject, title: string, body: () => string) => {
+            (o as GameObjects.Container).setSize?.(PX * 40, PX * 16);
+            o.setInteractive?.();
+            o.on('pointerover', (p: Phaser.Input.Pointer) => this.tooltip.show(p.x + PX * 6, p.y + PX * 8, title, body()));
+            o.on('pointerout', () => this.tooltip.hide());
+        };
+        tip(this.stones, '灵石', () => `灵石：${this.stones.getData('v') ?? 0}`);
+        tip(this.deck, '卡牌', () => `携带卡牌：${this.deck.getData('v') ?? 0}`);
     }
 
     public setInventoryOpenHandler(onOpen: () => void): void {
-        this.carriedItemsValue.setInteractive({ useHandCursor: true });
-        this.carriedItemsValue.on('pointerdown', onOpen);
-        this.carriedItemsValue.on('pointerover', () => this.carriedItemsValue.setColor('#f6e2b1'));
-        this.carriedItemsValue.on('pointerout', () => this.carriedItemsValue.setColor('#f3ead3'));
-    }
-
-    private measureTextHeight(
-        text: string,
-        style: Phaser.Types.GameObjects.Text.TextStyle,
-    ): number {
-        const probe = this.scene.add.text(-10000, -10000, text, style);
-        const height = probe.height;
-        probe.destroy();
-        return height;
+        this.onInventory = onOpen;
     }
 
     public updateFromRun(run: RunSnapshot, currentNodeLabel?: string): void {
         const summary = createRunSummary(run, { currentNodeLabel });
-
         this.updateRunStats(
             summary.currentNodeLabel,
             summary.carriedDeckCount,
@@ -99,120 +94,26 @@ export class RunHud extends GameObjects.Container {
         itemSlotCapacity?: number,
         playerHealth?: number,
     ): void {
-        this.currentNodeValue.setText(`当前节点：${currentNodeLabel}`);
-        this.carriedDeckValue.setText(`携带卡牌：${carriedDeckCount}`);
-        this.carriedItemsValue.setText(`携带道具：${carriedItemCount}${occupiedItemSlots !== undefined && itemSlotCapacity !== undefined ? ` · ${occupiedItemSlots}/${itemSlotCapacity}格（整理）` : ''}`);
-        this.spiritStonesValue.setText(`生命：${playerHealth ?? MAX_RUN_PLAYER_HEALTH}/${MAX_RUN_PLAYER_HEALTH} · 灵石：${spiritStones}`);
+        const hp = playerHealth ?? MAX_RUN_PLAYER_HEALTH;
+        this.hpBar.draw(hp / MAX_RUN_PLAYER_HEALTH, hp / MAX_RUN_PLAYER_HEALTH < 0.3 ? INK.vermilion : INK.cinnabar);
+        this.hpText.setText(`${hp}`);
+        if (this.lastHp >= 0 && hp < this.lastHp) pxShake(this.scene, 6, 160);
+        this.lastHp = hp;
+        this.stones.setValue(`${spiritStones}`);
+        this.stones.setData('v', spiritStones);
+        this.deck.setValue(`${carriedDeckCount}`);
+        this.deck.setData('v', carriedDeckCount);
+        this.nodeText.setText(currentNodeLabel ? `◆ ${clip(currentNodeLabel, 14)}` : '');
+        this.bagText?.setText(occupiedItemSlots !== undefined && itemSlotCapacity !== undefined ? `${occupiedItemSlots}/${itemSlotCapacity}` : `${carriedItemCount}`);
     }
 
-    private createArrivalSupportLine(summary: ExpeditionArrivalCueSummary): string {
-        const routePreview = summary.routeLine.startsWith('首层：')
-            ? summary.routeLine.slice('首层：'.length)
-            : summary.routeLine;
-
-        return `${summary.detail}：${routePreview}`;
-    }
-
+    /** Arrival is a one-line banner, not a panel. */
     public showArrivalCue(summary: ExpeditionArrivalCueSummary): void {
-        this.hideArrivalCue();
-
-        const { width } = this.scene.scale;
-        const panelWidth = Math.max(320, Math.min(width - 180, 520));
-        const panelX = width / 2;
-        const panelY = 126;
-        const panelLeft = panelX - panelWidth / 2 + 18;
-        const contentWidth = panelWidth - 36;
-        const headlineLine = `${summary.badgeLabel} · ${summary.headline}`;
-        const supportLine = this.createArrivalSupportLine(summary);
-        const headlineHeight = this.measureTextHeight(headlineLine, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            fontStyle: 'bold',
-            wordWrap: { width: contentWidth },
-        });
-        const supportHeight = this.measureTextHeight(supportLine, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            wordWrap: { width: contentWidth },
-        });
-        const loadoutHeight = this.measureTextHeight(summary.loadoutLine, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            wordWrap: { width: contentWidth },
-        });
-        const panelHeight = Math.max(
-            86,
-            12
-            + headlineHeight
-            + 4
-            + supportHeight
-            + 4
-            + loadoutHeight
-            + 12,
-        );
-        const panelTop = panelY - panelHeight / 2;
-        const overlay = this.scene.add.container(0, 0);
-        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x07111f, 0.74);
-        panel.setStrokeStyle(1, expeditionUiTheme.colors.slate, 0.42);
-        const accent = this.scene.add.rectangle(panelX - panelWidth / 2 + 3, panelY, 3, panelHeight - 18, expeditionUiTheme.colors.jadeBright, 0.28);
-        const headline = this.scene.add.text(panelLeft, panelTop + 12, headlineLine, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: '#f3ead3',
-            fontStyle: 'bold',
-            wordWrap: { width: contentWidth },
-        }).setOrigin(0, 0);
-        const supportText = this.scene.add.text(panelLeft, headline.y + headline.height + 4, supportLine, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: '#bca785',
-            wordWrap: { width: contentWidth },
-        }).setOrigin(0, 0);
-        const loadoutLine = this.scene.add.text(panelLeft, supportText.y + supportText.height + 4, summary.loadoutLine, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: '#e6f3ea',
-            wordWrap: { width: contentWidth },
-        }).setOrigin(0, 0);
-
-        overlay.add([panel, accent, headline, supportText, loadoutLine]);
-        overlay.setAlpha(0);
-        overlay.setY(8);
-
-        this.add(overlay);
-        this.arrivalCueOverlay = overlay;
-
-        this.scene.tweens.add({
-            targets: overlay,
-            alpha: 1,
-            y: 0,
-            duration: 220,
-            ease: 'Cubic.easeOut',
-        });
+        ptoast(this.scene, `${summary.badgeLabel} · ${summary.headline}`, INK.gold, 2800);
     }
 
-    public hideArrivalCue(animate = false): void {
-        if (!this.arrivalCueOverlay) {
-            return;
-        }
-
-        const overlay = this.arrivalCueOverlay;
-        this.arrivalCueOverlay = undefined;
-        this.scene.tweens.killTweensOf(overlay);
-
-        if (!animate) {
-            overlay.destroy();
-            return;
-        }
-
-        this.scene.tweens.add({
-            targets: overlay,
-            alpha: 0,
-            y: -10,
-            duration: 160,
-            ease: 'Cubic.easeIn',
-            onComplete: () => overlay.destroy(),
-        });
+    public hideArrivalCue(_animate = false): void {
+        // banners dismiss themselves
     }
 
     public showPostRunSummary(
@@ -220,208 +121,48 @@ export class RunHud extends GameObjects.Container {
         onAcknowledge: () => void,
         options: RunResolutionSummaryViewOptions = {},
     ): void {
-        this.hideArrivalCue();
         this.hidePostRunSummary();
-
-        const { width, height } = this.scene.scale;
+        const s = this.scene;
+        const { width, height } = s.scale;
         const view = createRunResolutionSummaryView(summary, options);
-        if (isPortraitGameViewport(width, height)) {
-            this.showPortraitPostRunSummary(view, onAcknowledge);
-            return;
-        }
-        const overlay = this.scene.add.container(0, 0);
-        const background = this.scene.add.rectangle(width / 2, height / 2, width, height, expeditionUiTheme.colors.overlay, 0.86);
-        const panelWidth = Math.min(980, width * 0.78);
-        const panelHeight = Math.min(760, height * 0.78);
-        const panelX = width / 2;
-        const panelY = height / 2 + 24;
-        const leftX = panelX - panelWidth / 2 + 56;
-        const rightX = panelX + 40;
-        const keptCards = view.keptCards.join('\n');
-        const keptItems = view.keptItems.join('\n');
-        const lostCards = view.lostCards.join('\n');
-        const lostItems = view.lostItems.join('\n');
+        const lost = view.outcome === 'defeat';
+        const overlay = s.add.container(0, 0).setDepth(1500);
+        const dim = s.add.rectangle(width / 2, height / 2, width, height, INK.void, 0.82).setInteractive();
+        overlay.add(dim);
 
-        const panel = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, expeditionUiTheme.colors.panelInner, 0.98);
-        panel.setStrokeStyle(3, view.outcome === 'defeat' ? expeditionUiTheme.colors.emberBright : expeditionUiTheme.colors.jade, 0.95);
+        const title = ptitle(s, width / 2, snap(height * 0.18), view.title, 4, lost
+            ? { face: INK.haze, lower: INK.mist, extrude: INK.wine }
+            : { face: INK.paper, lower: INK.gold, extrude: INK.cinnabar });
+        title.setScale(0);
+        s.tweens.add({ targets: title, scale: PX, duration: 320, ease: 'Back.easeOut', onComplete: () => {
+            pxBurst(s, width / 2, height * 0.18, { colors: lost ? [INK.ash, INK.mist] : [INK.gold, INK.paper, INK.vermilion], count: 26, speed: 300, size: 9, depth: 1600 });
+        } });
+        overlay.add(title);
+        overlay.add(ptext(s, width / 2, snap(height * 0.18) + PX * 32, clip(view.subtitle, 40), { color: INK.bone, origin: [0.5, 0.5], fx: 'outline' }));
 
-        const title = this.scene.add.text(leftX, panelY - panelHeight / 2 + 42, view.title, {
-            fontFamily: expeditionUiTheme.fonts.display,
-            fontSize: '40px',
-            color: view.outcome === 'defeat' ? '#f3d0c3' : '#e6f3ea',
-            fontStyle: 'bold',
-        });
-
-        const subtitle = this.scene.add.text(leftX, title.y + 52, view.subtitle, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '22px',
-            color: '#f3ead3',
-            wordWrap: { width: panelWidth - 112 },
-        });
-
-        const nodeText = this.scene.add.text(leftX, subtitle.y + 44, `终点节点：${view.finalNodeLabel ?? view.finalNodeId}`, {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '18px',
-            color: '#e8d5ab',
-        });
-
-        const keptHeading = this.scene.add.text(leftX, nodeText.y + 58, '保留 / 存入永久仓库', {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '28px',
-            color: '#e6f3ea',
-            fontStyle: 'bold',
-        });
-
-        const keptText = this.scene.add.text(
-            leftX,
-            keptHeading.y + 40,
-            `卡牌\n${keptCards}\n\n道具\n${keptItems}\n\n灵石\n${view.keptSpiritStones}`,
-            {
-                fontFamily: expeditionUiTheme.fonts.mono,
-                fontSize: '18px',
-                color: '#f3ead3',
-                lineSpacing: 6,
-            },
-        );
-
-        const lostHeading = this.scene.add.text(rightX, keptHeading.y, '遗失 / 从本次探索中失去', {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '28px',
-            color: '#fca5a5',
-            fontStyle: 'bold',
-        });
-
-        const lostText = this.scene.add.text(
-            rightX,
-            lostHeading.y + 40,
-            `卡牌\n${lostCards}\n\n道具\n${lostItems}\n\n灵石\n${view.lostSpiritStones}`,
-            {
-                fontFamily: expeditionUiTheme.fonts.mono,
-                fontSize: '18px',
-                color: '#f3ead3',
-                lineSpacing: 6,
-            },
-        );
-
-        const acknowledgeButton = this.scene.add.rectangle(panelX, panelY + panelHeight / 2 - 64, 320, 56, expeditionUiTheme.colors.jade, 1);
-        acknowledgeButton.setStrokeStyle(2, expeditionUiTheme.colors.goldSoft, 0.9);
-        acknowledgeButton.setInteractive({ useHandCursor: true });
-        acknowledgeButton.on('pointerover', () => acknowledgeButton.setFillStyle(expeditionUiTheme.colors.jadeBright));
-        acknowledgeButton.on('pointerout', () => acknowledgeButton.setFillStyle(expeditionUiTheme.colors.jade));
-        acknowledgeButton.on('pointerdown', onAcknowledge);
-
-        const acknowledgeLabel = this.scene.add.text(acknowledgeButton.x, acknowledgeButton.y, '确认并返回入口', {
-            fontFamily: expeditionUiTheme.fonts.ui,
-            fontSize: '22px',
-            color: '#f3ead3',
-            fontStyle: 'bold',
-        }).setOrigin(0.5);
-
-        overlay.add([
-            background,
-            panel,
-            title,
-            subtitle,
-            nodeText,
-            keptHeading,
-            keptText,
-            lostHeading,
-            lostText,
-            acknowledgeButton,
-            acknowledgeLabel,
-        ]);
-        overlay.setDepth(1500);
-
-        this.summaryOverlay = overlay;
-    }
-
-    private showPortraitPostRunSummary(view: RunResolutionSummaryView, onAcknowledge: () => void): void {
-        const { width, height } = this.scene.scale;
-        let selectedTab: 'kept' | 'lost' = view.outcome === 'defeat' ? 'lost' : 'kept';
-        let page = 0;
-        const render = () => {
-            this.summaryOverlay?.destroy();
-            const overlay = this.scene.add.container(0, 0);
-            const addButton = (x: number, y: number, buttonWidth: number, label: string,
-                onClick: () => void, disabled = false, selected = false) => {
-                const background = this.scene.add.rectangle(x, y, buttonWidth, 48,
-                    selected ? expeditionUiTheme.colors.jade : expeditionUiTheme.colors.slate, 1);
-                background.setStrokeStyle(1, expeditionUiTheme.colors.goldSoft, disabled ? 0.35 : 0.9);
-                if (disabled) background.setAlpha(0.68);
-                else background.setInteractive({ useHandCursor: true }).on('pointerdown', onClick);
-                const text = this.scene.add.text(x, y, label, {
-                    fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px',
-                    color: '#f3ead3', fontStyle: 'bold',
-                }).setOrigin(0.5);
-                overlay.add([background, text]);
-            };
-            const background = this.scene.add.rectangle(width / 2, height / 2, width, height,
-                expeditionUiTheme.colors.overlay, 0.88).setInteractive();
-            const panel = this.scene.add.rectangle(width / 2, height / 2, width - 44, height - 100,
-                expeditionUiTheme.colors.panelInner, 0.99);
-            panel.setStrokeStyle(3, view.outcome === 'defeat'
-                ? expeditionUiTheme.colors.emberBright : expeditionUiTheme.colors.jade, 0.95);
-            const left = 46;
-            const copyWidth = width - left * 2;
-            const title = this.scene.add.text(left, 91, view.title, {
-                fontFamily: expeditionUiTheme.fonts.display, fontSize: '34px',
-                color: view.outcome === 'defeat' ? '#f3d0c3' : '#e6f3ea', fontStyle: 'bold',
-            });
-            const subtitle = this.scene.add.text(left, title.y + title.height + 16,
-                wrapQuestJournalText(view.subtitle, 38), {
-                    fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#f3ead3',
-                    wordWrap: { width: copyWidth }, lineSpacing: 5,
-                });
-            const node = this.scene.add.text(left, subtitle.y + subtitle.height + 15,
-                `终点：${view.finalNodeLabel ?? view.finalNodeId}`, {
-                    fontFamily: expeditionUiTheme.fonts.ui, fontSize: '17px', color: '#e8d5ab',
-                    wordWrap: { width: copyWidth },
-                });
-            overlay.add([background, panel, title, subtitle, node]);
-
-            addButton(135, 285, 168, '存入仓库', () => { selectedTab = 'kept'; page = 0; render(); },
-                false, selectedTab === 'kept');
-            addButton(width - 135, 285, 168, '遗失', () => { selectedTab = 'lost'; page = 0; render(); },
-                false, selectedTab === 'lost');
-
-            const cards = (selectedTab === 'kept' ? view.keptCards : view.lostCards).filter(line => line !== '无');
-            const items = (selectedTab === 'kept' ? view.keptItems : view.lostItems).filter(line => line !== '无');
-            const stones = selectedTab === 'kept' ? view.keptSpiritStones : view.lostSpiritStones;
-            const rows = [
-                ...cards.map(line => `卡牌 · ${line}`),
-                ...items.map(line => `道具 · ${line}`),
-                `灵石 · ${stones}`,
+        const colW = snap(Math.min(600, width * 0.34));
+        const colH = snap(height * 0.46);
+        const colY = snap(height * 0.56);
+        const col = (x: number, heading: string, color: number, cards: string[], items: string[], stones: string) => {
+            overlay.add(panel(s, x, colY, colW, colH, 'ink'));
+            overlay.add(ptext(s, x - colW / 2 + PX * 10, colY - colH / 2 + PX * 8, heading, { color, fx: 'shadow' }));
+            const lines = [
+                ...cards.map((c) => `卡 ${c}`),
+                ...items.map((i) => `物 ${i}`),
             ];
-            const pageSize = 6;
-            const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
-            page = Math.min(page, pageCount - 1);
-            const frame = this.scene.add.rectangle(width / 2, 542, width - 78, 420,
-                expeditionUiTheme.colors.panel, 1);
-            frame.setStrokeStyle(1, expeditionUiTheme.colors.goldSoft, 0.6);
-            const totals = this.scene.add.text(left + 10, 352,
-                `卡牌 ${cards.length} 种 · 道具 ${items.length} 种 · 灵石 ${stones}`, {
-                    fontFamily: expeditionUiTheme.fonts.ui, fontSize: '17px', color: '#f6e2b1',
-                    wordWrap: { width: copyWidth - 20 },
-                });
-            overlay.add([frame, totals]);
-            rows.slice(page * pageSize, (page + 1) * pageSize).forEach((line, index) => {
-                overlay.add(this.scene.add.text(left + 10, 395 + index * 52,
-                    wrapQuestJournalText(line, 34), {
-                        fontFamily: expeditionUiTheme.fonts.ui, fontSize: '18px', color: '#f3ead3',
-                        wordWrap: { width: copyWidth - 20 }, lineSpacing: 3,
-                    }));
-            });
-            overlay.add(this.scene.add.text(width / 2, 768, `${page + 1}/${pageCount} 页`, {
-                fontFamily: expeditionUiTheme.fonts.ui, fontSize: '17px', color: '#f3ead3',
-            }).setOrigin(0.5));
-            addButton(136, 813, 142, '上一页', () => { page -= 1; render(); }, page === 0);
-            addButton(width - 136, 813, 142, '下一页', () => { page += 1; render(); },
-                page >= pageCount - 1);
-            addButton(width / 2, 895, 310, '确认并返回入口', onAcknowledge, false, true);
-            overlay.setDepth(1500);
-            this.summaryOverlay = overlay;
+            const max = Math.floor((colH - PX * 50) / 42);
+            const shown = lines.slice(0, max);
+            if (lines.length > max) shown[max - 1] = `…另有 ${lines.length - max + 1} 项`;
+            overlay.add(ptext(s, x - colW / 2 + PX * 10, colY - colH / 2 + PX * 26, shown.join('\n') || '—', { color: INK.bone, lineGap: PX * 2 }));
+            const chip = pchip(s, x - colW / 2 + PX * 10, colY + colH / 2 - PX * 12, 'stone', stones, INK.spirit);
+            overlay.add(chip);
         };
-        render();
+        col(width / 2 - colW / 2 - PX * 8, '保 留', INK.spirit, view.keptCards, view.keptItems, view.keptSpiritStones);
+        col(width / 2 + colW / 2 + PX * 8, '遗 失', INK.vermilion, view.lostCards, view.lostItems, view.lostSpiritStones);
+
+        overlay.add(pbutton(s, { x: width / 2, y: snap(height * 0.88), width: PX * 90, height: PX * 24, label: '返回入口', style: lost ? 'slate' : 'seal', onClick: onAcknowledge }));
+        if (!lost) pxShake(s, 6, 200);
+        this.summaryOverlay = overlay;
     }
 
     public hidePostRunSummary(): void {
