@@ -329,3 +329,19 @@ export function pixelateImage(scene: Phaser.Scene, srcKey: string, dstKey: strin
     scene.textures.addCanvas(dstKey, out)!.setFilter(NEAREST);
     return dstKey;
 }
+
+/** Stamp 12px pixel-font glyphs 1:1 into a Pix (for text baked into art: seals, plaques). */
+export function stampText(p: Pix, str: string, x: number, y: number, color: number): void {
+    const chars = [...str];
+    const cv = document.createElement('canvas');
+    cv.width = chars.length * 12 + 4; cv.height = 16;
+    const ctx = cv.getContext('2d')!;
+    ctx.font = '12px Zpix';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(str, 0, 0);
+    const data = ctx.getImageData(0, 0, cv.width, cv.height).data;
+    for (let yy = 0; yy < cv.height; yy++) for (let xx = 0; xx < cv.width; xx++) {
+        if (data[(yy * cv.width + xx) * 4 + 3] > 110) p.px(x + xx, y + yy, color);
+    }
+}

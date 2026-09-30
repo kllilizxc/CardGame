@@ -1,6 +1,5 @@
 import { INK } from './palette';
-import { Pix } from './pix';
-import { stampText } from './kit';
+import { Pix, stampText } from './pix';
 
 /** Card back: cinnabar border, ink field with cloud scrolls, a bone seal in the middle. */
 export function paintCardBack(w = 64, h = 88): Pix {

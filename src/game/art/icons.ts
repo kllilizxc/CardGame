@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import { INK } from './palette';
 import { Pix, bake } from './pix';
 

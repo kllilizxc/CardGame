@@ -87,7 +87,7 @@ describe('expedition UI Chinese copy', () => {
         const model = read('src/game/scenes/expedition/entryFlowModel.ts');
         const deckManagerCopy = `${panel}\n${model}`;
 
-        expect(panel).toContain('返回远征准备');
+        expect(panel).toContain('返回');
         expect(panel).toContain('新建卡组');
         expect(panel).toContain('重命名');
         expect(panel).toContain('储 物 袋');

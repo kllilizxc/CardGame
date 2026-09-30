@@ -1,247 +1,97 @@
 import { GameObjects, Scene } from 'phaser';
-import { CardSprite } from '../../objects/CardSprite';
-import { ArtifactSprite } from '../../objects/ArtifactSprite';
-import { TalismanSprite } from '../../objects/TalismanSprite';
-import { FieldSprite } from '../../objects/FieldSprite';
-import { PillSprite } from '../../objects/PillSprite';
 import type { UnitCard } from '@data/types/cards/unit';
 import type { ArtifactCard } from '@data/types/cards/artifact';
 import type { TalismanCard } from '@data/types/cards/talisman';
 import type { FieldCard } from '@data/types/cards/field';
 import type { PillCard } from '@data/types/cards/pill';
+import { INK, PX } from '../../art/palette';
+import { snap } from '../../art/pix';
+import { PTooltip, numberFont, panel, piconButton, ptext } from '../../art/kit';
+import { wenxinCardTexture } from '../../art/wenxin/WenxinArt';
+import { cardInfo } from './cardInfo';
+
+type ListCard = UnitCard | ArtifactCard | TalismanCard | FieldCard | PillCard;
 
 /**
- * 通用的卡片列表视图
- * 用于展示卡组、弃牌堆等卡片列表
+ * A pile (deck, discard…) laid out as a grid of pixel card faces at 1x in a scrolling panel.
+ * Hover a card for its full text. Click outside or ✕ to close.
  */
 export class CardListView extends GameObjects.Container {
-    private title: string;
-    private cards: (UnitCard | ArtifactCard | TalismanCard | FieldCard | PillCard)[];
-    private background!: GameObjects.Rectangle;
-    private titleText!: GameObjects.Text;
-    private closeButton!: GameObjects.Rectangle;
-    private scrollContainer!: GameObjects.Container;
-    private cardSprites: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite | PillSprite)[] = [];
-    private maskShape!: GameObjects.Graphics;
-    
-    private scrollY: number = 0;
-    private maxScrollY: number = 0;
-    private isDragging: boolean = false;
-    private lastPointerY: number = 0;
-    private panelWidth: number = 0;
-    private panelHeight: number = 0;
-    private panelX: number = 0;
-    private panelY: number = 0;
-    private contentLeft: number = 0;
-    private contentTop: number = 0;
-    private contentWidth: number = 0;
-    private contentHeight: number = 0;
+    private scroll!: GameObjects.Container;
+    private tip: PTooltip;
+    private scrollY = 0;
+    private maxScrollY = 0;
+    private readonly wheel = (_p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => this.setScroll(this.scrollY + dy * 0.8);
 
-    constructor(scene: Scene, title: string, cards: (UnitCard | ArtifactCard | TalismanCard | FieldCard | PillCard)[]) {
+    constructor(scene: Scene, title: string, cards: ListCard[]) {
         super(scene, 0, 0);
-        
-        this.title = title;
-        this.cards = cards;
-        
-        this.createView();
-        this.setupInteraction();
-        
-        scene.add.existing(this);
-    }
-
-    private createView() {
-        const { width, height } = this.scene.scale;
-        
-        // 半透明黑色背景遮罩（覆盖整个屏幕）
-        const overlay = this.scene.add.rectangle(width / 2, height / 2, width, height, 0x0b0714, 0.7);
-        overlay.setInteractive();
-        overlay.on('pointerdown', () => this.close());
-        this.add(overlay);
-
-        // 主面板
-        this.panelWidth = Math.min(800, width * 0.9);
-        this.panelHeight = Math.min(600, height * 0.85);
-        this.panelX = width / 2;
-        this.panelY = height / 2;
-
-        this.background = this.scene.add.rectangle(this.panelX, this.panelY, this.panelWidth, this.panelHeight, 0x32285a);
-        this.background.setStrokeStyle(4, 0xf28a2e);
-        this.background.setInteractive(); // 阻止点击穿透
-        this.add(this.background);
-
-        // 标题
-        this.titleText = this.scene.add.text(this.panelX, this.panelY - this.panelHeight / 2 + 30, this.title, {
-            fontSize: '24px',
-            color: '#f28a2e',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        this.add(this.titleText);
-
-        // 卡片数量
-        const countText = this.scene.add.text(this.panelX, this.panelY - this.panelHeight / 2 + 60, `共 ${this.cards.length} 张卡牌`, {
-            fontSize: '16px',
-            color: '#f4ecd8'
-        }).setOrigin(0.5);
-        this.add(countText);
-
-        // 关闭按钮
-        const closeX = this.panelX + this.panelWidth / 2 - 40;
-        const closeY = this.panelY - this.panelHeight / 2 + 30;
-        this.closeButton = this.scene.add.rectangle(closeX, closeY, 60, 40, 0xee4a3a);
-        this.closeButton.setStrokeStyle(2, 0xf4ecd8);
-        this.closeButton.setInteractive({ useHandCursor: true });
-        this.closeButton.on('pointerover', () => this.closeButton.setFillStyle(0xee4a3a));
-        this.closeButton.on('pointerout', () => this.closeButton.setFillStyle(0xee4a3a));
-        this.closeButton.on('pointerdown', () => this.close());
-        this.add(this.closeButton);
-
-        const closeText = this.scene.add.text(closeX, closeY, '关闭', {
-            fontSize: '16px',
-            color: '#f4ecd8'
-        }).setOrigin(0.5);
-        this.add(closeText);
-
-        // 创建滚动容器
-        this.contentLeft = this.panelX - this.panelWidth / 2 + 20;
-        this.contentTop = this.panelY - this.panelHeight / 2 + 110;
-        this.contentWidth = this.panelWidth - 40;
-        this.contentHeight = this.panelHeight - 160;
-
-        this.scrollContainer = this.scene.add.container(0, 0);
-        this.add(this.scrollContainer);
-
-        // 创建遮罩（在世界坐标系中）
-        this.maskShape = this.scene.add.graphics();
-        this.maskShape.fillStyle(0xf4ecd8);
-        this.maskShape.fillRect(this.contentLeft, this.contentTop, this.contentWidth, this.contentHeight);
-        const mask = this.maskShape.createGeometryMask();
-        this.scrollContainer.setMask(mask);
-        
-        // 设置滚动容器的初始位置（左上角）
-        this.scrollContainer.setPosition(this.contentLeft, this.contentTop);
-
-        // 创建卡片网格
-        this.createCardGrid(this.contentWidth);
-
-        // 滚动提示
-        if (this.maxScrollY > 0) {
-            const scrollHint = this.scene.add.text(this.panelX, this.panelY + this.panelHeight / 2 - 20, '↕ 滚动查看更多', {
-                fontSize: '14px',
-                color: '#9a8fbf'
-            }).setOrigin(0.5);
-            this.add(scrollHint);
-        }
-
+        this.tip = new PTooltip(scene, PX * 150, 5200);
         this.setDepth(5000);
+        this.build(title, cards);
+        scene.add.existing(this);
+        scene.input.on('wheel', this.wheel);
     }
 
-    private createCardGrid(containerWidth: number) {
-        const cardScale = 0.5;
-        const cardWidth = 180 * cardScale;
-        const cardHeight = 260 * cardScale;
-        const spacing = 20;
-        const cols = Math.floor(containerWidth / (cardWidth + spacing));
-        
-        this.cards.forEach((cardData, index) => {
-            const col = index % cols;
-            const row = Math.floor(index / cols);
-            
-            // 从左上角开始排列
-            const x = col * (cardWidth + spacing) + cardWidth / 2;
-            const y = row * (cardHeight + spacing) + cardHeight / 2;
+    private build(title: string, cards: ListCard[]): void {
+        const s = this.scene;
+        const { width, height } = s.scale;
+        const pw = snap(Math.min(1500, width - PX * 40));
+        const ph = snap(height - PX * 30);
+        const cx = snap(width / 2), cy = snap(height / 2);
+        const overlay = s.add.rectangle(width / 2, height / 2, width, height, INK.void, 0.75).setInteractive();
+        overlay.on('pointerdown', () => this.close());
+        const frame = panel(s, cx, cy, pw, ph, 'ink');
+        const block = s.add.rectangle(cx, cy, pw, ph, 0, 0.001).setInteractive();
+        const left = cx - pw / 2, top = cy - ph / 2;
+        const heading = ptext(s, left + PX * 12, top + PX * 8, `${title} · ${cards.length}`, { size: 2, color: INK.paper });
+        const close = piconButton(s, left + pw - PX * 16, top + PX * 16, 'close', () => this.close(), 'slate', 16);
+        this.add([overlay, frame, block, heading, close]);
 
-            let sprite: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite;
-            if (cardData.kind === 'unit') {
-                sprite = new CardSprite(this.scene, x, y, cardData as UnitCard, cardScale);
-            } else if (cardData.kind === 'artifact') {
-                sprite = new ArtifactSprite(this.scene, x, y, cardData as ArtifactCard, cardScale);
-            } else if (cardData.kind === 'talisman') {
-                sprite = new TalismanSprite(this.scene, x, y, cardData as TalismanCard, cardScale);
-            } else if (cardData.kind === 'field') {
-                sprite = new FieldSprite(this.scene, x, y, cardData as FieldCard, cardScale);
-            } else {
-                return; // 暂不支持其他类型
+        const areaTop = top + PX * 40, areaH = ph - PX * 48, areaLeft = left + PX * 10, areaW = pw - PX * 20;
+        const cw = 180, chh = 258, gap = PX * 6;
+        const cols = Math.max(1, Math.floor((areaW + gap) / (cw + gap)));
+        const gridW = cols * cw + (cols - 1) * gap;
+        const gx = snap(areaLeft + (areaW - gridW) / 2 + cw / 2);
+        this.scroll = s.add.container(0, 0);
+        const sorted = [...cards].sort((a, b) => String(a.kind).localeCompare(String(b.kind)) || String(a.name).localeCompare(String(b.name)));
+        sorted.forEach((card, i) => {
+            const x = gx + (i % cols) * (cw + gap);
+            const y = snap(areaTop + chh / 2 + Math.floor(i / cols) * (chh + gap));
+            const key = wenxinCardTexture(s, card as never);
+            if (!key) return;
+            const img = s.add.image(x, y, key).setScale(PX).setInteractive({ useHandCursor: true });
+            this.scroll.add(img);
+            if (card.kind === 'unit') {
+                const u = card as UnitCard;
+                const a = s.add.bitmapText(x - 55, y + 108, numberFont(s, INK.paper), `${u.attack}`).setOrigin(0.5).setScale(PX);
+                const h = s.add.bitmapText(x + 55, y + 108, numberFont(s, INK.paper), `${u.health}`).setOrigin(0.5).setScale(PX);
+                a.setLetterSpacing(-1); h.setLetterSpacing(-1);
+                this.scroll.add([a, h]);
             }
-
-            // 禁用拖拽
-            sprite.disableDragging();
-
-            // 设置为卡组模式（不显示description）
-            sprite.setDisplayMode('deck');
-            
-            // 添加hover效果（预览在CardSprite/ArtifactSprite中已实现）
-            
-            this.scrollContainer.add(sprite);
-            this.cardSprites.push(sprite);
+            img.on('pointerover', (p: Phaser.Input.Pointer) => {
+                img.y = y - PX * 3;
+                const info = cardInfo(s, card as never);
+                this.tip.show(p.x + PX * 10, p.y - PX * 40, info.title, [info.sub, info.body, ...info.gongfa.map((g) => `【${g.name}】${g.text}`)].filter(Boolean).join('\n'));
+            });
+            img.on('pointerout', () => { img.y = y; this.tip.hide(); });
         });
-
-        // 计算最大滚动距离
-        const rows = Math.ceil(this.cards.length / cols);
-        const totalHeight = rows * (cardHeight + spacing);
-        this.maxScrollY = Math.max(0, totalHeight - this.contentHeight);
+        const rows = Math.ceil(sorted.length / cols);
+        this.maxScrollY = Math.max(0, rows * (chh + gap) - gap - areaH);
+        const maskG = s.make.graphics({});
+        maskG.fillStyle(0xffffff).fillRect(areaLeft, areaTop, areaW, areaH);
+        this.scroll.setMask(maskG.createGeometryMask());
+        this.add(this.scroll);
+        if (!cards.length) this.add(ptext(s, cx, cy, '空 空 如 也', { color: INK.mist, origin: [0.5, 0.5] }));
     }
 
-    private setupInteraction() {
-        // 鼠标滚轮滚动
-        this.scene.input.on('wheel', (
-            _pointer: Phaser.Input.Pointer,
-            _gameObjects: Phaser.GameObjects.GameObject[],
-            _deltaX: number,
-            deltaY: number
-        ) => {
-            this.scroll(deltaY * 0.5);
-        });
-
-        // 触摸拖动滚动
-        this.background.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            this.isDragging = true;
-            this.lastPointerY = pointer.y;
-        });
-
-        this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-            if (this.isDragging) {
-                const deltaY = this.lastPointerY - pointer.y;
-                this.scroll(deltaY);
-                this.lastPointerY = pointer.y;
-            }
-        });
-
-        this.scene.input.on('pointerup', () => {
-            this.isDragging = false;
-        });
-
-        // ESC键关闭
-        this.scene.input.keyboard?.on('keydown-ESC', () => {
-            this.close();
-        });
+    private setScroll(v: number): void {
+        this.scrollY = Phaser.Math.Clamp(v, 0, this.maxScrollY);
+        this.scroll.y = -snap(this.scrollY);
     }
 
-    private scroll(delta: number) {
-        this.scrollY += delta;
-        this.scrollY = Phaser.Math.Clamp(this.scrollY, 0, this.maxScrollY);
-        
-        // 更新滚动容器的 Y 偏移
-        this.scrollContainer.setY(this.contentTop - this.scrollY);
-    }
-
-    private close() {
-        // 移除键盘监听
-        this.scene.input.keyboard?.off('keydown-ESC');
-        
-        // 移除鼠标监听
-        this.scene.input.off('wheel');
-        this.scene.input.off('pointermove');
-        this.scene.input.off('pointerup');
-        
-        // 销毁所有卡片精灵
-        this.cardSprites.forEach(sprite => sprite.destroy());
-        
-        // 销毁遮罩
-        if (this.maskShape) {
-            this.maskShape.destroy();
-        }
-        
-        // 销毁自己
+    public close(): void {
+        this.scene.input.off('wheel', this.wheel);
+        this.tip.destroy();
         this.destroy();
     }
 }

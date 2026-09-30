@@ -1,12 +1,13 @@
 import { GameObjects, Scene } from 'phaser';
 
-import type { CardKind, CardRarity } from '@data/types/cards/core';
-import { C, FONT, hex } from '../../art/palette';
-import { drawPixelFrame, PANEL_BLOOD, PANEL_INK, PANEL_JADE, type PanelStyle } from '../../art/ui';
-import { CardSpriteFactory } from '../../factories/CardSpriteFactory';
-import { isPortraitGameViewport } from '../../layout/gameViewport';
+import type { CardKind } from '@data/types/cards/core';
+import { INK, PX, hex } from '../../art/palette';
+import { snap } from '../../art/pix';
+import { PTooltip, clip, numberFont, panel, pbutton, piconButton, ptext, type FrameStyle } from '../../art/kit';
+import { addIcon, type PixIcon } from '../../art/icons';
+import { pxBurst } from '../../art/fx';
+import { wenxinCardTexture } from '../../art/wenxin/WenxinArt';
 import type { PreviewCardData } from '../../managers/common/cardPreviewProtocol';
-import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 import {
     computeCardCollectionViewModel,
     type CardCollectionRow,
@@ -29,6 +30,7 @@ import {
 } from '../../state/PersistentStashDecks';
 import type { ExpeditionCardStack, PersistentStash, SavedDeck } from '../../types/expedition';
 import { NativeTextEntryOverlay } from '../common/NativeTextEntryOverlay';
+import { cardInfo } from '../common/cardInfo';
 import type { EntryPanelFrame, EntryPanelFrameProvider } from '../expedition/EntryPanelFrame';
 import { DECK_MANAGEMENT_CARD_PREVIEW_CONTEXT_ID, type DeckManagementCardPreviewResolver } from './DeckManagementCardPreview';
 
@@ -42,172 +44,100 @@ export interface DeckManagementPanelConfig {
     onClose: () => void;
 }
 
-// ---------------------------------------------------------------------------------------------
-// vocabulary
-// ---------------------------------------------------------------------------------------------
 const KIND_ORDER: CardKind[] = ['unit', 'artifact', 'talisman', 'field', 'skill', 'pill'];
-const KIND_LABEL: Record<CardKind, string> = { unit: '生物', artifact: '神器', talisman: '护符', field: '场地', skill: '技能', pill: '丹药' };
-const KIND_GLYPH: Record<CardKind, string> = { unit: '灵', artifact: '器', talisman: '符', field: '阵', skill: '诀', pill: '丹' };
-const KIND_COLOR: Record<CardKind, number> = {
-    unit: C.celadon, artifact: C.gold, talisman: C.petal, field: C.sky, skill: C.orchid, pill: C.lime,
-};
-const RARITY_COLOR: Record<CardRarity, number> = {
-    common: C.mist, uncommon: C.lime, rare: C.sky, epic: C.orchid, legendary: C.glow,
-};
+const KIND_LABEL: Record<CardKind, string> = { unit: '灵契', artifact: '法器', talisman: '符箓', field: '场地', skill: '功法', pill: '丹药' };
+const KIND_ICON: Record<CardKind, PixIcon> = { unit: 'star', artifact: 'sword', talisman: 'talisman', field: 'mountain', skill: 'scroll', pill: 'pill' };
 const SORT_FIELDS: CardCollectionSortField[] = ['kind', 'name', 'count', 'id'];
 const SORT_LABEL: Record<CardCollectionSortField, string> = { kind: '种类', name: '名称', count: '库存', id: '编号' };
 const DEFAULT_LIMIT_PER_DECK = 3;
-
 const SEARCH_SESSION = 'deck-search';
 const NAME_SESSION = 'deck-name';
-
 const createDeckId = () => `deck-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
 interface Rect { x: number; y: number; w: number; h: number }
-interface ScrollRegion {
-    rect: Rect;
-    content: GameObjects.Container;
-    offset: number;
-    height: number;
-    mask: GameObjects.Graphics;
-}
-
-const style = (size: number, color: number, extra: Phaser.Types.GameObjects.Text.TextStyle = {}): Phaser.Types.GameObjects.Text.TextStyle => ({
-    fontFamily: FONT, fontSize: `${size}px`, color: hex(color), ...extra,
-});
+interface ScrollRegion { rect: Rect; content: GameObjects.Container; offset: number; height: number; mask: GameObjects.Graphics }
 
 /**
- * 卡组编成 — the deck workshop.
- *
- *   ┌ decks ┐ ┌───────────── collection ─────────────┐ ┌──── current deck ────┐
- *   │ list  │ │ search · kind · sort                  │ │ name  27 / 20–40     │
- *   │       │ │  [card][card][card][card]...         │ │ ▓▓▓▓▓▓▓░░░ meter      │
- *   │ + new │ │  click = add · right-click = remove  │ │ grouped rows  − +    │
- *   └───────┘ └──────────────────────────────────────┘ │ ┌ preview ─────────┐ │
- *                                                       └─└──────────────────┘─┘
- *
- * All state changes flow through the existing stash helpers; nothing here invents rules.
+ * 卡组工坊 — three columns over the expedition backdrop:
+ *   decks (list + 新建 / 重命名 / 删除) · 储 物 袋 (pixel card grid; left-click adds, right-click removes)
+ *   · the current deck (count, status, grouped list with −/+).
+ * Hovering any card shows its full text in a pixel scroll.
  */
 export class DeckManagementPanel extends GameObjects.Container implements EntryPanelFrameProvider {
     private stash: PersistentStash;
     private readonly config: DeckManagementPanelConfig;
-    private readonly portrait: boolean;
     private readonly nativeText: NativeTextEntryOverlay;
     private readonly panelFrame: EntryPanelFrame;
-
-    // regions
-    private frameRect!: Rect;
     private railRect!: Rect;
     private collRect!: Rect;
     private deckRect!: Rect;
-
-    // layers
     private readonly railLayer: GameObjects.Container;
     private readonly collLayer: GameObjects.Container;
     private readonly deckLayer: GameObjects.Container;
-    private readonly toastLayer: GameObjects.Container;
-
-    // dynamic containers
     private railScroll!: ScrollRegion;
     private gridScroll!: ScrollRegion;
     private listScroll!: ScrollRegion;
-    private railItems: GameObjects.Container[] = [];
-    private deckHeader!: GameObjects.Container;
-    private previewBox!: GameObjects.Container;
     private toolbar!: GameObjects.Container;
-    private tileCache = new Map<string, GameObjects.Container>();
-
-    // state
+    private deckHeader!: GameObjects.Container;
+    private railFooter!: GameObjects.Container;
+    private tip: PTooltip;
     private selectedDeckId: string | null;
     private query = '';
     private kindFilter: CardKind | undefined;
     private hideZero = true;
     private sortIndex = 0;
     private sortDesc = false;
-    private hoverCardId: string | null = null;
-    private portraitTab: 'collection' | 'deck' = 'collection';
     private deleteArmedAt = 0;
-    private countPopTarget?: GameObjects.Text;
     private bound: Array<() => void> = [];
-    private lastPreviewId: string | null = null;
 
     constructor(scene: Scene, config: DeckManagementPanelConfig) {
         super(scene, 0, 0);
         this.config = config;
         this.stash = config.stash;
-        this.portrait = isPortraitGameViewport(scene.scale.width, scene.scale.height);
         this.selectedDeckId = config.stash.selectedDeckId ?? config.stash.savedDecks[0]?.id ?? null;
         this.nativeText = new NativeTextEntryOverlay(scene);
+        this.tip = new PTooltip(scene, PX * 150, 1500);
+        const { width: W, height: H } = scene.scale;
+        this.panelFrame = { panelX: W / 2, panelY: H / 2, panelWidth: W, panelHeight: H };
         this.computeLayout();
-        this.panelFrame = {
-            panelX: this.frameRect.x + this.frameRect.w / 2,
-            panelY: this.frameRect.y + this.frameRect.h / 2,
-            panelWidth: this.frameRect.w,
-            panelHeight: this.frameRect.h,
-        };
         this.railLayer = scene.add.container(0, 0);
         this.collLayer = scene.add.container(0, 0);
         this.deckLayer = scene.add.container(0, 0);
-        this.toastLayer = scene.add.container(0, 0);
-        this.add([this.railLayer, this.collLayer, this.deckLayer, this.toastLayer]);
+        this.add([this.railLayer, this.collLayer, this.deckLayer]);
         scene.add.existing(this);
         this.setDepth(1200);
-
         this.buildFrames();
         this.buildRail();
         this.buildCollection();
         this.buildDeckPane();
         this.refreshAll();
         this.bindInput();
-        this.playEntrance();
+        this.setAlpha(0);
+        scene.tweens.add({ targets: this, alpha: 1, duration: 160, ease: 'Stepped', easeParams: [3] });
     }
 
     public getEntryPanelFrame(): EntryPanelFrame | null {
         return this.panelFrame;
     }
 
-    // ---------------------------------------------------------------------------------------
-    // layout
-    // ---------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------ layout
     private computeLayout() {
         const { width: W, height: H } = this.scene.scale;
-        if (this.portrait) {
-            this.frameRect = { x: 8, y: 56, w: W - 16, h: H - 64 };
-            const inner = { x: 20, y: 68, w: W - 40, h: H - 84 };
-            this.railRect = { x: inner.x, y: inner.y, w: inner.w, h: 72 };
-            this.collRect = { x: inner.x, y: inner.y + 132, w: inner.w, h: inner.h - 132 };
-            this.deckRect = { x: inner.x, y: inner.y + 132, w: inner.w, h: inner.h - 132 };
-            return;
-        }
-        this.frameRect = { x: 24, y: 76, w: W - 48, h: H - 100 };
-        const pad = 16, gap = 14;
-        const x0 = this.frameRect.x + pad, y0 = this.frameRect.y + pad, h = this.frameRect.h - pad * 2;
-        this.railRect = { x: x0, y: y0, w: 292, h };
-        this.deckRect = { x: this.frameRect.x + this.frameRect.w - pad - 500, y: y0, w: 500, h };
-        this.collRect = { x: this.railRect.x + this.railRect.w + gap, y: y0, w: this.deckRect.x - gap - (this.railRect.x + this.railRect.w + gap), h };
+        const top = PX * 52, bottom = H - PX * 8, gap = PX * 5;
+        const railW = PX * 92, deckW = PX * 150;
+        this.railRect = { x: PX * 8, y: top, w: railW, h: bottom - top };
+        this.deckRect = { x: W - PX * 8 - deckW, y: top, w: deckW, h: bottom - top };
+        this.collRect = { x: this.railRect.x + railW + gap, y: top, w: this.deckRect.x - gap - (this.railRect.x + railW + gap), h: bottom - top };
     }
 
-    private panel(rect: Rect, s: PanelStyle) {
-        const g = this.scene.add.graphics().setPosition(rect.x, rect.y);
-        drawPixelFrame(g, rect.w, rect.h, { shadow: false, ...s });
-        return g;
-    }
-
-    private text(x: number, y: number, s: string, size: number, color: number, extra: Phaser.Types.GameObjects.Text.TextStyle = {}) {
-        return this.scene.add.text(x, y, s, style(size, color, extra));
+    private framePanel(r: Rect, style: FrameStyle = 'ink') {
+        return panel(this.scene, r.x + r.w / 2, r.y + r.h / 2, snap(r.w), snap(r.h), style);
     }
 
     private buildFrames() {
-        const back = this.panel(this.frameRect, { ...PANEL_INK, fill: C.ink, border: C.dusk, hi: C.haze, lo: C.void });
-        this.addAt(back, 0);
-        if (this.portrait) {
-            this.collLayer.add(this.panel(this.collRect, { ...PANEL_INK, fill: C.night }));
-            this.deckLayer.add(this.panel(this.deckRect, { ...PANEL_INK, fill: C.night, border: C.olive }));
-            return;
-        }
-        this.railLayer.add(this.panel(this.railRect, { ...PANEL_INK, fill: C.night, border: C.dusk, hi: C.haze }));
-        this.collLayer.add(this.panel(this.collRect, { ...PANEL_INK, fill: C.night, border: C.dusk, hi: C.haze }));
-        this.deckLayer.add(this.panel(this.deckRect, { ...PANEL_INK, fill: C.night, border: C.olive, hi: C.lime }));
+        this.railLayer.add(this.framePanel(this.railRect));
+        this.collLayer.add(this.framePanel(this.collRect));
+        this.deckLayer.add(this.framePanel(this.deckRect));
     }
 
     private makeScroll(rect: Rect, parent: GameObjects.Container): ScrollRegion {
@@ -222,41 +152,21 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     private setScroll(region: ScrollRegion, offset: number) {
         const max = Math.max(0, region.height - region.rect.h);
         region.offset = Phaser.Math.Clamp(offset, 0, max);
-        region.content.y = region.rect.y - region.offset;
-        this.updateScrollbar(region);
-    }
-
-    private scrollbars = new Map<ScrollRegion, GameObjects.Rectangle>();
-    private updateScrollbar(region: ScrollRegion) {
-        let bar = this.scrollbars.get(region);
-        if (!bar) {
-            bar = this.scene.add.rectangle(0, 0, 6, 40, C.gold, 0.7).setOrigin(0.5, 0);
-            this.add(bar);
-            this.scrollbars.set(region, bar);
-        }
-        const max = Math.max(0, region.height - region.rect.h);
-        if (max <= 0) { bar.setVisible(false); return; }
-        const th = Math.max(40, (region.rect.h * region.rect.h) / region.height);
-        bar.setVisible(true).setSize(6, th).setPosition(region.rect.x + region.rect.w - 5, region.rect.y + (region.offset / max) * (region.rect.h - th));
+        region.content.y = snap(region.rect.y - region.offset);
     }
 
     private inside(rect: Rect, p: Phaser.Input.Pointer) {
         return p.x >= rect.x && p.x <= rect.x + rect.w && p.y >= rect.y && p.y <= rect.y + rect.h;
     }
 
-    // ---------------------------------------------------------------------------------------
-    // data helpers
-    // ---------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------ data helpers
     private get deck(): SavedDeck | null {
         return this.stash.savedDecks.find(d => d.id === this.selectedDeckId) ?? null;
     }
-    private meta(id: string): CardMetadata {
-        return this.config.metadata?.[id] ?? {};
-    }
+    private meta(id: string): CardMetadata { return this.config.metadata?.[id] ?? {}; }
     private nameOf(id: string) { return this.meta(id).name ?? id; }
     private owned(id: string) { return this.stash.cards.find(c => c.id === id)?.count ?? 0; }
     private inDeck(id: string, deck = this.deck) { return deck?.cards.find(c => c.id === id)?.count ?? 0; }
-    private rarityColor(id: string) { return RARITY_COLOR[this.meta(id).rarity ?? 'common'] ?? C.mist; }
     private kindOf(id: string): CardKind | undefined { return this.meta(id).kind; }
 
     private commit(next: PersistentStash) {
@@ -278,9 +188,7 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         return { ok: true };
     }
 
-    // ---------------------------------------------------------------------------------------
-    // actions
-    // ---------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------ actions
     private addCard(id: string, from?: { x: number; y: number }, amount = 1) {
         let added = 0;
         for (let i = 0; i < amount; i++) {
@@ -295,8 +203,7 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         }
         if (!added) return;
         this.refreshAll();
-        this.flyToken(id, from, true);
-        this.popCount(1);
+        if (from) pxBurst(this.scene, from.x, from.y, { colors: [INK.gold, INK.paper], count: 8, speed: 140, size: 6, depth: 1600 });
     }
 
     private topUpDeck() {
@@ -304,23 +211,17 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         if (!deck) return;
         const missing = DECK_CARD_MIN - countDeckCards(deck.cards);
         const next = topUpSavedDeckToMinimum(this.stash, deck.id, this.config.starterCards ?? [], this.config.metadata);
-        if (next === this.stash) {
-            this.toast('可用卡牌不足，暂时无法补齐', 'warn');
-            return;
-        }
+        if (next === this.stash) { this.toast('可用卡牌不足，暂时无法补齐', 'warn'); return; }
         this.commit(next);
         this.refreshAll();
-        this.popCount(1);
         this.toast(`已补入 ${missing} 张，当前卡组共 ${DECK_CARD_MIN} 张`, 'ok');
     }
 
-    private removeCard(id: string, amount = 1, to?: { x: number; y: number }) {
+    private removeCard(id: string, amount = 1) {
         const deck = this.deck;
         if (!deck || this.inDeck(id) <= 0) return;
         this.setDeckCards(deck.id, adjustDeckCardCount(deck.cards, id, -Math.min(amount, this.inDeck(id))));
         this.refreshAll();
-        if (to) this.flyToken(id, to, false);
-        this.popCount(-1);
     }
 
     private selectDeck(id: string) {
@@ -328,7 +229,6 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         this.selectedDeckId = id;
         this.commit(selectDeckInStash(this.stash, id));
         this.refreshAll();
-        this.pulse(this.deckHeader);
     }
 
     private newDeck() {
@@ -351,7 +251,6 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         if (now - this.deleteArmedAt > 2600) {
             this.deleteArmedAt = now;
             this.toast(`再点一次“删除”确认删除「${deck.name}」`, 'warn');
-            this.refreshRail();
             return;
         }
         this.deleteArmedAt = 0;
@@ -365,19 +264,17 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     private startRename() {
         const deck = this.deck;
         if (!deck) return;
-        const b = this.nameBounds();
         this.nativeText.activate({
             id: NAME_SESSION,
             ariaLabel: '卡组名称输入',
             value: deck.name,
             selectAllOnFocus: true,
             getBounds: () => this.nameBounds(),
-            style: { fontFamily: 'Zpix, monospace', fontSize: 24, color: '#f3ead3', caretColor: '#f2d98d', lineHeight: 30 },
+            style: { fontFamily: 'Zpix, monospace', fontSize: 36, color: '#fbf4df', caretColor: '#f5cf6a', lineHeight: 42 },
             onConfirm: (value) => this.finishRename(value),
             onCancel: () => this.nativeText.deactivate(NAME_SESSION),
             onBlur: () => this.finishRename(undefined),
         });
-        void b;
     }
 
     private finishRename(value: string | undefined) {
@@ -392,7 +289,7 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
 
     private nameBounds() {
         const r = this.deckRect;
-        return { x: r.x + 18, y: r.y + 14, width: r.w - 120, height: 40 };
+        return { x: r.x + PX * 8, y: r.y + PX * 6, width: r.w - PX * 16, height: PX * 16 };
     }
 
     private close() {
@@ -401,211 +298,109 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         this.config.onClose();
     }
 
-    // ---------------------------------------------------------------------------------------
-    // building: deck rail
-    // ---------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------ deck rail
     private buildRail() {
         const r = this.railRect;
-        if (this.portrait) {
-            // compact deck bar (◀ name ▶ ＋) and two tabs; rebuilt by refreshRail()
-            const bar = this.scene.add.container(0, 0);
-            this.railLayer.add(bar);
-            this.railScroll = { rect: r, content: bar, offset: 0, height: r.h, mask: this.scene.make.graphics({}) };
-            return;
-        }
-        this.railLayer.add(this.text(r.x + 20, r.y + 16, '卡  组', 24, C.gold, { stroke: hex(C.void), strokeThickness: 4 }));
-        const listRect = { x: r.x + 10, y: r.y + 62, w: r.w - 20, h: r.h - 62 - 152 };
+        this.railLayer.add(pbutton(this.scene, { x: r.x + r.w / 2, y: r.y + PX * 14, width: r.w - PX * 12, height: PX * 20, icon: 'back', label: '返回', style: 'slate', onClick: () => this.close() }));
+        this.railLayer.add(ptext(this.scene, r.x + PX * 8, r.y + PX * 30, '卡 组', { color: INK.gold }));
+        const listRect = { x: r.x + PX * 4, y: r.y + PX * 46, w: r.w - PX * 8, h: r.h - PX * 46 - PX * 82 };
         this.railScroll = this.makeScroll(listRect, this.railLayer);
-        // footer actions
-        const fy = r.y + r.h - 138;
-        this.railLayer.add(this.button(r.x + 12, fy, r.w - 24, 52, '＋ 新建卡组', PANEL_JADE, 24, () => this.newDeck()));
-        this.railLayer.add(this.button(r.x + 12, fy + 62, (r.w - 32) / 2, 46, '重命名', PANEL_INK, 24, () => this.startRename()));
-        const del = this.button(r.x + 20 + (r.w - 32) / 2, fy + 62, (r.w - 32) / 2, 46, '删除', PANEL_BLOOD, 24, () => this.deleteDeck());
-        this.railLayer.add(del);
-        this.railLayer.add(this.text(r.x + 20, fy + 118, '双击卡组名可直接改名', 12, C.mist));
+        this.railFooter = this.scene.add.container(0, 0);
+        this.railLayer.add(this.railFooter);
+        const fy = r.y + r.h - PX * 70;
+        const bw = r.w - PX * 12;
+        this.railFooter.add(pbutton(this.scene, { x: r.x + r.w / 2, y: fy, width: bw, height: PX * 20, label: '＋ 新建卡组', style: 'jade', onClick: () => this.newDeck() }));
+        this.railFooter.add(pbutton(this.scene, { x: r.x + r.w / 2, y: fy + PX * 24, width: bw, height: PX * 20, label: '重命名', style: 'slate', onClick: () => this.startRename() }));
+        this.railFooter.add(pbutton(this.scene, { x: r.x + r.w / 2, y: fy + PX * 48, width: bw, height: PX * 20, label: '删除', style: 'seal', onClick: () => this.deleteDeck() }));
     }
 
     private refreshRail() {
-        this.railItems.forEach(i => i.destroy());
-        this.railItems = [];
-        const decks = this.stash.savedDecks;
-        if (this.portrait) { this.refreshPortraitBar(); return; }
         const region = this.railScroll;
-        const H = 96, G = 10;
-        decks.forEach((d, i) => {
-            const y = i * (H + G);
-            const c = this.scene.add.container(0, y);
-            const sel = d.id === this.selectedDeckId;
-            const count = countDeckCards(d.cards);
-            const ok = count >= DECK_CARD_MIN && count <= DECK_CARD_MAX;
-            const w = region.rect.w - 8;
-            const g = this.scene.add.graphics();
-            const draw = (hot: boolean) => {
-                g.clear();
-                drawPixelFrame(g, w, H, {
-                    shadow: false,
-                    fill: sel ? C.pine : C.ink,
-                    edge: C.void,
-                    border: sel ? C.gold : hot ? C.haze : C.dusk,
-                    hi: sel ? C.glow : C.haze,
-                    lo: C.void,
-                    stud: sel ? C.gold : null,
-                });
-            };
-            draw(false);
-            c.add(g);
-            const name = this.text(18, 14, d.name, 24, sel ? C.paper : C.fog, { stroke: hex(C.void), strokeThickness: 3 });
-            if (name.width > w - 110) name.setScale((w - 110) / name.width);
-            c.add(name);
-            c.add(this.text(18, 50, `${count} 张`, 12, ok ? C.celadon : count > DECK_CARD_MAX ? C.cinnabar : C.gold));
-            c.add(this.text(w - 16, 50, ok ? '可出发' : count < DECK_CARD_MIN ? `差${DECK_CARD_MIN - count}` : `超${count - DECK_CARD_MAX}`, 12, ok ? C.celadon : C.ember).setOrigin(1, 0));
-            // kind pips
-            const kinds = new Map<CardKind, number>();
-            d.cards.forEach(s => { const k = this.kindOf(s.id); if (k) kinds.set(k, (kinds.get(k) ?? 0) + s.count); });
-            let px = 18;
-            KIND_ORDER.forEach(k => {
-                const n = kinds.get(k);
-                if (!n) return;
-                const pip = this.scene.add.rectangle(px + 5, 78, 10, 10, KIND_COLOR[k]).setOrigin(0.5);
-                c.add(pip);
-                c.add(this.text(px + 14, 72, `${n}`, 12, C.fog));
-                px += 44;
-            });
-            // meter line
-            const mw = w - 36;
-            const meter = this.scene.add.graphics().setPosition(18, 44 + 2);
-            meter.fillStyle(C.void, 1).fillRect(0, 0, mw, 3);
-            meter.fillStyle(ok ? C.celadon : count > DECK_CARD_MAX ? C.cinnabar : C.gold, 1).fillRect(0, 0, Math.round(mw * Math.min(1, count / DECK_CARD_MAX) / 4) * 4, 3);
-            c.add(meter);
-            c.setSize(w, H).setInteractive(new Phaser.Geom.Rectangle(w / 2, H / 2, w, H), Phaser.Geom.Rectangle.Contains);
-            c.input!.cursor = 'pointer';
-            let lastClick = 0;
-            c.on('pointerover', () => { draw(true); });
-            c.on('pointerout', () => { draw(false); });
-            c.on('pointerdown', () => {
-                if (!this.inside(region.rect, this.scene.input.activePointer)) return;
-                const now = this.scene.time.now;
-                if (sel && now - lastClick < 380) this.startRename();
-                lastClick = now;
-                this.selectDeck(d.id);
-            });
-            region.content.add(c);
-            this.railItems.push(c);
+        region.content.removeAll(true);
+        const w = region.rect.w;
+        const rowH = PX * 30;
+        this.stash.savedDecks.forEach((deck, i) => {
+            const y = i * (rowH + PX * 3);
+            const sel = deck.id === this.selectedDeckId;
+            const count = countDeckCards(deck.cards);
+            const ok = count >= DECK_CARD_MIN && count <= DECK_CARD_MAX && validateDeckAvailability(deck.cards, this.stash.cards).length === 0;
+            const bg = panel(this.scene, w / 2, y + rowH / 2, w, rowH, sel ? 'gold' : 'slate');
+            const name = ptext(this.scene, PX * 6, y + PX * 8, clip(deck.name, Math.floor((w - PX * 14) / 36)), { color: sel ? INK.gold : INK.paper, origin: [0, 0.5] });
+            const dot = this.scene.add.rectangle(PX * 7, y + PX * 21, PX * 2, PX * 2, ok ? INK.spirit : INK.vermilion);
+            const n = ptext(this.scene, PX * 12, y + PX * 21, `${count} 张`, { color: INK.mist, origin: [0, 0.5] });
+            const hit = this.scene.add.rectangle(w / 2, y + rowH / 2, w, rowH, 0, 0.001).setInteractive({ useHandCursor: true });
+            hit.on('pointerdown', (p: Phaser.Input.Pointer) => { if (this.inside(region.rect, p)) this.selectDeck(deck.id); });
+            region.content.add([bg, name, dot, n, hit]);
         });
-        region.height = decks.length * (H + G);
+        region.height = this.stash.savedDecks.length * (rowH + PX * 3);
         this.setScroll(region, region.offset);
     }
 
-    private refreshPortraitBar() {
-        const bar = this.railScroll.content;
-        bar.removeAll(true);
-        const r = this.railRect;
-        const decks = this.stash.savedDecks;
-        const idx = Math.max(0, decks.findIndex(d => d.id === this.selectedDeckId));
-        const deck = decks[idx];
-        bar.add(this.panel({ x: r.x, y: r.y, w: r.w, h: 64 }, { ...PANEL_INK, fill: C.night }));
-        const step = (dir: number) => {
-            if (!decks.length) return;
-            this.selectDeck(decks[(idx + dir + decks.length) % decks.length].id);
-        };
-        bar.add(this.button(r.x + 6, r.y + 8, 48, 48, '<', PANEL_INK, 24, () => step(-1)));
-        const name = this.text(r.x + r.w / 2 - 20, r.y + 32, deck?.name ?? '无卡组', 24, C.paper, { stroke: hex(C.void), strokeThickness: 4 }).setOrigin(0.5);
-        if (name.width > r.w - 200) name.setScale((r.w - 200) / name.width);
-        name.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.startRename());
-        bar.add(name);
-        bar.add(this.button(r.x + r.w - 110, r.y + 8, 48, 48, '>', PANEL_INK, 24, () => step(1)));
-        bar.add(this.button(r.x + r.w - 56, r.y + 8, 48, 48, '＋', PANEL_JADE, 24, () => this.newDeck()));
-        const count = deck ? countDeckCards(deck.cards) : 0;
-        const tabs: Array<['collection' | 'deck', string]> = [['collection', '储物袋'], ['deck', `卡组 ${count}/${DECK_CARD_MAX}`]];
-        tabs.forEach(([key, label], i) => {
-            const active = this.portraitTab === key;
-            bar.add(this.button(r.x + i * (r.w / 2 + 2), r.y + 72, r.w / 2 - 2, 52, label, active ? PANEL_JADE : PANEL_INK, 24, () => {
-                this.portraitTab = key; this.applyPortraitTab(); this.refreshPortraitBar();
-            }));
-        });
-        this.applyPortraitTab();
-    }
-
-    private applyPortraitTab() {
-        if (!this.portrait) return;
-        this.collLayer.setVisible(this.portraitTab === 'collection');
-        this.deckLayer.setVisible(this.portraitTab === 'deck');
-        this.gridScroll.content.setVisible(this.portraitTab === 'collection');
-        this.listScroll.content.setVisible(this.portraitTab === 'deck');
-    }
-
-    // ---------------------------------------------------------------------------------------
-    // building: collection
-    // ---------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------ collection grid
     private buildCollection() {
         const r = this.collRect;
         this.toolbar = this.scene.add.container(0, 0);
         this.collLayer.add(this.toolbar);
-        const toolbarH = this.portrait ? 200 : 122;
-        if (!this.portrait) {
-            this.collLayer.add(this.text(r.x + 20, r.y + 16, '储 物 袋', 24, C.gold, { stroke: hex(C.void), strokeThickness: 4 }));
-        }
-        const gridRect = this.portrait
-            ? { x: r.x + 4, y: r.y + toolbarH, w: r.w - 8, h: r.h - toolbarH - 8 }
-            : { x: r.x + 10, y: r.y + toolbarH, w: r.w - 20, h: r.h - toolbarH - 46 };
+        const gridRect = { x: r.x + PX * 4, y: r.y + PX * 52, w: r.w - PX * 8, h: r.h - PX * 56 };
         this.gridScroll = this.makeScroll(gridRect, this.collLayer);
         this.refreshToolbar();
+    }
+
+    private searchRect() {
+        const r = this.collRect;
+        const sw = Math.min(PX * 110, r.w * 0.4);
+        return { x: r.x + r.w - sw - PX * 6, y: r.y + PX * 5, w: sw, h: PX * 18 };
     }
 
     private refreshToolbar() {
         this.toolbar.removeAll(true);
         const r = this.collRect;
         const t = this.toolbar;
-        const y0 = this.portrait ? r.y + 8 : r.y + 12;
-        // search field
-        const sw = this.portrait ? r.w - 24 : 320;
-        const sx = this.portrait ? r.x + 12 : r.x + r.w - sw - 20;
-        const sg = this.scene.add.graphics().setPosition(sx, y0);
+        t.add(ptext(this.scene, r.x + PX * 8, r.y + PX * 8, '储 物 袋', { color: INK.gold }));
+        // search box
+        const sr = this.searchRect();
         const searching = this.nativeText.isActive(SEARCH_SESSION);
-        drawPixelFrame(sg, sw, 44, { shadow: false, fill: searching ? C.pine : C.ink, edge: C.void, border: searching ? C.gold : C.dusk, hi: C.haze, lo: C.void, stud: null });
-        t.add(sg);
+        t.add(panel(this.scene, sr.x + sr.w / 2, sr.y + sr.h / 2, snap(sr.w), sr.h, searching ? 'gold' : 'slate'));
         const has = this.query.trim().length > 0;
-        const label = this.text(sx + 16, y0 + 10, has ? this.query : '搜索名称或编号…', 24, has ? C.paper : C.mist);
-        if (label.width > sw - 60) label.setScale((sw - 60) / label.width);
-        label.setVisible(!searching);
-        t.add(label);
-        const hit = this.scene.add.rectangle(sx + sw / 2, y0 + 22, sw, 44, 0x000000, 0.001).setInteractive({ useHandCursor: true });
+        if (!searching) t.add(ptext(this.scene, sr.x + PX * 16, sr.y + sr.h / 2 - PX, has ? clip(this.query, 8) : '搜索名称或编号', { color: has ? INK.paper : INK.mist, origin: [0, 0.5] }));
+        t.add(addIcon(this.scene, sr.x + PX * 8, sr.y + sr.h / 2, 'eye'));
+        const hit = this.scene.add.rectangle(sr.x + sr.w / 2, sr.y + sr.h / 2, sr.w, sr.h, 0, 0.001).setInteractive({ useHandCursor: true });
         hit.on('pointerdown', () => this.focusSearch());
         t.add(hit);
-        if (has) {
-            const x = this.text(sx + sw - 26, y0 + 10, '×', 24, C.fog).setInteractive({ useHandCursor: true });
-            x.on('pointerdown', () => { this.query = ''; this.nativeText.deactivate(SEARCH_SESSION); this.refreshToolbar(); this.refreshGrid(); });
-            t.add(x);
-        }
-        // kind chips
-        const chips: Array<{ k: CardKind | undefined; label: string }> = [{ k: undefined, label: '全部' }, ...KIND_ORDER.map(k => ({ k, label: KIND_LABEL[k] }))];
-        const cw = 76, cg = 8;
-        const cy = this.portrait ? y0 + 56 : y0 + 56;
-        const perRow = this.portrait ? 4 : chips.length;
-        chips.forEach((chip, i) => {
-            const cx = (this.portrait ? r.x + 12 : r.x + 20) + (i % perRow) * (cw + cg);
-            const cyy = cy + Math.floor(i / perRow) * 48;
+        if (has && !searching) t.add(piconButton(this.scene, sr.x + sr.w - PX * 8, sr.y + sr.h / 2, 'close', () => { this.query = ''; this.refreshToolbar(); this.refreshGrid(); }, 'slate', 12));
+
+        // kind chips (icons) + sort + stock toggle
+        const cy = r.y + PX * 36;
+        const chips: Array<{ k: CardKind | undefined; label: string; icon?: PixIcon }> = [
+            { k: undefined, label: '全部' },
+            ...KIND_ORDER.map(k => ({ k, label: KIND_LABEL[k], icon: KIND_ICON[k] })),
+        ];
+        let x = r.x + PX * 6;
+        chips.forEach((chip) => {
             const active = this.kindFilter === chip.k;
-            const g = this.scene.add.graphics().setPosition(cx, cyy);
-            drawPixelFrame(g, cw, 40, { shadow: false, fill: active ? C.pine : C.ink, edge: C.void, border: active ? (chip.k ? KIND_COLOR[chip.k] : C.gold) : C.dusk, hi: active ? C.glow : C.haze, lo: C.void, stud: null });
-            t.add(g);
-            t.add(this.text(cx + cw / 2, cyy + 20, chip.label, 24, active ? C.paper : C.fog).setOrigin(0.5));
-            const hit2 = this.scene.add.rectangle(cx + cw / 2, cyy + 20, cw, 40, 0x000000, 0.001).setInteractive({ useHandCursor: true });
-            hit2.on('pointerdown', () => { this.kindFilter = chip.k; this.refreshToolbar(); this.refreshGrid(); this.setScroll(this.gridScroll, 0); });
-            t.add(hit2);
+            const w = chip.icon ? PX * 20 : PX * 30;
+            const b = pbutton(this.scene, { x: x + w / 2, y: cy, width: w, height: PX * 18, icon: chip.icon, label: chip.icon ? undefined : chip.label, style: active ? 'gold' : 'slate',
+                onClick: () => { this.kindFilter = chip.k; this.refreshToolbar(); this.refreshGrid(); this.setScroll(this.gridScroll, 0); } });
+            if (chip.icon) {
+                b.on('pointerover', (p: Phaser.Input.Pointer) => this.tip.show(p.x + PX * 6, p.y + PX * 6, chip.label, ''));
+                b.on('pointerout', () => this.tip.hide());
+            }
+            t.add(b);
+            x += w + PX * 2;
         });
-        // sort + zero toggles
-        const bx = r.x + 20 + chips.length * (cw + cg) + 12;
-        const by = this.portrait ? cy + 104 : cy;
         const sortLabel = `${SORT_LABEL[SORT_FIELDS[this.sortIndex]]}${this.sortDesc ? '↓' : '↑'}`;
-        const sortBtn = this.button(this.portrait ? r.x + 12 : bx, by, 116, 40, sortLabel, PANEL_INK, 24, () => {
+        const sortW = PX * 38;
+        t.add(pbutton(this.scene, { x: x + PX * 4 + sortW / 2, y: cy, width: sortW, height: PX * 18, label: sortLabel, style: 'slate', onClick: () => {
             if (this.sortDesc) { this.sortDesc = false; this.sortIndex = (this.sortIndex + 1) % SORT_FIELDS.length; } else this.sortDesc = true;
             this.refreshToolbar(); this.refreshGrid();
-        });
-        const zeroBtn = this.button(this.portrait ? r.x + 12 + 128 : bx + 128, by, 132, 40, this.hideZero ? '仅有库存' : '含无库存', this.hideZero ? PANEL_JADE : PANEL_INK, 24, () => {
-            this.hideZero = !this.hideZero; this.refreshToolbar(); this.refreshGrid();
-        });
-        t.add([sortBtn, zeroBtn]);
+        } }));
+        x += PX * 6 + sortW;
+        const zw = PX * 52;
+        if (x + zw < r.x + r.w - PX * 4) {
+            t.add(pbutton(this.scene, { x: x + PX * 2 + zw / 2, y: cy, width: zw, height: PX * 18, label: this.hideZero ? '仅有库存' : '含无库存', style: this.hideZero ? 'jade' : 'slate', onClick: () => {
+                this.hideZero = !this.hideZero; this.refreshToolbar(); this.refreshGrid();
+            } }));
+        }
     }
 
     private focusSearch() {
@@ -614,14 +409,8 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
             ariaLabel: '储物袋搜索输入',
             value: this.query,
             placeholder: '搜索名称或编号…',
-            getBounds: () => {
-                const r = this.collRect;
-                const sw = this.portrait ? r.w - 24 : 320;
-                const sx = this.portrait ? r.x + 12 : r.x + r.w - sw - 20;
-                const y0 = this.portrait ? r.y + 8 : r.y + 12;
-                return { x: sx + 10, y: y0 + 6, width: sw - 56, height: 32 };
-            },
-            style: { fontFamily: 'Zpix, monospace', fontSize: 24, color: '#f3ead3', placeholderColor: '#7d8c98', caretColor: '#f2d98d', lineHeight: 30 },
+            getBounds: () => { const sr = this.searchRect(); return { x: sr.x + PX * 16, y: sr.y + PX * 2, width: sr.w - PX * 22, height: sr.h - PX * 4 }; },
+            style: { fontFamily: 'Zpix, monospace', fontSize: 36, color: '#fbf4df', placeholderColor: '#7f93b2', caretColor: '#f5cf6a', lineHeight: 42 },
             onValueChange: (v) => { this.query = v; this.refreshGrid(); },
             onConfirm: (v) => { this.query = v; this.nativeText.deactivate(SEARCH_SESSION); this.refreshToolbar(); },
             onCancel: () => { this.nativeText.deactivate(SEARCH_SESSION); this.refreshToolbar(); },
@@ -638,148 +427,71 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         });
     }
 
-    private tileScale() { return this.portrait ? 0.5 : 0.8; }
-    private tileSize() {
-        const s = this.tileScale();
-        return { w: Math.round(180 * s) + 16, h: Math.round(260 * s) + 30 };
-    }
-
-    private makeTile(id: string): GameObjects.Container {
-        const cached = this.tileCache.get(id);
-        if (cached) return cached;
-        const s = this.tileScale();
-        const { w, h } = this.tileSize();
-        const c = this.scene.add.container(0, 0);
-        const data = this.config.previewResolver(id);
-        let face: BaseCardSprite | null = null;
-        if (data) {
-            face = CardSpriteFactory.createSprite(this.scene, data as never, 0, 0, s);
-            if (face) {
-                face.disableDragging(); face.disableInteractive(); face.setDisplayMode('deck');
-                face.setPosition(w / 2, 10 + (260 * s) / 2);
-            }
-        }
-        if (face) c.add(face);
-        else c.add(this.fallbackFace(id, w, h));
-        c.setData('meta', { w, h });
-        this.tileCache.set(id, c);
-        return c;
-    }
-
-    private fallbackFace(id: string, w: number, _h: number) {
-        const s = this.tileScale();
-        const c = this.scene.add.container(w / 2, 10 + (260 * s) / 2);
-        const kind = this.kindOf(id);
-        const color = kind ? KIND_COLOR[kind] : C.mist;
-        const g = this.scene.add.graphics().setPosition(-(180 * s) / 2, -(260 * s) / 2);
-        drawPixelFrame(g, 180 * s, 260 * s, { shadow: false, fill: C.pine, edge: C.void, border: color, hi: C.haze, lo: C.void, stud: C.gold });
-        c.add(g);
-        c.add(this.text(0, -20, kind ? KIND_GLYPH[kind] : '牌', 36, color).setOrigin(0.5));
-        const n = this.text(0, 30, this.nameOf(id), 12, C.paper, { align: 'center', wordWrap: { width: 180 * s - 16 } }).setOrigin(0.5);
-        c.add(n);
-        return c;
+    private showCardTip(id: string, x: number, y: number) {
+        const data = this.config.previewResolver(id) as PreviewCardData | null;
+        const info = data ? cardInfo(this.scene, data as never) : { title: this.nameOf(id), sub: '', body: this.meta(id).description ?? '', gongfa: [] as Array<{ name: string; text: string }> };
+        const extra = `库存 ${this.owned(id)} · 已带 ${this.inDeck(id)}`;
+        this.tip.show(x, y, info.title, [info.sub, extra, info.body, ...info.gongfa.map((g) => `【${g.name}】${g.text}`)].filter(Boolean).join('\n'));
     }
 
     private refreshGrid() {
         const region = this.gridScroll;
-        // detach cached tiles from the scroll content without destroying them
-        region.content.removeAll(false);
-        this.gridOverlays.forEach(o => o.destroy());
-        this.gridOverlays = [];
+        region.content.removeAll(true);
         const rows = this.collectionRows();
-        const { w, h } = this.tileSize();
-        const gap = 6;
-        const cols = Math.max(1, Math.floor((region.rect.w - 8) / (w + gap)));
-        const offsetX = Math.max(0, Math.floor((region.rect.w - cols * (w + gap) + gap) / 2));
+        const cw = 180, ch = 258, gap = PX * 5, labelH = PX * 12;
+        const cols = Math.max(1, Math.floor((region.rect.w + gap) / (cw + gap)));
+        const ox = snap((region.rect.w - (cols * cw + (cols - 1) * gap)) / 2);
         rows.forEach((row, i) => {
-            const cx = offsetX + (i % cols) * (w + gap);
-            const cy = 8 + Math.floor(i / cols) * (h + gap);
-            const tile = this.makeTile(row.id);
-            tile.setPosition(cx, cy).setVisible(true);
-            region.content.add(tile);
-            this.decorateTile(row, cx, cy, w, region);
+            const x = ox + (i % cols) * (cw + gap) + cw / 2;
+            const y = PX * 4 + Math.floor(i / cols) * (ch + labelH + gap) + ch / 2;
+            const id = row.id;
+            const data = this.config.previewResolver(id);
+            const key = wenxinCardTexture(this.scene, (data ?? { id, name: this.nameOf(id), kind: this.kindOf(id) }) as never);
+            const inDeck = this.inDeck(id);
+            const avail = row.count - inDeck;
+            const img = key ? this.scene.add.image(x, y, key).setScale(PX) : this.scene.add.rectangle(x, y, cw, ch, INK.indigo);
+            if (avail <= 0) img.setAlpha(0.45);
+            region.content.add(img);
+            if (data && data.kind === 'unit') {
+                const u = data as { attack: number; health: number };
+                const a = this.scene.add.bitmapText(x - 55, y + 108, numberFont(this.scene, INK.paper), `${u.attack}`).setOrigin(0.5).setScale(PX);
+                const h = this.scene.add.bitmapText(x + 55, y + 108, numberFont(this.scene, INK.paper), `${u.health}`).setOrigin(0.5).setScale(PX);
+                a.setLetterSpacing(-1); h.setLetterSpacing(-1);
+                region.content.add([a, h]);
+            }
+            // stock line under the card: available / owned, and the in-deck tag
+            region.content.add(ptext(this.scene, x, y + ch / 2 + PX * 6, `余 ${avail}/${row.count}`, { color: avail > 0 ? INK.spirit : INK.ash, origin: [0.5, 0.5] }));
+            if (inDeck > 0) {
+                region.content.add(panel(this.scene, x + cw / 2 - PX * 12, y - ch / 2 + PX * 8, PX * 22, PX * 14, 'gold'));
+                region.content.add(this.scene.add.bitmapText(x + cw / 2 - PX * 12, y - ch / 2 + PX * 8, numberFont(this.scene, INK.gold), `x${inDeck}`).setOrigin(0.5).setScale(PX));
+            }
+            const hit = this.scene.add.rectangle(x, y, cw, ch, 0, 0.001).setInteractive({ useHandCursor: true });
+            hit.on('pointerover', (p: Phaser.Input.Pointer) => {
+                if (!this.inside(region.rect, p)) return;
+                img.y = y - PX * 3;
+                this.showCardTip(id, Math.min(p.x + PX * 10, this.scene.scale.width - PX * 156), p.y - PX * 60);
+            });
+            hit.on('pointerout', () => { img.y = y; this.tip.hide(); });
+            hit.on('pointerdown', (p: Phaser.Input.Pointer) => {
+                if (!this.inside(region.rect, p)) return;
+                if (p.rightButtonDown()) this.removeCard(id, 1);
+                else this.addCard(id, { x: p.x, y: p.y }, p.event && (p.event as MouseEvent).shiftKey ? 5 : 1);
+            });
+            region.content.add(hit);
         });
-        region.height = 8 + Math.ceil(rows.length / cols) * (h + gap) + 8;
+        region.height = PX * 8 + Math.ceil(rows.length / cols) * (ch + labelH + gap);
         this.setScroll(region, region.offset);
-        if (rows.length === 0) {
-            const empty = this.text(region.rect.w / 2, 90, this.query || this.kindFilter ? '没有符合条件的卡牌' : '储物袋是空的', 24, C.mist).setOrigin(0.5);
-            region.content.add(empty);
-            this.gridOverlays.push(empty);
-        }
-        const foot = `共 ${rows.length} 种 · 库存 ${this.stash.cards.reduce((n, c) => n + c.count, 0)} 张`;
-        this.footText?.setText(foot);
+        if (rows.length === 0) region.content.add(ptext(this.scene, region.rect.w / 2, PX * 30, this.query || this.kindFilter ? '没有符合条件的卡牌' : '储物袋是空的', { color: INK.mist, origin: [0.5, 0.5] }));
     }
 
-    private gridOverlays: GameObjects.GameObject[] = [];
-    private footText?: GameObjects.Text;
-
-    /** badges, dim and hit-area are rebuilt every refresh (cheap) on top of the cached card face */
-    private decorateTile(row: CardCollectionRow, cx: number, cy: number, w: number, region: ScrollRegion) {
-        const id = row.id;
-        const deck = this.deck;
-        const inDeck = this.inDeck(id, deck);
-        const avail = row.count - inDeck;
-        const s = this.tileScale();
-        const cardH = 260 * s;
-        const layer = this.scene.add.container(cx, cy);
-        const dim = avail <= 0 && inDeck === 0;
-        if (dim || avail <= 0) layer.add(this.scene.add.rectangle(w / 2, 10 + cardH / 2, 180 * s, cardH, C.void, 0.38));
-        // owned badge
-        const badge = this.scene.add.graphics().setPosition(w / 2 - 34, 10 + cardH - 2);
-        drawPixelFrame(badge, 68, 26, { shadow: false, fill: C.void, edge: C.void, border: avail > 0 ? C.celadon : C.mist, hi: C.haze, lo: C.void, stud: null });
-        layer.add(badge);
-        layer.add(this.text(w / 2, 10 + cardH + 11, `${avail}/${row.count}`, 12, avail > 0 ? C.celadon : C.mist).setOrigin(0.5));
-        if (inDeck > 0) {
-            const chip = this.scene.add.graphics().setPosition(4, 4);
-            drawPixelFrame(chip, 44, 28, { shadow: false, fill: C.umber, edge: C.void, border: C.glow, hi: C.glow, lo: C.void, stud: null });
-            layer.add(chip);
-            layer.add(this.text(26, 18, `×${inDeck}`, 12, C.glow).setOrigin(0.5));
-        }
-        const hit = this.scene.add.rectangle(w / 2, 10 + cardH / 2, 180 * s, cardH, 0x000000, 0.001).setInteractive({ useHandCursor: true });
-        const ring = this.scene.add.graphics().setPosition(w / 2 - (180 * s) / 2 - 3, 7);
-        ring.setVisible(false);
-        ring.lineStyle(4, C.glow, 1).strokeRect(0, 0, 180 * s + 6, cardH + 6);
-        layer.add([ring, hit]);
-        hit.on('pointerover', () => {
-            if (!this.inside(region.rect, this.scene.input.activePointer)) return;
-            ring.setVisible(true);
-            this.scene.tweens.add({ targets: layer, y: cy - 6, duration: 90 });
-            this.setPreview(id);
-        });
-        hit.on('pointerout', () => { ring.setVisible(false); this.scene.tweens.add({ targets: layer, y: cy, duration: 90 }); });
-        hit.on('pointerdown', (p: Phaser.Input.Pointer) => {
-            if (!this.inside(region.rect, p)) return;
-            const wp = { x: region.rect.x + cx + w / 2, y: region.rect.y - region.offset + cy + 10 + cardH / 2 };
-            if (p.rightButtonDown()) this.removeCard(id, 1);
-            else this.addCard(id, wp, p.event && (p.event as MouseEvent).shiftKey ? 5 : 1);
-        });
-        region.content.add(layer);
-        this.gridOverlays.push(layer);
-    }
-
-    // ---------------------------------------------------------------------------------------
-    // building: deck pane
-    // ---------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------ deck pane
     private buildDeckPane() {
         const r = this.deckRect;
         this.deckHeader = this.scene.add.container(0, 0);
         this.deckLayer.add(this.deckHeader);
-        const headerH = 180;
-        const previewH = this.portrait ? 0 : 300;
-        const footerH = 74;
-        const listRect = this.portrait
-            ? { x: r.x + 8, y: r.y + headerH, w: r.w - 16, h: r.h - headerH - footerH }
-            : { x: r.x + 10, y: r.y + headerH, w: r.w - 20, h: r.h - headerH - previewH - footerH - 8 };
+        const listRect = { x: r.x + PX * 4, y: r.y + PX * 72, w: r.w - PX * 8, h: r.h - PX * 72 - PX * 20 };
         this.listScroll = this.makeScroll(listRect, this.deckLayer);
-        this.previewBox = this.scene.add.container(0, 0);
-        this.deckLayer.add(this.previewBox);
-        // footer: back button
-        const fx = r.x + 12, fy = r.y + r.h - footerH + 10;
-        this.deckLayer.add(this.button(fx, fy, r.w - 24, 54, '←  返回远征准备', PANEL_JADE, 24, () => this.close()));
-        this.footText = this.text(this.collRect.x + 20, this.collRect.y + this.collRect.h - 32, '', 12, C.mist);
-        if (!this.portrait) this.collLayer.add(this.footText);
-        else this.footText.destroy(), (this.footText = undefined);
-        if (!this.portrait) this.collLayer.add(this.text(this.collRect.x + this.collRect.w - 20, this.collRect.y + this.collRect.h - 32, '左键加入 · 右键移出 · Shift 一次加多张', 12, C.mist).setOrigin(1, 0));
+        this.deckLayer.add(ptext(this.scene, r.x + r.w / 2, r.y + r.h - PX * 10, '左键加入 · 右键移出', { color: INK.slate, origin: [0.5, 0.5], fx: 'none' }).setColor(hex(INK.mist)));
     }
 
     private refreshDeckHeader() {
@@ -788,43 +500,27 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         const r = this.deckRect;
         const deck = this.deck;
         if (!deck) {
-            h.add(this.text(r.x + 20, r.y + 20, '尚无卡组', 24, C.mist));
+            h.add(ptext(this.scene, r.x + PX * 8, r.y + PX * 8, '未选择卡组', { color: INK.mist }));
             return;
         }
         const count = countDeckCards(deck.cards);
-        const ok = count >= DECK_CARD_MIN && count <= DECK_CARD_MAX;
-        const col = ok ? C.celadon : count > DECK_CARD_MAX ? C.cinnabar : C.gold;
-        const name = this.text(r.x + 18, r.y + 16, deck.name, 24, C.paper, { stroke: hex(C.void), strokeThickness: 4 });
-        if (name.width > r.w - 150) name.setScale((r.w - 150) / name.width);
-        name.setInteractive({ useHandCursor: true });
-        name.on('pointerdown', () => this.startRename());
-        h.add(name);
-        this.countPopTarget = this.text(r.x + r.w - 96, r.y + 30, `${count}`, 36, col, { stroke: hex(C.void), strokeThickness: 6 }).setOrigin(1, 0.5);
-        h.add(this.countPopTarget);
-        h.add(this.text(r.x + r.w - 92, r.y + 40, `/ ${DECK_CARD_MIN}–${DECK_CARD_MAX}`, 12, C.mist).setOrigin(0, 0.5));
-        // meter with min marker
-        const mx = r.x + 18, my = r.y + 66, mw = r.w - 36, mh = 22;
-        const g = this.scene.add.graphics().setPosition(mx, my);
-        g.fillStyle(C.void, 1).fillRect(0, 0, mw, mh);
-        g.fillStyle(C.ink, 1).fillRect(3, 3, mw - 6, mh - 6);
-        const fill = Math.round(((mw - 6) * Math.min(1, count / DECK_CARD_MAX)) / 4) * 4;
-        g.fillStyle(col, 1).fillRect(3, 3, fill, mh - 6);
-        g.fillStyle(C.paper, 0.3).fillRect(3, 3, fill, 3);
-        const minX = 3 + Math.round(((mw - 6) * DECK_CARD_MIN) / DECK_CARD_MAX);
-        g.fillStyle(C.glow, 1).fillRect(minX - 2, -4, 4, mh + 8);
-        g.fillStyle(C.void, 0.4);
-        for (let i = 1; i < DECK_CARD_MAX; i++) if (i % 5 === 0) g.fillRect(3 + Math.round(((mw - 6) * i) / DECK_CARD_MAX), 3, 2, mh - 6);
-        h.add(g);
-        h.add(this.text(mx + minX, my + mh + 8, `${DECK_CARD_MIN}`, 12, C.glow).setOrigin(0.5, 0));
-        // status line
         const issues = validateDeckAvailability(deck.cards, this.stash.cards);
-        const status = issues.length ? `有 ${issues.length} 种卡的库存不足，请调整`
-            : count < DECK_CARD_MIN ? `还差 ${DECK_CARD_MIN - count} 张才能出发`
-                : count > DECK_CARD_MAX ? `超出上限 ${count - DECK_CARD_MAX} 张`
-                    : '卡组合格，可以出发';
-        h.add(this.text(mx, my + mh + 30, status, 12, issues.length ? C.cinnabar : col));
+        const ok = count >= DECK_CARD_MIN && count <= DECK_CARD_MAX && issues.length === 0;
+        if (!this.nativeText.isActive(NAME_SESSION)) {
+            const name = ptext(this.scene, r.x + PX * 8, r.y + PX * 5, clip(deck.name, Math.floor((r.w - PX * 16) / 72)), { size: 2, color: INK.paper });
+            name.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.startRename());
+            h.add(name);
+        }
+        const num = this.scene.add.bitmapText(r.x + PX * 8, r.y + PX * 42, numberFont(this.scene, ok ? INK.spirit : INK.amber), `${count}`).setOrigin(0, 0.5).setScale(PX * 2);
+        num.setLetterSpacing(-1);
+        h.add(num);
+        h.add(ptext(this.scene, r.x + PX * 10 + num.displayWidth, r.y + PX * 42, `/ ${DECK_CARD_MIN}-${DECK_CARD_MAX}`, { color: INK.mist, origin: [0, 0.5] }));
+        const status = count < DECK_CARD_MIN ? `还差 ${DECK_CARD_MIN - count} 张`
+            : count > DECK_CARD_MAX ? `超出 ${count - DECK_CARD_MAX} 张`
+                : issues.length ? `库存不足 ${issues.length} 种` : '卡组合格，可以出发';
+        h.add(ptext(this.scene, r.x + PX * 8, r.y + PX * 60, status, { color: ok ? INK.spirit : INK.vermilion, origin: [0, 0.5] }));
         if (count < DECK_CARD_MIN) {
-            h.add(this.button(mx, r.y + 134, mw, 38, '补齐至 20 张', PANEL_JADE, 20, () => this.topUpDeck()));
+            h.add(pbutton(this.scene, { x: r.x + r.w - PX * 26, y: r.y + PX * 42, width: PX * 40, height: PX * 18, label: '补齐', style: 'jade', onClick: () => this.topUpDeck() }));
         }
     }
 
@@ -832,228 +528,66 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         const region = this.listScroll;
         region.content.removeAll(true);
         const deck = this.deck;
-        if (!deck) { region.height = 0; this.setScroll(region, 0); return; }
-        const issues = new Set(validateDeckAvailability(deck.cards, this.stash.cards).map(i => (i.kind === 'insufficient-copies' ? i.cardId : '')));
-        const groups = new Map<string, ExpeditionCardStack[]>();
-        deck.cards.forEach(stack => {
-            const k = this.kindOf(stack.id) ?? 'unit';
-            if (!groups.has(k)) groups.set(k, []);
-            groups.get(k)!.push(stack);
-        });
-        let y = 4;
-        const w = region.rect.w - 12;
-        KIND_ORDER.forEach(kind => {
-            const stacks = groups.get(kind);
-            if (!stacks?.length) return;
-            const total = stacks.reduce((n, s) => n + s.count, 0);
-            region.content.add(this.scene.add.rectangle(4, y + 12, 6, 16, KIND_COLOR[kind]).setOrigin(0, 0.5));
-            region.content.add(this.text(18, y + 12, `${KIND_LABEL[kind]}  ${total}`, 12, KIND_COLOR[kind]).setOrigin(0, 0.5));
-            y += 30;
-            stacks.sort((a, b) => this.nameOf(a.id).localeCompare(this.nameOf(b.id), 'zh-Hans-CN')).forEach(stack => {
-                region.content.add(this.buildRow(stack, kind, 0, y, w, issues.has(stack.id)));
-                y += 50;
-            });
-            y += 6;
-        });
-        if (!deck.cards.length) {
-            region.content.add(this.text(w / 2, 60, '空空如也\n从左侧储物袋点选卡牌加入', 24, C.mist, { align: 'center', lineSpacing: 10 }).setOrigin(0.5, 0));
-            y = 200;
+        if (!deck) return;
+        const w = region.rect.w;
+        const rowH = PX * 20;
+        let y = 0;
+        const missing = new Set(validateDeckAvailability(deck.cards, this.stash.cards).map((issue) => (issue as { cardId?: string }).cardId));
+        for (const kind of KIND_ORDER) {
+            const stacks = deck.cards.filter((c) => c.count > 0 && (this.kindOf(c.id) ?? 'unit') === kind);
+            if (!stacks.length) continue;
+            const total = stacks.reduce((n, c) => n + c.count, 0);
+            region.content.add(addIcon(this.scene, PX * 8, y + PX * 7, KIND_ICON[kind]));
+            region.content.add(ptext(this.scene, PX * 16, y + PX * 7, `${KIND_LABEL[kind]}  ${total}`, { color: INK.gold, origin: [0, 0.5] }));
+            y += PX * 15;
+            for (const stack of stacks) {
+                const bad = missing.has(stack.id);
+                region.content.add(panel(this.scene, w / 2, y + rowH / 2, w, rowH, 'slate'));
+                const nameChars = Math.floor((w - PX * 60) / 36);
+                region.content.add(ptext(this.scene, PX * 6, y + rowH / 2 - PX, clip(this.nameOf(stack.id), nameChars), { color: bad ? INK.vermilion : INK.paper, origin: [0, 0.5] }));
+                region.content.add(this.scene.add.bitmapText(w - PX * 44, y + rowH / 2, numberFont(this.scene, INK.bone), `x${stack.count}`).setOrigin(1, 0.5).setScale(PX));
+                const minus = pbutton(this.scene, { x: w - PX * 30, y: y + rowH / 2 - PX, width: PX * 14, height: PX * 16, label: '-', style: 'slate', onClick: () => this.removeCard(stack.id) });
+                const plus = pbutton(this.scene, { x: w - PX * 12, y: y + rowH / 2 - PX, width: PX * 14, height: PX * 16, label: '+', style: 'jade', onClick: () => this.addCard(stack.id) });
+                const hit = this.scene.add.rectangle((w - PX * 44) / 2, y + rowH / 2, w - PX * 44, rowH, 0, 0.001).setInteractive({ useHandCursor: true });
+                hit.on('pointerover', (p: Phaser.Input.Pointer) => this.showCardTip(stack.id, this.deckRect.x - PX * 156, p.y - PX * 30));
+                hit.on('pointerout', () => this.tip.hide());
+                hit.on('pointerdown', (p: Phaser.Input.Pointer) => { if (p.rightButtonDown()) this.removeCard(stack.id); });
+                region.content.add([hit, minus, plus]);
+                y += rowH + PX * 2;
+            }
+            y += PX * 4;
         }
-        region.height = y + 8;
+        region.height = y;
         this.setScroll(region, region.offset);
     }
 
-    private buildRow(stack: ExpeditionCardStack, kind: CardKind, x: number, y: number, w: number, bad: boolean) {
-        const c = this.scene.add.container(x, y);
-        const g = this.scene.add.graphics();
-        const rc = this.rarityColor(stack.id);
-        const draw = (hot: boolean) => {
-            g.clear();
-            drawPixelFrame(g, w, 44, { shadow: false, fill: bad ? C.blood : hot ? C.olive : C.ink, edge: C.void, border: bad ? C.cinnabar : hot ? C.lime : C.dusk, hi: C.haze, lo: C.void, stud: null });
-            g.fillStyle(rc, 1).fillRect(8, 8, 6, 28);
-        };
-        draw(false);
-        c.add(g);
-        c.add(this.text(28, 22, KIND_GLYPH[kind], 24, KIND_COLOR[kind]).setOrigin(0, 0.5));
-        const name = this.text(66, 22, this.nameOf(stack.id), 24, C.paper).setOrigin(0, 0.5);
-        if (name.width > w - 66 - 130) name.setScale((w - 66 - 130) / name.width);
-        c.add(name);
-        c.add(this.text(w - 92, 22, `×${stack.count}`, 24, C.glow).setOrigin(1, 0.5));
-        const btn = (bx: number, label: string, cb: () => void) => {
-            const b = this.scene.add.graphics().setPosition(bx, 6);
-            b.fillStyle(C.night, 1).fillRect(0, 0, 32, 32);
-            b.lineStyle(2, C.haze, 1).strokeRect(1, 1, 30, 30);
-            b.fillStyle(C.paper, 1).fillRect(8, 14, 16, 4);
-            if (label === '+') b.fillRect(14, 8, 4, 16);
-            c.add(b);
-            const hit = this.scene.add.rectangle(bx + 16, 22, 32, 32, 0x000000, 0.001).setInteractive({ useHandCursor: true });
-            hit.on('pointerdown', (p: Phaser.Input.Pointer) => {
-                if (!this.inside(this.listScroll.rect, p)) return;
-                cb();
-            });
-            c.add(hit);
-        };
-        btn(w - 84, '-', () => this.removeCard(stack.id, 1, { x: this.collRect.x + this.collRect.w / 2, y: this.collRect.y + this.collRect.h / 2 }));
-        btn(w - 44, '+', () => this.addCard(stack.id, { x: this.deckRect.x + w - 30, y: this.listScroll.rect.y + y - this.listScroll.offset + 22 }));
-        const area = this.scene.add.rectangle(w / 2 - 50, 22, w - 110, 44, 0x000000, 0.001).setInteractive({ useHandCursor: true });
-        area.on('pointerover', () => { draw(true); this.setPreview(stack.id); });
-        area.on('pointerout', () => draw(false));
-        c.add(area);
-        return c;
-    }
-
-    // ---------------------------------------------------------------------------------------
-    // preview
-    // ---------------------------------------------------------------------------------------
-    private setPreview(id: string) {
-        this.hoverCardId = id;
-        if (this.portrait) return;
-        if (this.lastPreviewId === id) return;
-        this.lastPreviewId = id;
-        this.renderPreview();
-    }
-
-    private renderPreview() {
-        const box = this.previewBox;
-        box.removeAll(true);
-        const r = this.deckRect;
-        const ph = 300;
-        const px = r.x + 10, py = r.y + r.h - ph - 74 - 4;
-        const g = this.scene.add.graphics().setPosition(px, py);
-        drawPixelFrame(g, r.w - 20, ph, { shadow: false, fill: C.ink, edge: C.void, border: C.dusk, hi: C.haze, lo: C.void, stud: C.gold });
-        box.add(g);
-        const id = this.hoverCardId ?? this.deck?.cards[0]?.id ?? this.stash.cards[0]?.id;
-        if (!id) { box.add(this.text(px + (r.w - 20) / 2, py + ph / 2, '悬停卡牌查看详情', 24, C.mist).setOrigin(0.5)); return; }
-        const data = this.config.previewResolver(id);
-        const meta = this.meta(id);
-        if (data) {
-            const sprite = CardSpriteFactory.createSprite(this.scene, data as never, px + 16 + 102, py + ph / 2, 0.92);
-            if (sprite) {
-                sprite.disableDragging(); sprite.disableInteractive(); sprite.setDisplayMode('hover');
-                box.add(sprite);
-                sprite.setAlpha(0); this.scene.tweens.add({ targets: sprite, alpha: 1, y: sprite.y, duration: 120 });
-            }
-        }
-        const tx = px + 230, tw = r.w - 20 - 230 - 14;
-        box.add(this.text(tx, py + 18, meta.name ?? id, 24, C.paper, { wordWrap: { width: tw }, stroke: hex(C.void), strokeThickness: 4 }));
-        const kind = meta.kind;
-        const tags = [kind ? KIND_LABEL[kind] : null, meta.gradeLabel, meta.rarity ? { common: '凡品', uncommon: '良品', rare: '珍品', epic: '极品', legendary: '传说' }[meta.rarity] : null, meta.race].filter(Boolean).join(' · ');
-        box.add(this.text(tx, py + 58, tags, 12, kind ? KIND_COLOR[kind] : C.mist, { wordWrap: { width: tw } }));
-        const stats: string[] = [];
-        if (meta.attack !== undefined) stats.push(`攻 ${meta.attack}`);
-        if (meta.health !== undefined) stats.push(`命 ${meta.health}`);
-        if (meta.attackBonus) stats.push(`攻+${meta.attackBonus}`);
-        if (meta.healthBonus) stats.push(`命+${meta.healthBonus}`);
-        if (stats.length) box.add(this.text(tx, py + 82, stats.join('   '), 24, C.ember));
-        const desc = meta.effectSummary ?? meta.description ?? '';
-        box.add(this.text(tx, py + (stats.length ? 120 : 92), desc, 12, C.fog, { wordWrap: { width: tw, useAdvancedWrap: true }, lineSpacing: 6 }));
-        const own = this.owned(id), used = this.inDeck(id);
-        box.add(this.text(tx, py + ph - 30, `库存 ${own}   已带 ${used}   同名上限 ${meta.limitPerDeck ?? DEFAULT_LIMIT_PER_DECK}`, 12, C.celadon));
-    }
-
-    // ---------------------------------------------------------------------------------------
-    // feedback
-    // ---------------------------------------------------------------------------------------
-    private button(x: number, y: number, w: number, h: number, label: string, s: PanelStyle, size: number, onClick: () => void) {
-        const c = this.scene.add.container(x, y);
-        const g = this.scene.add.graphics();
-        const draw = (hot: boolean) => { g.clear(); drawPixelFrame(g, w, h, hot ? { ...s, border: C.gold, hi: C.glow, shadow: false } : { ...s, shadow: false }); };
-        draw(false);
-        const t = this.text(w / 2, h / 2, label, size, C.paper, { stroke: hex(C.void), strokeThickness: 4 }).setOrigin(0.5);
-        if (t.width > w - 16) t.setScale((w - 16) / t.width);
-        const hit = this.scene.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.001).setInteractive({ useHandCursor: true });
-        hit.on('pointerover', () => draw(true));
-        hit.on('pointerout', () => draw(false));
-        hit.on('pointerdown', () => { this.scene.tweens.add({ targets: c, y: y + 3, duration: 60, yoyo: true }); onClick(); });
-        c.add([g, t, hit]);
-        return c;
-    }
-
+    // ------------------------------------------------------------------------------ feedback
     private toast(msg: string, tone: 'ok' | 'warn') {
-        const r = this.collRect;
-        this.toastLayer.removeAll(true);
-        const t = this.text(r.x + r.w / 2, r.y + r.h - 64, msg, 24, tone === 'ok' ? C.celadon : C.ember, { stroke: hex(C.void), strokeThickness: 6 }).setOrigin(0.5);
-        const bg = this.scene.add.rectangle(t.x, t.y, t.width + 40, 44, C.void, 0.8).setStrokeStyle(2, tone === 'ok' ? C.jade : C.ember);
-        this.toastLayer.add([bg, t]);
-        this.toastLayer.setAlpha(0).setY(10);
-        this.scene.tweens.killTweensOf(this.toastLayer);
-        this.scene.tweens.add({
-            targets: this.toastLayer, alpha: 1, y: 0, duration: 140, ease: 'Cubic.easeOut',
-            onComplete: () => this.scene.tweens.add({ targets: this.toastLayer, alpha: 0, duration: 300, delay: 1600 }),
-        });
+        const { width, height } = this.scene.scale;
+        const t = ptext(this.scene, 0, 0, msg, { color: tone === 'ok' ? INK.spirit : INK.amber, origin: [0.5, 0.5] });
+        const bg = panel(this.scene, 0, 0, snap(t.width + PX * 20), PX * 20, 'ink');
+        const c = this.scene.add.container(snap(width / 2), snap(height - PX * 30), [bg, t]).setDepth(1600);
+        this.scene.tweens.add({ targets: c, y: c.y - PX * 6, alpha: { from: 1, to: 0 }, delay: 1600, duration: 400, onComplete: () => c.destroy() });
     }
 
-    private pulse(o: GameObjects.Container) {
-        this.scene.tweens.add({ targets: o, alpha: { from: 0.4, to: 1 }, duration: 160 });
-    }
-
-    private popCount(direction: 1 | -1) {
-        const t = this.countPopTarget;
-        if (!t || !t.active) return;
-        t.setScale(direction > 0 ? 1.5 : 0.75);
-        this.scene.tweens.add({ targets: t, scale: 1, duration: 200, ease: 'Back.easeOut' });
-    }
-
-    /** A small kind-coloured card token that flies between the collection and the deck list. */
-    private flyToken(id: string, at: { x: number; y: number } | undefined, adding: boolean) {
-        if (!at) return;
-        const kind = this.kindOf(id);
-        const color = kind ? KIND_COLOR[kind] : C.mist;
-        const token = this.scene.add.container(at.x, at.y);
-        token.add(this.scene.add.rectangle(0, 0, 40, 56, C.night).setStrokeStyle(4, color));
-        token.add(this.text(0, 0, kind ? KIND_GLYPH[kind] : '牌', 24, color).setOrigin(0.5));
-        this.add(token);
-        token.setDepth(50);
-        const dst = this.countPopTarget ? { x: this.countPopTarget.x - 30, y: this.countPopTarget.y } : { x: this.deckRect.x + 200, y: this.deckRect.y + 40 };
-        const from = adding ? at : dst;
-        const to = adding ? dst : at;
-        token.setPosition(from.x, from.y);
-        this.scene.tweens.add({
-            targets: token, x: to.x, y: to.y, scale: adding ? 0.5 : 1.2, alpha: { from: 1, to: 0.15 },
-            duration: 380, ease: 'Cubic.easeInOut', onComplete: () => token.destroy(),
-        });
-    }
-
-    private playEntrance() {
-        if (this.portrait) return;
-        const slide = (layer: GameObjects.Container, dx: number, delay: number) => {
-            layer.setAlpha(0).setX(dx);
-            this.scene.tweens.add({ targets: layer, alpha: 1, x: 0, duration: 280, delay, ease: 'Cubic.easeOut' });
-        };
-        slide(this.railLayer, -40, 40);
-        slide(this.collLayer, 0, 100);
-        this.collLayer.y = 24; this.scene.tweens.add({ targets: this.collLayer, y: 0, duration: 300, delay: 100, ease: 'Cubic.easeOut' });
-        slide(this.deckLayer, 40, 160);
-    }
-
-    // ---------------------------------------------------------------------------------------
-    // refresh + input
-    // ---------------------------------------------------------------------------------------
     private refreshAll() {
         this.refreshRail();
+        this.refreshToolbar();
         this.refreshGrid();
         this.refreshDeckHeader();
         this.refreshList();
-        if (!this.portrait) this.renderPreviewIfChanged();
-    }
-
-    private renderPreviewIfChanged() {
-        // stats such as "已带 n" change on every edit, so always refresh, but keep the same card
-        this.lastPreviewId = this.hoverCardId;
-        this.renderPreview();
     }
 
     private bindInput() {
         const onWheel = (p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => {
-            const step = Math.sign(dy) * 70;
-            if (this.gridScroll.content.visible && this.inside(this.gridScroll.rect, p)) this.setScroll(this.gridScroll, this.gridScroll.offset + step);
-            else if (this.listScroll.content.visible && this.inside(this.listScroll.rect, p)) this.setScroll(this.listScroll, this.listScroll.offset + step);
+            const step = Math.sign(dy) * PX * 30;
+            if (this.inside(this.gridScroll.rect, p)) this.setScroll(this.gridScroll, this.gridScroll.offset + step);
+            else if (this.inside(this.listScroll.rect, p)) this.setScroll(this.listScroll, this.listScroll.offset + step);
             else if (this.inside(this.railScroll.rect, p)) this.setScroll(this.railScroll, this.railScroll.offset + step);
         };
         this.scene.input.on('wheel', onWheel);
         this.bound.push(() => this.scene.input.off('wheel', onWheel));
         this.scene.input.mouse?.disableContextMenu();
-
         const onKey = (e: KeyboardEvent) => {
             if (this.nativeText.isFocused(SEARCH_SESSION) || this.nativeText.isFocused(NAME_SESSION)) return;
             if (e.key === 'Escape') this.close();
@@ -1067,10 +601,9 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
     destroy(fromScene?: boolean): void {
         this.bound.forEach(f => f()); this.bound = [];
         this.nativeText.destroy();
+        this.tip.destroy();
         [this.railScroll, this.gridScroll, this.listScroll].forEach(r => r?.mask?.destroy());
-        this.tileCache.clear();
-        this.scene.tweens.killTweensOf(this.toastLayer);
-        this.scene.events.emit('clearCardPreviewContext', DECK_MANAGEMENT_CARD_PREVIEW_CONTEXT_ID);
+        this.scene?.events.emit('clearCardPreviewContext', DECK_MANAGEMENT_CARD_PREVIEW_CONTEXT_ID);
         super.destroy(fromScene);
     }
 }
