@@ -47,7 +47,7 @@ export class MainMenu extends Scene {
         const logoY = snap(height * 0.34);
         this.logo = ptitle(this, width / 2, logoY, '青云问道', 4, { face: INK.paper, lower: INK.bone, extrude: INK.cinnabar, extrudeDepth: 3 }).setDepth(20);
         const seal = this.drawSeal(snap(width / 2 + this.logo.displayWidth / 2 - PX * 2), snap(logoY + this.logo.displayHeight / 2 - PX * 4)).setDepth(21);
-        const tag = ptext(this, width / 2, logoY + this.logo.displayHeight / 2 + PX * 10, '— 一 匣 卡 牌 · 一 条 仙 路 —', { color: INK.mist, origin: [0.5, 0.5], fx: 'outline' }).setDepth(20);
+        ptext(this, width / 2, logoY + this.logo.displayHeight / 2 + PX * 10, '— 一 匣 卡 牌 · 一 条 仙 路 —', { color: INK.mist, origin: [0.5, 0.5], fx: 'outline' }).setDepth(20);
 
         this.logo.setY(-200);
         this.tweens.add({ targets: this.logo, y: logoY, duration: 700, ease: 'Bounce.easeOut', delay: 250 });
