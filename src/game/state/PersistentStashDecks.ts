@@ -154,6 +154,58 @@ export function countDeckCards(cards: readonly ExpeditionCardStack[]): number {
     return total;
 }
 
+/**
+ * Brings an older seeded deck up to the current starter-deck definition without
+ * touching user-created decks. The collection is topped up as well so the
+ * repaired deck passes the availability check on the same boot.
+ */
+export function upgradeSeededDeckToMinimum(
+    stash: PersistentStash,
+    seededDeckId: string,
+    seededCards: readonly ExpeditionCardStack[],
+): PersistentStash {
+    if (countDeckCards(seededCards) < DECK_CARD_MIN) {
+        return stash;
+    }
+
+    const seededDeck = stash.savedDecks.find((savedDeck) => savedDeck.id === seededDeckId);
+
+    if (!seededDeck || countDeckCards(seededDeck.cards) >= DECK_CARD_MIN) {
+        return stash;
+    }
+
+    const seededCounts = new Map(seededCards.map((card) => [card.id, card.count]));
+    const canUpgrade = seededDeck.cards.every((card) => {
+        const seededCount = seededCounts.get(card.id);
+        return seededCount !== undefined && card.count <= seededCount;
+    });
+
+    if (!canUpgrade) {
+        return stash;
+    }
+
+    const upgradedCards = cloneDeckCardStacks(seededCards);
+    const upgradedCollection = cloneDeckCardStacks(stash.cards);
+
+    for (const card of upgradedCards) {
+        const ownedCard = upgradedCollection.find((owned) => owned.id === card.id);
+
+        if (ownedCard) {
+            ownedCard.count = Math.max(ownedCard.count, card.count);
+        } else {
+            upgradedCollection.push({ ...card });
+        }
+    }
+
+    return {
+        ...stash,
+        cards: upgradedCollection,
+        savedDecks: stash.savedDecks.map((savedDeckEntry) => savedDeckEntry.id === seededDeckId
+            ? { ...savedDeckEntry, cards: cloneDeckCardStacks(upgradedCards) }
+            : { ...savedDeckEntry, cards: cloneDeckCardStacks(savedDeckEntry.cards) }),
+    };
+}
+
 export function summarizeDeckCapacity(cards: readonly ExpeditionCardStack[]): DeckCapacitySummary {
     const count = countDeckCards(cards);
 

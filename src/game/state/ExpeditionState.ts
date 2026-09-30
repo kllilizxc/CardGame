@@ -27,6 +27,10 @@ import {
     createStartingLoadoutFromStash,
     mergeItemStacks,
 } from './GameWorldStateStashOperations';
+import {
+    DEFAULT_SAVED_DECK_ID,
+    upgradeSeededDeckToMinimum,
+} from './PersistentStashDecks';
 import type {
     ExpeditionItemType,
     ExpeditionMapDefinition,
@@ -189,10 +193,11 @@ export class ExpeditionState {
                 ?? undefined,
         );
         const normalizedRouteKey = normalizeActiveRunRouteKey(activeRunRouteKey, normalizedTargetIdentity);
-        const persistentStash = loadPersistentStash(storage) ?? createPersistentStashFromWorldStateSeed({
-            worldState,
-            starterDeck,
-        });
+        const loadedStash = loadPersistentStash(storage);
+        const seededDeckId = worldState.stash?.deckRef ?? DEFAULT_SAVED_DECK_ID;
+        const persistentStash = loadedStash
+            ? upgradeSeededDeckToMinimum(loadedStash, seededDeckId, starterDeck.cards)
+            : createPersistentStashFromWorldStateSeed({ worldState, starterDeck });
         const activeRun = loadActiveRun(activeRunRouteKey ?? normalizedRouteKey, normalizedTargetIdentity, storage);
 
         savePersistentStash(persistentStash, storage);
