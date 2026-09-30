@@ -3,6 +3,9 @@ import type { Scene } from 'phaser';
 export const NEAREST = 1;
 import { loadWenxinMaterials, type WenxinMaterials, type PixelSurface } from './materials.js';
 import { unitArt } from './presentation';
+import { paintCardFace, type CardKindKey } from '../cardArt';
+import { iconPix, type PixIcon } from '../icons';
+import { getUnitStar } from '../../utils/RealmHelper';
 
 let materials: WenxinMaterials | undefined;
 let loading: Promise<WenxinMaterials> | undefined;
@@ -36,38 +39,27 @@ export async function ensureWenxinArt(scene: Scene) {
     if (!scene.textures.exists('wenxin:back')) scene.textures.addImage('wenxin:back', frames.get('back')!)!.setFilter(NEAREST);
     return art;
 }
-export interface VisualCard { id: string; name?: string; kind?: string; description?: string; race?: string; rarity?: string; attack?: number; health?: number }
-/** Printed art contains immutable labels only; live unit stats remain Phaser text. */
+export interface VisualCard { id: string; name?: string; kind?: string; description?: string; race?: string; rarity?: string; attack?: number; health?: number; realmId?: string; weaponType?: string }
+
+const KIND_ICON: Record<string, PixIcon> = { artifact: 'sword', talisman: 'talisman', field: 'mountain', pill: 'pill', skill: 'scroll', unit: 'star' };
+
+/**
+ * The pixel card face (60x86 art px). Printed art holds immutable labels only; live unit
+ * stats are drawn by the sprite on top of the empty badges.
+ */
 export function wenxinCardTexture(scene: Scene, card: VisualCard): string | undefined {
-    if (!materials || !card.name) return;
-    const key = `wenxin:card:${card.id}:${card.name}:${card.kind ?? ''}`;
+    if (!card.name) return;
+    const key = `pxcard:${card.id}:${card.name}:${card.kind ?? ''}`;
     if (scene.textures.exists(key)) return key;
     const mon = unitArt(card.id);
-    const kind = card.kind ?? (mon ? 'unit' : 'skill');
-    const frame = kind === 'unit' ? (mon === 'sage' ? 'sage' : mon === 'disc' ? 'disc' : 'fox') : kind === 'talisman' ? 'talis' : 'sword';
-    const { o, ox: x } = pixelSurface(360, 520);
-    x.drawImage(frames.get(frame)!, 0, 0, 360, 520);
-    if (mon || kind === 'talisman' || kind === 'artifact' && card.name.includes('剑')) {
-        const art = materials.cardArt({ mon, theme: mon === 'fox' ? 'forest' : mon === 'sage' ? 'gold' : 'sky', key: kind === 'talisman' ? 'talis' : 'sword' });
-        x.drawImage(art, 22, 85, 316, 282);
-    } else {
-        x.drawImage(materials.background(kind === 'field' ? 'story' : 'gallery', 112, 100), 22, 85, 316, 282);
-        x.fillStyle = '#202e2a'; x.fillRect(139, 180, 82, 88);
-        x.strokeStyle = '#c6aa7a'; x.lineWidth = 4; x.strokeRect(143, 184, 74, 80);
-        x.font = '48px serif'; x.fillStyle = '#eee4d3'; x.textAlign = 'center';
-        x.fillText(kind === 'pill' ? '丹' : kind === 'field' ? '境' : kind === 'artifact' ? '器' : '诀', 180, 241);
+    const kind = (card.kind ?? (mon ? 'unit' : 'skill')) as CardKindKey;
+    let art: HTMLCanvasElement | undefined;
+    if (materials && (mon || kind === 'talisman' || (kind === 'artifact' && card.name.includes('剑')))) {
+        art = materials.cardArt({ mon, theme: 'sky', key: kind === 'talisman' ? 'talis' : 'sword' });
     }
-    x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#eee4d3';
-    x.font = `bold ${card.name.length > 10 ? 19 : 23}px "Noto Serif SC", serif`;
-    x.fillText(card.name, 180, 48, 280);
-    x.font = '17px sans-serif';
-    const labels: Record<string, string> = { unit: card.race ?? '灵契', talisman: '符箓', artifact: '法器', field: '场地', pill: '丹药', skill: '功法' };
-    x.fillText(labels[kind] ?? kind, 168, 394, 268);
-    // The lower parchment leaves space for the existing interactive gongfa and values.
-    if (kind !== 'unit') {
-        x.fillStyle = '#303a42'; x.font = '16px sans-serif';
-        const chars = [...(card.description ?? '')];
-        for (let i = 0; i < Math.min(3, Math.ceil(chars.length / 17)); i++) x.fillText(chars.slice(i * 17, (i + 1) * 17).join(''), 178, 441 + i * 21, 284);
-    }
-    return addPixelTexture(scene, key, o);
+    let stars = 0;
+    if (kind === 'unit') { try { stars = getUnitStar(card as never); } catch { stars = 0; } }
+    const face = paintCardFace({ name: card.name, kind, rarity: card.rarity, stars, art, icon: art ? undefined : iconPix(KIND_ICON[kind] ?? 'star') });
+    const cv = face.toCanvas();
+    return addPixelTexture(scene, key, cv);
 }

@@ -616,8 +616,7 @@ export class BattleScene extends Scene {
     private setupCardPreview() {
         this.events.on('showCardPreview', (card: BaseCardSprite, metadata?: CardPreviewMetadata) => {
             if (this.hoverCard) {
-                // Hand cards raise themselves in the fan; only board units need the inspector.
-                if (!this.hand.includes(card as never)) this.hoverCard.showFromSprite(card, metadata);
+                this.hoverCard.showFromSprite(card, metadata);
                 return;
             }
             this.cardPreviewManager.showFromSprite(card, metadata);

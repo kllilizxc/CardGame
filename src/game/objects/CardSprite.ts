@@ -1,6 +1,7 @@
 import { WenxinUnitView } from '../art/wenxin/WenxinUnitView';
 import { unitArt, UNIT_ART, type BattleSide } from '../art/wenxin/presentation';
-import { C, T } from '../art/palette';
+import { C, INK, T } from '../art/palette';
+import { numberFont } from '../art/kit';
 import { iconTexture, STATUS_ICON } from '../art/sprites';
 import { GameObjects } from 'phaser';
 import type { UnitCard } from '@data/types/cards/unit';
@@ -19,7 +20,7 @@ import { GongfaTooltip } from '../ui/common/GongfaTooltip';
 import { describeGongfa } from '../utils/GongfaDescriptionBuilder';
 import { getUnitStar, getRealmConfig } from '../utils/RealmHelper';
 import { getStatusCategoryColor, getStatusFullDescription } from '../utils/StatusHelper';
-import { selectedCardFace, watchCardFace } from './cardFaceAppearance';
+import { watchCardFace } from './cardFaceAppearance';
 import { isPortraitGameViewport } from '../layout/gameViewport';
 
 export class CardSprite extends BaseCardSprite {
@@ -40,6 +41,8 @@ export class CardSprite extends BaseCardSprite {
     private statusTooltip?: GameObjects.Container;
     private faceImage?: GameObjects.Image;
     private faceRealmText?: GameObjects.Text;
+    private faceAtk?: GameObjects.BitmapText;
+    private faceHp?: GameObjects.BitmapText;
     private releaseFace?: () => void;
 
     constructor(scene: Phaser.Scene, x: number, y: number, cardData: UnitCard, scale: number = 1) {
@@ -171,22 +174,18 @@ export class CardSprite extends BaseCardSprite {
             this.faceRealmText = undefined;
             for (const { object, visible } of original) if (object.active) object.setVisible(visible);
             this.background.setFillStyle(this.palette.shell, .98);
+            this.faceAtk?.destroy(); this.faceHp?.destroy();
+            this.faceAtk = undefined; this.faceHp = undefined;
             if (key) {
-                this.faceImage = scene.add.image(0, 0, key).setDisplaySize(180, 260);
+                // Pixel face: 60x86 art px at 3x. Live stats sit in the painted badges.
+                this.faceImage = scene.add.image(0, 0, key).setScale(3);
                 this.addAt(this.faceImage, 0);
-                for (const { object } of original) if (object !== this.attackText && object !== this.healthText) object.setVisible(false);
+                for (const { object } of original) object.setVisible(false);
                 this.background.setVisible(true).setFillStyle(this.palette.shell, 0);
-                const scroll = selectedCardFace(cardData.id, cardData.cardFace) === 'scroll';
-                const realm = getRealmConfig(cardData.realmId);
-                this.faceRealmText = scene.add.text(0, scroll ? -92 : -103, `${realm?.stage ?? ''}${realm?.phase ?? ''} ${'★'.repeat(getUnitStar(cardData))}`, {
-                    fontFamily: sceneTheme.fonts.ui, fontSize: '9px', resolution: 3, color: scroll ? '#655f4c' : '#d8cba5',
-                }).setOrigin(.5);
-                this.add(this.faceRealmText);
-                // Keep the original interactive gongfa names/tooltips available.
-                this.gongfaContainer.setScale(.5).setPosition(0, 83);
-                this.gongfaTexts.forEach(text => text.setColor('#425d57'));
-                this.attackText.setPosition(-67, 112).setFontSize(12).setStroke('', 0);
-                this.healthText.setPosition(67, 112).setFontSize(12).setStroke('', 0);
+                this.faceAtk = scene.add.bitmapText(-55, 108, numberFont(scene, INK.paper), '').setOrigin(0.5).setScale(3);
+                this.faceHp = scene.add.bitmapText(55, 108, numberFont(scene, INK.paper), '').setOrigin(0.5).setScale(3);
+                this.faceAtk.setLetterSpacing(-1); this.faceHp.setLetterSpacing(-1);
+                this.add([this.faceAtk, this.faceHp]);
             } else {
                 this.gongfaTexts.forEach(text => text.setColor(battleColorToHex(sceneTheme.colors.goldSoft)));
                 this.gongfaContainer.setScale(1).setPosition(0, 0);
@@ -236,6 +235,9 @@ export class CardSprite extends BaseCardSprite {
         
         // 更新生命值
         this.healthText.setText(`命 ${this.cardData.health}`);
+        this.faceAtk?.setText(`${this.cardData.attack}`);
+        this.faceHp?.setText(`${Math.max(0, this.cardData.health)}`);
+        this.faceHp?.setFont(numberFont(this.scene, this.cardData.health <= this.getOriginalHealth() * 0.3 ? INK.gold : INK.paper));
         this.attackText.setColor(this.faceImage ? '#673b39' : battleTheme.colors.textDanger);
         
         // 如果生命值过低，改变颜色提示
@@ -268,10 +270,11 @@ export class CardSprite extends BaseCardSprite {
             return;
         }
         if (this.faceImage) {
-            this.descriptionText.setVisible(false);
-            this.gongfaContainer.setVisible(true);
-            this.raceBox.setVisible(false);
-            this.raceText.setVisible(false);
+            for (const object of this.list) {
+                if (object === this.faceImage || object === this.faceAtk || object === this.faceHp || object === this.background) continue;
+                if (object === this.statusContainer) continue;
+                if ('setVisible' in object) (object as GameObjects.Image).setVisible(false);
+            }
             return;
         }
         const showExpandedDescription = this.currentDisplayMode === 'hover';

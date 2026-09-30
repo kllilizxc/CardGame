@@ -164,7 +164,7 @@ export abstract class BaseCardSprite extends GameObjects.Container {
             this.updateDisplayMode();
             if (key) {
                 for (const { object } of this.genericFaceOriginal ?? []) if (object.active) object.setVisible(false);
-                this.genericFaceImage = this.scene.add.image(0, 0, key).setDisplaySize(this.CARD_WIDTH, this.CARD_HEIGHT);
+                this.genericFaceImage = this.scene.add.image(0, 0, key).setScale(3);
                 this.addAt(this.genericFaceImage, 0);
             }
         });
@@ -256,7 +256,7 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      * 悬停时的处理（子类可重写）
      */
     protected onPointerOver(): void {
-        this.background.setStrokeStyle(4, sceneTheme.colors.goldSoft, 0.92);
+        this.background.setStrokeStyle(3, sceneTheme.colors.gold, 1);
         this.scene.events.emit('showCardPreview', this, this.getPreviewMetadata());
     }
 

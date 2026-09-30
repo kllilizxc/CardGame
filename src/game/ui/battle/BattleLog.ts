@@ -1,4 +1,6 @@
 import { Scene } from 'phaser';
+import { INK } from '../../art/palette';
+import { panel, ptext } from '../../art/kit';
 import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 import { GongfaTooltip } from '../common/GongfaTooltip';
 import type { PanelConfig } from '../../config/LayoutConfig';
@@ -54,37 +56,10 @@ export class BattleLog {
         this.container = scene.add.container(this.LOG_X, this.LOG_Y);
         this.container.setDepth(1500);
 
-        const shadow = scene.add.rectangle(10, 12, this.LOG_WIDTH, this.LOG_HEIGHT, sceneTheme.colors.shadow, 0.24);
-        this.background = scene.add.rectangle(0, 0, this.LOG_WIDTH, this.LOG_HEIGHT, sceneTheme.colors.panel, 0.96);
-        this.background.setStrokeStyle(3, sceneTheme.colors.gold, 0.72);
+        this.background = scene.add.rectangle(0, 0, this.LOG_WIDTH, this.LOG_HEIGHT, 0x000000, 0.001);
         this.background.setInteractive();
-        const inner = scene.add.rectangle(
-            0,
-            0,
-            this.LOG_WIDTH - 22,
-            this.LOG_HEIGHT - 22,
-            blendBattleColor(sceneTheme.colors.panelInner, sceneTheme.colors.jade, 0.08),
-            0.94,
-        );
-        inner.setStrokeStyle(1, sceneTheme.colors.jadeBright, 0.22);
-        const banner = scene.add.rectangle(
-            0,
-            -this.LOG_HEIGHT / 2 + 34,
-            this.LOG_WIDTH - 34,
-            42,
-            blendBattleColor(sceneTheme.colors.banner, sceneTheme.colors.gold, 0.14),
-            0.9,
-        );
-        banner.setStrokeStyle(1, sceneTheme.colors.goldSoft, 0.22);
-        this.container.add([shadow, this.background, inner, banner]);
-
-        // 标题
-        const title = scene.add.text(0, -this.LOG_HEIGHT / 2 + 20, '战斗日志', {
-            fontFamily: sceneTheme.fonts.display,
-            fontSize: Math.max(28, Math.floor(scene.scale.height * 0.026)) + 'px',
-            color: battleTheme.colors.textPrimary,
-        }).setOrigin(0.5);
-        this.container.add(title);
+        this.container.add([panel(scene, 0, 0, this.LOG_WIDTH, this.LOG_HEIGHT, 'ink'), this.background]);
+        this.container.add(ptext(scene, -this.LOG_WIDTH / 2 + 24, -this.LOG_HEIGHT / 2 + 12, '战斗日志', { color: INK.gold }));
 
         // 创建日志内容容器（用于滚动）
         this.logContainer = scene.add.container(0, 0);
@@ -93,23 +68,7 @@ export class BattleLog {
         // 创建滚动条
         this.createScrollBar();
 
-        // 滚动提示（左侧）
-        const scrollHint = scene.add.text(-this.LOG_WIDTH / 2 + 80, this.LOG_HEIGHT / 2 - 15, '[ 滚轮滚动 ]', {
-            fontFamily: sceneTheme.fonts.ui,
-            fontSize: Math.max(18, Math.floor(scene.scale.height * 0.017)) + 'px',
-            color: battleTheme.colors.textSupport,
-            fontStyle: 'italic',
-        }).setOrigin(0.5);
-        this.container.add(scrollHint);
-
-        // 位置提示（右侧）
-        this.bottomHint = scene.add.text(this.LOG_WIDTH / 2 - 80, this.LOG_HEIGHT / 2 - 15, '✓ 已到最新', {
-            fontFamily: sceneTheme.fonts.ui,
-            fontSize: Math.max(18, Math.floor(scene.scale.height * 0.017)) + 'px',
-            color: battleTheme.colors.textPositive,
-            fontStyle: 'bold',
-        }).setOrigin(0.5);
-        this.bottomHint.setVisible(true);
+        this.bottomHint = ptext(scene, this.LOG_WIDTH / 2 - 24, this.LOG_HEIGHT / 2 - 12, '✓ 最新', { color: INK.spirit, origin: [1, 1] });
         this.container.add(this.bottomHint);
 
         // 创建切换按钮
@@ -130,7 +89,7 @@ export class BattleLog {
         
         const portrait = isPortraitGameViewport(width, height);
         this.toggleButton = this.scene.add.container(width - (portrait ? 60 : width * 0.02 + 56), portrait ? 36 : height * 0.34);
-        this.toggleButton.setDepth(1501);
+        this.toggleButton.setDepth(1501).setVisible(false);
 
         const buttonShadow = this.scene.add.rectangle(4, 6, portrait ? 92 : 100, 48, sceneTheme.colors.shadow, 0.22);
         const btnBg = this.scene.add.rectangle(
@@ -427,238 +386,23 @@ export class BattleLog {
         y: number,
         text: string,
         cardRefs: Array<{ name: string; card: BaseCardSprite; cardData: any }>,
-        gongfaInfo: { name: string; description: string } | undefined,
-        fontSize: string,
+        _gongfaInfo: { name: string; description: string } | undefined,
+        _fontSize: string,
         maxWidth: number
     ): number {
-        // 解析文本，识别卡牌名称和功法标记
-        const parts: Array<{ 
-            text: string; 
-            isCard: boolean; 
-            isGongfa: boolean;
-            cardRef?: { name: string; card: BaseCardSprite; cardData: any };
-            gongfaInfo?: { name: string; description: string };
-        }> = [];
-        let remaining = text;
-        
-        // 分割文本，同时处理 <CARD> 和 <GONGFA> 标记
-        while (remaining.length > 0) {
-            const cardStart = remaining.indexOf('<CARD>');
-            const gongfaStart = remaining.indexOf('<GONGFA>');
-            
-            // 找到最近的标记
-            let nextMarkStart = -1;
-            let isNextCard = false;
-            
-            if (cardStart !== -1 && gongfaStart !== -1) {
-                if (cardStart < gongfaStart) {
-                    nextMarkStart = cardStart;
-                    isNextCard = true;
-                } else {
-                    nextMarkStart = gongfaStart;
-                    isNextCard = false;
-                }
-            } else if (cardStart !== -1) {
-                nextMarkStart = cardStart;
-                isNextCard = true;
-            } else if (gongfaStart !== -1) {
-                nextMarkStart = gongfaStart;
-                isNextCard = false;
-            }
-            
-            if (nextMarkStart === -1) {
-                // 没有更多标记
-                if (remaining.length > 0) {
-                    parts.push({ text: remaining, isCard: false, isGongfa: false });
-                }
-                break;
-            }
-            
-            // 添加标记前的普通文本
-            if (nextMarkStart > 0) {
-                parts.push({ text: remaining.substring(0, nextMarkStart), isCard: false, isGongfa: false });
-            }
-            
-            if (isNextCard) {
-                // 处理卡牌标记
-                const cardEnd = remaining.indexOf('</CARD>');
-                if (cardEnd === -1) break;
-                
-                const cardName = remaining.substring(cardStart + 6, cardEnd);
-                const cardRef = cardRefs.find(ref => ref.name === cardName);
-                
-                parts.push({ 
-                    text: `【${cardName}】`, 
-                    isCard: true,
-                    isGongfa: false,
-                    cardRef: cardRef
-                });
-                
-                remaining = remaining.substring(cardEnd + 7);
-            } else {
-                // 处理功法标记
-                const gongfaEnd = remaining.indexOf('</GONGFA>');
-                if (gongfaEnd === -1) break;
-                
-                const gongfaName = remaining.substring(gongfaStart + 8, gongfaEnd);
-                
-                parts.push({ 
-                    text: `【${gongfaName}】`, 
-                    isCard: false,
-                    isGongfa: true,
-                    gongfaInfo: gongfaInfo
-                });
-                
-                remaining = remaining.substring(gongfaEnd + 9);
-            }
+        // One pixel-text block per entry; card and technique names are bracketed for scanning.
+        const plain = text
+            .replace(/<CARD>(.*?)<\/CARD>/g, '【$1】')
+            .replace(/<GONGFA>(.*?)<\/GONGFA>/g, '〔$1〕');
+        const line = ptext(this.scene, x, y, plain, { color: INK.bone, wrap: Math.max(72, maxWidth), fx: 'none' });
+        if (cardRefs.length) {
+            line.setInteractive({ useHandCursor: true });
+            line.on('pointerover', () => { line.setColor('#f5cf6a'); this.scene.events.emit('showCardPreview', cardRefs[0].card, this.previewMetadata); });
+            line.on('pointerout', () => line.setColor('#e6dcc2'));
         }
-        
-        // 创建文本片段
-        let currentX = x;
-        let currentLineY = y;
-        let lineWidth = 0;
-        let maxHeight = 0;
-        
-        parts.forEach(part => {
-            const textColor = part.isCard || part.isGongfa ? battleTheme.colors.textPrimary : battleTheme.colors.textBody;
-            const textStyle = part.isCard || part.isGongfa ? 'bold' : 'normal';
-            const fontSizePx = Number.parseFloat(fontSize) || 18;
-            const minimumWrapWidth = Math.max(32, Math.ceil(fontSizePx * 1.5));
-            const remainingWrapWidth = Math.max(minimumWrapWidth, maxWidth - lineWidth);
-            
-            const textObj = this.scene.add.text(currentX, currentLineY, part.text, {
-                fontFamily: part.isCard || part.isGongfa ? sceneTheme.fonts.ui : sceneTheme.fonts.body,
-                fontSize: fontSize,
-                color: textColor,
-                fontStyle: textStyle,
-                lineSpacing: 4,
-                wordWrap: { width: remainingWrapWidth }
-            });
-            textObj.setOrigin(0, 0);
-            this.logContainer.add(textObj);
-            this.logObjects.push(textObj);
-            
-            // 记录最大高度
-            maxHeight = Math.max(maxHeight, textObj.height);
-            
-            // 如果是卡牌名称，添加交互
-            if (part.isCard && part.cardRef) {
-                const hitArea = this.scene.add.rectangle(
-                    currentX + textObj.width / 2,
-                    currentLineY + textObj.height / 2,
-                    textObj.width,
-                    Math.max(20, textObj.height),
-                    sceneTheme.colors.goldSoft,
-                    0
-                );
-                hitArea.setInteractive({ useHandCursor: true });
-                hitArea.setOrigin(0.5, 0.5);
-                this.logContainer.add(hitArea);
-                this.logObjects.push(hitArea);
-                
-                // 下划线
-                const underline = this.scene.add.rectangle(
-                    hitArea.x,
-                    hitArea.y + textObj.height / 2 - 1,
-                    textObj.width,
-                    2,
-                    sceneTheme.colors.goldSoft,
-                    0
-                );
-                this.logContainer.add(underline);
-                this.logObjects.push(underline);
-                
-                const cardRef = part.cardRef;
-                hitArea.on('pointerover', () => {
-                    underline.setAlpha(1);
-                    // 安全检查：如果精灵还活着且场景存在，使用精灵；否则使用卡片数据
-                    try {
-                        if (cardRef.card && cardRef.card.active && cardRef.card.scene) {
-                            this.scene.events.emit('showCardPreview', cardRef.card, this.previewMetadata);
-                        } else {
-                            this.scene.events.emit('showCardPreviewFromData', cardRef.cardData, this.previewMetadata);
-                        }
-                    } catch (e) {
-                        console.warn('Error accessing card sprite, using card data instead:', e);
-                        this.scene.events.emit('showCardPreviewFromData', cardRef.cardData, this.previewMetadata);
-                    }
-                });
-                
-                hitArea.on('pointerout', () => {
-                    underline.setAlpha(0);
-                });
-                
-                // 让滚轮事件穿透到背景
-                hitArea.on('wheel', (_pointer: Phaser.Input.Pointer, _deltaX: number, deltaY: number) => {
-                    if (this.isScrolling) return;
-                    
-                    const scrollSpeed = 60;
-                    const targetOffset = this.scrollOffset + (deltaY > 0 ? scrollSpeed : -scrollSpeed);
-                    const clampedOffset = Phaser.Math.Clamp(targetOffset, 0, this.maxScrollOffset);
-                    
-                    this.smoothScrollTo(clampedOffset);
-                });
-            }
-            
-            // 如果是功法名称，添加悬浮提示交互
-            if (part.isGongfa && part.gongfaInfo) {
-                const hitArea = this.scene.add.rectangle(
-                    currentX + textObj.width / 2,
-                    currentLineY + textObj.height / 2,
-                    textObj.width,
-                    Math.max(20, textObj.height),
-                    sceneTheme.colors.goldSoft,
-                    0
-                );
-                hitArea.setInteractive({ useHandCursor: true });
-                hitArea.setOrigin(0.5, 0.5);
-                this.logContainer.add(hitArea);
-                this.logObjects.push(hitArea);
-                
-                // 下划线
-                const underline = this.scene.add.rectangle(
-                    hitArea.x,
-                    hitArea.y + textObj.height / 2 - 1,
-                    textObj.width,
-                    2,
-                    sceneTheme.colors.goldSoft,
-                    0
-                );
-                this.logContainer.add(underline);
-                this.logObjects.push(underline);
-                
-                const gongfaInfo = part.gongfaInfo;
-                hitArea.on('pointerover', () => {
-                    underline.setAlpha(1);
-                    // 计算提示框位置（相对于场景坐标）
-                    const worldX = this.container.x + hitArea.x + this.logContainer.x;
-                    const worldY = this.container.y + hitArea.y + this.logContainer.y;
-                    this.gongfaTooltip.show(worldX + textObj.width / 2, worldY - 10, gongfaInfo.name, gongfaInfo.description);
-                });
-                
-                hitArea.on('pointerout', () => {
-                    underline.setAlpha(0);
-                    this.gongfaTooltip.hide();
-                });
-                
-                // 让滚轮事件穿透到背景
-                hitArea.on('wheel', (_pointer: Phaser.Input.Pointer, _deltaX: number, deltaY: number) => {
-                    if (this.isScrolling) return;
-                    
-                    const scrollSpeed = 60;
-                    const targetOffset = this.scrollOffset + (deltaY > 0 ? scrollSpeed : -scrollSpeed);
-                    const clampedOffset = Phaser.Math.Clamp(targetOffset, 0, this.maxScrollOffset);
-                    
-                    this.smoothScrollTo(clampedOffset);
-                });
-            }
-            
-            currentX += textObj.width;
-            lineWidth += textObj.width;
-        });
-        
-        // 返回实际高度
-        return maxHeight;
+        this.logContainer.add(line);
+        this.logObjects.push(line);
+        return line.height;
     }
 
 

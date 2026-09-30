@@ -112,7 +112,7 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
         battleLog: { x: width - 230, y: height * 0.46, width: 420, height: 640 },
 
         // Hand fan: bottom centre.
-        handZone: { x: width * 0.5, y: height - 118, width: 1120, height: 230 },
+        handZone: { x: width * 0.5, y: height - 150, width: Math.min(1240, width - 640), height: 260 },
 
         // Drop zones sit on the diorama itself (allies right, foes left).
         playerFieldZone: { x: width * 0.725, y: height * 0.47, width: width * 0.51, height: height * 0.62 },
@@ -122,12 +122,12 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
         fieldCardZone: { x: width * 0.5, y: 150, width: 210, height: 120 },
 
         // Piles flank the hand.
-        deckButton: { x: 112, y: height - 138, width: 112, height: 150 },
-        discardPileButton: { x: width - 112, y: height - 138, width: 112, height: 150 },
+        deckButton: { x: 96, y: height - 120, width: 132, height: 210 },
+        discardPileButton: { x: width - 96, y: height - 120, width: 132, height: 210 },
 
         // Right-hand action stack.
-        drawButton: { x: width - 128, y: height - 372, width: 140, height: 56 },
-        endTurnButton: { x: width - 128, y: height - 268, width: 148, height: 148 },
+        drawButton: { x: width - 290, y: height - 54, width: 144, height: 60 },
+        endTurnButton: { x: width - 290, y: height - 140, width: 174, height: 90 },
         speedButton: { x: width - 148, y: 44, width: 72, height: 72 },
 
         // Pills: left rail. Skills: right rail.

@@ -79,7 +79,7 @@ export class CardManager {
     }
 
     // ---- hand fan -----------------------------------------------------------------
-    private static readonly FAN_REST_SCALE = 0.72;
+    private static readonly FAN_REST_SCALE = 1;
     private fanHover: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite) | null = null;
     private fanHand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[] = [];
     private fanBound = new WeakSet<object>();
@@ -137,7 +137,7 @@ export class CardManager {
             let depth = depthBase + i;
             if (hoverIndex >= 0) {
                 if (i === hoverIndex) {
-                    y = zone.y - 128; angle = 0; scale = 1.04; depth = depthBase + 200;
+                    y = zone.y - 96; angle = 0; scale = 1; depth = depthBase + 200;
                 } else {
                     x += (i < hoverIndex ? -1 : 1) * Math.max(0, 62 - Math.abs(i - hoverIndex) * 14);
                 }

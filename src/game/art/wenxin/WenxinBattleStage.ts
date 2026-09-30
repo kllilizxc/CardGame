@@ -1,6 +1,11 @@
 import { type Textures, type Scene } from 'phaser';
 import type { CardSprite } from '../../objects/CardSprite';
-import { NEAREST, getWenxinMaterials, pixelSurface } from './WenxinArt';
+import { NEAREST, pixelSurface } from './WenxinArt';
+import { arenaBell, arenaCloud, arenaFloor, arenaIsland, arenaSea, arenaSky } from '../arenaArt';
+import { bayer } from '../pix';
+
+const arenaCache = new Map<string, HTMLCanvasElement>();
+const arenaCanvas = (key: string, make: () => HTMLCanvasElement) => { let c = arenaCache.get(key); if (!c) { c = make(); arenaCache.set(key, c); } return c; };
 import { BATTLE_SLOTS, slotPosition, type BattleSide } from './presentation';
 import { isPortraitGameViewport } from '../../layout/gameViewport';
 import { wenxinCardTexture } from './WenxinArt';
@@ -38,13 +43,18 @@ export class WenxinBattleStage {
         flash: 0, flashColor: '#eee4d3',
     };
     private readonly surface = pixelSurface(640, 360);
-    private readonly art = getWenxinMaterials()!;
-    private readonly floor = this.art.floor(BATTLE_SLOTS);
-    private readonly sky = this.art.background('sky', 640, 120);
-    private readonly sea = this.art.sea(1280, 100);
-    private readonly bell = this.art.prop('bell', 96, 88);
-    private readonly island = this.art.prop('island', 110, 72);
-    private readonly cloud = this.art.prop('cloud', 150, 50);
+    private readonly floor = arenaCanvas('floor', () => arenaFloor(BATTLE_SLOTS));
+    private readonly sky = arenaCanvas('sky', arenaSky);
+    private readonly sea = arenaCanvas('sea', arenaSea);
+    private readonly bell = arenaCanvas('bell', arenaBell);
+    private readonly island = arenaCanvas('island', arenaIsland);
+    private readonly cloud = arenaCanvas('cloud', arenaCloud);
+    private readonly mist = arenaCanvas('mist', () => {
+        const c = document.createElement('canvas'); c.width = 656; c.height = 68;
+        const m = c.getContext('2d')!; m.fillStyle = '#3e1f3a';
+        for (let yy = 0; yy < 68; yy++) for (let xx = 0; xx < 656; xx++) if (bayer(xx, yy + 300) < yy / 50) m.fillRect(xx, yy, 1, 1);
+        return c;
+    });
     private readonly texture: Textures.CanvasTexture;
     private units = new Map<CardSprite, { side: BattleSide; slot: number }>();
     private elapsed = 0;
@@ -228,28 +238,23 @@ export class WenxinBattleStage {
         const x = this.surface.ox, t = this.elapsed, camera = this.camera;
         x.save();
         x.translate(Math.round(r.shakeX), Math.round(r.shakeY));
-        x.fillStyle = '#849a8d'; x.fillRect(-8, -8, 656, 376); x.drawImage(this.sky, 0, 0);
-        x.drawImage(this.sea, -(t * 10 + camera.x * 1.2) % 640, 76, 1280, 284);
+        x.fillStyle = '#6a1e2c'; x.fillRect(-8, -8, 656, 376); x.drawImage(this.sky, 0, 0);
+        const seaX = -(((t * 10 + camera.x * 1.2) % 640) + 640) % 640;
+        x.drawImage(this.sea, Math.round(seaX), 76, 1280, 284);
         // slow far clouds for depth
-        x.globalAlpha = 0.5;
-        x.drawImage(this.cloud, (((t * 6 + 90) % 900) - 200) - camera.x * 0.5, 40);
-        x.drawImage(this.cloud, (((t * 4 + 500) % 900) - 200) - camera.x * 0.5, 62);
-        x.globalAlpha = 1;
-        x.drawImage(this.island, 65 - camera.x * .4, 55 + Math.sin(t) * 2);
-        x.drawImage(this.island, 475 - camera.x * .4, 50 + Math.sin(t + 2) * 2);
+        x.drawImage(this.cloud, Math.round((((t * 6 + 90) % 900) - 200) - camera.x * 0.5), 40);
+        x.drawImage(this.cloud, Math.round((((t * 4 + 500) % 900) - 200) - camera.x * 0.5), 62);
+        x.drawImage(this.island, Math.round(65 - camera.x * .4), Math.round(55 + Math.sin(t) * 2));
+        x.drawImage(this.island, Math.round(475 - camera.x * .4), Math.round(50 + Math.sin(t + 2) * 2));
         for (let y = 81; y < 360; y++) {
             const dz = 40 * 240 / (y - 80), z = camera.z + dz;
             if (z < 30 || z > 230) continue;
             const hw = 320 * dz / 240;
             x.drawImage(this.floor, (camera.x - hw + 100) * 4, (z - 30) * 4, hw * 8, 1, 0, y, 640, 1);
         }
-        x.drawImage(this.bell, 272 - camera.x * .3, 4 + Math.sin(t * .8) * 3);
-        // the arena floats in cloud: dissolve the near edge into mist so the hand reads cleanly
-        const mist = x.createLinearGradient(0, 292, 0, 364);
-        mist.addColorStop(0, 'rgba(132,154,141,0)');
-        mist.addColorStop(0.55, 'rgba(146,166,152,0.7)');
-        mist.addColorStop(1, 'rgba(160,178,166,0.92)');
-        x.fillStyle = mist; x.fillRect(-8, 292, 656, 76);
+        x.drawImage(this.bell, Math.round(272 - camera.x * .3), Math.round(4 + Math.sin(t * .8) * 3));
+        // the arena floats in cloud: a dithered bank of mist along the near edge keeps the hand legible
+        x.drawImage(this.mist, -8, 300);
         x.restore();
         if (r.flash > 0) {
             x.globalAlpha = r.flash; x.fillStyle = r.flashColor; x.fillRect(0, 0, 640, 360); x.globalAlpha = 1;

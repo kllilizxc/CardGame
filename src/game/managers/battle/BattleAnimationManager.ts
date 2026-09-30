@@ -1,3 +1,5 @@
+import { ptitle } from '../../art/kit';
+import { INK } from '../../art/palette';
 import { getWenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
 import { Scene } from 'phaser';
 import { C } from '../../art/palette';
@@ -1038,15 +1040,14 @@ export class BattleAnimationManager {
         const barH = height * 0.16;
         const top = this.scene.add.rectangle(width / 2, -barH / 2, width, barH, C.void).setDepth(2500);
         const bottom = this.scene.add.rectangle(width / 2, height + barH / 2, width, barH, C.void).setDepth(2500);
-        const band = this.scene.add.rectangle(-width / 2, height / 2, width, 140, C.ink).setDepth(2500);
-        const bandEdge1 = this.scene.add.rectangle(-width / 2, height / 2 - 72, width, 8, color).setDepth(2501);
-        const bandEdge2 = this.scene.add.rectangle(-width / 2, height / 2 + 72, width, 8, color).setDepth(2501);
-        const turnText = this.scene.add.text(width + 400, height / 2, text, {
-            fontSize: '96px',
-            color: '#' + color.toString(16).padStart(6, '0'),
-            stroke: '#0b0714',
-            strokeThickness: 12
-        }).setOrigin(0.5).setDepth(2502);
+        const foe = ((color >> 16) & 0xff) > ((color >> 8) & 0xff) + 40;
+        const edge = foe ? INK.vermilion : INK.spirit;
+        const band = this.scene.add.rectangle(-width / 2, height / 2, width, 150, C.void).setDepth(2500);
+        const bandEdge1 = this.scene.add.rectangle(-width / 2, height / 2 - 75, width, 6, edge).setDepth(2501);
+        const bandEdge2 = this.scene.add.rectangle(-width / 2, height / 2 + 75, width, 6, edge).setDepth(2501);
+        const turnText = ptitle(this.scene, width + 400, height / 2, text.replace(/\s+/g, ''), 4, foe
+            ? { face: INK.paper, lower: INK.bone, extrude: INK.cinnabar, extrudeDepth: 3 }
+            : { face: INK.paper, lower: INK.frost, extrude: INK.teal, extrudeDepth: 3 }).setDepth(2502);
 
         const slide = (targets: Phaser.GameObjects.GameObject[], x: number, duration: number, ease = 'Cubic.easeOut') =>
             this.addTweens({ targets, x, duration, ease });
@@ -1060,7 +1061,7 @@ export class BattleAnimationManager {
             duration: 380,
             ease: 'Back.easeOut',
             onComplete: () => {
-                pxBurst(this.scene, width / 2, height / 2, { colors: [color, C.glow, C.paper], count: 18, speed: 300, size: 10, depth: 2503 });
+                pxBurst(this.scene, width / 2, height / 2, { colors: [edge, INK.gold, INK.paper], count: 18, speed: 300, size: 9, depth: 2503 });
                 this.scene.time.delayedCall(560, () => {
                     slide([band, bandEdge1, bandEdge2], width * 1.5, 260, 'Cubic.easeIn');
                     this.addTweens({ targets: turnText, x: -600, duration: 280, ease: 'Cubic.easeIn' });

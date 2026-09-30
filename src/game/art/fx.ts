@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { C, FONT, hex, PX } from './palette';
+import { ptext, ptitle } from './kit';
 
 const snap = (v: number, u = PX): number => Math.round(v / u) * u;
 
@@ -200,79 +201,69 @@ export function pxIrisIn(scene: Phaser.Scene, ms = 520): void {
 }
 
 /**
- * Full-screen result splash. Victory: spinning gold rays + rising embers.
- * Defeat: crimson wash + falling ash. Resolves on the next click via `onContinue`.
+ * Full-screen result splash. Victory: gold rays turning behind a chunky logo and rising embers.
+ * Defeat: wine wash, a grey logo and falling ash. Resolves on the next click via `onContinue`.
  */
 export function showResultSplash(scene: Phaser.Scene, kind: 'victory' | 'defeat', onContinue: () => void): void {
     const { width, height } = scene.scale;
     const D = 10000;
     const win = kind === 'victory';
-    const main = win ? C.gold : C.cinnabar;
-    const dark = win ? C.umber : C.blood;
     const objs: Phaser.GameObjects.GameObject[] = [];
 
-    const wash = scene.add.rectangle(width / 2, height / 2, width, height, C.void, 0).setDepth(D).setInteractive();
+    const wash = scene.add.rectangle(width / 2, height / 2, width, height, win ? C.void : C.blood, 0).setDepth(D).setInteractive();
     objs.push(wash);
-    scene.tweens.add({ targets: wash, fillAlpha: 0.92, duration: 500, ease: 'Stepped', easeParams: [5] });
+    scene.tweens.add({ targets: wash, fillAlpha: 0.88, duration: 400, ease: 'Stepped', easeParams: [5] });
 
-    // rays / shards
-    const rays = scene.add.graphics().setDepth(D + 1).setPosition(width / 2, height / 2);
+    const rays = scene.add.graphics().setDepth(D + 1).setPosition(snap(width / 2), snap(height * 0.44));
     objs.push(rays);
-    const state = { a: 0, s: 0 };
+    const st = { a: 0, s: 0 };
     const drawRays = () => {
         rays.clear();
-        const n = 14;
+        const n = 12;
         for (let i = 0; i < n; i++) {
-            const ang = state.a + (i / n) * Math.PI * 2;
-            const len = Math.max(width, height) * state.s;
-            rays.fillStyle(i % 2 ? dark : (win ? C.ember : C.crimson), win ? 0.55 : 0.4);
+            const ang = st.a + (i / n) * Math.PI * 2;
+            const len = Math.max(width, height) * st.s;
+            rays.fillStyle(i % 2 ? (win ? C.umber : C.plum) : (win ? C.bark : C.blood), 1);
             rays.beginPath();
             rays.moveTo(0, 0);
-            rays.lineTo(Math.cos(ang - 0.07) * len, Math.sin(ang - 0.07) * len);
-            rays.lineTo(Math.cos(ang + 0.07) * len, Math.sin(ang + 0.07) * len);
+            rays.lineTo(Math.cos(ang - 0.09) * len, Math.sin(ang - 0.09) * len);
+            rays.lineTo(Math.cos(ang + 0.09) * len, Math.sin(ang + 0.09) * len);
             rays.closePath();
             rays.fillPath();
         }
     };
-    scene.tweens.add({ targets: state, s: 1, duration: 500, ease: 'Cubic.easeOut', onUpdate: drawRays });
-    scene.tweens.add({ targets: state, a: Math.PI * 2, duration: 22000, repeat: -1, onUpdate: drawRays });
+    scene.tweens.add({ targets: st, s: 1, duration: 500, ease: 'Cubic.easeOut', onUpdate: drawRays });
+    scene.tweens.add({ targets: st, a: Math.PI * 2, duration: 30000, repeat: -1, onUpdate: drawRays });
 
-    // banner plate
-    const plate = scene.add.rectangle(width / 2, height / 2, width, 220, C.ink, 1).setDepth(D + 2).setScale(1, 0);
-    const e1 = scene.add.rectangle(width / 2, height / 2 - 116, width, 8, main).setDepth(D + 3).setScale(1, 0);
-    const e2 = scene.add.rectangle(width / 2, height / 2 + 116, width, 8, main).setDepth(D + 3).setScale(1, 0);
-    objs.push(plate, e1, e2);
-    scene.tweens.add({ targets: [plate, e1, e2], scaleY: 1, duration: 260, delay: 200, ease: 'Back.easeOut' });
+    const band = scene.add.rectangle(width / 2, height * 0.44, width, 210, C.void, 1).setDepth(D + 2).setScale(1, 0);
+    const e1 = scene.add.rectangle(width / 2, height * 0.44 - 105, width, PX * 2, win ? C.gold : C.cinnabar).setDepth(D + 3).setScale(0, 1);
+    const e2 = scene.add.rectangle(width / 2, height * 0.44 + 105, width, PX * 2, win ? C.gold : C.cinnabar).setDepth(D + 3).setScale(0, 1);
+    objs.push(band, e1, e2);
+    scene.tweens.add({ targets: band, scaleY: 1, duration: 220, delay: 150, ease: 'Cubic.easeOut' });
+    scene.tweens.add({ targets: [e1, e2], scaleX: 1, duration: 360, delay: 220, ease: 'Cubic.easeOut' });
 
-    const title = scene.add.text(width / 2, height / 2 - 6, win ? '胜 利' : '败 北', {
-        fontFamily: FONT, fontSize: '144px', color: hex(main), stroke: hex(C.void), strokeThickness: 16,
-    }).setOrigin(0.5).setDepth(D + 4).setScale(0);
-    // extruded shadow
-    const shade = scene.add.text(width / 2 + 8, height / 2 + 2, win ? '胜 利' : '败 北', {
-        fontFamily: FONT, fontSize: '144px', color: hex(dark),
-    }).setOrigin(0.5).setDepth(D + 3.5).setScale(0);
-    objs.push(title, shade);
-    scene.tweens.add({ targets: [title, shade], scale: 1, duration: 320, delay: 380, ease: 'Back.easeOut', onComplete: () => {
-        pxBurst(scene, width / 2, height / 2, { colors: win ? [C.glow, C.gold, C.paper] : [C.cinnabar, C.crimson, C.mist], count: 30, speed: 420, size: 12, depth: D + 5 });
-        pxRing(scene, width / 2, height / 2, main, 420, D + 5);
-        pxShake(scene, win ? 8 : 18, 260);
+    const title = ptitle(scene, width / 2, height * 0.44, win ? '斗法告捷' : '斗法失利', 5, win
+        ? { face: C.paper, lower: C.gold, extrude: C.cinnabar, extrudeDepth: 4 }
+        : { face: C.fog, lower: C.mist, extrude: C.blood, extrudeDepth: 4 }).setDepth(D + 4).setScale(0);
+    objs.push(title);
+    scene.tweens.add({ targets: title, scale: PX, duration: 300, delay: 380, ease: 'Back.easeOut', onComplete: () => {
+        pxBurst(scene, width / 2, height * 0.44, { colors: win ? [C.gold, C.paper, C.ember] : [C.mist, C.fog, C.cinnabar], count: 30, speed: 420, size: 9, depth: D + 5 });
+        pxRing(scene, width / 2, height * 0.44, win ? C.gold : C.cinnabar, 420, D + 5);
+        pxShake(scene, win ? 8 : 16, 260);
     } });
 
-    const hint = scene.add.text(width / 2, height / 2 + 190, '点击任意位置继续', {
-        fontFamily: FONT, fontSize: '24px', color: hex(C.paper), stroke: hex(C.void), strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(D + 4).setAlpha(0);
+    const hint = ptext(scene, width / 2, height * 0.44 + 150, '点击任意位置继续', { color: C.paper, fx: 'outline', origin: [0.5, 0.5] }).setDepth(D + 4).setAlpha(0);
     objs.push(hint);
     scene.tweens.add({ targets: hint, alpha: 1, duration: 200, delay: 1000, onComplete: () => {
-        scene.tweens.add({ targets: hint, alpha: 0.25, duration: 500, yoyo: true, repeat: -1, ease: 'Stepped', easeParams: [2] });
+        scene.tweens.add({ targets: hint, alpha: 0.2, duration: 500, yoyo: true, repeat: -1, ease: 'Stepped', easeParams: [2] });
     } });
 
-    // ambient particles: embers up on victory, ash down on defeat
     const amb = scene.time.addEvent({
         delay: 90, loop: true,
         callback: () => {
             const x = Math.random() * width;
-            const s = Math.random() < 0.3 ? 8 : 4;
-            const p = scene.add.rectangle(snap(x), win ? height + 8 : -8, s, s, win ? [C.gold, C.ember, C.glow][Math.floor(Math.random() * 3)] : [C.mist, C.haze, C.cinnabar][Math.floor(Math.random() * 3)]).setDepth(D + 2);
+            const sz = Math.random() < 0.3 ? PX * 2 : PX;
+            const p = scene.add.rectangle(snap(x), win ? height + 8 : -8, sz, sz, win ? [C.gold, C.ember, C.paper][Math.floor(Math.random() * 3)] : [C.mist, C.ash, C.cinnabar][Math.floor(Math.random() * 3)]).setDepth(D + 2);
             scene.tweens.add({
                 targets: p, y: win ? -20 : height + 20, x: snap(x + (Math.random() - 0.5) * 200), alpha: { from: 1, to: 0.2 },
                 duration: 2500 + Math.random() * 2500, ease: 'Sine.easeInOut', onComplete: () => p.destroy(),
@@ -280,10 +271,9 @@ export function showResultSplash(scene: Phaser.Scene, kind: 'victory' | 'defeat'
         },
     });
 
-    scene.input.once('pointerdown', () => {
+    scene.time.delayedCall(600, () => scene.input.once('pointerdown', () => {
         amb.remove();
         onContinue();
-    });
-    // scene teardown destroys these; keep refs alive for GC clarity
+    }));
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { amb.remove(); objs.forEach((o) => o.destroy()); });
 }

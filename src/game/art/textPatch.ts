@@ -35,7 +35,10 @@ export function installPixelText(): void {
         s.resolution = 1;
         if (s.lineSpacing === undefined) s.lineSpacing = PX * 2;
         // CJK has no spaces to break on — wrap per glyph.
-        if (s.wordWrap && s.wordWrap.width) s.wordWrap = { ...s.wordWrap, useAdvancedWrap: true };
+        if (s.wordWrap && s.wordWrap.width) {
+            const min = parseFloat(String(s.fontSize)) || GRID;
+            s.wordWrap = { ...s.wordWrap, width: Math.max(s.wordWrap.width, min * 1.05), useAdvancedWrap: true };
+        }
         return origSetStyle.call(this, s, updateText, setDefaults);
     };
 
@@ -50,6 +53,11 @@ export function installPixelText(): void {
     const origFS = proto.setFontStyle;
     proto.setFontStyle = function (fs: string) {
         return origFS.call(this, (fs || '').replace(/bold|italic/gi, '').trim());
+    };
+    const origWrap = proto.setWordWrapWidth;
+    proto.setWordWrapWidth = function (this: Phaser.GameObjects.TextStyle, width: number | null, useAdvancedWrap?: boolean) {
+        const min = parseFloat(String(this.fontSize)) || GRID;
+        return origWrap.call(this, width === null ? null : Math.max(width, min * 1.05), useAdvancedWrap);
     };
     const origStroke = proto.setStroke;
     proto.setStroke = function (color: string, thickness: number) {
