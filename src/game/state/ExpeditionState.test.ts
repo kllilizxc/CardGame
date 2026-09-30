@@ -184,6 +184,30 @@ describe('ExpeditionState', () => {
         expect(loadPersistentStash()).toEqual(restoredState.persistentStash);
     });
 
+    it('persists exactly three added cards for an edited 17-card starter deck', () => {
+        const storage = new MemoryStorage();
+        const sources = { worldState: { stash: { ...initialWorldState.stash, items: [] } }, starterDeck: structuredClone(starterDeckJson), storage };
+        const seeded = ExpeditionState.bootstrap(sources);
+        const cards = structuredClone(starterDeckJson.cards);
+        cards.find(card => card.id === 'SX_YJZ_001')!.count = 1;
+        cards.find(card => card.id === 'SX_YJS_001')!.count = 1;
+        cards.push({ id: 'TL_004', count: 1 });
+        const legacy = {
+            ...seeded.persistentStash,
+            cards,
+            savedDecks: [{ ...seeded.persistentStash.savedDecks[0], cards }],
+            spiritStones: 123,
+        };
+        savePersistentStash(legacy, storage);
+        const restored = ExpeditionState.bootstrap(sources);
+        expect(countDeckCards(getSelectedDeckCards(restored.persistentStash))).toBe(20);
+        expect(countDeckCards(restored.persistentStash.cards)).toBe(20);
+        expect(getSelectedDeckCards(restored.persistentStash)).toContainEqual({ id: 'TL_004', count: 1 });
+        expect(restored.persistentStash.spiritStones).toBe(123);
+        expect(loadPersistentStash(storage)).toEqual(restored.persistentStash);
+        expect(ExpeditionState.bootstrap(sources).persistentStash).toEqual(restored.persistentStash);
+    });
+
     it('persists seed-fallback stash and active runs through an injected storage adapter without touching ambient localStorage', () => {
         const injectedStorage = new MemoryStorage();
 

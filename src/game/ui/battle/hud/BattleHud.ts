@@ -57,6 +57,8 @@ export class BattleHud {
     private hpShake = 0;
     private updateHandler?: (t: number, d: number) => void;
     private logToggle?: () => void;
+    private destroyed = false;
+    private readonly shutdownHandler = () => this.destroy();
 
     constructor(
         private readonly scene: Scene,
@@ -73,6 +75,9 @@ export class BattleHud {
     }
 
     createAll() {
+        if (this.destroyed || this.updateHandler) return;
+        this.scene.events.once('shutdown', this.shutdownHandler);
+        this.scene.events.once('destroy', this.shutdownHandler);
         this.createPlayerPlate();
         this.createTurnRibbon();
         this.createToolbar();
@@ -254,6 +259,7 @@ export class BattleHud {
 
     // ------------------------------------------------------------------ toasts
     private toast(line: string) {
+        if (this.destroyed) return;
         const clean = line.replace(/<\/?GONGFA>/g, '').replace(/^═+\s*|\s*═+$/g, '');
         if (!clean.trim()) return;
         const s = this.scene;
@@ -271,6 +277,7 @@ export class BattleHud {
 
     // ------------------------------------------------------------------ frame update
     private tick(dt: number) {
+        if (this.destroyed || !this.hpNumber?.active) return;
         const st = this.battleState;
         this.drawHp(dt);
         this.chips.setText(`手牌 ${st.getHandCount()}  ·  牌库 ${st.getDeckCount()}  ·  我阵 ${st.playerField.length}/3  ·  敌阵 ${st.enemyField.length}`);
@@ -308,10 +315,21 @@ export class BattleHud {
     updateDiscardPileCount() {}
 
     destroy() {
+        if (this.destroyed) return;
+        this.destroyed = true;
         if (this.updateHandler) this.scene.events.off('update', this.updateHandler);
+        this.updateHandler = undefined;
+        this.scene.events.off('shutdown', this.shutdownHandler);
+        this.scene.events.off('destroy', this.shutdownHandler);
         this.scene.input.off('dragstart', this.onDragStart, this);
         this.scene.input.off('dragend', this.onDragEnd, this);
-        this.toasts.forEach(t => t.box.destroy()); this.toasts = [];
-        this.objs.forEach(o => o.destroy()); this.objs.length = 0;
+        for (const object of [...this.toasts.map(t => t.box), ...this.objs]) {
+            this.scene.tweens.killTweensOf(object);
+            object.destroy();
+        }
+        this.toasts = [];
+        this.objs.length = 0;
+        this.cb = {};
+        this.logToggle = undefined;
     }
 }

@@ -24,6 +24,7 @@ import {
     renameSavedDeckInStash,
     selectDeckInStash,
     updateSavedDeckInStash,
+    topUpSavedDeckToMinimum,
     validateDeckAvailability,
 } from '../../state/PersistentStashDecks';
 import type { ExpeditionCardStack, PersistentStash, SavedDeck } from '../../types/expedition';
@@ -34,6 +35,7 @@ import { DECK_MANAGEMENT_CARD_PREVIEW_CONTEXT_ID, type DeckManagementCardPreview
 export interface DeckManagementPanelConfig {
     stash: PersistentStash;
     metadata?: CardMetadataMap;
+    starterCards?: readonly ExpeditionCardStack[];
     previewResolver: DeckManagementCardPreviewResolver;
     initialKeyboardZone?: 'decks' | 'editor' | 'browser' | 'return';
     onStashChange: (stash: PersistentStash) => void;
@@ -295,6 +297,21 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         this.refreshAll();
         this.flyToken(id, from, true);
         this.popCount(1);
+    }
+
+    private topUpDeck() {
+        const deck = this.deck;
+        if (!deck) return;
+        const missing = DECK_CARD_MIN - countDeckCards(deck.cards);
+        const next = topUpSavedDeckToMinimum(this.stash, deck.id, this.config.starterCards ?? [], this.config.metadata);
+        if (next === this.stash) {
+            this.toast('可用卡牌不足，暂时无法补齐', 'warn');
+            return;
+        }
+        this.commit(next);
+        this.refreshAll();
+        this.popCount(1);
+        this.toast(`已补入 ${missing} 张，当前卡组共 ${DECK_CARD_MIN} 张`, 'ok');
     }
 
     private removeCard(id: string, amount = 1, to?: { x: number; y: number }) {
@@ -747,7 +764,7 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
         const r = this.deckRect;
         this.deckHeader = this.scene.add.container(0, 0);
         this.deckLayer.add(this.deckHeader);
-        const headerH = 132;
+        const headerH = 180;
         const previewH = this.portrait ? 0 : 300;
         const footerH = 74;
         const listRect = this.portrait
@@ -806,6 +823,9 @@ export class DeckManagementPanel extends GameObjects.Container implements EntryP
                 : count > DECK_CARD_MAX ? `超出上限 ${count - DECK_CARD_MAX} 张`
                     : '卡组合格，可以出发';
         h.add(this.text(mx, my + mh + 30, status, 12, issues.length ? C.cinnabar : col));
+        if (count < DECK_CARD_MIN) {
+            h.add(this.button(mx, r.y + 134, mw, 38, '补齐至 20 张', PANEL_JADE, 20, () => this.topUpDeck()));
+        }
     }
 
     private refreshList() {

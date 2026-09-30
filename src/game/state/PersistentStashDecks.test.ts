@@ -12,6 +12,7 @@ import {
     selectDeckInStash,
     summarizeDeckCapacity,
     updateSavedDeckInStash,
+    topUpSavedDeckToMinimum,
     validateDeckAvailability,
     validateDeckSize,
 } from './PersistentStashDecks';
@@ -593,5 +594,47 @@ describe('DECK_CARD_MIN and DECK_CARD_MAX constants', () => {
 
     it('ensures min is less than max', () => {
         expect(DECK_CARD_MIN).toBeLessThan(DECK_CARD_MAX);
+    });
+});
+
+
+describe('topUpSavedDeckToMinimum', () => {
+    const starter = stacks(['CARD_A', 3], ['CARD_B', 3], ['CARD_C', 3], ['CARD_D', 3], ['CARD_E', 3], ['CARD_F', 3], ['CARD_G', 2]);
+    const current = stacks(['CARD_A', 1], ['CARD_B', 1], ['CARD_C', 3], ['CARD_D', 3], ['CARD_E', 3], ['CARD_F', 3], ['CARD_G', 2], ['REWARD', 1]);
+    const makeStash = () => createStash({
+        cards: current,
+        savedDecks: [{ id: 'my-deck', name: '当前卡组', cards: current }, { id: 'other', name: 'Other', cards: stacks(['REWARD', 1]) }],
+        selectedDeckId: 'my-deck',
+    });
+
+    it('fills a custom 17-card deck with exactly three cards, retaining its reward and selection', () => {
+        const stash = makeStash();
+        expect(countDeckCards(current)).toBe(17);
+        const next = topUpSavedDeckToMinimum(stash, 'my-deck', starter);
+        expect(countDeckCards(next.savedDecks[0].cards)).toBe(20);
+        expect(countDeckCards(next.cards)).toBe(20);
+        expect(next.savedDecks[0].cards).toContainEqual({ id: 'REWARD', count: 1 });
+        expect(validateDeckAvailability(next.savedDecks[0].cards, next.cards)).toEqual([]);
+        expect(next.selectedDeckId).toBe('my-deck');
+        expect(next.savedDecks[1]).toBe(stash.savedDecks[1]);
+        expect(countDeckCards(stash.savedDecks[0].cards)).toBe(17);
+        expect(topUpSavedDeckToMinimum(next, 'my-deck', starter)).toBe(next);
+    });
+
+    it('uses spare owned cards without increasing the inventory', () => {
+        const stash = makeStash();
+        stash.cards = [...current, { id: 'SPARE', count: 3 }];
+        const next = topUpSavedDeckToMinimum(stash, 'my-deck', starter);
+        expect(next.cards).toEqual(stash.cards);
+        expect(next.savedDecks[0].cards).toContainEqual({ id: 'SPARE', count: 3 });
+        expect(validateDeckAvailability(next.savedDecks[0].cards, next.cards)).toEqual([]);
+    });
+
+    it('respects per-card limits and leaves insufficient supply unchanged', () => {
+        const stash = makeStash();
+        const next = topUpSavedDeckToMinimum(stash, 'my-deck', starter, { CARD_A: { limitPerDeck: 2 } });
+        expect(next.savedDecks[0].cards).toContainEqual({ id: 'CARD_A', count: 2 });
+        expect(countDeckCards(next.savedDecks[0].cards)).toBe(20);
+        expect(topUpSavedDeckToMinimum(stash, 'my-deck', [])).toBe(stash);
     });
 });

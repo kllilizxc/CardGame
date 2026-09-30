@@ -154,56 +154,62 @@ export function countDeckCards(cards: readonly ExpeditionCardStack[]): number {
     return total;
 }
 
-/**
- * Brings an older seeded deck up to the current starter-deck definition without
- * touching user-created decks. The collection is topped up as well so the
- * repaired deck passes the availability check on the same boot.
- */
+/** Fill only the missing slots, using owned cards before supplying starter copies. */
+export function topUpSavedDeckToMinimum(
+    stash: PersistentStash,
+    deckId: string,
+    starterCards: readonly ExpeditionCardStack[],
+    limits: Readonly<Record<string, { limitPerDeck?: number }>> = {},
+): PersistentStash {
+    const deck = getSavedDeckById(stash.savedDecks, deckId);
+    if (!deck || countDeckCards(deck.cards) >= DECK_CARD_MIN) return stash;
+
+    const countCopies = (cards: readonly ExpeditionCardStack[]) => {
+        const counts = new Map<string, number>();
+        for (const card of cards) counts.set(card.id, (counts.get(card.id) ?? 0) + card.count);
+        return counts;
+    };
+    const deckCounts = countCopies(deck.cards);
+    const ownedCounts = countCopies(stash.cards);
+    const starterCounts = countCopies(starterCards);
+    const candidates = [...new Set([...starterCounts.keys(), ...ownedCounts.keys()])];
+    let missing = DECK_CARD_MIN - countDeckCards(deck.cards);
+    const addCopies = (id: string, available: number) => {
+        const used = deckCounts.get(id) ?? 0;
+        const limit = limits[id]?.limitPerDeck ?? 3;
+        const added = Math.min(missing, Math.max(0, limit - used), Math.max(0, available));
+        if (added <= 0) return;
+        deckCounts.set(id, used + added);
+        missing -= added;
+    };
+    for (const id of candidates) {
+        addCopies(id, (ownedCounts.get(id) ?? 0) - (deckCounts.get(id) ?? 0));
+    }
+    for (const [id, count] of starterCounts) {
+        const used = deckCounts.get(id) ?? 0;
+        const before = missing;
+        addCopies(id, count - used);
+        if (missing < before) ownedCounts.set(id, Math.max(ownedCounts.get(id) ?? 0, deckCounts.get(id)!));
+    }
+    if (missing > 0) return stash;
+
+    return {
+        ...stash,
+        cards: [...ownedCounts].map(([id, count]) => ({ id, count })),
+        savedDecks: stash.savedDecks.map(savedDeck => savedDeck.id === deckId
+            ? { ...savedDeck, cards: [...deckCounts].map(([id, count]) => ({ id, count })) }
+            : savedDeck),
+    };
+}
+
+/** Older starter saves may contain added reward cards; retain them when topping up. */
 export function upgradeSeededDeckToMinimum(
     stash: PersistentStash,
     seededDeckId: string,
     seededCards: readonly ExpeditionCardStack[],
 ): PersistentStash {
-    if (countDeckCards(seededCards) < DECK_CARD_MIN) {
-        return stash;
-    }
-
-    const seededDeck = stash.savedDecks.find((savedDeck) => savedDeck.id === seededDeckId);
-
-    if (!seededDeck || countDeckCards(seededDeck.cards) >= DECK_CARD_MIN) {
-        return stash;
-    }
-
-    const seededCounts = new Map(seededCards.map((card) => [card.id, card.count]));
-    const canUpgrade = seededDeck.cards.every((card) => {
-        const seededCount = seededCounts.get(card.id);
-        return seededCount !== undefined && card.count <= seededCount;
-    });
-
-    if (!canUpgrade) {
-        return stash;
-    }
-
-    const upgradedCards = cloneDeckCardStacks(seededCards);
-    const upgradedCollection = cloneDeckCardStacks(stash.cards);
-
-    for (const card of upgradedCards) {
-        const ownedCard = upgradedCollection.find((owned) => owned.id === card.id);
-
-        if (ownedCard) {
-            ownedCard.count = Math.max(ownedCard.count, card.count);
-        } else {
-            upgradedCollection.push({ ...card });
-        }
-    }
-
-    return {
-        ...stash,
-        cards: upgradedCollection,
-        savedDecks: stash.savedDecks.map((savedDeckEntry) => savedDeckEntry.id === seededDeckId
-            ? { ...savedDeckEntry, cards: cloneDeckCardStacks(upgradedCards) }
-            : { ...savedDeckEntry, cards: cloneDeckCardStacks(savedDeckEntry.cards) }),
-    };
+    if (countDeckCards(seededCards) < DECK_CARD_MIN) return stash;
+    return topUpSavedDeckToMinimum(stash, seededDeckId, seededCards);
 }
 
 export function summarizeDeckCapacity(cards: readonly ExpeditionCardStack[]): DeckCapacitySummary {

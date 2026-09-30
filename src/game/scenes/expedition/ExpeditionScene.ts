@@ -1033,6 +1033,7 @@ export class ExpeditionScene extends Scene {
         const nextPanel = new DeckManagementPanel(this, {
             stash: this.expeditionState.persistentStash,
             metadata: this.deckbuilderCardMetadata,
+            starterCards: this.cache.json.get(this.getResolvedExpeditionResources().starterDeck.cacheKey)?.cards,
             previewResolver: this.deckManagementCardPreviewResolver ?? (() => null),
             onStashChange: (newStash) => {
                 this.expeditionState.persistentStash = newStash;
