@@ -1,31 +1,22 @@
 #game-app {
   position: fixed;
   inset: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   overflow: hidden;
-  background: #080c12;
+  background: #0a0a12;
 }
 
+/* Full-bleed: the canvas width follows the window aspect (see pixelViewportForBrowser),
+   so it fills the screen with no letterbox frame. */
 #game-container {
-  position: relative;
-  flex: 0 0 auto;
-  width: min(100vw, calc(100vh * 16 / 9));
-  height: min(100vh, calc(100vw * 9 / 16));
-  aspect-ratio: 16 / 9;
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
 }
 
 #game-container canvas {
   display: block;
-  width: 100%;
-  height: 100%;
-}
-
-@media (max-width: 700px) and (orientation: portrait) {
-  #game-container {
-    width: min(100vw, calc(100dvh * 12 / 25));
-    height: min(100dvh, calc(100vw * 25 / 12));
-    aspect-ratio: 12 / 25;
-  }
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }

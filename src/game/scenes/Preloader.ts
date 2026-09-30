@@ -5,7 +5,9 @@ import {
     CONTENT_CATALOG_CACHE_KEY,
     CONTENT_CATALOG_PUBLIC_PATH,
 } from '../content/contentCatalog';
-import { C, FONT, T } from '../art/palette';
+import { INK, PX } from '../art/palette';
+import { snap } from '../art/pix';
+import { ptext, ptitle } from '../art/kit';
 
 export class Preloader extends Scene
 {
@@ -17,36 +19,32 @@ export class Preloader extends Scene
     init ()
     {
         const { width, height } = this.scale;
-        this.cameras.main.setBackgroundColor(C.void);
-        this.add.text(width / 2, height / 2 - 90, '青 云', {
-            fontFamily: FONT, fontSize: '72px', color: T.gold, stroke: T.void, strokeThickness: 8,
-        }).setOrigin(0.5);
-        const label = this.add.text(width / 2, height / 2 + 70, '点燃灵火…', {
-            fontFamily: FONT, fontSize: '24px', color: T.dim,
-        }).setOrigin(0.5);
+        this.cameras.main.setBackgroundColor(INK.void);
+        ptitle(this, width / 2, height / 2 - 90, '青云', 4);
+        const label = ptext(this, width / 2, height / 2 + 84, '研 墨 …', { color: INK.mist, origin: [0.5, 0.5] });
 
-        const barWidth = 600;
-        const x0 = width / 2 - barWidth / 2;
-        const y0 = height / 2;
+        // a row of ink blocks that fill with cinnabar
+        const blocks = 24;
+        const size = PX * 6;
+        const gap = PX * 2;
+        const x0 = snap(width / 2 - (blocks * (size + gap)) / 2);
+        const y0 = snap(height / 2 + 24);
         const graphics = this.add.graphics();
         const drawProgress = (progress: number) => {
             graphics.clear();
-            graphics.fillStyle(C.umber, 1);
-            graphics.fillRect(x0 - 8, y0 - 8, barWidth + 16, 40);
-            graphics.fillStyle(C.void, 1);
-            graphics.fillRect(x0 - 4, y0 - 4, barWidth + 8, 32);
-            const filled = Math.floor((barWidth * progress) / 8) * 8;
-            for (let x = 0; x < filled; x += 8) {
-                graphics.fillStyle(x % 16 === 0 ? C.ember : C.gold, 1);
-                graphics.fillRect(x0 + x, y0, 8, 24);
-                graphics.fillStyle(C.glow, 1);
-                graphics.fillRect(x0 + x, y0, 8, 4);
+            const lit = Math.round(blocks * progress);
+            for (let i = 0; i < blocks; i++) {
+                graphics.fillStyle(INK.void, 1);
+                graphics.fillRect(x0 + i * (size + gap) - PX, y0 - PX, size + PX * 2, size + PX * 2);
+                graphics.fillStyle(i < lit ? INK.cinnabar : INK.indigo, 1);
+                graphics.fillRect(x0 + i * (size + gap), y0, size, size);
+                if (i < lit) { graphics.fillStyle(INK.vermilion, 1); graphics.fillRect(x0 + i * (size + gap), y0, size, PX); }
             }
         };
         drawProgress(0);
         this.load.on('progress', (progress: number) => {
             drawProgress(progress);
-            label.setText(`点燃灵火… ${Math.floor(progress * 100)}%`);
+            label.setText(`研 墨 … ${Math.floor(progress * 100)}%`);
         });
     }
 
@@ -67,7 +65,7 @@ export class Preloader extends Scene
         //  For example, you can define global animations here, so we can use them in other scenes.
 
         //  Move to the MainMenu. You could also swap this for a Scene Transition, such as a camera fade.
-        const label = this.add.text(this.scale.width / 2, this.scale.height / 2 + 60, '展开画卷……', { fontSize: '24px', color: '#dfc99f' }).setOrigin(.5);
+        const label = ptext(this, this.scale.width / 2, this.scale.height / 2 + 150, '展 开 画 卷 …', { color: INK.bone, origin: [0.5, 0.5] });
         try {
             await ensureWenxinArt(this);
             if (this.sys.isActive()) this.scene.start('MainMenu');

@@ -9,11 +9,10 @@ import { StoryScene } from './scenes/story/StoryScene';
 import { WorldMapScene } from './scenes/worldmap/WorldMapScene';
 import Phaser, { AUTO, Game } from 'phaser';
 import { Preloader } from './scenes/Preloader';
-import { gameViewportForBrowser } from './layout/gameViewport';
+import { pixelViewportForBrowser } from './layout/gameViewport';
 import { PaletteFX, applyPaletteFX } from './art/PaletteFX';
 import { installPixelText } from './art/textPatch';
-import { installPixelRects } from './art/rectPatch';
-import { pxIrisIn } from './art/fx';
+import { inkIn, installSceneTransitions } from './art/transition';
 
 //  Find out more information about the Game Config at:
 //  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
@@ -22,7 +21,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: 1920,
     height: 1080,
     parent: 'game-container',
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#0a0a12',
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -51,9 +50,9 @@ const config: Phaser.Types.Core.GameConfig = {
 
 const StartGame = (parent: string) => {
     installPixelText();
-    installPixelRects();
+    installSceneTransitions();
 
-    const viewport = gameViewportForBrowser(window.innerWidth, window.innerHeight);
+    const viewport = pixelViewportForBrowser(window.innerWidth, window.innerHeight);
     const game = new Game({ ...config, parent, width: viewport.width, height: viewport.height,
         scale: { ...config.scale, width: viewport.width, height: viewport.height } });
 
@@ -65,7 +64,7 @@ const StartGame = (parent: string) => {
         game.scene.scenes.forEach((scene) => {
             scene.events.on(Phaser.Scenes.Events.CREATE, () => {
                 applyPaletteFX(scene);
-                if (scene.scene.key !== 'Boot' && scene.scene.key !== 'Preloader') pxIrisIn(scene);
+                if (scene.scene.key !== 'Boot' && scene.scene.key !== 'Preloader') inkIn(scene);
             });
         });
     });

@@ -1,5 +1,6 @@
 import { type Textures, type Scene, type GameObjects } from 'phaser';
 import { NEAREST, getWenxinMaterials, pixelSurface } from './WenxinArt';
+import { pixelateImage } from '../pix';
 
 let serial = 0;
 /** Presentation only. Dialogue IDs, branching, rewards and persistence belong to StoryScene. */
@@ -12,12 +13,13 @@ export class WenxinStoryStage {
     private frame = -1;
     private speaking = 'deacon';
     private emotion = '';
-    constructor(private readonly scene: Scene) {
-        for (const [kind, x] of [['deacon', 420], ['girl', 1490]] as const) {
+    constructor(private readonly scene: Scene, private readonly bottom = scene.scale.height - 240) {
+        const { width } = scene.scale;
+        for (const [kind, x] of [['deacon', Math.round(width * 0.2 / 3) * 3], ['girl', Math.round(width * 0.8 / 3) * 3]] as const) {
             const surface = pixelSurface(192, 264);
             const texture = scene.textures.addCanvas(`wenxin:portrait:${++serial}`, surface.o)!;
             texture.setFilter(NEAREST);
-            const image = scene.add.image(x, 225, texture.key).setOrigin(.5, 0).setScale(2.65).setDepth(-5).setVisible(false);
+            const image = scene.add.image(x, this.bottom, texture.key).setOrigin(.5, 1).setScale(3).setDepth(-5).setVisible(false);
             this.portraits.push({ kind, image, texture, surface });
         }
         scene.events.on('update', this.update, this);
@@ -68,15 +70,15 @@ export class WenxinStoryStage {
             this.scene.load.start();
             return;
         }
-        const { width, height } = this.scene.scale;
-        const portrait = height > width;
-        const source = this.scene.textures.get(key).getSourceImage();
-        // The portrait viewport has a shallow header above the dialogue panel.
-        // Keep the NPC visible there instead of placing it behind the panel.
-        const scale = Math.min((portrait ? 150 : 730) / source.height, (portrait ? width * .28 : 540) / source.width);
-        this.customPortrait ??= this.scene.add.image(0, 0, key).setOrigin(.5, 0).setDepth(-5);
-        this.customPortrait.setTexture(key).setPosition(portrait ? width - 68 : 410, portrait ? 2 : 170)
-            .setScale(scale).setVisible(true);
+        const { width } = this.scene.scale;
+        const pixKey = pixelateImage(this.scene, key, `${key}:px`, 200, 250, 'contain');
+        this.customPortrait ??= this.scene.add.image(0, 0, pixKey).setOrigin(.5, 1).setDepth(-5);
+        this.customPortrait.setTexture(pixKey).setPosition(Math.round(width * 0.2 / 3) * 3, this.bottom)
+            .setScale(3).setVisible(true);
+    }
+    /** Is a portrait on screen for the current page? */
+    hasPortrait(): boolean {
+        return Boolean(this.customPortrait?.visible) || this.portraits.some(p => p.image.visible);
     }
     private update(_time: number, delta: number) {
         this.elapsed += Math.min(delta, 100) / 1000;

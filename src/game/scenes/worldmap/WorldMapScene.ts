@@ -1,10 +1,12 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../../EventBus';
-import { ensureBackdrop } from '../../art/backdrop';
-import { bakeTerrain } from '../../art/terrain';
-import { PANEL_INK, pixelPanel } from '../../art/ui';
-import { isPortraitGameViewport } from '../../layout/gameViewport';
+import { INK, PX } from '../../art/palette';
+import { Pix, bake, snap } from '../../art/pix';
+import { panel, pbutton, piconButton, ptext, ptoast, clip, type PButton } from '../../art/kit';
+import { paintLandmark } from '../../art/buildings';
+import { paintCloudFringe, paintWorldMap, roadPoint, spanningRoads, travellerPix, type MapSite } from '../../art/worldArt';
+import { pxBurst } from '../../art/fx';
 import {
     CONTENT_CATALOG_CACHE_KEY,
     CONTENT_CATALOG_PUBLIC_PATH,
@@ -15,43 +17,48 @@ import {
     clampWorldMapSurfacePosition,
     createWorldMapInitialSurfacePosition,
     createWorldMapDestinationIntent,
-    getWorldMapDestinationSurfacePosition,
+    createWorldMapDestinationSelectionStatusText,
     shouldActivateWorldMapMarker,
     validateWorldMapDefinition,
     type WorldMapDefinition,
     type WorldMapDestination,
+    type WorldMapPresentation,
     type WorldMapReturnPayload,
-    type WorldMapSurfacePosition,
     type WorldMapViewport,
 } from './worldMap';
-import {
-    createSceneButton,
-    createScenePanel,
-    createStatusLine,
-    getSceneTextStyle,
-    sceneTheme,
-} from '../shared/sceneTheme';
 import { QuestJournalOverlay, savedQuestJournalEntries } from '../shared/questJournalOverlay';
 
 export const WORLD_MAP_CACHE_KEY = 'worldMapShell';
-const WORLD_MAP_SUPPORT_COPY = '云阶城镇与试炼入口都已标在图上。拖拽舆图，选定下一段路。';
+const LAST_DESTINATION_KEY = 'qingyun:worldmap:last-destination';
 
+interface Marker {
+    destination: WorldMapDestination;
+    site: MapSite;              // art px on the map
+    container: Phaser.GameObjects.Container;
+    art: Phaser.GameObjects.Image;
+    tag: Phaser.GameObjects.Container;
+}
+
+/**
+ * The region map fills the whole screen: a hand-painted pixel island you can drag around,
+ * landmarks you can hover and pick, and a little traveller who walks the roads between them.
+ */
 export class WorldMapScene extends Scene {
     private worldMap!: WorldMapDefinition;
     private worldMapPublicPath?: string;
-    private statusText!: Phaser.GameObjects.Text;
-    private shellContainer?: Phaser.GameObjects.Container;
-    private mapSurfaceContainer?: Phaser.GameObjects.Container;
-    private mapViewport?: WorldMapViewport;
     private questJournal!: QuestJournalOverlay;
-    private mapDragState?: {
-        startPointerX: number;
-        startPointerY: number;
-        startSurfaceX: number;
-        startSurfaceY: number;
-    };
+    private surface?: Phaser.GameObjects.Container;
+    private surfacePresentation!: WorldMapPresentation;
+    private mapViewport!: WorldMapViewport;
+    private markers: Marker[] = [];
+    private roads: Array<[number, number]> = [];
+    private traveller?: Phaser.GameObjects.Image;
+    private travellerAt = 0;
+    private selected = -1;
+    private card?: Phaser.GameObjects.Container;
+    private travelling = false;
+    private mapDragState?: { startPointerX: number; startPointerY: number; startSurfaceX: number; startSurfaceY: number; moved: boolean };
     private returnStatusText?: string;
-    private portraitPage = 0;
     private readonly dragDistanceThreshold = 8;
 
     constructor() {
@@ -82,6 +89,10 @@ export class WorldMapScene extends Scene {
     create(): void {
         this.worldMap = this.readValidatedWorldMapResource();
         this.questJournal = new QuestJournalOverlay(this);
+        this.markers = [];
+        this.selected = -1;
+        this.card = undefined;
+        this.travelling = false;
         this.renderShell();
         EventBus.emit('current-scene-ready', this);
     }
@@ -108,317 +119,184 @@ export class WorldMapScene extends Scene {
     }
 
     private renderShell(): void {
-        this.questJournal.close();
-        this.shellContainer?.destroy();
-        this.mapSurfaceContainer = undefined;
-        this.mapViewport = undefined;
-        this.mapDragState = undefined;
-        if (isPortraitGameViewport(this.scale.width, this.scale.height)) {
-            this.renderPortraitShell();
-            return;
-        }
-
         const { width, height } = this.scale;
-        const container = this.add.container(0, 0);
+        this.cameras.main.setBackgroundColor(INK.indigo);
 
-        this.cameras.main.setBackgroundColor(0x0b0714);
-        ensureBackdrop(this, 'mountain', 'dusk');
+        // Map art is larger than the screen so it can be explored by dragging.
+        const aw = Math.max(Math.ceil(width / PX * 1.18), 760);
+        const ah = 440;
+        const sites: MapSite[] = this.worldMap.destinations.map((d) => ({
+            x: Math.round(d.presentation.position.x * aw),
+            y: Math.round(d.presentation.position.y * ah),
+        }));
+        this.roads = spanningRoads(sites);
+        const mapKey = bake(this, `pxmap:${this.worldMap.id}:${aw}x${ah}`, () => paintWorldMap(aw, ah, sites, this.roads, 11));
+        const fringeKey = bake(this, `pxmapfringe:${aw}x${ah}`, () => paintCloudFringe(aw, ah, 5));
 
-        const margin = 28;
-        const panelX = width / 2;
-        const panelY = height / 2;
-        const panelWidth = width - margin * 2;
-        const panelHeight = height - margin * 2;
-        container.add(pixelPanel(this, panelX, panelY, panelWidth, panelHeight, { ...PANEL_INK, alpha: 0.93 }));
-
-        const left = margin + 28;
-        container.add(this.add.text(left, margin + 20, this.worldMap.title, getSceneTextStyle('sceneTitle', { fontSize: '48px' })));
-        container.add(this.add.text(left + 8, margin + 78, `${this.worldMap.subtitle} · ${WORLD_MAP_SUPPORT_COPY}`, getSceneTextStyle('support', {
-            wordWrap: { width: panelWidth - 420 },
-        })));
-        if (savedQuestJournalEntries().length) {
-            container.add(createSceneButton(this, { x: width - margin - 28 - 110, y: margin + 52,
-                width: 220, height: 52, label: '任务日志', variant: 'secondary',
-                onClick: () => { this.mapDragState = undefined; this.questJournal.open(); } }).objects);
-        }
-
-        const mapViewport = {
-            left: margin + 20,
-            top: margin + 116,
-            width: panelWidth - 40,
-            height: panelHeight - 116 - 72,
+        this.surfacePresentation = {
+            mapWidth: aw * PX,
+            mapHeight: ah * PX,
+            initialCenter: this.worldMap.presentation.initialCenter,
         };
-        const statusLine = createStatusLine(this, {
-            x: panelX,
-            y: height - margin - 38,
-            width: panelWidth - 56,
-            text: this.getDefaultStatusText(),
-        });
-        this.statusText = statusLine.text;
-        container.add(statusLine.objects);
-        this.mapViewport = mapViewport;
-        this.renderMapSurface(container, mapViewport);
+        this.mapViewport = { left: 0, top: 0, width, height };
+        const start = createWorldMapInitialSurfacePosition(this.surfacePresentation, this.mapViewport);
+        const surface = this.add.container(start.x, start.y);
+        this.surface = surface;
+        surface.add(this.add.image(0, 0, mapKey).setOrigin(0).setScale(PX));
+        this.worldMap.destinations.forEach((destination, i) => this.createDestinationMarker(destination, sites[i], i));
+        surface.add(this.add.image(0, 0, fringeKey).setOrigin(0).setScale(PX));
+
+        // traveller
+        const lastId = this.readLastDestination();
+        const startIndex = Math.max(0, this.worldMap.destinations.findIndex((d) => d.id === (lastId ?? this.worldMap.defaultDestinationId)));
+        this.travellerAt = startIndex;
+        const t0 = bake(this, 'px:traveller0', () => travellerPix(0));
+        const t1 = bake(this, 'px:traveller1', () => travellerPix(1));
+        const tp = this.siteToSurface(sites[startIndex]);
+        this.traveller = this.add.image(tp.x + PX * 24, tp.y + PX * 4, t0).setOrigin(0.5, 1).setScale(PX);
+        surface.add(this.traveller);
+        let f = 0;
+        this.time.addEvent({ delay: 380, loop: true, callback: () => { f ^= 1; this.traveller?.setTexture(f ? t1 : t0); } });
+        this.addCloudShadows(surface, aw, ah);
+        this.centerOn(tp.x, tp.y, false);
+
+        this.renderHud();
         this.registerMapInputHandlers();
 
-        this.shellContainer = container;
+        const kb = this.input.keyboard;
+        kb?.on('keydown-RIGHT', () => this.selectMarker((Math.max(0, this.selected) + 1) % this.markers.length));
+        kb?.on('keydown-LEFT', () => this.selectMarker((Math.max(0, this.selected) - 1 + this.markers.length) % this.markers.length));
+        kb?.on('keydown-ENTER', () => { if (this.selected >= 0) this.handleDestinationSelected(this.markers[this.selected].destination.id); });
+        kb?.on('keydown-ESC', () => this.closeCard());
+
+        if (this.returnStatusText) this.time.delayedCall(450, () => ptoast(this, this.returnStatusText!));
     }
 
-    private renderPortraitShell(): void {
+    private renderHud(): void {
         const { width } = this.scale;
-        const container = this.add.container(0, 0);
-        this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
-        ensureBackdrop(this, 'mountain', 'dusk');
-        container.add(this.add.text(width / 2, 78, this.worldMap.title, getSceneTextStyle('sceneTitle', {
-            fontSize: '43px', wordWrap: { width: width - 36 }, align: 'center',
-        })).setOrigin(0.5));
-        container.add(this.add.text(width / 2, 138, this.worldMap.subtitle, getSceneTextStyle('sceneSubtitle', {
-            fontSize: '19px', wordWrap: { width: width - 52 }, align: 'center',
-        })).setOrigin(0.5));
-        container.add(createScenePanel(this, { x: width / 2, y: 560, width: width - 32, height: 790 }));
-        container.add(this.add.text(48, 216, '山麓舆图', getSceneTextStyle('panelTitle', { fontSize: '29px' })));
+        ptext(this, PX * 10, PX * 8, this.worldMap.title, { size: 2, color: INK.paper, fx: 'outline' }).setDepth(50).setScrollFactor(0);
+        let x = width - PX * 16;
+        piconButton(this, x, PX * 16, 'back', () => this.scene.start('MainMenu')).setDepth(50);
         if (savedQuestJournalEntries().length) {
-            container.add(createSceneButton(this, { x: width - 110, y: 216, width: 170, height: 52,
-                label: '任务日志', variant: 'secondary', onClick: () => this.questJournal.open() }).objects);
+            x -= PX * 28;
+            piconButton(this, x, PX * 16, 'book', () => { this.mapDragState = undefined; this.questJournal.open(); }, 'seal').setDepth(50);
         }
-        container.add(this.add.text(48, 270, '选择目的地，启程前往。', getSceneTextStyle('support', {
-            fontSize: '18px', wordWrap: { width: width - 90 },
-        })));
+    }
 
-        const pageSize = 5;
-        const pageCount = Math.max(1, Math.ceil(this.worldMap.destinations.length / pageSize));
-        this.portraitPage = Math.min(this.portraitPage, pageCount - 1);
-        this.worldMap.destinations.slice(this.portraitPage * pageSize, (this.portraitPage + 1) * pageSize)
-            .forEach((destination, index) => {
-                container.add(createSceneButton(this, { x: width / 2, y: 354 + index * 99,
-                    width: width - 82, height: 84, label: destination.label,
-                    description: `${destination.presentation.regionLabel} · ${destination.kind === 'hub' ? '驻地' : '秘境'}`,
-                    variant: 'option', onClick: () => this.handleDestinationSelected(destination.id),
-                }).objects);
+    private addCloudShadows(surface: Phaser.GameObjects.Container, aw: number, ah: number): void {
+        for (let i = 0; i < 4; i++) {
+            const key = bake(this, `px:mapcloud:${i}`, () => {
+                const p = new Pix(70, 20);
+                const r = Math.random;
+                for (let k = 0; k < 6; k++) p.ellipse(12 + Math.floor(r() * 46), 12 - Math.floor(r() * 5), 6 + Math.floor(r() * 5), 3 + Math.floor(r() * 3), INK.paper);
+                p.rect(0, 15, 70, 5, -1);
+                p.rect(8, 14, 54, 1, INK.haze);
+                return p.outline(INK.mist);
             });
-        if (pageCount > 1) {
-            container.add(createSceneButton(this, { x: 112, y: 831, width: 152, height: 46,
-                label: '上一页', variant: 'secondary', onClick: () => {
-                    this.portraitPage = (this.portraitPage - 1 + pageCount) % pageCount; this.renderShell();
-                } }).objects);
-            container.add(createSceneButton(this, { x: width - 112, y: 831, width: 152, height: 46,
-                label: '下一页', variant: 'secondary', onClick: () => {
-                    this.portraitPage = (this.portraitPage + 1) % pageCount; this.renderShell();
-                } }).objects);
+            const c = this.add.image(snap(Math.random() * aw * PX), snap((0.1 + Math.random() * 0.7) * ah * PX), key).setScale(PX).setAlpha(1);
+            surface.add(c);
+            this.tweens.add({ targets: c, x: c.x + aw * PX * 0.4, duration: 120000 + Math.random() * 60000, repeat: -1, yoyo: true });
         }
-        const status = createStatusLine(this, { x: width / 2, y: 903, width: width - 80,
-            text: this.returnStatusText ?? '点选目的地，前往城镇、山门或秘境。', align: 'center' });
-        this.statusText = status.text;
-        container.add(status.objects);
-        this.shellContainer = container;
     }
 
-    private renderMapSurface(container: Phaser.GameObjects.Container, viewport: WorldMapViewport): void {
-        const viewportCenterX = viewport.left + viewport.width / 2;
-        const viewportCenterY = viewport.top + viewport.height / 2;
-        const viewportBackground = this.add.rectangle(
-            viewportCenterX,
-            viewportCenterY,
-            viewport.width,
-            viewport.height,
-            sceneTheme.colors.ink,
-            0.92,
-        );
-        viewportBackground.setStrokeStyle(2, sceneTheme.colors.gold, 0.28);
-        container.add(viewportBackground);
+    private siteToSurface(site: MapSite): { x: number; y: number } {
+        return { x: site.x * PX, y: site.y * PX };
+    }
 
-        const initialSurfacePosition = createWorldMapInitialSurfacePosition(this.worldMap.presentation, viewport);
-        const surface = this.add.container(initialSurfacePosition.x, initialSurfacePosition.y);
-        this.mapSurfaceContainer = surface;
+    private centerOn(x: number, y: number, animate = true): void {
+        if (!this.surface) return;
+        const { width, height } = this.scale;
+        const target = clampWorldMapSurfacePosition(this.surfacePresentation, this.mapViewport, { x: width / 2 - x, y: height / 2 - y });
+        if (animate) this.tweens.add({ targets: this.surface, x: snap(target.x), y: snap(target.y), duration: 350, ease: 'Cubic.easeOut' });
+        else this.surface.setPosition(snap(target.x), snap(target.y));
+    }
 
-        surface.add(this.createMapSurfaceBackdrop());
-        surface.add(this.createMapTerrainArtwork());
-        this.worldMap.destinations.forEach((destination) => {
-            surface.add(this.createDestinationMarker(destination));
+    private createDestinationMarker(destination: WorldMapDestination, site: MapSite, index: number): Marker {
+        const pos = this.siteToSurface(site);
+        const container = this.add.container(pos.x, pos.y);
+        const shadow = this.add.ellipse(0, 0, PX * 44, PX * 10, INK.void, 0.3);
+        const art = this.add.image(0, PX, bake(this, `px:lm2:${destination.presentation.icon}`, () => paintLandmark(destination.presentation.icon)))
+            .setOrigin(0.5, 1).setScale(PX);
+        const hub = destination.kind === 'hub';
+        const label = ptext(this, 0, 0, destination.label, { color: INK.paper, origin: [0.5, 0.5], fx: 'shadow' });
+        const tagW = snap(label.width + PX * 10), tagH = PX * 16;
+        const tagBg = panel(this, 0, 0, tagW, tagH, hub ? 'ink' : 'gold');
+        const pip = this.add.rectangle(-tagW / 2 + PX * 4, 0, PX * 2, PX * 2, hub ? INK.spirit : INK.vermilion);
+        const tag = this.add.container(0, PX * 12, [tagBg, label, pip]);
+        label.setY(-PX);
+        const hit = this.add.rectangle(0, -PX * 12, PX * 54, PX * 56, 0, 0.001).setInteractive({ useHandCursor: true });
+        container.add([shadow, art, tag, hit]);
+        this.surface!.add(container);
+
+        this.tweens.add({ targets: art, y: art.y - PX, duration: 900 + index * 70, yoyo: true, repeat: -1, ease: 'Stepped', easeParams: [1] });
+        const marker: Marker = { destination, site, container, art, tag };
+        this.markers.push(marker);
+
+        let down: { x: number; y: number } | undefined;
+        hit.on('pointerover', () => { if (!this.travelling) this.hoverMarker(marker, true); });
+        hit.on('pointerout', () => this.hoverMarker(marker, false));
+        hit.on('pointerdown', (p: Phaser.Input.Pointer) => { down = { x: p.x, y: p.y }; });
+        hit.on('pointerup', (p: Phaser.Input.Pointer) => {
+            if (!down || this.travelling || this.questJournal.isOpen()) return;
+            const click = shouldActivateWorldMapMarker(down, { x: p.x, y: p.y }, this.dragDistanceThreshold);
+            down = undefined;
+            if (!click) return;
+            if (this.selected === index) this.handleDestinationSelected(destination.id);
+            else this.selectMarker(index);
         });
-
-        const maskShape = this.add.graphics();
-        maskShape.fillStyle(0xf4ecd8, 1);
-        maskShape.fillRect(viewport.left, viewport.top, viewport.width, viewport.height);
-        maskShape.setVisible(false);
-        surface.setMask(maskShape.createGeometryMask());
-
-        container.add(surface);
-        container.add(maskShape);
-
-        const frame = this.add.rectangle(
-            viewportCenterX,
-            viewportCenterY,
-            viewport.width,
-            viewport.height,
-            0x0b0714,
-            0,
-        );
-        frame.setStrokeStyle(4, sceneTheme.colors.gold, 0.54);
-        container.add(frame);
-
-        const hint = this.add.text(viewport.left + 22, viewport.top + 18, '拖拽舆图查看远近 · 点击地标启程', getSceneTextStyle('support', {
-            color: '#f3ead3',
-            backgroundColor: '#493824cc',
-            padding: { x: 12, y: 7 },
-        }));
-        container.add(hint);
-    }
-
-    private createMapSurfaceBackdrop(): Phaser.GameObjects.Rectangle {
-        const { mapWidth, mapHeight } = this.worldMap.presentation;
-        const backdrop = this.add.rectangle(0, 0, mapWidth, mapHeight, sceneTheme.colors.panel, 1);
-        backdrop.setOrigin(0, 0);
-        backdrop.setStrokeStyle(6, sceneTheme.colors.slate, 1);
-
-        return backdrop;
-    }
-
-    private createMapTerrainArtwork(): Phaser.GameObjects.Image {
-        const { mapWidth, mapHeight } = this.worldMap.presentation;
-        const route: Array<[number, number]> = [
-            [mapWidth * 0.18, mapHeight * 0.74],
-            [mapWidth * 0.35, mapHeight * 0.62],
-            [mapWidth * 0.52, mapHeight * 0.38],
-            [mapWidth * 0.68, mapHeight * 0.52],
-            [mapWidth * 0.8, mapHeight * 0.74],
-        ];
-        const key = bakeTerrain(this, `terrain_${mapWidth}x${mapHeight}`, mapWidth, mapHeight, route);
-        return this.add.image(0, 0, key).setOrigin(0, 0).setScale(4);
-    }
-
-    private createDestinationMarker(destination: WorldMapDestination): Phaser.GameObjects.Container {
-        const position = getWorldMapDestinationSurfacePosition(this.worldMap, destination);
-        const marker = this.add.container(position.x, position.y);
-        const palette = this.getDestinationMarkerPalette(destination);
-        const markerLabel = destination.kind === 'hub' ? '驻地' : '秘境';
-
-        const aura = this.add.rectangle(0, 0, 112, 112, palette.fill, 0.22);
-        this.tweens.add({ targets: aura, scale: 1.25, alpha: 0.05, duration: 1200, repeat: -1, ease: 'Stepped', easeParams: [4] });
-        const pin = this.add.rectangle(0, 0, 68, 68, palette.fill, 1);
-        (pin as unknown as { deco: boolean }).deco = true;
-        pin.setStrokeStyle(4, palette.stroke, 1);
-        pin.setInteractive({ useHandCursor: true });
-
-        const glyph = this.add.text(0, -1, this.getDestinationMarkerGlyph(destination), {
-            fontFamily: sceneTheme.fonts.display,
-            fontSize: '24px',
-            color: '#f3ead3',
-            stroke: '#140f0a',
-            strokeThickness: 4,
-        }).setOrigin(0.5);
-
-        const labelPanelWidth = Math.max(148, destination.label.length * 25);
-        const labelPanel = this.add.rectangle(0, 64, labelPanelWidth, 66, sceneTheme.colors.panelInner, 0.86);
-        labelPanel.setStrokeStyle(2, palette.stroke, 0.48);
-        labelPanel.setInteractive({ useHandCursor: true });
-        const label = this.add.text(0, 46, destination.label, {
-            fontFamily: sceneTheme.fonts.ui,
-            fontSize: '20px',
-            color: '#f3ead3',
-            fontStyle: 'bold',
-        }).setOrigin(0.5);
-        const region = this.add.text(0, 72, `${destination.presentation.regionLabel} · ${markerLabel}`, {
-            fontFamily: sceneTheme.fonts.body,
-            fontSize: '18px',
-            color: '#d9c6a2',
-        }).setOrigin(0.5);
-
-        let pointerDownPosition: WorldMapSurfacePosition | undefined;
-        const onPointerDown = (pointer: Phaser.Input.Pointer) => {
-            if (!this.isPointerInsideMapViewport(pointer)) {
-                return;
-            }
-
-            pointerDownPosition = { x: pointer.x, y: pointer.y };
-            pin.setFillStyle(palette.hoverFill, 1);
-            this.previewDestination(destination);
-        };
-        const onPointerUp = (pointer: Phaser.Input.Pointer) => {
-            if (!pointerDownPosition || !this.isPointerInsideMapViewport(pointer)) {
-                pointerDownPosition = undefined;
-                return;
-            }
-
-            const shouldActivate = shouldActivateWorldMapMarker(
-                pointerDownPosition,
-                { x: pointer.x, y: pointer.y },
-                this.dragDistanceThreshold,
-            );
-            pointerDownPosition = undefined;
-
-            if (shouldActivate) {
-                this.handleDestinationSelected(destination.id);
-                return;
-            }
-
-            this.restoreDefaultStatusText();
-        };
-        const onPointerOver = (pointer: Phaser.Input.Pointer) => {
-            if (this.isPointerInsideMapViewport(pointer)) {
-                pin.setFillStyle(palette.hoverFill, 1);
-                this.previewDestination(destination);
-            }
-        };
-        const onPointerOut = () => {
-            pin.setFillStyle(palette.fill, 0.98);
-            this.restoreDefaultStatusText();
-        };
-        for (const target of [pin, labelPanel]) {
-            target.on('pointerdown', onPointerDown);
-            target.on('pointerup', onPointerUp);
-            target.on('pointerover', onPointerOver);
-            target.on('pointerout', onPointerOut);
-        }
-
-        marker.add([aura, pin, glyph, labelPanel, label, region]);
-
         return marker;
     }
 
-    private getDestinationMarkerPalette(destination: WorldMapDestination): {
-        fill: number;
-        hoverFill: number;
-        stroke: number;
-    } {
-        if (destination.kind === 'hub') {
-            return {
-                fill: sceneTheme.colors.jade,
-                hoverFill: sceneTheme.colors.jadeBright,
-                stroke: sceneTheme.colors.goldSoft,
-            };
-        }
-
-        return {
-            fill: sceneTheme.colors.ember,
-            hoverFill: sceneTheme.colors.emberBright,
-            stroke: sceneTheme.colors.goldSoft,
-        };
+    private hoverMarker(m: Marker, on: boolean): void {
+        m.tag.setScale(on ? 1.0 : 1);
+        m.tag.y = on ? PX * 11 : PX * 12;
+        m.art.setTint(on ? 0xffffff : 0xffffff);
+        if (on) this.tweens.add({ targets: m.art, scaleX: PX * 1.1, scaleY: PX * 0.9, duration: 80, yoyo: true, ease: 'Stepped', easeParams: [2] });
     }
 
-    private getDestinationMarkerGlyph(destination: WorldMapDestination): string {
-        const markerGlyphs: Record<string, string> = {
-            town: '镇',
-            'sect-gate': '宗',
-            teahouse: '茶',
-            trial: '试',
-            cave: '洞',
-        };
-
-        return markerGlyphs[destination.presentation.icon] ?? (destination.kind === 'hub' ? '驿' : '境');
+    private selectMarker(index: number): void {
+        if (this.travelling || !this.markers[index]) return;
+        this.selected = index;
+        const m = this.markers[index];
+        this.markers.forEach((mk, i) => mk.container.setDepth(i === index ? 2 : 1));
+        const p = this.siteToSurface(m.site);
+        this.centerOn(p.x, p.y + PX * 20);
+        pxBurst(this, (this.surface?.x ?? 0) + p.x, (this.surface?.y ?? 0) + p.y - PX * 10, { colors: [INK.gold, INK.paper], count: 8, speed: 120, size: 6, depth: 60 });
+        this.openCard(m.destination);
     }
 
-    private previewDestination(destination: WorldMapDestination): void {
-        const travelSummary = destination.kind === 'hub'
-            ? '可在此落脚整备。'
-            : '可在此深入试炼。';
-
-        this.statusText.setText(
-            `${destination.presentation.regionLabel} · ${destination.label}\n${travelSummary} ${destination.description}`,
-        );
+    private openCard(destination: WorldMapDestination): void {
+        this.card?.destroy();
+        const { width, height } = this.scale;
+        const w = snap(Math.min(1200, width - PX * 40));
+        const h = PX * 72;
+        const c = this.add.container(snap(width / 2), height + h).setDepth(80);
+        const hub = destination.kind === 'hub';
+        const bg = panel(this, 0, 0, w, h, 'ink');
+        const iconFrame = panel(this, -w / 2 + PX * 34, 0, PX * 60, PX * 52, 'slate');
+        const icon = this.add.image(-w / 2 + PX * 34, PX * 21, bake(this, `px:lm2:${destination.presentation.icon}`, () => paintLandmark(destination.presentation.icon)))
+            .setOrigin(0.5, 1).setScale(PX);
+        const left = -w / 2 + PX * 72;
+        const name = ptext(this, left, -h / 2 + PX * 8, destination.label, { size: 2, color: INK.paper });
+        const kind = ptext(this, left + name.width + PX * 6, -h / 2 + PX * 16, `${hub ? '驻地' : '秘境'} · ${destination.presentation.regionLabel}`, { color: hub ? INK.spirit : INK.amber });
+        const btnW = PX * 64;
+        const desc = ptext(this, left, -h / 2 + PX * 33, clip(destination.description, Math.floor((w - PX * 60 - btnW - PX * 20) / 36) * 2), {
+            color: INK.haze, wrap: w - PX * 72 - btnW - PX * 20,
+        });
+        const go: PButton = pbutton(this, { x: w / 2 - btnW / 2 - PX * 10, y: PX * 12, width: btnW, height: PX * 24, label: hub ? '前 往' : '出 发', style: 'seal', size: 1,
+            onClick: () => this.handleDestinationSelected(destination.id) });
+        const close = piconButton(this, w / 2 - PX * 12, -h / 2 + PX * 13, 'close', () => this.closeCard(), 'slate', 14);
+        c.add([bg, iconFrame, icon, name, kind, desc, go, close]);
+        this.tweens.add({ targets: c, y: snap(height - h / 2 - PX * 8), duration: 240, ease: 'Back.easeOut' });
+        this.card = c;
     }
 
-    private restoreDefaultStatusText(): void {
-        this.statusText.setText(this.getDefaultStatusText());
+    private closeCard(): void {
+        if (!this.card) return;
+        const c = this.card;
+        this.card = undefined;
+        this.selected = -1;
+        this.tweens.add({ targets: c, y: this.scale.height + 300, duration: 180, ease: 'Quad.easeIn', onComplete: () => c.destroy() });
     }
 
     private registerMapInputHandlers(): void {
@@ -430,58 +308,100 @@ export class WorldMapScene extends Scene {
         this.input.on('pointerup', this.handleMapPointerUp, this);
     }
 
-    private handleMapPointerDown(pointer: Phaser.Input.Pointer): void {
-        if (this.questJournal.isOpen() || !this.mapSurfaceContainer || !this.isPointerInsideMapViewport(pointer)) {
-            return;
-        }
-
+    private handleMapPointerDown(pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]): void {
+        if (this.questJournal.isOpen() || !this.surface || this.travelling) return;
+        if (this.card && over.some((o) => this.card!.exists(o) || o.parentContainer === this.card)) return;
         this.mapDragState = {
             startPointerX: pointer.x,
             startPointerY: pointer.y,
-            startSurfaceX: this.mapSurfaceContainer.x,
-            startSurfaceY: this.mapSurfaceContainer.y,
+            startSurfaceX: this.surface.x,
+            startSurfaceY: this.surface.y,
+            moved: false,
         };
     }
 
     private handleMapPointerMove(pointer: Phaser.Input.Pointer): void {
-        if (this.questJournal.isOpen() || !this.mapDragState || !this.mapSurfaceContainer || !this.mapViewport || !pointer.isDown) {
-            return;
-        }
-
+        if (this.questJournal.isOpen() || !this.mapDragState || !this.surface || !pointer.isDown) return;
         const deltaX = pointer.x - this.mapDragState.startPointerX;
         const deltaY = pointer.y - this.mapDragState.startPointerY;
-        const clampedPosition = clampWorldMapSurfacePosition(this.worldMap.presentation, this.mapViewport, {
+        if (Math.abs(deltaX) + Math.abs(deltaY) > this.dragDistanceThreshold) this.mapDragState.moved = true;
+        const clampedPosition = clampWorldMapSurfacePosition(this.surfacePresentation, this.mapViewport, {
             x: this.mapDragState.startSurfaceX + deltaX,
             y: this.mapDragState.startSurfaceY + deltaY,
         });
-
-        this.mapSurfaceContainer.setPosition(clampedPosition.x, clampedPosition.y);
+        this.surface.setPosition(snap(clampedPosition.x), snap(clampedPosition.y));
     }
 
-    private handleMapPointerUp(): void {
+    private handleMapPointerUp(_pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]): void {
+        const drag = this.mapDragState;
         this.mapDragState = undefined;
+        // a plain click on empty map dismisses the card
+        if (drag && !drag.moved && over.length === 0) this.closeCard();
     }
 
-    private isPointerInsideMapViewport(pointer: Phaser.Input.Pointer): boolean {
-        if (!this.mapViewport) {
-            return false;
+    /** BFS over the road tree from the traveller to `target`, returning site indices. */
+    private routeTo(target: number): number[] {
+        const prev = new Map<number, number>([[this.travellerAt, -1]]);
+        const queue = [this.travellerAt];
+        while (queue.length) {
+            const a = queue.shift()!;
+            if (a === target) break;
+            for (const [x, y] of this.roads) {
+                const b = x === a ? y : y === a ? x : -1;
+                if (b >= 0 && !prev.has(b)) { prev.set(b, a); queue.push(b); }
+            }
         }
-
-        return pointer.x >= this.mapViewport.left
-            && pointer.x <= this.mapViewport.left + this.mapViewport.width
-            && pointer.y >= this.mapViewport.top
-            && pointer.y <= this.mapViewport.top + this.mapViewport.height;
+        const path: number[] = [];
+        for (let at = target; at !== -1 && at !== undefined; at = prev.get(at)!) path.unshift(at);
+        return path[0] === this.travellerAt ? path : [this.travellerAt, target];
     }
 
     private handleDestinationSelected(destinationId: string): void {
+        if (this.travelling) return;
         const intent = createWorldMapDestinationIntent(this.worldMap, destinationId);
-        const destination = this.worldMap.destinations.find((candidate) => candidate.id === destinationId);
+        const index = this.worldMap.destinations.findIndex((candidate) => candidate.id === destinationId);
+        const destination = this.worldMap.destinations[index];
+        this.travelling = true;
+        this.writeLastDestination(destinationId);
+        this.closeCard();
 
-        this.statusText.setText(destination?.statusText ?? '已启程，正在赶往选中的地点。');
-        this.scene.start(intent.sceneKey, intent.payload);
+        const { width, height } = this.scale;
+        const caption = ptext(this, width / 2, height - PX * 20, createWorldMapDestinationSelectionStatusText(destination), {
+            color: INK.bone, fx: 'outline', origin: [0.5, 0.5],
+        }).setDepth(90);
+        this.tweens.add({ targets: caption, alpha: 0.4, duration: 300, yoyo: true, repeat: -1, ease: 'Stepped', easeParams: [2] });
+
+        const path = this.routeTo(index);
+        const segments: Array<[MapSite, MapSite]> = [];
+        for (let i = 0; i + 1 < path.length; i++) segments.push([this.markers[path[i]].site, this.markers[path[i + 1]].site]);
+        const walk = (k: number) => {
+            if (k >= segments.length || !this.traveller) {
+                this.scene.start(intent.sceneKey, intent.payload);
+                return;
+            }
+            const [A, B] = segments[k];
+            const roadDir = this.roads.some(([a, b]) => this.markers[a].site === A && this.markers[b].site === B);
+            const st = { t: 0 };
+            this.tweens.add({
+                targets: st, t: 1, duration: 520, ease: 'Linear',
+                onUpdate: () => {
+                    const p = roadDir ? roadPoint(A, B, st.t) : roadPoint(B, A, 1 - st.t);
+                    this.traveller!.setPosition(snap(p.x * PX), snap(p.y * PX + PX * 2));
+                    this.traveller!.setFlipX(B.x < A.x);
+                    this.centerOn(p.x * PX, p.y * PX, false);
+                },
+                onComplete: () => walk(k + 1),
+            });
+        };
+        if (!segments.length) this.time.delayedCall(250, () => this.scene.start(intent.sceneKey, intent.payload));
+        else walk(0);
     }
 
-    private getDefaultStatusText(): string {
-        return this.returnStatusText ?? '拖拽舆图查看山势，指向地标听闻动向，选定后即可启程。';
+    private readLastDestination(): string | undefined {
+        try { return window.localStorage.getItem(LAST_DESTINATION_KEY) ?? undefined; } catch { return undefined; }
+    }
+
+    private writeLastDestination(id: string): void {
+        try { window.localStorage.setItem(LAST_DESTINATION_KEY, id); } catch { /* storage unavailable */ }
     }
 }

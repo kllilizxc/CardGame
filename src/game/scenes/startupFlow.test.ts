@@ -36,12 +36,12 @@ describe('startup scene flow', () => {
         expect(mainMenuScene).not.toContain("this.scene.start('Game')");
     });
 
-    it('mounts Phaser into a fixed-aspect viewport that fills the window instead of an auto-growing shell container', () => {
+    it('mounts Phaser into a full-bleed viewport that fills the window instead of an auto-growing shell container', () => {
         const gameAppCss = read('src/GameApp.css');
         const gameContainerBlock = gameAppCss.match(/#game-container\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
 
-        expect(gameContainerBlock).toContain('width: min(100vw');
-        expect(gameContainerBlock).toContain('aspect-ratio: 16 / 9;');
+        expect(gameContainerBlock).toContain('width: 100vw');
+        expect(gameContainerBlock).not.toContain('aspect-ratio');
         expect(gameContainerBlock).not.toContain('display: inline-flex;');
         expect(gameContainerBlock).not.toContain('padding');
         // no decorative frame stealing screen space around the canvas
@@ -90,7 +90,7 @@ describe('startup scene flow', () => {
         expect(hubScene).toContain('返回大地图');
         expect(hubScene).toContain('createWorldMapReturnIntent');
         expect(hubScene).toContain('this.scene.start(intent.sceneKey, intent.payload)');
-        expect(hubScene).toContain('createHubMapInitialSurfacePosition');
+        expect(hubScene).toContain('focusStreet');
         expect(hubScene).toContain('createHubLocationMarker');
         expect(hubScene).toContain('handleHubMapPointerMove');
         expect(hubScene).toContain('createHubLocationSelectionIntent');

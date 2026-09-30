@@ -6,7 +6,7 @@
 
 :root {
     color-scheme: dark;
-    --hopi-ink: #0d1320;
+    --hopi-ink: #0a0a12;
     --hopi-ink-soft: #172133;
     --hopi-panel: #22180f;
     --hopi-panel-soft: #493824;
@@ -34,10 +34,7 @@ body {
     margin: 0;
     padding: 0;
     color: var(--hopi-paper);
-    background:
-        radial-gradient(circle at 18% 20%, rgba(79, 122, 98, 0.28), transparent 26%),
-        radial-gradient(circle at 84% 16%, rgba(232, 213, 171, 0.18), transparent 18%),
-        linear-gradient(180deg, #0d1320 0%, #101827 45%, #0a0f18 100%);
+    background: #0a0a12;
     font-family: Zpix, var(--hopi-font-body);
     overflow: hidden;
 }

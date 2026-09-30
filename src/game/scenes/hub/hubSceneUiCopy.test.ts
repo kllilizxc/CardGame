@@ -7,9 +7,8 @@ describe('HubScene player-facing copy', () => {
     it('keeps map prompts and status feedback free of internal hub/session terminology', () => {
         const scene = read('src/game/scenes/hub/HubScene.ts');
 
-        expect(scene).toContain("const HUB_MAP_TITLE = '城镇地图';");
-        expect(scene).toContain("const HUB_MAP_INSTRUCTION = '拖拽查看地图，点击标记切换想去的地点。';");
-        expect(scene).toContain("const HUB_DEFAULT_STATUS_TEXT = '选好落脚点后安心四处看看；离开城镇后，下次回来仍会从这里继续。';");
+        // The street view needs no instruction copy: places are buildings you click.
+        expect(scene).not.toContain('拖拽查看地图');
         expect(scene).toContain('`已选定前往：${location.title}。`');
 
         expect(scene).not.toContain("'地点子地图'");

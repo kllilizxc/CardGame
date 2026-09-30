@@ -1,56 +1,53 @@
 import Phaser from 'phaser';
-import { PALETTE } from './palette';
+import { PALETTE, PX } from './palette';
 
+const N = 32;
+
+/**
+ * The final look of every frame:
+ *  1. pixelate — the canvas is sampled once per 3x3 block, so anything (rotated cards, scaled
+ *     tweens, text) lands on the same 640x360 art grid as the hand-authored sprites;
+ *  2. soft vignette to pull the eye to the centre;
+ *  3. snap to the 墨砂 palette.
+ */
 const frag = `
 precision mediump float;
 uniform sampler2D uMainSampler;
-uniform vec3 uPal[64];
+uniform vec3 uPal[${N}];
 uniform vec2 uRes;
-uniform float uTime;
+uniform float uPx;
+uniform float uVig;
 varying vec2 outTexCoord;
 
-float bayer(vec2 p) {
-    vec2 q = mod(floor(p / 2.0), 4.0);
-    float x0 = mod(q.x, 2.0); float x1 = floor(q.x / 2.0);
-    float y0 = mod(q.y, 2.0); float y1 = floor(q.y / 2.0);
-    float a0 = mod(x0 + y0, 2.0); float a1 = mod(x1 + y1, 2.0);
-    return (a0 * 8.0 + y0 * 4.0 + a1 * 2.0 + y1) / 16.0;
-}
-
 void main() {
-    vec2 uv = outTexCoord;
+    vec2 cell = floor(gl_FragCoord.xy / uPx) * uPx + uPx * 0.5;
+    vec2 uv = cell / uRes;
     vec4 tex = texture2D(uMainSampler, uv);
     vec3 c = tex.rgb;
 
-    // vignette + slow candle-flicker breathing
     vec2 d = uv - 0.5;
-    float vig = 1.0 - dot(d, d) * (0.62 + 0.012 * sin(uTime * 1.3));
-    c *= clamp(vig, 0.0, 1.0);
+    c *= clamp(1.0 - dot(d, d) * uVig, 0.0, 1.0);
 
-    // ordered dither so smooth gradients become pixel-art bands
-    float t = bayer(gl_FragCoord.xy) - 0.5;
-    c += t * 0.028;
-
-    // snap to nearest palette colour
     float best = 1e9;
     vec3 pick = uPal[0];
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < ${N}; i++) {
         vec3 p = uPal[i];
-        vec3 df = (c - p) * vec3(0.9, 1.15, 0.8);
+        vec3 df = (c - p) * vec3(0.95, 1.2, 0.75);
         float dist = dot(df, df);
         if (dist < best) { best = dist; pick = p; }
     }
-    gl_FragColor = vec4(pick, tex.a);
+    gl_FragColor = vec4(pick, 1.0);
 }
 `;
 
 export class PaletteFX extends Phaser.Renderer.WebGL.Pipelines.PostFXPipeline {
     private palette: Float32Array;
+    vignette = 0;
 
     constructor(game: Phaser.Game) {
         super({ game, name: 'PaletteFX', fragShader: frag });
-        this.palette = new Float32Array(64 * 3);
-        const padded = Array.from({ length: 64 }, (_, i) => PALETTE[Math.min(i, PALETTE.length - 1)]);
+        this.palette = new Float32Array(N * 3);
+        const padded = Array.from({ length: N }, (_, i) => PALETTE[Math.min(i, PALETTE.length - 1)]);
         padded.forEach((c, i) => {
             this.palette[i * 3] = ((c >> 16) & 0xff) / 255;
             this.palette[i * 3 + 1] = ((c >> 8) & 0xff) / 255;
@@ -61,7 +58,8 @@ export class PaletteFX extends Phaser.Renderer.WebGL.Pipelines.PostFXPipeline {
     onPreRender(): void {
         this.set3fv('uPal', this.palette);
         this.set2f('uRes', this.renderer.width, this.renderer.height);
-        this.set1f('uTime', this.game.loop.time / 1000);
+        this.set1f('uPx', PX);
+        this.set1f('uVig', this.vignette);
     }
 }
 
