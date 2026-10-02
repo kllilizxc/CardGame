@@ -1,7 +1,7 @@
 import type { Scene } from 'phaser';
 // Phaser.Textures.FilterMode.NEAREST; keep this utility importable by headless data tests.
 export const NEAREST = 1;
-import { loadWenxinMaterials, type WenxinMaterials, type PixelSurface } from './materials.js';
+import { loadImage, loadWenxinMaterials, type WenxinMaterials, type PixelSurface } from './materials.js';
 import { unitArt } from './presentation';
 import { paintCardFace, type CardKindKey } from '../cardArt';
 import { iconPix, type PixIcon } from '../icons';
@@ -24,12 +24,7 @@ export function addPixelTexture(scene: Scene, key: string, canvas: HTMLCanvasEle
 export async function ensureWenxinArt(scene: Scene) {
     loading ??= Promise.all([
         loadWenxinMaterials(),
-        ...['fox', 'eagle', 'disc', 'sage', 'talis', 'sword', 'back'].map(name => new Promise<void>((resolve, reject) => {
-            const image = new Image();
-            image.onload = () => { frames.set(name, image); resolve(); };
-            image.onerror = () => reject(new Error(`卡框载入失败：${name}`));
-            image.src = `/assets/wenxin/frames/${name}.png`;
-        })),
+        ...['fox', 'eagle', 'disc', 'sage', 'talis', 'sword', 'back'].map(name => loadImage(`/assets/wenxin/frames/${name}.png`, `卡框 ${name}`).then(image => { frames.set(name, image); })),
     ]).then(([art]) => { materials = art; return art; }).catch(error => { loading = undefined; throw error; });
     const art = await loading;
     for (const kind of ['story', 'gallery', 'sky']) addPixelTexture(scene, `wenxin:${kind}`, art.background(kind, 640, 360));

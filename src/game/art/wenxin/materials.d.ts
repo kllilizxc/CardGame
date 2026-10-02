@@ -10,4 +10,5 @@ export interface WenxinMaterials {
     flyingSword(ctx: CanvasRenderingContext2D, x: number, y: number): void;
     casket(px: PixelSurface, open: number): HTMLCanvasElement;
 }
+export function loadImage(src: string, label?: string, attempts?: number): Promise<HTMLImageElement>;
 export function loadWenxinMaterials(baseUrl?: string): Promise<WenxinMaterials>;

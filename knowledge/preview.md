@@ -1,6 +1,6 @@
 # CardGame 预览运行说明
 
-默认入口：web。权威 v2 项目描述为 [preview.config.mjs](./tools/preview/preview.config.mjs)。候选必须提供 game 仓库的确切 Git 提交；Worka 管理独立工作树、端口、依赖准备、进程与状态。
+默认入口：web（开发服务器，本机迭代用）；另有 static 构建版入口，按候选 commit 缓存构建产物，供 Tailscale 等远程分享。权威 v2 项目描述为 [preview.config.mjs](./tools/preview/preview.config.mjs)。候选必须提供 game 仓库的确切 Git 提交；Worka 管理独立工作树、端口、依赖准备、进程与状态。
 
 剧情候选可同时指定 `storyId`、`entryHubId` 和 `entryActionId`。预览链接会从内容目录定位该据点，再通过据点已有的剧情行动进入故事；普通游戏链接仍从主菜单开始。
 

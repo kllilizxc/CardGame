@@ -1,6 +1,17 @@
 /* v4 owns scene state, camera, attack timing and effects.
  * This adapter only supplies art, expression patches and the original pose channels.
  */
+export function loadImage(src, label = src, attempts = 4) {
+  return new Promise((resolve, reject) => {
+    const tryLoad = left => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => { if (left > 1) setTimeout(() => tryLoad(left - 1), (attempts - left + 1) * 800); else reject(new Error('素材载入失败：' + label)); };
+      img.src = src;
+    };
+    tryLoad(attempts);
+  });
+}
 export function loadWenxinMaterials(baseUrl = '/assets/wenxin/') {
   const names=['disciple-reference-v2','series-girl','series-elder','series-fox','series-eagle','series-ghost','series-talisman','series-sword','series-story','series-floor','series-sky','series-gallery','series-bell','series-island','series-cloud','series-casket','series-turtle','series-wolf'];
   const images={},cache=new Map(),boxes=new WeakMap(),faceBoxes=new WeakMap();
@@ -195,6 +206,6 @@ export function loadWenxinMaterials(baseUrl = '/assets/wenxin/') {
   }
   const api={monster,portrait,cardArt,native,background,sea,floor,prop,crowd,casket,ghostEyes,flyingSword,
     inspect:()=>({assets:names,portraitFaces:{girl:[0,1,2,3].map(i=>faceBox(cell('series-girl',i))),elder:[0,1,2,3].map(i=>faceBox(cell('series-elder',i)))},eyePoints:cache.get('ghost-eyes')})};
-  const ready=Promise.all(names.map(name=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{images[name]=img;resolve();};img.onerror=()=>reject(new Error('素材载入失败：'+name));img.src=`${baseUrl}${name}.png`;}))).then(()=>api);
+  const ready=Promise.all(names.map(name=>loadImage(`${baseUrl}${name}.png`,name).then(img=>{images[name]=img;}))).then(()=>api);
   return ready;
 }

@@ -1,5 +1,6 @@
 import { existsSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 
 const json = path => JSON.parse(readFileSync(path, 'utf8'));
@@ -72,13 +73,23 @@ export default {
       query.set('workaAction', context.options.entryActionId);
       query.set('workaStory', context.options.storyId);
     }
+    const dist = join(context.runtimeDir, 'build-' + game.commit.replace(/[^A-Za-z0-9._-]+/g, '_'));
     return {
-      surfaces: [{ name: 'web', title: '游戏', service: 'web', path: `/?${query}` }],
+      surfaces: [
+        { name: 'web', title: '游戏', service: 'web', path: `/?${query}` },
+        { name: 'static', title: '游戏（构建版）', service: 'static', path: `/?${query}` },
+      ],
       prepare: [{ name: 'install-dependencies', cwd: game.dir, command: ['bun', 'install', '--frozen-lockfile'], unless: 'node_modules/vite/bin/vite.js', timeoutMs: 180_000 }],
       services: [{
         name: 'web', cwd: game.dir,
         command: ['bun', 'node_modules/vite/bin/vite.js', '--config', 'vite/config.dev.mjs', '--host', '127.0.0.1', '--port', '{{port:web}}', '--strictPort'],
         ready: { http: '/', timeoutMs: 120_000 },
+      }, {
+        // 构建版供远程分享：请求少、产物带哈希长缓存；构建在 serve-static 内按 commit 缓存。
+        name: 'static', cwd: game.dir,
+        command: ['bun', join(dirname(fileURLToPath(import.meta.url)), 'serve-static.mjs')],
+        env: { PORT: '{{port:static}}', WORKA_DIST_DIR: dist },
+        ready: { http: '/', timeoutMs: 600_000 },
       }],
     };
   },
@@ -94,16 +105,18 @@ export default {
     ];
   },
   async verify(context, surface) {
-    if (surface !== 'web') return [check('surface', false, '未知游戏入口')];
+    if (surface !== 'web' && surface !== 'static') return [check('surface', false, '未知游戏入口')];
     const root = context.repos.game.dir;
-    const base = context.urls.web;
+    const base = context.urls[surface];
     const response = await fetch(base, { signal: AbortSignal.timeout(12_000) });
     const html = await response.text();
+    // 构建版的入口是哈希产物而不是 src/main.tsx。
+    const shellOk = response.ok && html.includes('root') && (surface === 'static' ? html.includes('assets/') : html.includes('src/main.tsx'));
     const catalogResponse = await fetch(new URL('/data/content-catalog.json', base), { signal: AbortSignal.timeout(12_000) });
     const servedCatalog = catalogResponse.ok ? await catalogResponse.json() : null;
     const storyId = typeof context.options.storyId === 'string' ? context.options.storyId : '';
     if (context.options.candidateKind === 'documents') return [
-      check('game-shell', response.ok && html.includes('src/main.tsx') && html.includes('root'), '游戏页面指向实际入口'),
+      check('game-shell', shellOk, '游戏页面指向实际入口'),
       check('content-catalog', catalogResponse.ok, '候选内容目录可读取'),
       check('knowledge-documents', documentRevisionsValid(root, context.options.documentRevisions), '普通资料文件与确切候选一致'),
     ];
@@ -372,7 +385,7 @@ export default {
         && action.storyResourceId === storyId && action.storyGraphFile === storyPath)) === true;
     }));
     return [
-      check('game-shell', response.ok && html.includes('src/main.tsx') && html.includes('root'), '游戏页面指向实际入口'),
+      check('game-shell', shellOk, '游戏页面指向实际入口'),
       check('content-catalog', catalogResponse.ok, '候选内容目录可读取'),
       ...(!storyId ? [
         check('card-definition', Boolean(expected && actual && JSON.stringify(expected) === JSON.stringify(actual)), `${cardId} 定义与确切候选工作区一致`),

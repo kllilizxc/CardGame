@@ -1,4 +1,5 @@
 import { wenxinCardTexture } from '../art/wenxin/WenxinArt';
+import { loadImage } from '../art/wenxin/materials.js';
 import type { Scene, Textures } from 'phaser';
 import { gameStorage, previewStoragePrefix } from '../services/PreviewStorage';
 
@@ -33,12 +34,7 @@ function texture(scene: Scene, url: string): Promise<string> {
     if (!tasks) { tasks = new Map(); pending.set(scene.textures, tasks); }
     if (tasks.has(key)) return tasks.get(key)!;
     const manager = scene.textures;
-    const job = new Promise<string>((resolve, reject) => {
-        const image = new Image();
-        image.onload = () => { if (!manager.exists(key)) manager.addImage(key, image); resolve(key); };
-        image.onerror = () => reject(Error(`Card-face image unavailable: ${url}`));
-        image.src = url;
-    });
+    const job = loadImage(url, url).then(image => { if (!manager.exists(key)) manager.addImage(key, image); return key; });
     tasks.set(key, job);
     void job.finally(() => tasks!.delete(key)).catch(() => undefined);
     return job;

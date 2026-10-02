@@ -14,14 +14,15 @@ test('card face preferences preserve variants and ignore stale loads and destroy
             scroll: { texture: '/assets/card-faces/U/scroll.png', preview: '/assets/card-faces/U/scroll-preview.png', templateVersion: 1 },
         } };
         const values: Array<string | undefined> = [];
+        const flush = async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); };
         const stop = watchCardFace(scene, { id: 'U-test-theme', cardFace: face }, value => values.push(value));
         expect(images.length).toBe(1);
         setCardFaceTheme('U-test-theme', 'scroll');
         expect(selectedCardFace('U-test-theme', face)).toBe('scroll');
         expect(face.themeId).toBe('jade');
-        images[0].onload(); await Promise.resolve();
+        images[0].onload(); await flush();
         expect(values).toEqual([]);
-        images[1].onload(); await Promise.resolve();
+        images[1].onload(); await flush();
         expect(values[values.length - 1]).toContain('/scroll.png');
         setCardFaceTheme('U-test-theme', 'original');
         expect(values[values.length - 1]).toBeUndefined();
@@ -31,7 +32,7 @@ test('card face preferences preserve variants and ignore stale loads and destroy
         expect(values.length).toBe(count);
         const removed: unknown[] = [];
         const release = watchCardFace({ textures: { exists: () => false, addImage: () => {} } } as any, { id: 'destroyed', cardFace: face }, value => removed.push(value));
-        release(); images[images.length - 1]!.onload(); await Promise.resolve();
+        release(); images[images.length - 1]!.onload(); await flush();
         expect(removed).toEqual([]);
     } finally { (globalThis as any).window = savedWindow; (globalThis as any).Image = savedImage; }
 });
