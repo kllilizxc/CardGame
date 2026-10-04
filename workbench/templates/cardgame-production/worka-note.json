@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "name": "AI 资源生产",
+  "files": [
+    "README.md",
+    "SKILL.md",
+    "actions.ts",
+    "state.ts",
+    "view.tsx",
+    "card-workflow.tsx",
+    "card-face.ts",
+    "package.json",
+    "icon.svg",
+    "companion-create.tsx",
+    "companion-context.tsx",
+    "deck-outcome.tsx"
+  ],
+  "initialState": {
+    "projectId": "",
+    "query": ""
+  },
+  "config": {
+    "defaults": {
+      "projectId": "",
+      "projectRoot": "",
+      "notes": {
+        "knowledge": "",
+        "cards": "",
+        "assets": "",
+        "production": "",
+        "todo": "",
+        "execution": "",
+        "preview": ""
+      }
+    },
+    "required": [
+      "projectId",
+      "projectRoot"
+    ],
+    "legacyStateFields": []
+  },
+  "icon": {
+    "type": "svg",
+    "path": "icon.svg",
+    "monochrome": true
+  }
+}

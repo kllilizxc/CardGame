@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "name": "CardGame Todo",
+  "files": [
+    "README.md",
+    "SKILL.md",
+    "actions.ts",
+    "images.tsx",
+    "state.ts",
+    "view.tsx",
+    "package.json",
+    "icon.svg"
+  ],
+  "initialState": {
+    "projectId": "",
+    "query": "",
+    "cursor": ""
+  },
+  "config": {
+    "defaults": {
+      "projectId": "",
+      "projectRoot": "",
+      "notes": {
+        "knowledge": "",
+        "cards": "",
+        "assets": "",
+        "production": "",
+        "todo": "",
+        "execution": "",
+        "preview": ""
+      }
+    },
+    "required": [
+      "projectId",
+      "projectRoot"
+    ],
+    "legacyStateFields": []
+  },
+  "icon": {
+    "type": "svg",
+    "path": "icon.svg",
+    "monochrome": true
+  }
+}

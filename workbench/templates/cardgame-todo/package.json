@@ -1,0 +1,12 @@
+{
+  "name": "dsh-cardgame-todo",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@dsh-workbench/react": "file:../../sdk/react",
+    "@dsh-workbench/runtime": "file:../../sdk/runtime",
+    "@heroui/react": "^3.2.4",
+    "@heroui/styles": "^3.2.4"
+  }
+}
+

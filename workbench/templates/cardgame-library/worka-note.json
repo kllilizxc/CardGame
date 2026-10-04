@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "name": "CardGame 内容库",
+  "files": [
+    "README.md",
+    "SKILL.md",
+    "actions.ts",
+    "model.ts",
+    "mermaid.tsx",
+    "package.json",
+    "state.ts",
+    "view.tsx",
+    "cards-workspace.tsx",
+    "icon.svg"
+  ],
+  "initialState": {
+    "query": "",
+    "bookmarks": [],
+    "views": {
+      "knowledge": "reader",
+      "cards": "table",
+      "assets": "grid",
+      "assetsFilters": []
+    }
+  },
+  "config": {
+    "defaults": {
+      "mode": "knowledge",
+      "notes": {
+        "knowledge": "",
+        "cards": "",
+        "assets": "",
+        "production": "",
+        "todo": "",
+        "execution": "",
+        "preview": ""
+      },
+      "resources": []
+    },
+    "required": [
+      "projectId"
+    ],
+    "legacyStateFields": []
+  },
+  "icon": {
+    "type": "svg",
+    "path": "icon.svg",
+    "monochrome": true
+  }
+}

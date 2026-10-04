@@ -1,0 +1,12 @@
+{
+  "type": "module",
+  "dependencies": {
+    "react": "19.3.0",
+    "@heroui/react": "3.2.4",
+    "@dsh-workbench/react": "workspace:*",
+    "@dsh-workbench/runtime": "workspace:*",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "mermaid": "^12.0.0"
+  }
+}
