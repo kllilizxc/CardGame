@@ -21,6 +21,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
     private requiredCount: number = 0;
     private unitHighlights: Map<CardSprite, GameObjects.Graphics> = new Map();
     private unitOverlays: Map<CardSprite, GameObjects.Rectangle> = new Map();
+    private selectionButtons: Array<{ unit: CardSprite; button: ReturnType<typeof createSceneButton> }> = [];
     
     private onConfirm: ((selected: CardSprite[]) => void) | null = null;
     private onCancel: (() => void) | null = null;
@@ -74,7 +75,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
             width / 2 - 100,
             height * 0.85,
             '确认献祭',
-            '选满后执行',
+            '',
             'primary',
             () => this.handleConfirm()
         );
@@ -85,7 +86,7 @@ export class SacrificeSelectionUI extends GameObjects.Container {
             width / 2 + 100,
             height * 0.85,
             '取消',
-            '返回斗法',
+            '',
             'secondary',
             () => this.handleCancel()
         );
@@ -162,7 +163,9 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         this.unitOverlays.clear();
         this.unitOriginalDepths.clear();
 
-        this.availableUnits.forEach(unit => {
+        const { width, height } = this.scene.scale;
+        const buttonWidth = Math.min(214, (width - 58) / Math.max(this.availableUnits.length, 1));
+        this.availableUnits.forEach((unit, index) => {
             this.unitOriginalDepths.set(unit, unit.depth);
             // 提升单位深度到UI之上
             unit.setDepth(5001);
@@ -204,6 +207,18 @@ export class SacrificeSelectionUI extends GameObjects.Container {
             
             // 保存遮罩层引用
             this.unitOverlays.set(unit, overlay);
+
+            const button = createSceneButton(this.scene, {
+                x: width / 2 + (index - (this.availableUnits.length - 1) / 2) * (buttonWidth + 8),
+                y: height * 0.14 + 122,
+                width: buttonWidth,
+                height: 56,
+                label: unit.getCardData().name,
+                variant: 'secondary',
+                onClick: () => this.toggleUnitSelection(unit),
+            });
+            button.objects.forEach(object => (object as GameObjects.Rectangle).setDepth(5004));
+            this.selectionButtons.push({ unit, button });
         });
     }
 
@@ -239,6 +254,9 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         this.instructionText.setText(
             `请选择${this.requiredCount}只要献祭的单位 (${this.selectedUnits.length}/${this.requiredCount})`
         );
+        this.selectionButtons.forEach(({ unit: candidate, button }) => {
+            button.label.setColor(this.selectedUnits.includes(candidate) ? '#f3c477' : '#f3ead3');
+        });
 
         this.updateConfirmButton();
     }
@@ -345,6 +363,8 @@ export class SacrificeSelectionUI extends GameObjects.Container {
         // 清除所有遮罩层
         this.unitOverlays.forEach(overlay => overlay.destroy());
         this.unitOverlays.clear();
+        this.selectionButtons.forEach(({ button }) => button.objects.forEach(object => object.destroy()));
+        this.selectionButtons = [];
 
         // 恢复单位原始深度（不需要移除事件监听器，因为我们没有修改卡牌的事件）
         this.availableUnits.forEach(unit => {

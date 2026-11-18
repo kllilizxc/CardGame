@@ -28,10 +28,10 @@ function unitSprite(id: string): CardSprite {
 
 describe('Qingyun tidekeeper practice', () => {
     it('loads the fixed practice deck instead of the generic preview deck without changing expedition decks', async () => {
-        const request = Object.assign(async (path: string) => {
+        const request = async (path: string) => {
             expect(path).toBe('data/decks/qingyun-tide-dragon.json');
             return Response.json(deck);
-        }, { preconnect: fetch.preconnect });
+        };
         const practice = await loadPracticeBattle(catalog, launch, encounter, request);
         expect(practice?.deckPlan).toEqual({ stacks: deck.cards, shouldShuffle: false });
         expect(await loadPracticeBattle(catalog, { ...launch, runId: 'expedition-1' }, encounter, request)).toBeNull();

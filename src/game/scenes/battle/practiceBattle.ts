@@ -11,7 +11,7 @@ export async function loadPracticeBattle(
     catalog: unknown,
     launch: BattleLaunchPayload | null,
     encounter: { practice?: { deckResourceId: string; guide: string } } | null | undefined,
-    request: typeof fetch = fetch,
+    request: (path: string) => Promise<Response> = fetch,
 ): Promise<PracticeBattle | null> {
     if (launch?.runId !== 'worka-preview' || !encounter?.practice) return null;
 
