@@ -5,7 +5,7 @@
   "difficulty": 2,
   "practice": {
     "deckResourceId": "deck.qingyun-tide-dragon",
-    "guide": "守堰演武｜先拖听潮螭上场，再拖镇脊龙并确认献祭。将合潮印拖到龙身上，结束回合出击。"
+    "guide": "守堰演武｜用听潮螭献祭召龙，再给龙装备合潮印。可开闸取回灵螭，也可先结束回合，让龙出击。"
   },
   "enemies": [
     { "cardId": "CR_006", "position": 0 },

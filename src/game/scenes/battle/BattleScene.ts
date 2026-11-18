@@ -50,8 +50,9 @@ import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import { createExpeditionBattleCompleteEvent } from './battleCompletion';
 import { createStoryBattleCompleteEvent } from '../story/storyBattleRoundTrip';
 import { resolveBattleLoadout } from './battleLoadout';
-import { createScenePanel, getSceneTextStyle, sceneTheme } from '../shared/sceneTheme';
+import { createSceneButton, createScenePanel, getSceneTextStyle, sceneTheme } from '../shared/sceneTheme';
 import { loadPracticeBattle, type PracticeBattle } from './practiceBattle';
+import { TideGate, TIDE_SEAL_ID } from './tideGate';
 import {
     BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
     BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
@@ -136,6 +137,8 @@ export class BattleScene extends Scene {
     private deckCacheKey = 'starterDeck';
     private battleEndHandled = false;
     private practiceBattle: PracticeBattle | null = null;
+    private tideGate = new TideGate<CardSprite>();
+    private showingTideGate = false;
 
     constructor() {
         super('BattleScene');
@@ -154,6 +157,8 @@ export class BattleScene extends Scene {
         this.deckCacheKey = getBattleDeckCacheKey(this.storyLaunchPayload);
         this.battleEndHandled = false;
         this.practiceBattle = null;
+        this.tideGate = new TideGate<CardSprite>();
+        this.showingTideGate = false;
     }
 
     // ===== Getter 方法，用于兼容现有代码 =====
@@ -811,10 +816,8 @@ export class BattleScene extends Scene {
             return;
         }
         // 先将被献祭的单位加入弃牌堆
-        sacrificeTargets.forEach(unit => {
-            const unitData = unit.getCardData();
-            this.addToDiscardPile(unitData);
-        });
+        const tributes = sacrificeTargets.map(unit => unit.getCardData());
+        tributes.forEach(unit => this.addToDiscardPile(unit));
         
         // 执行献祭
         this.sacrificeManager.performSacrifice(
@@ -835,6 +838,7 @@ export class BattleScene extends Scene {
                 );
                 
                 if (result.success) {
+                    this.tideGate.bindSacrifice(card, card.getCardData().id, tributes);
                     // 从手牌中移除
                     const cardIndex = this.hand.indexOf(card);
                     if (cardIndex > -1) {
@@ -888,6 +892,10 @@ export class BattleScene extends Scene {
             // 尝试装备
             const success = this.artifactManager.equipArtifact(artifact, targetUnit);
             if (success) {
+                if (artifact.getCardData().id === TIDE_SEAL_ID && !this.showingTideGate) {
+                    this.showingTideGate = true;
+                    this.createTideGateControl();
+                }
                 // 从手牌移除
                 const index = this.hand.indexOf(artifact);
                 if (index > -1) {
@@ -1055,10 +1063,68 @@ export class BattleScene extends Scene {
             onEnablePlayerInteraction: () => this.enablePlayerInteraction(),
             onDisablePlayerInteraction: () => this.disablePlayerInteraction(),
             onApplyPlayerTurnEndEffects: () => this.applyPlayerTurnEndEffects(),
+            shouldUnitAutoAttack: (unit: CardSprite) => !this.tideGate.skipsAttack(unit, this.turnNumber),
             onSetIsPlayerTurn: (value: boolean) => { this.isPlayerTurn = value; },
             onSetTurnNumber: (value: number) => { this.turnNumber = value; },
             onSetIsProcessingTurn: (value: boolean) => { this.isProcessingTurn = value; }
         };
+    }
+
+    private hasTideSeal(unit: CardSprite): boolean {
+        return this.artifactManager.getEquippedArtifacts(unit).some(artifact => artifact.getCardData().id === TIDE_SEAL_ID);
+    }
+
+    private findTideGateDragon(): CardSprite | undefined {
+        if (!this.isPlayerTurn || this.isProcessingTurn) return;
+        return this.playerField.find(unit => unit.active && unit.getCardData().health > 0
+            && this.tideGate.canOpen(unit, this.discardPile, this.hasTideSeal(unit)));
+    }
+
+    private openTideGate(): void {
+        const dragon = this.findTideGateDragon();
+        if (!dragon) return;
+        const scout = this.tideGate.open(dragon, this.discardPile, this.hasTideSeal(dragon), this.turnNumber);
+        if (!scout) return;
+        const { x, y } = this.layout.discardPileButton;
+        this.hand.push(new CardSprite(this, x, y, scout, this.cardScale));
+        this.cardManager.arrangeHand(this.hand);
+        this.battleLog.addLog('开闸回潮：取回了献祭的听潮螭。镇脊龙本回合不参加自动攻击。', [dragon]);
+    }
+
+    private createTideGateControl(): void {
+        const { width } = this.scale;
+        const landscape = this.isLandscape();
+        const y = landscape ? 202 : 252;
+        const depth = this.layout.depth.uiButtons;
+        const button = createSceneButton(this, {
+            x: width / 2, y, width: Math.min(width - 54, 410), height: 54,
+            label: '开闸回潮 · 取回听潮螭',
+            variant: 'primary',
+            onClick: () => this.openTideGate(),
+        });
+        button.objects.forEach(object => (object as Phaser.GameObjects.Rectangle).setDepth(depth));
+        const note = this.add.text(width / 2, y + 41, '', getSceneTextStyle('support', {
+            fontSize: landscape ? '18px' : '15px', align: 'center',
+            backgroundColor: '#17231f', color: '#f3ead3',
+            padding: { x: 12, y: 6 }, wordWrap: { width: width - 44 },
+        })).setOrigin(0.5).setDepth(depth + 1);
+        const update = () => {
+            const ready = this.findTideGateDragon() !== undefined;
+            button.objects.forEach(object => (object as Phaser.GameObjects.Rectangle).setVisible(ready));
+            if (button.background.input) button.background.input.enabled = ready;
+            const waiting = this.playerField.some(unit => this.tideGate.skipsAttack(unit, this.turnNumber));
+            const sealed = this.playerField.some(unit => this.hasTideSeal(unit));
+            const text = waiting
+                ? '已取回听潮螭｜镇脊龙本回合不自动攻击'
+                : this.tideGate.wasOpened()
+                    ? '本场已开闸｜镇脊龙可以照常出击'
+                    : ready ? '本场限一次：开闸则龙本回合不自动攻击；也可先出击，下回合再开。'
+                        : '合潮印｜用听潮螭献祭召龙，才能开闸回收。';
+            note.setText(text).setVisible((sealed || waiting) && this.isPlayerTurn && !this.isProcessingTurn);
+        };
+        update();
+        this.events.on('update', update);
+        this.events.once('shutdown', () => this.events.off('update', update));
     }
 
     private endTurn() {

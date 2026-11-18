@@ -4,7 +4,7 @@
       "id": "AR_QY_TIDE_SEAL",
       "name": "合潮印",
       "kind": "artifact",
-      "description": "原是合拢堰闸的铜钥。仅能装备给回潮镇脊龙，使其攻击力＋7、生命值＋8。",
+      "description": "守堰铜钥，只能装备给镇脊龙：攻＋7、命＋8。每场可开闸一次，取回召龙时献祭的听潮螭；龙本回合不自动攻击。",
       "rarity": "rare",
       "labels": ["sect_qingyun", "堰器"],
       "weaponType": "印",

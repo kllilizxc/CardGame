@@ -36,6 +36,7 @@ function fixture(enemies: CardSprite[]) {
     const battleContext = {
         battleState: state,
         battleTickManager: { tick: mock(() => {}) },
+        effectResolver: { clearTurnAttackMods: mock(() => {}) },
         battleLog: { addLog: log },
         battleStatusController: { triggerTurnStartStatuses: mock(() => {}) },
         effectManager: { showTurnAnimation: mock((_text: string, _color: number, callback: () => void) => callback()) },
@@ -78,4 +79,22 @@ test('a surviving enemy turn receives the updated field, excluding defeated unit
         { player: true, enemies: [defeated, survivor] },
         { player: false, enemies: [survivor] },
     ]);
+});
+
+test('holding a unit at the gate skips its auto attack but leaves it on the field to defend', () => {
+    const enemy = unit('enemy');
+    const holding = unit('holding');
+    const striking = unit('striking');
+    const f = fixture([enemy]);
+    f.state.playerField = [holding, striking];
+    f.context.shouldUnitAutoAttack = (unit) => unit !== holding;
+    const fields: CardSprite[][] = [];
+    f.context.combatManager.resolveCombat = mock((player: boolean, allies: CardSprite[], _enemies: CardSprite[],
+        _damage: (amount: number) => void, done?: () => void) => {
+        fields.push(allies);
+        if (player) done?.();
+        return 0;
+    });
+    f.manager.executePlayerTurn(f.context);
+    expect(fields).toEqual([[striking], [holding, striking]]);
 });

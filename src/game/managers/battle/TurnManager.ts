@@ -18,6 +18,7 @@ export interface TurnManagerContext {
     onPlayerDamaged: (damage: number) => void;
     onRemoveUnit: (unit: CardSprite, isPlayer: boolean) => void;
     onApplyPlayerTurnEndEffects: () => void;
+    shouldUnitAutoAttack?: (unit: CardSprite) => boolean;
     onSetIsPlayerTurn: (value: boolean) => void;
     onSetTurnNumber: (value: number) => void;
     onSetIsProcessingTurn: (value: boolean) => void;
@@ -123,9 +124,12 @@ export class TurnManager {
      */
     public executePlayerTurn(context: TurnManagerContext): void {
         const state = this.battleContext.battleState;
+        const attackers = context.shouldUnitAutoAttack
+            ? state.playerField.filter(context.shouldUnitAutoAttack)
+            : state.playerField;
         context.combatManager.resolveCombat(
             state.isPlayerTurn,
-            state.playerField,
+            attackers,
             state.enemyField,
             context.onPlayerDamaged,
             () => {
