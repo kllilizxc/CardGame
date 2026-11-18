@@ -1,6 +1,22 @@
 {
   "artifacts": [
     {
+      "id": "AR_QY_TIDE_SEAL",
+      "name": "合潮印",
+      "kind": "artifact",
+      "description": "原是合拢堰闸的铜钥。仅能装备给回潮镇脊龙，使其攻击力＋7、生命值＋8。",
+      "rarity": "rare",
+      "labels": ["sect_qingyun", "堰器"],
+      "weaponType": "印",
+      "limitPerDeck": 2,
+      "gradeId": "grade_earth_lower",
+      "equipTarget": "unit",
+      "equipRequiresLabel": "回潮镇脊龙",
+      "elements": ["水"],
+      "attackBonus": 7,
+      "healthBonus": 8
+    },
+    {
       "id": "AR_001",
       "name": "青云剑",
       "kind": "artifact",

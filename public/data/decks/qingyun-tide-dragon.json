@@ -1,0 +1,20 @@
+{
+  "name": "青云宗·回潮守堰",
+  "description": "听潮螭替代高星祭品，引出回潮镇脊龙；合潮印专为镇脊龙增攻护身。演武按牌表顺序发起手。",
+  "cards": [
+    { "id": "CR_QY_TIDE_SCOUT", "count": 1 },
+    { "id": "CR_QY_TIDE_DRAGON", "count": 1 },
+    { "id": "AR_QY_TIDE_SEAL", "count": 1 },
+    { "id": "CR_008", "count": 1 },
+    { "id": "TL_003", "count": 1 },
+    { "id": "SX_YJS_001", "count": 2 },
+    { "id": "CR_QY_TIDE_SCOUT", "count": 2 },
+    { "id": "CR_QY_TIDE_DRAGON", "count": 1 },
+    { "id": "AR_QY_TIDE_SEAL", "count": 1 },
+    { "id": "AR_001", "count": 2 },
+    { "id": "CR_008", "count": 1 },
+    { "id": "SX_TY_001", "count": 2 },
+    { "id": "CR_009", "count": 1 },
+    { "id": "TL_004", "count": 3 }
+  ]
+}

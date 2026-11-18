@@ -50,7 +50,8 @@ import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import { createExpeditionBattleCompleteEvent } from './battleCompletion';
 import { createStoryBattleCompleteEvent } from '../story/storyBattleRoundTrip';
 import { resolveBattleLoadout } from './battleLoadout';
-import { sceneTheme } from '../shared/sceneTheme';
+import { createScenePanel, getSceneTextStyle, sceneTheme } from '../shared/sceneTheme';
+import { loadPracticeBattle, type PracticeBattle } from './practiceBattle';
 import {
     BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
     BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
@@ -134,6 +135,7 @@ export class BattleScene extends Scene {
     private encounterCacheKey = 'currentEncounter';
     private deckCacheKey = 'starterDeck';
     private battleEndHandled = false;
+    private practiceBattle: PracticeBattle | null = null;
 
     constructor() {
         super('BattleScene');
@@ -151,6 +153,7 @@ export class BattleScene extends Scene {
         this.encounterCacheKey = getEncounterCacheKey(this.launchPayload, this.storyLaunchPayload);
         this.deckCacheKey = getBattleDeckCacheKey(this.storyLaunchPayload);
         this.battleEndHandled = false;
+        this.practiceBattle = null;
     }
 
     // ===== Getter 方法，用于兼容现有代码 =====
@@ -290,8 +293,13 @@ export class BattleScene extends Scene {
 
         this.cardScale = this.calculateCardScale();
         this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
-        await ensureWenxinArt(this);
+        const [, practiceBattle] = await Promise.all([
+            ensureWenxinArt(this),
+            loadPracticeBattle(this.cache.json.get(CONTENT_CATALOG_CACHE_KEY), this.launchPayload,
+                this.cache.json.get(this.encounterCacheKey)),
+        ]);
         if (!this.sys.isActive()) return;
+        this.practiceBattle = practiceBattle;
         new WenxinBattleStage(this);
         
         // 初始化游戏状态
@@ -345,7 +353,7 @@ export class BattleScene extends Scene {
         const skillCardsData = this.getRequiredSharedRuntimeJson('skillCards') as { skills: SkillCard[] };
         const initialLoadout = resolveBattleLoadout(this.getOptionalSharedRuntimeJson(BATTLE_LOADOUT_CONFIG_CACHE_KEY), pillCardsData.pills as PillCard[], skillCardsData.skills);
         const starterDeckData = this.cache.json.get(this.deckCacheKey) as { cards: Array<{ id: string; count: number }> };
-        const deckStartupPlan = createBattleDeckStartupPlan(
+        const deckStartupPlan = this.practiceBattle?.deckPlan ?? createBattleDeckStartupPlan(
             this.launchPayload,
             this.storyLaunchPayload,
             starterDeckData,
@@ -401,6 +409,18 @@ export class BattleScene extends Scene {
         });
         this.uiManager.createAll();
         if (this.uiManager instanceof BattleHud) this.uiManager.attachLog(this.battleLog);
+        if (this.practiceBattle) {
+            const depth = this.layout.depth.uiButtons;
+            const panelWidth = Math.min(940, width - 40);
+            const y = this.isLandscape() ? 121 : 164;
+            createScenePanel(this, { x: width / 2, y, width: panelWidth, height: 60 })
+                .forEach(object => (object as Phaser.GameObjects.Rectangle).setDepth(depth));
+            this.add.text(width / 2, y, this.practiceBattle.guide, getSceneTextStyle('support', {
+                fontSize: this.isLandscape() ? '18px' : '15px',
+                align: 'center',
+                wordWrap: { width: panelWidth - 32 },
+            })).setOrigin(0.5).setDepth(depth + 1);
+        }
 
         // 初始化卡牌预览和丹药提示框
         this.cardPreviewManager = new CardPreviewManager(this);
@@ -726,15 +746,16 @@ export class BattleScene extends Scene {
         
         if (sacrificeRequired > 0) {
             // 需要献祭
-            if (!this.sacrificeManager.canSacrifice(this.playerField, sacrificeRequired)) {
+            const validSacrifices = this.sacrificeManager.getValidSacrifices(cardData, this.playerField);
+            if (!this.sacrificeManager.canSacrifice(validSacrifices, sacrificeRequired)) {
                 // 场上单位不足，无法召唤
-                this.battleLog.addLog(`需要${sacrificeRequired}只场上单位进行献祭，但场上单位不足！`);
+                this.battleLog.addLog(this.sacrificeManager.getSacrificeText(cardData, sacrificeRequired));
                 return false;
             }
             
             // 显示献祭选择UI
             this.sacrificeUI.show(
-                this.playerField,
+                validSacrifices,
                 sacrificeRequired,
                 (selectedUnits: CardSprite[]) => {
                     // 献祭完成，执行召唤
@@ -784,6 +805,11 @@ export class BattleScene extends Scene {
      * 执行献祭并召唤单位
      */
     private performSacrificeAndSummon(card: CardSprite, sacrificeTargets: CardSprite[]): void {
+        if (!this.hand.includes(card) || sacrificeTargets.some(target => !this.playerField.includes(target))
+            || !this.sacrificeManager.validateSacrificeStars(card.getCardData(), sacrificeTargets)) {
+            card.returnToOriginalPosition();
+            return;
+        }
         // 先将被献祭的单位加入弃牌堆
         sacrificeTargets.forEach(unit => {
             const unitData = unit.getCardData();
@@ -1102,6 +1128,11 @@ export class BattleScene extends Scene {
 
         this.battleEndHandled = true;
         this.input.resetPointers();
+
+        if (this.practiceBattle && this.launchPayload) {
+            this.scene.restart(this.launchPayload);
+            return;
+        }
 
         if (this.storyLaunchPayload) {
             const result = createStoryBattleCompleteEvent(this.storyLaunchPayload, victory);

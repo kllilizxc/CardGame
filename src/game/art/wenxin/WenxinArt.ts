@@ -7,6 +7,20 @@ import { unitArt } from './presentation';
 let materials: WenxinMaterials | undefined;
 let loading: Promise<WenxinMaterials> | undefined;
 const frames = new Map<string, HTMLImageElement>();
+const portraits = new Map<string, HTMLImageElement>();
+const portraitAssets = {
+    CR_QY_TIDE_DRAGON: 'tide-dragon',
+    CR_QY_TIDE_SCOUT: 'tide-scout',
+    AR_QY_TIDE_SEAL: 'tide-seal',
+} as const;
+
+export function wenxinCardPortrait(scene: Scene, cardId: string): string | undefined {
+    const portrait = portraits.get(cardId);
+    if (!portrait) return;
+    const key = `wenxin:portrait:${cardId}`;
+    if (!scene.textures.exists(key)) scene.textures.addImage(key, portrait);
+    return key;
+}
 export function getWenxinMaterials() { return materials; }
 export function pixelSurface(w: number, h: number): PixelSurface {
     const o = document.createElement('canvas'); o.width = w; o.height = h;
@@ -26,6 +40,12 @@ export async function ensureWenxinArt(scene: Scene) {
             image.onload = () => { frames.set(name, image); resolve(); };
             image.onerror = () => reject(new Error(`卡框载入失败：${name}`));
             image.src = `/assets/wenxin/frames/${name}.png`;
+        })),
+        ...Object.entries(portraitAssets).map(([cardId, file]) => new Promise<void>((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => { portraits.set(cardId, image); resolve(); };
+            image.onerror = () => reject(new Error(`卡牌插画载入失败：${cardId}`));
+            image.src = `/assets/wenxin/qingyun/${file}.svg`;
         })),
     ]).then(([art]) => { materials = art; return art; }).catch(error => { loading = undefined; throw error; });
     const art = await loading;
@@ -47,7 +67,10 @@ export function wenxinCardTexture(scene: Scene, card: VisualCard): string | unde
     const frame = kind === 'unit' ? (mon === 'sage' ? 'sage' : mon === 'disc' ? 'disc' : 'fox') : kind === 'talisman' ? 'talis' : 'sword';
     const { o, ox: x } = pixelSurface(360, 520);
     x.drawImage(frames.get(frame)!, 0, 0, 360, 520);
-    if (mon || kind === 'talisman' || kind === 'artifact' && card.name.includes('剑')) {
+    const portrait = portraits.get(card.id);
+    if (portrait) {
+        x.drawImage(portrait, 22, 85, 316, 282);
+    } else if (mon || kind === 'talisman' || kind === 'artifact' && card.name.includes('剑')) {
         const art = materials.cardArt({ mon, theme: mon === 'fox' ? 'forest' : mon === 'sage' ? 'gold' : 'sky', key: kind === 'talisman' ? 'talis' : 'sword' });
         x.drawImage(art, 22, 85, 316, 282);
     } else {

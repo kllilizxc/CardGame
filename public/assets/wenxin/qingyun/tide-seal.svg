@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="316" height="282" viewBox="0 0 316 282">
+  <defs><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#e6c181"/><stop offset=".52" stop-color="#5c9a85"/><stop offset="1" stop-color="#2a554d"/></linearGradient></defs>
+  <path fill="#1a393b" d="M0 0h316v282H0z"/>
+  <path fill="#285452" d="M0 36h316v24H0zm0 187h316v27H0z"/>
+  <path fill="none" stroke="#7cb19d" stroke-width="2" d="M16 44h80m113 0h93M16 241h82m111 0h92"/>
+  <circle cx="158" cy="138" r="112" fill="#22494a" stroke="#b99258" stroke-width="2"/>
+  <circle cx="158" cy="138" r="98" fill="none" stroke="#8faf9a" stroke-dasharray="2 6" stroke-width="2"/>
+  <path fill="#0f2e33" d="m130 63 62-2 13 30-4 55 34 27v32l-62 29-86-38v-24l43-32z"/>
+  <path fill="#508277" stroke="#dfbe83" stroke-width="3" d="m81 172 76-32 77 32v23l-76 34-77-34z"/>
+  <path fill="#213c39" stroke="#b99661" stroke-width="3" d="m81 172 76-32 77 32-76 34z"/>
+  <path fill="url(#metal)" stroke="#dfbe83" stroke-width="3" d="m132 79 14-19h27l13 19v55l18 17-5 23-41 18-41-18-4-23 19-17z"/>
+  <path fill="#254e4b" stroke="#c6a874" stroke-width="3" d="M146 82q12-16 25 0v48h-25z"/>
+  <path d="m134 158 24-11 24 11-24 12zm8 19 16 7 16-7m-22-72h13m-6-9v19" fill="none" stroke="#e9cd92" stroke-width="2.5"/>
+  <path d="M20 132q18-14 36 0t31 0m141 0q19-14 36 0t31 0M22 146q18-14 36 0t27 2m146-2q19-14 36 0t28-1" fill="none" stroke="#79b7a0" stroke-width="3"/>
+</svg>

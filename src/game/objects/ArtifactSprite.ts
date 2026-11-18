@@ -1,4 +1,5 @@
 import { C, T } from '../art/palette';
+import { wenxinCardPortrait } from '../art/wenxin/WenxinArt';
 import { GameObjects } from 'phaser';
 import type { ArtifactCard } from '@data/types/cards/artifact';
 import { BaseCardSprite } from './BaseCardSprite';
@@ -56,7 +57,12 @@ export class ArtifactSprite extends BaseCardSprite {
         }
 
         // 图标占位符（保持在中间位置）
-        this.addIconPortrait('artifact');
+        const portrait = wenxinCardPortrait(scene, cardData.id);
+        if (portrait) {
+            this.add(scene.add.image(0, -9, portrait).setDisplaySize(114, 102));
+        } else {
+            this.addIconPortrait('artifact');
+        }
 
         // 加成数值（移到类型标签下方）
         if (cardData.attackBonus || cardData.healthBonus) {

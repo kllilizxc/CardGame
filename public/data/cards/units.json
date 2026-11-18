@@ -1,6 +1,37 @@
 {
   "units": [
     {
+      "id": "CR_QY_TIDE_DRAGON",
+      "name": "回潮镇脊龙",
+      "kind": "unit",
+      "description": "青云宗以古堰镇住山洪，堰心青铜水脊久而化龙。献祭一只三星以上单位，或献祭听潮螭召唤。",
+      "rarity": "legendary",
+      "labels": ["sect_qingyun", "灵兽", "回潮镇脊龙"],
+      "factionId": "sect_qingyun",
+      "limitPerDeck": 2,
+      "realmId": "realm_golden_early",
+      "race": "龙族",
+      "linggen": ["水", "土"],
+      "attack": 18,
+      "health": 58,
+      "sacrificeSubstituteLabel": "听潮螭"
+    },
+    {
+      "id": "CR_QY_TIDE_SCOUT",
+      "name": "听潮螭",
+      "kind": "unit",
+      "description": "守堰弟子养在量水石旁的灵螭。它能循暗渠引来回潮镇脊龙，可替代三星祭品。",
+      "rarity": "uncommon",
+      "labels": ["sect_qingyun", "灵兽", "听潮螭"],
+      "factionId": "sect_qingyun",
+      "limitPerDeck": 3,
+      "realmId": "realm_qi_1",
+      "race": "鳞族",
+      "linggen": ["水"],
+      "attack": 3,
+      "health": 16
+    },
+    {
       "id": "CR_001",
       "name": "青云山灵狐",
       "kind": "unit",
