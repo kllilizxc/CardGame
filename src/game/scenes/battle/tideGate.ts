@@ -5,22 +5,25 @@ export const TIDE_SCOUT_ID = 'CR_QY_TIDE_SCOUT';
 export const TIDE_SEAL_ID = 'AR_QY_TIDE_SEAL';
 
 export class TideGate<Dragon extends object> {
-    private readonly tributes = new WeakMap<Dragon, UnitCard>();
+    private readonly tributes = new WeakMap<Dragon, { scout: UnitCard; summonedTurn: number }>();
     private action?: { dragon: Dragon; turn: number };
 
-    bindSacrifice(dragon: Dragon, dragonId: string, tributes: readonly UnitCard[]): void {
+    bindSacrifice(dragon: Dragon, dragonId: string, tributes: readonly UnitCard[], summonedTurn: number): boolean {
         const scout = tributes.find(card => card.id === TIDE_SCOUT_ID);
-        if (dragonId === TIDE_DRAGON_ID && scout) this.tributes.set(dragon, scout);
+        if (dragonId !== TIDE_DRAGON_ID || !scout) return false;
+        this.tributes.set(dragon, { scout, summonedTurn });
+        return true;
     }
 
-    canOpen(dragon: Dragon, discard: readonly { id: string }[], hasSeal: boolean): boolean {
+    canOpen(dragon: Dragon, discard: readonly { id: string }[], hasSeal: boolean, turn: number): boolean {
         const tribute = this.tributes.get(dragon);
-        return !this.action && hasSeal && tribute !== undefined && discard.includes(tribute);
+        return !this.action && hasSeal && tribute !== undefined
+            && turn > tribute.summonedTurn && discard.includes(tribute.scout);
     }
 
     open(dragon: Dragon, discard: { id: string }[], hasSeal: boolean, turn: number): UnitCard | null {
-        if (!this.canOpen(dragon, discard, hasSeal)) return null;
-        const tribute = this.tributes.get(dragon)!;
+        if (!this.canOpen(dragon, discard, hasSeal, turn)) return null;
+        const tribute = this.tributes.get(dragon)!.scout;
         discard.splice(discard.indexOf(tribute), 1);
         this.action = { dragon, turn };
         return tribute;
@@ -30,7 +33,11 @@ export class TideGate<Dragon extends object> {
         return this.action !== undefined;
     }
 
+    isCrossing(dragon: Dragon, turn: number): boolean {
+        return this.tributes.get(dragon)?.summonedTurn === turn;
+    }
+
     skipsAttack(dragon: Dragon, turn: number): boolean {
-        return this.action?.dragon === dragon && this.action.turn === turn;
+        return this.isCrossing(dragon, turn) || (this.action?.dragon === dragon && this.action.turn === turn);
     }
 }

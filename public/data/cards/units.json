@@ -4,7 +4,7 @@
       "id": "CR_QY_TIDE_DRAGON",
       "name": "回潮镇脊龙",
       "kind": "unit",
-      "description": "青云古堰的青铜水脊化龙。献祭三星及以上单位，或献祭听潮螭召唤。以螭召龙后，合潮印能开闸送螭归来。",
+      "description": "青云古堰的青铜水脊化龙。献祭三星及以上单位，或借听潮螭早召。以螭早召时，龙本回合不自动攻击。",
       "rarity": "legendary",
       "labels": ["sect_qingyun", "灵兽", "回潮镇脊龙"],
       "factionId": "sect_qingyun",
@@ -13,7 +13,7 @@
       "race": "龙族",
       "linggen": ["水", "土"],
       "attack": 18,
-      "health": 58,
+      "health": 42,
       "sacrificeSubstituteLabel": "听潮螭"
     },
     {

@@ -817,6 +817,7 @@ export class BattleScene extends Scene {
         }
         // 先将被献祭的单位加入弃牌堆
         const tributes = sacrificeTargets.map(unit => unit.getCardData());
+        const summonedTurn = this.turnNumber;
         tributes.forEach(unit => this.addToDiscardPile(unit));
         
         // 执行献祭
@@ -838,7 +839,9 @@ export class BattleScene extends Scene {
                 );
                 
                 if (result.success) {
-                    this.tideGate.bindSacrifice(card, card.getCardData().id, tributes);
+                    if (this.tideGate.bindSacrifice(card, card.getCardData().id, tributes, summonedTurn)) {
+                        this.battleLog.addLog('借螭渡潮：镇脊龙已上场，但这回合不能自动攻击。', [card]);
+                    }
                     // 从手牌中移除
                     const cardIndex = this.hand.indexOf(card);
                     if (cardIndex > -1) {
@@ -1077,7 +1080,7 @@ export class BattleScene extends Scene {
     private findTideGateDragon(): CardSprite | undefined {
         if (!this.isPlayerTurn || this.isProcessingTurn) return;
         return this.playerField.find(unit => unit.active && unit.getCardData().health > 0
-            && this.tideGate.canOpen(unit, this.discardPile, this.hasTideSeal(unit)));
+            && this.tideGate.canOpen(unit, this.discardPile, this.hasTideSeal(unit), this.turnNumber));
     }
 
     private openTideGate(): void {
@@ -1113,13 +1116,14 @@ export class BattleScene extends Scene {
             button.objects.forEach(object => (object as Phaser.GameObjects.Rectangle).setVisible(ready));
             if (button.background.input) button.background.input.enabled = ready;
             const waiting = this.playerField.some(unit => this.tideGate.skipsAttack(unit, this.turnNumber));
+            const crossing = this.playerField.some(unit => this.tideGate.isCrossing(unit, this.turnNumber));
             const sealed = this.playerField.some(unit => this.hasTideSeal(unit));
-            const text = waiting
-                ? '已取回听潮螭｜镇脊龙本回合不自动攻击'
-                : this.tideGate.wasOpened()
-                    ? '本场已开闸｜镇脊龙可以照常出击'
-                    : ready ? '本场限一次：开闸则龙本回合不自动攻击；也可先出击，下回合再开。'
-                        : '合潮印｜用听潮螭献祭召龙，才能开闸回收。';
+            const text = crossing
+                ? '借螭渡潮｜龙本回合可以挡伤，下一回合才能出击或开闸。'
+                : waiting ? '已取回听潮螭｜镇脊龙本回合不自动攻击'
+                    : this.tideGate.wasOpened() ? '本场已开闸｜镇脊龙可以照常出击'
+                        : ready ? '本场限一次：开闸则龙本回合不自动攻击；也可先出击，下回合再开。'
+                            : '合潮印｜用听潮螭献祭召龙，才能开闸回收。';
             note.setText(text).setVisible((sealed || waiting) && this.isPlayerTurn && !this.isProcessingTurn);
         };
         update();

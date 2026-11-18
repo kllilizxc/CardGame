@@ -5,7 +5,7 @@
   "difficulty": 2,
   "practice": {
     "deckResourceId": "deck.qingyun-tide-dragon",
-    "guide": "守堰演武｜用听潮螭献祭召龙，再给龙装备合潮印。可开闸取回灵螭，也可先结束回合，让龙出击。"
+    "guide": "守堰演武｜用听潮螭献祭召龙，再给龙装备合潮印。早召时先守一回合，下一回合选出击或开闸。"
   },
   "enemies": [
     { "cardId": "CR_006", "position": 0 },

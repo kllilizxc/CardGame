@@ -63,6 +63,10 @@ describe('Qingyun tidekeeper practice', () => {
         expect(manager.validateSacrificeStars(dragon, [senior])).toBe(true);
         const seal = artifacts.artifacts.find(card => card.id === 'AR_QY_TIDE_SEAL');
         expect(dragon.labels).toContain(seal?.equipRequiresLabel);
-        expect(dragon.attack + (seal?.attackBonus ?? 0)).toBe(25);
+        const frontGuard = unitSprite('CR_006').getCardData();
+        const equippedAttack = dragon.attack + (seal?.attackBonus ?? 0);
+        expect(equippedAttack).toBe(22);
+        expect(equippedAttack).toBeLessThan(frontGuard.health);
+        expect(dragon.health + (seal?.healthBonus ?? 0)).toBe(46);
     });
 });
