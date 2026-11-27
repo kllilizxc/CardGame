@@ -1,8 +1,9 @@
-import { TalismanSprite } from '../../objects/TalismanSprite';
-import { CardSprite } from '../../objects/CardSprite';
-import { GameActionHandler } from '../../handlers/battle/GameActionHandler';
+import type { TalismanSprite } from '../../objects/TalismanSprite';
+import type { CardSprite } from '../../objects/CardSprite';
+import type { GameActionHandler } from '../../handlers/battle/GameActionHandler';
 import type { BattleContext } from '../../context/BattleContext';
 import type { TalismanCard } from '@data/types/cards/talisman';
+import type { LegacyEffectTarget } from '@data/types/cards/effects';
 
 export class TalismanManager {
     private battleContext: BattleContext;
@@ -76,13 +77,15 @@ export class TalismanManager {
     /**
      * 检查目标是否合法
      */
-    private isValidTarget(_target: CardSprite, talismanData: TalismanCard, targetSide: 'ally' | 'enemy'): boolean {
+    private isValidTarget(target: CardSprite, talismanData: TalismanCard, targetSide: 'ally' | 'enemy'): boolean {
         if (!talismanData.effects || talismanData.effects.length === 0) {
             return false;
         }
 
         const effect = talismanData.effects[0];
         const targetScope = effect.target?.scope;
+
+        if (!this.matchesLabels(target, effect.target)) return false;
 
         // 单体目标
         if (targetScope === 'singleAlly') {
@@ -127,20 +130,29 @@ export class TalismanManager {
             // 动画完成后应用效果
             if (this.gameActionHandler) {
                 const targetScope = effect.target?.scope || 'singleEnemy';
-                const targets = this.gameActionHandler.getTargetsByScope(targetScope, target);
-
-                effect.actions?.forEach((action: any) => {
-                    // 使用统一的效果处理器
-                    this.gameActionHandler!.applyEffect(
-                        action,
-                        talismanData.name,
-                        talisman,  // 传入符箓精灵作为源卡片
-                        targets.length === 1 ? targets[0] : undefined,
-                        targets.length > 1 ? targets : undefined
-                    );
+                const targets = this.gameActionHandler.getTargetsByScope(targetScope, target)
+                    .filter(unit => this.matchesLabels(unit, effect.target));
+                const state = this.battleContext.battleState;
+                const context = {
+                    playerField: state.playerField,
+                    enemyField: state.enemyField,
+                    triggerUnit: target,
+                    sourceCard: talisman,
+                    sourceName: talismanData.name,
+                };
+                effect.actions?.forEach(action => {
+                    this.battleContext.effectResolver.executeAction(action, targets, context);
                 });
             }
         });
+    }
+
+    private matchesLabels(unit: CardSprite, target: LegacyEffectTarget | undefined): boolean {
+        const labels = unit.getCardData().labels ?? [];
+        const all = target?.requiredLabelsAllOf ?? [];
+        const any = target?.requiredLabelsAnyOf ?? [];
+        return all.every(label => labels.includes(label))
+            && (any.length === 0 || any.some(label => labels.includes(label)));
     }
 
     /**

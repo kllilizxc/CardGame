@@ -14,9 +14,10 @@ import type { TalismanCard } from '@data/types/cards/talisman';
 import type { FieldCard } from '@data/types/cards/field';
 import type { PillCard } from '@data/types/cards/pill';
 import type { LegacyEffectAction } from '@data/types/cards/effects';
+import { getUnitStateId } from '../../managers/battle/unitIdentity';
 
 type GameActionCard = UnitCard | ArtifactCard | TalismanCard | FieldCard | PillCard;
-type SceneWithStatusManager = Scene & { statusManager?: StatusManager };
+type SceneWithStatusManager = Scene & { statusManager?: StatusManager; battleContext?: { statusManager: StatusManager } };
 
 /**
  * 游戏动作处理上下文
@@ -391,7 +392,7 @@ export class GameActionHandler {
 
         // 施加状态
         const success = statusManager.applyStatus(
-            targetData.id,
+            getUnitStateId(target),
             statusId,
             stacks
         );
@@ -409,7 +410,7 @@ export class GameActionHandler {
             );
 
             // 更新状态显示UI
-            const statuses = statusManager.getUnitStatuses(targetData.id);
+            const statuses = statusManager.getUnitStatuses(getUnitStateId(target));
             target.updateStatusDisplay(statuses);
         }
     }
@@ -428,7 +429,7 @@ export class GameActionHandler {
         }
 
         // 移除所有负面状态
-        statusManager.clearDebuffs(targetData.id);
+        statusManager.clearDebuffs(getUnitStateId(target));
 
         // 记录日志
         const cardRefs = sourceCard ? [sourceCard, target] : [target];
@@ -438,12 +439,13 @@ export class GameActionHandler {
         );
 
         // 更新状态显示UI
-        const statuses = statusManager.getUnitStatuses(targetData.id);
+        const statuses = statusManager.getUnitStatuses(getUnitStateId(target));
         target.updateStatusDisplay(statuses);
     }
 
     private getStatusManager(scene: Scene): StatusManager | undefined {
-        return (scene as SceneWithStatusManager).statusManager;
+        const battle = scene as SceneWithStatusManager;
+        return battle.battleContext?.statusManager ?? battle.statusManager;
     }
 
     /**

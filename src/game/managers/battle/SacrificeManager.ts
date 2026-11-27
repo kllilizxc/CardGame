@@ -71,7 +71,8 @@ export class SacrificeManager {
         // 祭品必须是低一星或更高星级的卡
         const minSacrificeStar = targetStar - 1;
         
-        return sacrificeTargets.every(sacrifice => {
+        return sacrificeTargets.length === this.getSacrificeRequired(cardData)
+            && new Set(sacrificeTargets).size === sacrificeTargets.length && sacrificeTargets.every(sacrifice => {
             const sacrificeData = sacrifice.getCardData();
             const sacrificeStar = getUnitStar(sacrificeData);
             return sacrificeStar >= minSacrificeStar;
@@ -169,7 +170,7 @@ export class SacrificeManager {
             const unitData = unit.getCardData();
             const unitStar = getUnitStar(unitData);
             // 可以使用低一星或更高星级的卡
-            return unitStar >= minSacrificeStar;
+            return unit.active && unitData.health > 0 && unitStar >= minSacrificeStar;
         });
     }
 }

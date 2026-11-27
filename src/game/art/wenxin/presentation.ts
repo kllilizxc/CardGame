@@ -1,5 +1,9 @@
 export type UnitArt = 'fox' | 'eagle' | 'disc' | 'sage' | 'turtle' | 'wolf' | 'ghost';
 export type BattleSide = 'me' | 'foe';
+/** The disciple reference looks left; the other shipped battle illustrations look right. */
+export function unitFlipX(art: UnitArt, side: BattleSide): boolean {
+    return art === 'disc' ? side === 'foe' : side === 'me';
+}
 export const UNIT_ART: Record<UnitArt, { w: number; h: number; ax: number; ay: number }> = {
     fox: { w: 120, h: 96, ax: 60, ay: 92 },
     eagle: { w: 120, h: 104, ax: 56, ay: 100 },

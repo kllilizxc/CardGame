@@ -6,13 +6,14 @@
       "kind": "talisman",
       "description": "最基础的进攻符箓，灼烧目标单位。",
       "rarity": "common",
-      "labels": ["攻击符", "火系"],
+      "labels": [
+        "攻击符",
+        "火系"
+      ],
       "limitPerDeck": 3,
-
       "isInstant": true,
       "duration": 0,
       "target": "unit",
-
       "effects": [
         {
           "timing": "reaction",
@@ -36,13 +37,13 @@
       "kind": "talisman",
       "description": "贴身护体，短时间内增强防护。",
       "rarity": "uncommon",
-      "labels": ["防御符"],
+      "labels": [
+        "防御符"
+      ],
       "limitPerDeck": 2,
-
       "isInstant": false,
       "duration": 2,
       "target": "unit",
-
       "effects": [
         {
           "timing": "onSummon",
@@ -67,13 +68,14 @@
       "kind": "talisman",
       "description": "引动天雷，对敌方单位造成强力伤害。",
       "rarity": "rare",
-      "labels": ["攻击符", "雷系"],
+      "labels": [
+        "攻击符",
+        "雷系"
+      ],
       "limitPerDeck": 2,
-
       "isInstant": true,
       "duration": 0,
       "target": "unit",
-
       "effects": [
         {
           "timing": "reaction",
@@ -97,13 +99,13 @@
       "kind": "talisman",
       "description": "温和的治疗符箓，能快速恢复伤势。",
       "rarity": "common",
-      "labels": ["治疗符"],
+      "labels": [
+        "治疗符"
+      ],
       "limitPerDeck": 3,
-
       "isInstant": true,
       "duration": 0,
       "target": "unit",
-
       "effects": [
         {
           "timing": "reaction",
@@ -127,13 +129,14 @@
       "kind": "talisman",
       "description": "冰系符箓，冻结目标使其无法行动。",
       "rarity": "rare",
-      "labels": ["控制符", "冰系"],
+      "labels": [
+        "控制符",
+        "冰系"
+      ],
       "limitPerDeck": 2,
-
       "isInstant": true,
       "duration": 0,
       "target": "unit",
-
       "effects": [
         {
           "timing": "reaction",
@@ -158,13 +161,14 @@
       "kind": "talisman",
       "description": "范围攻击符箓，对所有敌人造成伤害。",
       "rarity": "epic",
-      "labels": ["攻击符", "范围"],
+      "labels": [
+        "攻击符",
+        "范围"
+      ],
       "limitPerDeck": 1,
-
       "isInstant": true,
       "duration": 0,
       "target": "allEnemies",
-
       "effects": [
         {
           "timing": "reaction",
@@ -188,13 +192,13 @@
       "kind": "talisman",
       "description": "驱散一切负面状态的符箓。",
       "rarity": "uncommon",
-      "labels": ["辅助符"],
+      "labels": [
+        "辅助符"
+      ],
       "limitPerDeck": 2,
-
       "isInstant": true,
       "duration": 0,
       "target": "unit",
-
       "effects": [
         {
           "timing": "reaction",
@@ -218,13 +222,15 @@
       "kind": "talisman",
       "description": "施加剧毒，持续侵蚀目标生命。测试用符箓。",
       "rarity": "common",
-      "labels": ["攻击符", "毒系", "测试"],
+      "labels": [
+        "攻击符",
+        "毒系",
+        "测试"
+      ],
       "limitPerDeck": 3,
-
       "isInstant": true,
       "duration": 0,
       "target": "unit",
-
       "effects": [
         {
           "timing": "reaction",
@@ -249,13 +255,15 @@
       "kind": "talisman",
       "description": "施加燃烧，造成递减的持续伤害。测试用符箓。",
       "rarity": "common",
-      "labels": ["攻击符", "火系", "测试"],
+      "labels": [
+        "攻击符",
+        "火系",
+        "测试"
+      ],
       "limitPerDeck": 3,
-
       "isInstant": true,
       "duration": 0,
       "target": "unit",
-
       "effects": [
         {
           "timing": "reaction",
@@ -280,13 +288,14 @@
       "kind": "talisman",
       "description": "提供护甲保护。测试用符箓。",
       "rarity": "common",
-      "labels": ["防御符", "测试"],
+      "labels": [
+        "防御符",
+        "测试"
+      ],
       "limitPerDeck": 3,
-
       "isInstant": true,
       "duration": 0,
       "target": "unit",
-
       "effects": [
         {
           "timing": "reaction",
@@ -304,6 +313,115 @@
           "scriptId": "effect.TL_TEST_ARMOR.cast"
         }
       ]
+    },
+    {
+      "id": "TL_F3C91B077E91",
+      "name": "狐影突袭（QA测试）",
+      "kind": "talisman",
+      "rarity": "common",
+      "description": "使一个带有「灵狐」标签的己方单位本回合攻击 +2。",
+      "labels": [
+        "sect_qingyun",
+        "青云宗山门附近",
+        "灵狐",
+        "配套符箓"
+      ],
+      "limitPerDeck": 3,
+      "isInstant": true,
+      "duration": 0,
+      "target": "unit",
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "singleAlly",
+            "requiredLabelsAllOf": [
+              "灵狐"
+            ]
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 2,
+              "duration": "turn"
+            }
+          ],
+          "text": "使一个带有「灵狐」标签的己方单位本回合攻击 +2。",
+          "scriptId": "effect.TL_F3C91B077E91.cast"
+        }
+      ],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "jade",
+        "artwork": "/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-art.png",
+        "fingerprint": "4116955260ec5136ae1633d285b3608fac9f0de7a973cd4b89311de28c8db107",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-jade-runtime.png",
+            "preview": "/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-jade-preview.png",
+            "templateVersion": 2
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-scroll-runtime.png",
+            "preview": "/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-scroll-preview.png",
+            "templateVersion": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "TL_DRG_001",
+      "name": "龙鳞护脉符",
+      "kind": "talisman",
+      "description": "护脉符箓引动青鳞生机，使一个带有「龙族低阶」标签的己方龙族单位当前生命值+4。",
+      "rarity": "common",
+      "labels": [
+        "龙族",
+        "辅助符",
+        "龙族献祭"
+      ],
+      "limitPerDeck": 3,
+      "isInstant": true,
+      "duration": 0,
+      "target": "unit",
+      "effects": [
+        {
+          "timing": "reaction",
+          "target": {
+            "scope": "singleAlly",
+            "requiredLabelsAllOf": [
+              "龙族",
+              "龙族低阶"
+            ]
+          },
+          "actions": [
+            {
+              "type": "modifyHealth",
+              "value": 4
+            }
+          ],
+          "text": "使一个带有「龙族低阶」标签的己方龙族单位当前生命值+4。",
+          "scriptId": "effect.TL_DRG_001.cast"
+        }
+      ],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "jade",
+        "artwork": "/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-art.png",
+        "fingerprint": "044d39e31f546f1fbead4ad16fb13b51eade4085b551da0f93711f370ed6952b",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-jade-runtime.png",
+            "preview": "/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-jade-preview.png",
+            "templateVersion": 4
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-scroll-runtime.png",
+            "preview": "/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-scroll-preview.png",
+            "templateVersion": 4
+          }
+        }
+      }
     }
   ]
 }

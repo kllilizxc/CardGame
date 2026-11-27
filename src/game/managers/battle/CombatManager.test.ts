@@ -2,6 +2,7 @@ import { describe, expect, mock, test } from 'bun:test';
 import type { BattleContext } from '../../context/BattleContext';
 import type { CardSprite } from '../../objects/CardSprite';
 import { CombatManager } from './CombatManager';
+import { BattleState } from '../../state/BattleState';
 
 function unit(id: string, health: number, effects: object[] = []): CardSprite {
     const data = { id, name: id, attack: 4, health, effects };
@@ -83,4 +84,33 @@ describe('CombatManager onKill', () => {
             enemyField: f.scene.playerField,
         });
     });
+});
+
+test('combat waits for return motion and chooses the next target from actual remaining health', () => {
+    const f = fixture();
+    const second = unit('second', 5);
+    const state = new BattleState();
+    state.playerField = [f.attacker, second];
+    state.enemyField = [f.target];
+    Object.assign(f.context, { battleState: state });
+    const completed = mock(() => {});
+    const animations: Array<{ target: CardSprite; impact: (target: CardSprite, damage: number) => void; done: () => void }> = [];
+    f.context.battleTickManager = { tick: mock(() => {}) } as unknown as BattleContext['battleTickManager'];
+    f.context.animationManager.addAttackAnimation = mock((_attacker: CardSprite, target: CardSprite, _damage: number, _delay: number,
+        impact: (target: CardSprite, damage: number) => void, done?: () => void) => {
+        animations.push({ target, impact, done: done! });
+    });
+    f.manager.resolveCombat(true, state.playerField, state.enemyField, () => {}, completed);
+    expect(animations).toHaveLength(1);
+    expect(completed).not.toHaveBeenCalled();
+    // Armor prevents the first hit from killing the defender; the second must still target it.
+    (f.context.statusManager.processDamage as ReturnType<typeof mock>).mockReturnValue(0);
+    animations[0].impact(f.target, 4);
+    expect(animations).toHaveLength(1);
+    animations[0].done();
+    expect(animations).toHaveLength(2);
+    expect(animations[1].target).toBe(f.target);
+    animations[1].impact(f.target, 4);
+    animations[1].done();
+    expect(completed).toHaveBeenCalledTimes(1);
 });

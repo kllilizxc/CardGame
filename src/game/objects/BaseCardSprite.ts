@@ -164,7 +164,9 @@ export abstract class BaseCardSprite extends GameObjects.Container {
             this.updateDisplayMode();
             if (key) {
                 for (const { object } of this.genericFaceOriginal ?? []) if (object.active) object.setVisible(false);
-                this.genericFaceImage = this.scene.add.image(0, 0, key).setScale(3);
+                this.genericFaceImage = this.scene.add.image(0, 0, key);
+                if (key.startsWith('card-face:')) this.genericFaceImage.setDisplaySize(this.CARD_WIDTH, this.CARD_HEIGHT);
+                else this.genericFaceImage.setScale(3);
                 this.addAt(this.genericFaceImage, 0);
             }
         });
@@ -201,10 +203,9 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         // 拖拽开始：卡牌被“拎起”——放大到接近完整尺寸、摆正，并抬到最上层
         this.on('dragstart', () => {
             this.isDragging = true;
-            this.originalX = this.x;
-            this.originalY = this.y;
             this.restDepth = this.depth;
-            this.scene.tweens.killTweensOf(this);
+            this.stopMotion();
+            this.scene.events.emit('hideCardPreview');
             this.scene.tweens.add({
                 targets: this,
                 scale: Math.max(this.cardScale * 1.15, 0.96),
@@ -236,8 +237,9 @@ export abstract class BaseCardSprite extends GameObjects.Container {
         // 拖拽结束
         this.on('dragend', () => {
             this.isDragging = false;
-            this.scene.tweens.killTweensOf(this);
+            this.stopMotion();
             this.setScale(this.cardScale);
+            this.setAngle(this.restAngle);
             this.setDepth(this.restDepth);
             
             // 通知场景卡牌拖拽结束（用于场地卡等特殊处理）
@@ -284,6 +286,7 @@ export abstract class BaseCardSprite extends GameObjects.Container {
      * 返回原始位置
      */
     public returnToOriginalPosition(): void {
+        this.stopMotion();
         // 尝试通过 BattleScene 获取 battleContext
         const battleScene = this.scene as any;
         if (battleScene.battleContext?.effectManager) {
@@ -339,6 +342,11 @@ export abstract class BaseCardSprite extends GameObjects.Container {
 
     public getRestAngle(): number {
         return this.restAngle;
+    }
+
+    /** Stop through Tween.stop so counted movement can release its pending counter. */
+    public stopMotion(): void {
+        this.scene.tweens.getTweensOf(this).forEach(tween => tween.stop());
     }
 
     public setPreviewMetadata(metadata: CardPreviewMetadata): void {

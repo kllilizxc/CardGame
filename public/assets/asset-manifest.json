@@ -7,12 +7,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:f61a3f403dfe2564d4883374a16dde2794e2c05d1430301c3a66ae4554ce79c6",
+      "currentVersionId": "version:cardgame:dcabec16de272800206f3938b4f806d91471fb53a85759aef39e044e8e21cbcd",
       "versions": [
         {
           "id": "version:cardgame:f61a3f403dfe2564d4883374a16dde2794e2c05d1430301c3a66ae4554ce79c6",
           "path": "public/assets/bg.png",
           "revision": "868de612a0040e2a25e14f8b983d1c9fc96f0ac8cc6ed93dba9a74366b6c82e1",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:dcabec16de272800206f3938b4f806d91471fb53a85759aef39e044e8e21cbcd",
+          "path": "public/assets/bg.png",
+          "revision": "9fe12b00736638d7f1426c65055bb79c75d78e8c245976510444bfe716ba41e0",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -27,12 +34,22 @@
         "provider": "codex"
       },
       "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
-      "currentVersionId": "version:cardgame:9ac62aa4f3b49ea6a2f3d825437be581b53ea9c99b904071853c74c4258e1a5b",
+      "currentVersionId": "version:cardgame:bf7fa635d5177f9e5b465656f1b4148387c81915d6b8d4ec60713a354c2350ac",
       "versions": [
         {
           "id": "version:cardgame:9ac62aa4f3b49ea6a2f3d825437be581b53ea9c99b904071853c74c4258e1a5b",
           "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-art.png",
           "revision": "a63437fb4d2f976d45f73e2d656153e45dd22259b773924c3218766f1fe9ed61",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        },
+        {
+          "id": "version:cardgame:bf7fa635d5177f9e5b465656f1b4148387c81915d6b8d4ec60713a354c2350ac",
+          "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-art.png",
+          "revision": "6a3d9160d5e00ea7820fd3d35c2a75ebeac81c2faa2e1ee2d6f05edb73d46092",
           "mimeType": "image/png",
           "metadata": {
             "purpose": "card-face",
@@ -50,12 +67,22 @@
         "provider": "codex"
       },
       "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
-      "currentVersionId": "version:cardgame:735bfa33eba1db44a8ad846ebf3bdd933c01b705aedd41b46dc7c5db6ca19e70",
+      "currentVersionId": "version:cardgame:f8cee02951e96a3b6b0fcfe82c5937b800fdc93ad7e85d666dc0cc7f5b23f1c9",
       "versions": [
         {
           "id": "version:cardgame:735bfa33eba1db44a8ad846ebf3bdd933c01b705aedd41b46dc7c5db6ca19e70",
           "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-jade-preview.png",
           "revision": "208dd672883e2e82f7f291d155b8a0d5ba39d1d01637f1edfd0770ee7eddf08b",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        },
+        {
+          "id": "version:cardgame:f8cee02951e96a3b6b0fcfe82c5937b800fdc93ad7e85d666dc0cc7f5b23f1c9",
+          "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-jade-preview.png",
+          "revision": "a45cffebb9ade729e4137403fa42099c6288225824faa365a8a2ee4826bbfec3",
           "mimeType": "image/png",
           "metadata": {
             "purpose": "card-face",
@@ -73,12 +100,22 @@
         "provider": "codex"
       },
       "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
-      "currentVersionId": "version:cardgame:2a59032ecc4cb88bbad5add3c76edb25ecda45a4cd658136219bc51ff2c1ba90",
+      "currentVersionId": "version:cardgame:da74fc90cd6285a26c7b9d35ffa7fe9598fc520237a88e5e38fe8a2bb1c7514b",
       "versions": [
         {
           "id": "version:cardgame:2a59032ecc4cb88bbad5add3c76edb25ecda45a4cd658136219bc51ff2c1ba90",
           "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-jade-runtime.png",
           "revision": "b972a3071b7cb3fb32eb0aab3874cec7199b1f2d6cf18cde13be1bf140f1f91c",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        },
+        {
+          "id": "version:cardgame:da74fc90cd6285a26c7b9d35ffa7fe9598fc520237a88e5e38fe8a2bb1c7514b",
+          "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-jade-runtime.png",
+          "revision": "eff2fb4bda3817f7905277eb77c9eae852dc0ec93f96845f54c6c19ab041fac9",
           "mimeType": "image/png",
           "metadata": {
             "purpose": "card-face",
@@ -96,12 +133,22 @@
         "provider": "codex"
       },
       "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
-      "currentVersionId": "version:cardgame:fa953d23d66d3c52819c3261e81a3ada697d776ba652f3974b5affb591f4d0e9",
+      "currentVersionId": "version:cardgame:dd5a953114ae0c028d5dcf6b4c5622ce510eff2bc24b806811f3e155d0ca9c6a",
       "versions": [
         {
           "id": "version:cardgame:fa953d23d66d3c52819c3261e81a3ada697d776ba652f3974b5affb591f4d0e9",
           "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-scroll-preview.png",
           "revision": "9b59b1b05560fcf5fb0611d60461a5c159d95385308615f95bf6e924152443f6",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        },
+        {
+          "id": "version:cardgame:dd5a953114ae0c028d5dcf6b4c5622ce510eff2bc24b806811f3e155d0ca9c6a",
+          "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-scroll-preview.png",
+          "revision": "47cf9dcde32539daf5836f7564c29b0e349a1a5ef59dd11b7d0d7030e665db17",
           "mimeType": "image/png",
           "metadata": {
             "purpose": "card-face",
@@ -119,12 +166,1682 @@
         "provider": "codex"
       },
       "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
-      "currentVersionId": "version:cardgame:59b45eb71b5729f306aab118414d55cf042ee267bd5d0fa6bf85192aff0e34bb",
+      "currentVersionId": "version:cardgame:dc5600f1a4a34c06ec4dcf46231b93d5e92296416a7f0d71681a1dcc68aeb925",
       "versions": [
         {
           "id": "version:cardgame:59b45eb71b5729f306aab118414d55cf042ee267bd5d0fa6bf85192aff0e34bb",
           "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-scroll-runtime.png",
           "revision": "b0aeb02194886a977c79316bb16b793690e8dbf57d612da3409650de598641bb",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        },
+        {
+          "id": "version:cardgame:dc5600f1a4a34c06ec4dcf46231b93d5e92296416a7f0d71681a1dcc68aeb925",
+          "path": "public/assets/card-faces/CR_001/83e366dba5b6eabeff81-scroll-runtime.png",
+          "revision": "f558aa10ba793bf4496e8aa5ffd90e92acdcf3bf7ca57a411f265bc46e2bc411",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-art.png",
+      "path": "public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:90e8e63af0e459b0c3518e02d4754db7a0f6bc2f1bf827d381277661d7c03700",
+      "versions": [
+        {
+          "id": "version:cardgame:90e8e63af0e459b0c3518e02d4754db7a0f6bc2f1bf827d381277661d7c03700",
+          "path": "public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-art.png",
+          "revision": "7db1a3de28402664be7d3a14c3d29b62f109bf28d17f541b7be7658f297cfb97",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-jade-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:23e45b700069947ad6c248ae718678d0f645ce12b5f8696ed7e0fbdeeee578f3",
+      "versions": [
+        {
+          "id": "version:cardgame:23e45b700069947ad6c248ae718678d0f645ce12b5f8696ed7e0fbdeeee578f3",
+          "path": "public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-jade-preview.png",
+          "revision": "7ec277dd13b01f9583483334315fb849215164ad79e642b678a8def8ac348da8",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-jade-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:d8e0a6b3ff104124c1363242099339578deee1802d64d9ec91b1e6bd7cdab1bf",
+      "versions": [
+        {
+          "id": "version:cardgame:d8e0a6b3ff104124c1363242099339578deee1802d64d9ec91b1e6bd7cdab1bf",
+          "path": "public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-jade-runtime.png",
+          "revision": "53e6fe444fce8d3b5ab20bc0a1ca37c37196de6ba6f998277d08d763a5da62e5",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-scroll-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:f03a6d0c28764d623bde09273452c3fec79c14ea0cd1116091385ff3ba203be1",
+      "versions": [
+        {
+          "id": "version:cardgame:f03a6d0c28764d623bde09273452c3fec79c14ea0cd1116091385ff3ba203be1",
+          "path": "public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-scroll-preview.png",
+          "revision": "888792fae76a0e4184455e2dc7eb091a13369ae988e73ed6bd218ab93ebbfc91",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-scroll-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:ad87a3a770b7c4def72f803798300331135399735ca6d6694d4129d24796de34",
+      "versions": [
+        {
+          "id": "version:cardgame:ad87a3a770b7c4def72f803798300331135399735ca6d6694d4129d24796de34",
+          "path": "public/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-scroll-runtime.png",
+          "revision": "4e2080245102047cf8c050db860f68d98256d6a863e11322db6421853c0d3c6a",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-art.png",
+      "path": "public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:f9a889497a1878f764972ff4a93410142b3628cb329c0f38fcfe2f7e617d8d8f",
+      "versions": [
+        {
+          "id": "version:cardgame:f9a889497a1878f764972ff4a93410142b3628cb329c0f38fcfe2f7e617d8d8f",
+          "path": "public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-art.png",
+          "revision": "9008d71e32fa542b71007643e57effb727e4d90e953e47f6fba042292ac2e590",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-jade-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:806c87e81cadadbb3999ad7520dcb99dc62f3963f9cd00d047f011cb45050ce4",
+      "versions": [
+        {
+          "id": "version:cardgame:806c87e81cadadbb3999ad7520dcb99dc62f3963f9cd00d047f011cb45050ce4",
+          "path": "public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-jade-preview.png",
+          "revision": "117b54fe033d5c4348fd4ed4e3b73e9ad6ca213daf699c3852c0b339186be0ec",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-jade-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:9201be2c2f327c304846242be58d7207d79af96fd690cc0bc74f6b72705a8b97",
+      "versions": [
+        {
+          "id": "version:cardgame:9201be2c2f327c304846242be58d7207d79af96fd690cc0bc74f6b72705a8b97",
+          "path": "public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-jade-runtime.png",
+          "revision": "fed38a74c3d64160b278b80f7d97fd85de8e7531a878e1038a7ab91ad5fa6aab",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-scroll-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:020dcc5a78e37343a9ad0e1231aafd3bd508976768fe922d83240f0a0c3f2a57",
+      "versions": [
+        {
+          "id": "version:cardgame:020dcc5a78e37343a9ad0e1231aafd3bd508976768fe922d83240f0a0c3f2a57",
+          "path": "public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-scroll-preview.png",
+          "revision": "fd13c2d1625a6f3cd836ad2fb31083f11826d56d72da7b7c68b9d501c23a2827",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-scroll-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:54a56663797f3b7c6309424204a6fb4bbc96a69c00b691e2ee51adbb14900c8c",
+      "versions": [
+        {
+          "id": "version:cardgame:54a56663797f3b7c6309424204a6fb4bbc96a69c00b691e2ee51adbb14900c8c",
+          "path": "public/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-scroll-runtime.png",
+          "revision": "6ee1e25a6deba76751c85bd65a016ebe8910c85beb37c59f93a11829d8289ca8",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-art.png",
+      "path": "public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:c92c275173a1a95fc06246843e158932539ca71cb1b6ea9bd9075faa8e5aca8f",
+      "versions": [
+        {
+          "id": "version:cardgame:c92c275173a1a95fc06246843e158932539ca71cb1b6ea9bd9075faa8e5aca8f",
+          "path": "public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-art.png",
+          "revision": "3c3aeb7707f6735024eb95468beabbdc857da00ed9d4959f66cca86f8225b636",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-jade-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:ea94d3fd2ed9efd90359167be6772e450ef0e5b2d4ff5247c35c2ccf3c17349a",
+      "versions": [
+        {
+          "id": "version:cardgame:ea94d3fd2ed9efd90359167be6772e450ef0e5b2d4ff5247c35c2ccf3c17349a",
+          "path": "public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-jade-preview.png",
+          "revision": "6d3f238142a7856187671283d57d3e2f4fc1482f6b99dc9e5ad1ca48e25c5623",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-jade-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:76faabac8ab84a55f7262aabc87ff25f1ca6f3bc7a146d056fb24246f1b0c233",
+      "versions": [
+        {
+          "id": "version:cardgame:76faabac8ab84a55f7262aabc87ff25f1ca6f3bc7a146d056fb24246f1b0c233",
+          "path": "public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-jade-runtime.png",
+          "revision": "cef1f0b8777b6695235356b0e7775440ac2835a693f8714c7e0fb44cb50a352a",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-scroll-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:555c575ae3d49c054632caf1c727c7cba7e0b5234af594233e70683b70bda155",
+      "versions": [
+        {
+          "id": "version:cardgame:555c575ae3d49c054632caf1c727c7cba7e0b5234af594233e70683b70bda155",
+          "path": "public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-scroll-preview.png",
+          "revision": "36ce7d511204b9489332cc25d503ae38dffc4b4e292fd9c1b1ff07a24c6dc728",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-scroll-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:59104781499894fed57ddca1590b87bfb21ce89adecd959c1d55ddccf55cc868",
+      "versions": [
+        {
+          "id": "version:cardgame:59104781499894fed57ddca1590b87bfb21ce89adecd959c1d55ddccf55cc868",
+          "path": "public/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-scroll-runtime.png",
+          "revision": "368bfee8568543dca19e93024539cd276b7b9e1e84e0b0ed6969534b34415a5a",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-art.png",
+      "path": "public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:45b2e48a52f27f3b591f3722464f933010a3bf112a1b3fd6cc0256140c10ee9b",
+      "versions": [
+        {
+          "id": "version:cardgame:45b2e48a52f27f3b591f3722464f933010a3bf112a1b3fd6cc0256140c10ee9b",
+          "path": "public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-art.png",
+          "revision": "168cd3a42119b799da24c2f119fe117a674cb9f7cd63d16b84e10710fb5f54ff",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-jade-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:bbfd7d837891f280dc1fb8419229e469ea094746735d647d3e72ae681bb8c12b",
+      "versions": [
+        {
+          "id": "version:cardgame:bbfd7d837891f280dc1fb8419229e469ea094746735d647d3e72ae681bb8c12b",
+          "path": "public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-jade-preview.png",
+          "revision": "2e592feb2e31037bc4d75a99792541d05f0bb9a5fa92cf65db4c6a7676b33926",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-jade-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:b55ce1bae7e58a36b75ad1f30bef0ae9e49565eed832b9ace6b06c35e9142796",
+      "versions": [
+        {
+          "id": "version:cardgame:b55ce1bae7e58a36b75ad1f30bef0ae9e49565eed832b9ace6b06c35e9142796",
+          "path": "public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-jade-runtime.png",
+          "revision": "fd22a4b6b0d886b4b19276705ed1ef4f237f1c8788ad011672299c88639757e7",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-scroll-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:51781bc5f0cbdb94c970bc92d1355aab2dcdb61f268fd49bd9745db6e99846e3",
+      "versions": [
+        {
+          "id": "version:cardgame:51781bc5f0cbdb94c970bc92d1355aab2dcdb61f268fd49bd9745db6e99846e3",
+          "path": "public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-scroll-preview.png",
+          "revision": "6091dad4be1f93013909c3b97cad9ad46669b5859e0d17360d569fd8ba088745",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-scroll-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:734d26adff51e828643e2d8646598af418beea8d2f7b0fa1a8a1f1babbc584e9",
+      "versions": [
+        {
+          "id": "version:cardgame:734d26adff51e828643e2d8646598af418beea8d2f7b0fa1a8a1f1babbc584e9",
+          "path": "public/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-scroll-runtime.png",
+          "revision": "e62d5a658adb1c61fa6156750cfc8490db8e59574b1669bf92eb018a5c417420",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-art.png",
+      "path": "public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:06350dc244f5e74c7e26c16898d3feee86826cb1cf2f21b857d87a615f28b961",
+      "versions": [
+        {
+          "id": "version:cardgame:06350dc244f5e74c7e26c16898d3feee86826cb1cf2f21b857d87a615f28b961",
+          "path": "public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-art.png",
+          "revision": "4bb1739966b9635c9bac6fe946c3d2edf602fe80c02d6b7910afcc4fb9a53fb3",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-jade-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:7c880642bfdda2143cf0df2322d689f0f614203879f6560ae0f4d3bede1daa28",
+      "versions": [
+        {
+          "id": "version:cardgame:7c880642bfdda2143cf0df2322d689f0f614203879f6560ae0f4d3bede1daa28",
+          "path": "public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-jade-preview.png",
+          "revision": "86f1463efa9f8eacb0bcc2e663b0a155331762fc08ee7fe464df5d45c5f8e56e",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-jade-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:03eef8aeec3795eb971116bf6b64d6023380f80f9d1b7fcce150d2c00c33b0de",
+      "versions": [
+        {
+          "id": "version:cardgame:03eef8aeec3795eb971116bf6b64d6023380f80f9d1b7fcce150d2c00c33b0de",
+          "path": "public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-jade-runtime.png",
+          "revision": "db016eaac9c35ee8cb5b07af27bafbc0299fd68525f68bd950807e0e4d6c5fc3",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-scroll-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:aeee3b1043fd5e9d26b7da54b22857790d78353c1467bb9137bd6300233ffdaa",
+      "versions": [
+        {
+          "id": "version:cardgame:aeee3b1043fd5e9d26b7da54b22857790d78353c1467bb9137bd6300233ffdaa",
+          "path": "public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-scroll-preview.png",
+          "revision": "5fecad66f51853b130d635b23165aa39c057f8b5113bb36f8a3081758d6b402c",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-scroll-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:6978af3e427333e89186572cf8b39380bd448acd82b9e29f1c3a13b722e4e059",
+      "versions": [
+        {
+          "id": "version:cardgame:6978af3e427333e89186572cf8b39380bd448acd82b9e29f1c3a13b722e4e059",
+          "path": "public/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-scroll-runtime.png",
+          "revision": "9398075336a9324013abe8870c02bce0929feca2485b6a3420945de1ea27c70d",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-art.png",
+      "path": "public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:1d175f84cda2ebc7004708b47cb2acc8136b1c65ebd0742006323ebf19dacc40",
+      "versions": [
+        {
+          "id": "version:cardgame:1d175f84cda2ebc7004708b47cb2acc8136b1c65ebd0742006323ebf19dacc40",
+          "path": "public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-art.png",
+          "revision": "8f5254c792ef5302d0212f0dcc9d4563a014cc5909853cbe8d21688874f4a02d",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-jade-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:43ecbf3d75072b5cb91e075a076099ebc0c12bcbe377d6874532564652e2cb6a",
+      "versions": [
+        {
+          "id": "version:cardgame:43ecbf3d75072b5cb91e075a076099ebc0c12bcbe377d6874532564652e2cb6a",
+          "path": "public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-jade-preview.png",
+          "revision": "3eee54ac4ef5c57177802ec6fc6c891836a013956c51525fbec53d62f9c322a0",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-jade-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:138e6ffb148197d3852bff1f6612f3c366a748ffcb3e7bbd92114436958086c7",
+      "versions": [
+        {
+          "id": "version:cardgame:138e6ffb148197d3852bff1f6612f3c366a748ffcb3e7bbd92114436958086c7",
+          "path": "public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-jade-runtime.png",
+          "revision": "4e731d30c5e8f39d9f10de4762ad1b50e0d79cd39c917dd9a7087b0921c84e8a",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-scroll-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:982b9fa4c9e211cf80092d1f9f71abb197e7bcf4139a8090b90b408f3ae35dee",
+      "versions": [
+        {
+          "id": "version:cardgame:982b9fa4c9e211cf80092d1f9f71abb197e7bcf4139a8090b90b408f3ae35dee",
+          "path": "public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-scroll-preview.png",
+          "revision": "9adf056a63c8ba3ab6cd1c6f74210b5776744894bee4257d9315f032b7860a05",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-scroll-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:04d48fd2465e3893022656de3f6c9b8f28095dcf4b675914148a5964d739fc21",
+      "versions": [
+        {
+          "id": "version:cardgame:04d48fd2465e3893022656de3f6c9b8f28095dcf4b675914148a5964d739fc21",
+          "path": "public/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-scroll-runtime.png",
+          "revision": "d32bd34b10c515f44e1102dfc3061734660f51ab8df37d0b343a850095f1c55a",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-art.png",
+      "path": "public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:25928cdae31a3bb35cf1e5f1c6992755d2de5ed0870057daf4d436bf69b94347",
+      "versions": [
+        {
+          "id": "version:cardgame:25928cdae31a3bb35cf1e5f1c6992755d2de5ed0870057daf4d436bf69b94347",
+          "path": "public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-art.png",
+          "revision": "43fb4e43d1f321f2d84f7f0b213c10894d6a5f398e92b4f7c603e6f9ce76834c",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-jade-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:b1aa8ce1be5ceb664ce22cce0cc8cf048124dd60f6ef232c4590b992862733df",
+      "versions": [
+        {
+          "id": "version:cardgame:b1aa8ce1be5ceb664ce22cce0cc8cf048124dd60f6ef232c4590b992862733df",
+          "path": "public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-jade-preview.png",
+          "revision": "1f2406ee05690264e29c93bb4348b832cf50425cdcb09e707bd8c78189954d93",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-jade-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:6ec30daf8edb50ba2a3748c34022a55d95e1eda5b51a6f9aacddb17624a375ab",
+      "versions": [
+        {
+          "id": "version:cardgame:6ec30daf8edb50ba2a3748c34022a55d95e1eda5b51a6f9aacddb17624a375ab",
+          "path": "public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-jade-runtime.png",
+          "revision": "e151fbdea14a764498b799a6dd3f53b7b92dd6b9a251715db93cd7b8ee92db53",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-scroll-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:c4a5552eecaae016df0da187377044ba4846bda0acf5684e3099c6a96d13035d",
+      "versions": [
+        {
+          "id": "version:cardgame:c4a5552eecaae016df0da187377044ba4846bda0acf5684e3099c6a96d13035d",
+          "path": "public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-scroll-preview.png",
+          "revision": "206fa5b96958081607ec6f1e082550feffa19a45e8472992bf767eac9ecb7e98",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-scroll-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:cffea44e99deaef0a54807c0e41e732e9bf3f9e4a8f88c58e399b443389c63b9",
+      "versions": [
+        {
+          "id": "version:cardgame:cffea44e99deaef0a54807c0e41e732e9bf3f9e4a8f88c58e399b443389c63b9",
+          "path": "public/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-scroll-runtime.png",
+          "revision": "6f1da12427b235dc242bf6a00124e8eded1633052026ecf6d0c607fafca4c897",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-art.png",
+      "path": "public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:516feff630d9347ab6ca4149a7b466e508306247f17ebddfad5fff3385bce53b",
+      "versions": [
+        {
+          "id": "version:cardgame:516feff630d9347ab6ca4149a7b466e508306247f17ebddfad5fff3385bce53b",
+          "path": "public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-art.png",
+          "revision": "0b5d2abae9135f1583131fa866fc0476ff2f28694d993304849d9418b4742711",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-jade-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:5b62d30220ab2ffd4441e425cdeb105d76577c2a2b8817f8e438ed0d829b7d6c",
+      "versions": [
+        {
+          "id": "version:cardgame:5b62d30220ab2ffd4441e425cdeb105d76577c2a2b8817f8e438ed0d829b7d6c",
+          "path": "public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-jade-preview.png",
+          "revision": "df5671696400ba2854bccd20e46e17353de84f205ec6ae53d216262c6c784c5c",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-jade-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:4a133ecbff17f0369685b0ef9b586db8d46abf4e3a2519d474a80bd8181747c8",
+      "versions": [
+        {
+          "id": "version:cardgame:4a133ecbff17f0369685b0ef9b586db8d46abf4e3a2519d474a80bd8181747c8",
+          "path": "public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-jade-runtime.png",
+          "revision": "aa70be383ed3ed3af5348a06db8629afed4c0cb46177bb116f5b6a97aab45981",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-scroll-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:ee50fb53db52d0ef6dc3dff5e90616f8549eb085e49ac6ffbe73db13db0634c3",
+      "versions": [
+        {
+          "id": "version:cardgame:ee50fb53db52d0ef6dc3dff5e90616f8549eb085e49ac6ffbe73db13db0634c3",
+          "path": "public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-scroll-preview.png",
+          "revision": "d171f1fac6b6692e2083c759399ff61049b2982568e1bede18468dd8efb0579f",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-scroll-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:e43215688837e578ba019cb29c91ed9a2a518b437464e0a0de29f5aac0e5cdf3",
+      "versions": [
+        {
+          "id": "version:cardgame:e43215688837e578ba019cb29c91ed9a2a518b437464e0a0de29f5aac0e5cdf3",
+          "path": "public/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-scroll-runtime.png",
+          "revision": "c6efbe06e5a472f2a6446ae326d8af1fbdd814471135a140ea945ac1d1e728b0",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-art.png",
+      "path": "public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:b157f14cbe34992517a14af01c30121b876608520110a554ece710b38f477860",
+      "versions": [
+        {
+          "id": "version:cardgame:b157f14cbe34992517a14af01c30121b876608520110a554ece710b38f477860",
+          "path": "public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-art.png",
+          "revision": "9d4ea1a0e759579fb6b4582992b541691ad8b4f1c7100c09410ad47c965cb81c",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-jade-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:d0a17d04dd4f5d9c667a071b6a91b02fa0cdbbc7013e3312f8737d9ae793778f",
+      "versions": [
+        {
+          "id": "version:cardgame:d0a17d04dd4f5d9c667a071b6a91b02fa0cdbbc7013e3312f8737d9ae793778f",
+          "path": "public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-jade-preview.png",
+          "revision": "6871adcf7d94e65b2f6d08f7a8769807571f69d34109ce8505b8b72fa7bbe040",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-jade-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:12a75852bce9e75d0bf6f6c3c27e4a46012fcec3b992669d26ec89295e46d35f",
+      "versions": [
+        {
+          "id": "version:cardgame:12a75852bce9e75d0bf6f6c3c27e4a46012fcec3b992669d26ec89295e46d35f",
+          "path": "public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-jade-runtime.png",
+          "revision": "3e8c92d374a4836d7ec2b699b8a908379ac7d0a2c8278f2ea68ebf94df70e087",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-scroll-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:4101166b6b96be81d7152799bb0e5f1777073f9daf9bd8ecd32039c293cb981a",
+      "versions": [
+        {
+          "id": "version:cardgame:4101166b6b96be81d7152799bb0e5f1777073f9daf9bd8ecd32039c293cb981a",
+          "path": "public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-scroll-preview.png",
+          "revision": "ba908d6f833b8713bb10839a511edd52084fe7f94a1c031663ffb98c32200988",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-scroll-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:4c04161e52f8564a6838bac64d6c00a220c20e98c85f4619bfcdc5d01375f5d7",
+      "versions": [
+        {
+          "id": "version:cardgame:4c04161e52f8564a6838bac64d6c00a220c20e98c85f4619bfcdc5d01375f5d7",
+          "path": "public/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-scroll-runtime.png",
+          "revision": "f2ffdb675ab98d1b28237aa702dd20491319f73473cb946ca4bfbc10dbe503dd",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-art.png",
+      "path": "public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:40b00fa03c0570a520c798c9e00cf223ad5095ed6c0a2d04f27c0ff29905e139",
+      "versions": [
+        {
+          "id": "version:cardgame:40b00fa03c0570a520c798c9e00cf223ad5095ed6c0a2d04f27c0ff29905e139",
+          "path": "public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-art.png",
+          "revision": "85df9e431e0b0520d1d869f7e87e7666cb72c7b0ce22c4a39cf6af3d03af67bb",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-jade-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:a0eaab77cbabca4600f5c0c0f6d26d3a7b18aacfccca25a0339acf9d4b8c7a0b",
+      "versions": [
+        {
+          "id": "version:cardgame:a0eaab77cbabca4600f5c0c0f6d26d3a7b18aacfccca25a0339acf9d4b8c7a0b",
+          "path": "public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-jade-preview.png",
+          "revision": "f375f3fd1baf668f99091df014b362b59bbd61f91b38837800a2342e592ebdcc",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-jade-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:7faa6f9117fd8f5f3fe2aa0a20e22b78d88387c29038df8622753d82813db72b",
+      "versions": [
+        {
+          "id": "version:cardgame:7faa6f9117fd8f5f3fe2aa0a20e22b78d88387c29038df8622753d82813db72b",
+          "path": "public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-jade-runtime.png",
+          "revision": "568e9351e2d332ead465d59277023a9dd574fdfefd606737276f7ea7c05c1e77",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-scroll-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:83aa001b39604afb6a43465786e32830db4dec5680eebae6b1ce3aae83d0a32f",
+      "versions": [
+        {
+          "id": "version:cardgame:83aa001b39604afb6a43465786e32830db4dec5680eebae6b1ce3aae83d0a32f",
+          "path": "public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-scroll-preview.png",
+          "revision": "84be827512238fa4a807e6205623612210335c5bac44cb1b94165e925ef0770c",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-scroll-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:6484eaf2cb39c81dedf10ec1cffe3c47a021b65d704f2ab5b652ef6c7c6bb375",
+      "versions": [
+        {
+          "id": "version:cardgame:6484eaf2cb39c81dedf10ec1cffe3c47a021b65d704f2ab5b652ef6c7c6bb375",
+          "path": "public/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-scroll-runtime.png",
+          "revision": "ca16af5e567487524b880a8b324b3cfbf12d00f3b2d09d914380ec2e2aa7959c",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-art.png",
+      "path": "public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:00e90aaba90599fb1714dc34875a4ee2d08617bdcd7009b38b67d42438f1ed98",
+      "versions": [
+        {
+          "id": "version:cardgame:00e90aaba90599fb1714dc34875a4ee2d08617bdcd7009b38b67d42438f1ed98",
+          "path": "public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-art.png",
+          "revision": "9a458bee2f60bed4c99f6145ac79fc58ae0582c284ced42319f21330bd5e18b3",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-jade-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:c74ba26debe23101ac13dad5420a676d5befe6abf3ed0024064d625dd0879435",
+      "versions": [
+        {
+          "id": "version:cardgame:c74ba26debe23101ac13dad5420a676d5befe6abf3ed0024064d625dd0879435",
+          "path": "public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-jade-preview.png",
+          "revision": "992919825631335724cb3be853d9a1226b09bc873637abc7d42b3471c5dbb04d",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-jade-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:36a92f58eb5c799010e95e7aaa09e43272cd47784bd684a528bb94f795818ea0",
+      "versions": [
+        {
+          "id": "version:cardgame:36a92f58eb5c799010e95e7aaa09e43272cd47784bd684a528bb94f795818ea0",
+          "path": "public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-jade-runtime.png",
+          "revision": "8558fd430251debdeabdb4ffda57a8f6d22103f316c66c2f5ae25e619c7148af",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-scroll-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:5d404f69896f2df5fb6a76a7bcb84e3346115685ad5df5668fef5d67c15ccf9f",
+      "versions": [
+        {
+          "id": "version:cardgame:5d404f69896f2df5fb6a76a7bcb84e3346115685ad5df5668fef5d67c15ccf9f",
+          "path": "public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-scroll-preview.png",
+          "revision": "ac8dc134e1ea522b5358d733ceade4d0b9dc1a34f9049eae43a5983a1f08cc0c",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-scroll-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:c0f23d7f3414a41f06dd8c88c8783ad2a40f5bb2143435fc29ed2065e88c045a",
+      "versions": [
+        {
+          "id": "version:cardgame:c0f23d7f3414a41f06dd8c88c8783ad2a40f5bb2143435fc29ed2065e88c045a",
+          "path": "public/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-scroll-runtime.png",
+          "revision": "f21facff50112894e547f36f4b8867a8860487d05ca72957dba2a39a788f23a8",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-art.png",
+      "path": "public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:95eb0df59a9741c83d8b9db1de1b35806eb27706b4fc43aca126cb96d7e41659",
+      "versions": [
+        {
+          "id": "version:cardgame:95eb0df59a9741c83d8b9db1de1b35806eb27706b4fc43aca126cb96d7e41659",
+          "path": "public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-art.png",
+          "revision": "a23bc61131bc0e076fa5c88e8984a43c943cc30a1fbd7465c28a12cc9fab2963",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-jade-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:dd07ae42d9a548cc7f1442285ddeeb240ede1814d3aab6197a763f4def64fcb0",
+      "versions": [
+        {
+          "id": "version:cardgame:dd07ae42d9a548cc7f1442285ddeeb240ede1814d3aab6197a763f4def64fcb0",
+          "path": "public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-jade-preview.png",
+          "revision": "291250181ea6f2983158374ac97326b2616714426b51b892b82728ca7cd966dc",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-jade-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:63f7f4b29310010888dcb464e9e93f5cf027e34977dc46709e42d010ac2eb782",
+      "versions": [
+        {
+          "id": "version:cardgame:63f7f4b29310010888dcb464e9e93f5cf027e34977dc46709e42d010ac2eb782",
+          "path": "public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-jade-runtime.png",
+          "revision": "0356124b79473211ffa209e1cc86363e1ce38e98daaa1909333528be0a0dbc75",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-scroll-preview.png",
+      "path": "public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:710c19d434edc6f555454045c7434d14f9c1210123f15fee21beff1f4e3eb132",
+      "versions": [
+        {
+          "id": "version:cardgame:710c19d434edc6f555454045c7434d14f9c1210123f15fee21beff1f4e3eb132",
+          "path": "public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-scroll-preview.png",
+          "revision": "1517223e34381f493434d6426b16bfaa0504e89aa210f3c7cc89b311799604bd",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-scroll-runtime.png",
+      "path": "public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:2870075bc25bcf32855ac722648c5acd9637ee4b959deaa12de90c649fbe1ba9",
+      "versions": [
+        {
+          "id": "version:cardgame:2870075bc25bcf32855ac722648c5acd9637ee4b959deaa12de90c649fbe1ba9",
+          "path": "public/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-scroll-runtime.png",
+          "revision": "465a1f081b61ca0bbdc0a4579e3467ea2509b828fbad85ac0148cd0194a31820",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-art.png",
+      "path": "public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:a4c87d2eeb1a30611723cec5519a96a47b40aeceb464902a392a7f8db3f80073",
+      "versions": [
+        {
+          "id": "version:cardgame:a4c87d2eeb1a30611723cec5519a96a47b40aeceb464902a392a7f8db3f80073",
+          "path": "public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-art.png",
+          "revision": "023fa84608f55fe890b93bb52a4a9b4eaa4691288db9ac829387f90a5cce6e46",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-jade-preview.png",
+      "path": "public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:ed3821a68f1448a534e6ca6848daf0f0f58977d55d33536dc17ab9ca901e85f7",
+      "versions": [
+        {
+          "id": "version:cardgame:ed3821a68f1448a534e6ca6848daf0f0f58977d55d33536dc17ab9ca901e85f7",
+          "path": "public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-jade-preview.png",
+          "revision": "39fc1666a9ea0aaedf6496e19e0bc272c2a007ded10e57c65b9c4444b7795390",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-jade-runtime.png",
+      "path": "public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:5039da65eb4f466afa2f36624e2e9f432b2f0a10b0a5ace393eb37b647430927",
+      "versions": [
+        {
+          "id": "version:cardgame:5039da65eb4f466afa2f36624e2e9f432b2f0a10b0a5ace393eb37b647430927",
+          "path": "public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-jade-runtime.png",
+          "revision": "39fc1666a9ea0aaedf6496e19e0bc272c2a007ded10e57c65b9c4444b7795390",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-scroll-preview.png",
+      "path": "public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:9410cbc4b3fb3cbd971843586aff618fbf57e92c72a83f6fb301941a0cc04ea7",
+      "versions": [
+        {
+          "id": "version:cardgame:9410cbc4b3fb3cbd971843586aff618fbf57e92c72a83f6fb301941a0cc04ea7",
+          "path": "public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-scroll-preview.png",
+          "revision": "5834f87a7a1288970a7f74ed3fc552aaac7d3572bd812f0194a92bd086728099",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-scroll-runtime.png",
+      "path": "public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:d28358483d2438ef4a0ac1c52da4638b4965c000f6c30052e5fd19d06a6d264a",
+      "versions": [
+        {
+          "id": "version:cardgame:d28358483d2438ef4a0ac1c52da4638b4965c000f6c30052e5fd19d06a6d264a",
+          "path": "public/assets/card-faces/TL_DRG_001/044d39e31f546f1fbead-scroll-runtime.png",
+          "revision": "5834f87a7a1288970a7f74ed3fc552aaac7d3572bd812f0194a92bd086728099",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-art.png",
+      "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-art.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:e4bcc79179bbebbbb2480cd6ec5c3379841c509ea48887804a9a1f09fec397e2",
+      "versions": [
+        {
+          "id": "version:cardgame:b09690fdfa2d10d540e178f85ef58529dd8e2224624c075daa33d86d498b21b0",
+          "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-art.png",
+          "revision": "a63437fb4d2f976d45f73e2d656153e45dd22259b773924c3218766f1fe9ed61",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        },
+        {
+          "id": "version:cardgame:e4bcc79179bbebbbb2480cd6ec5c3379841c509ea48887804a9a1f09fec397e2",
+          "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-art.png",
+          "revision": "6a3d9160d5e00ea7820fd3d35c2a75ebeac81c2faa2e1ee2d6f05edb73d46092",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-jade-preview.png",
+      "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-jade-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:394a1015e20ca905b09fb89a550a52f6ea709f173e2cdaf019b9ef07558b4088",
+      "versions": [
+        {
+          "id": "version:cardgame:4d1a61de3c8e20c929b49e28ec0de8099439566bbe678d24f7523293833853d6",
+          "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-jade-preview.png",
+          "revision": "2b8289cb1fc2d8880fc352188b68718e5afde5089ac6d344cb58517534b4211c",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        },
+        {
+          "id": "version:cardgame:394a1015e20ca905b09fb89a550a52f6ea709f173e2cdaf019b9ef07558b4088",
+          "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-jade-preview.png",
+          "revision": "de3f0d38445e70a85828bb79fd152b1c7fb372d1087e07cf9390b90f8e262b8d",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-jade-runtime.png",
+      "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-jade-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:37932aae3c169f1d768aee904ebe91fae7b58e50e1766bc99e3d931e006a62d0",
+      "versions": [
+        {
+          "id": "version:cardgame:76528d458fbe2d7be4b5d78b54b15fc584531ef60030ebaac717f0edecfb2161",
+          "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-jade-runtime.png",
+          "revision": "2b8289cb1fc2d8880fc352188b68718e5afde5089ac6d344cb58517534b4211c",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        },
+        {
+          "id": "version:cardgame:37932aae3c169f1d768aee904ebe91fae7b58e50e1766bc99e3d931e006a62d0",
+          "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-jade-runtime.png",
+          "revision": "de3f0d38445e70a85828bb79fd152b1c7fb372d1087e07cf9390b90f8e262b8d",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-scroll-preview.png",
+      "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-scroll-preview.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:3910517c73bb2ea03ea7b6847e6d51eb70a62c901968ed0c7f334d283c394e4e",
+      "versions": [
+        {
+          "id": "version:cardgame:1f0db60a02be08dc406436218a172ed0775eeb00d7d4eedcfda712a063315359",
+          "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-scroll-preview.png",
+          "revision": "8a115885160707d7fcb5ae98b2f3eb16bd2b0ca9c80b6de942bc898bff5b68b9",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        },
+        {
+          "id": "version:cardgame:3910517c73bb2ea03ea7b6847e6d51eb70a62c901968ed0c7f334d283c394e4e",
+          "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-scroll-preview.png",
+          "revision": "9ed46be302926d22c0fc5ade9e00bca8561d84fab8789551e02dc43601fa27aa",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset:cardgame:public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-scroll-runtime.png",
+      "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-scroll-runtime.png",
+      "tags": [],
+      "metadata": {
+        "purpose": "card-face",
+        "provider": "codex"
+      },
+      "metadataRevision": "81001c5bd509aa9b02bdaaff624b35df1031e9065de1b885a838f64f7a951727",
+      "currentVersionId": "version:cardgame:324c88cf774e3b46105a81c8e6c5caaf81d4e74e2909d48835b51c2a9df81c10",
+      "versions": [
+        {
+          "id": "version:cardgame:9c9f9c7add661984e5988ecbbdc6cbc8154d57d99c86d34d3e42c9a8c00b80e9",
+          "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-scroll-runtime.png",
+          "revision": "8a115885160707d7fcb5ae98b2f3eb16bd2b0ca9c80b6de942bc898bff5b68b9",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "card-face",
+            "provider": "codex"
+          }
+        },
+        {
+          "id": "version:cardgame:324c88cf774e3b46105a81c8e6c5caaf81d4e74e2909d48835b51c2a9df81c10",
+          "path": "public/assets/card-faces/TL_F3C91B077E91/4116955260ec5136ae16-scroll-runtime.png",
+          "revision": "9ed46be302926d22c0fc5ade9e00bca8561d84fab8789551e02dc43601fa27aa",
           "mimeType": "image/png",
           "metadata": {
             "purpose": "card-face",
@@ -141,12 +1858,21 @@
         "purpose": "item-icon"
       },
       "metadataRevision": "d8b29ac0377f5850c17e00ab1d2cef8f4ee43faf5bf4ac116ae9316aa4ea6e6a",
-      "currentVersionId": "version:cardgame:a4a5dc4f856696e90cd68c8ad29bb50f7089919ed89d065ed7253978596df8a0",
+      "currentVersionId": "version:cardgame:90b762c5339a10eadaf783d89ca31e536128df2d957341a3032c2ef101579709",
       "versions": [
         {
           "id": "version:cardgame:a4a5dc4f856696e90cd68c8ad29bb50f7089919ed89d065ed7253978596df8a0",
           "path": "public/assets/items/herbs/white-leaf-v1.png",
           "revision": "76d6862efeea50e67a03a42248f4935b6ea5f92d4b98ef8422468d8240e6cc8f",
+          "mimeType": "image/png",
+          "metadata": {
+            "purpose": "item-icon"
+          }
+        },
+        {
+          "id": "version:cardgame:90b762c5339a10eadaf783d89ca31e536128df2d957341a3032c2ef101579709",
+          "path": "public/assets/items/herbs/white-leaf-v1.png",
+          "revision": "0ff181df5cbd4916b99a21be0392d0ba4189891e4f131fc766e66bbe3bd46eca",
           "mimeType": "image/png",
           "metadata": {
             "purpose": "item-icon"
@@ -160,12 +1886,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:fe5362eb2effd29010639e91fd3025634cc98b0cc829916fac8f8c2e7eef5fe9",
+      "currentVersionId": "version:cardgame:74ded92fcb60c7c9a067dabac1c396adabac052eaca6ee183a596fc96b579f95",
       "versions": [
         {
           "id": "version:cardgame:fe5362eb2effd29010639e91fd3025634cc98b0cc829916fac8f8c2e7eef5fe9",
           "path": "public/assets/logo.png",
           "revision": "cc15da4ad8d0aacd84e8f7a1990b0ff7ecaf39646f4f6b9c296a183aad2e9076",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:74ded92fcb60c7c9a067dabac1c396adabac052eaca6ee183a596fc96b579f95",
+          "path": "public/assets/logo.png",
+          "revision": "876acf2a06971e0b9ce401ada3d08e514742cd9d9efe0a940cc1bd94e67d9e1d",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -177,12 +1910,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:af2357f5bcf094150818c95c89978f3105f3daf7715a8b4b8bad5072861c5f52",
+      "currentVersionId": "version:cardgame:374b3eddd495efca9d673f840fea1588a31e9081152184408ad8a961f36a3630",
       "versions": [
         {
           "id": "version:cardgame:af2357f5bcf094150818c95c89978f3105f3daf7715a8b4b8bad5072861c5f52",
           "path": "public/assets/star.png",
           "revision": "032a4a304b316d4f8d37b24b5d94011a029560717a4fdd089dfa46ad9c8fa2eb",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:374b3eddd495efca9d673f840fea1588a31e9081152184408ad8a961f36a3630",
+          "path": "public/assets/star.png",
+          "revision": "4afccadbee7a414544ab684db6e03aaaaf1feb31774a1480ca539c0fda8b3110",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -199,12 +1939,24 @@
         "status": "candidate"
       },
       "metadataRevision": "7338ce4e58bed805b6baa057cc519d93d9d51c5d3249a6c488d1ae5f5b0509cb",
-      "currentVersionId": "version:cardgame:2e3229cc6b7ec871d05c80887bfa43492953235f36cdacbbab8bd6a97dfcc363",
+      "currentVersionId": "version:cardgame:9410775b7b5e6ad70de31a4809d716c45f3066c3e1cd8ba844edeebf693dd885",
       "versions": [
         {
           "id": "version:cardgame:2e3229cc6b7ec871d05c80887bfa43492953235f36cdacbbab8bd6a97dfcc363",
           "path": "public/assets/story/qa-fog/apothecary-exterior-v1.png",
           "revision": "0e403d8f9339c723d8ab7dd302fb850faa166d3a0681a6592221785588136aca",
+          "mimeType": "image/png",
+          "metadata": {
+            "provider": "codex",
+            "purpose": "story-scene",
+            "styleProfile": "wenxin-v1",
+            "status": "candidate"
+          }
+        },
+        {
+          "id": "version:cardgame:9410775b7b5e6ad70de31a4809d716c45f3066c3e1cd8ba844edeebf693dd885",
+          "path": "public/assets/story/qa-fog/apothecary-exterior-v1.png",
+          "revision": "7729c011253b7fad2e1dfa4c43f17e4e839cf8ac49d7c01bc2f16b169a298431",
           "mimeType": "image/png",
           "metadata": {
             "provider": "codex",
@@ -226,12 +1978,24 @@
         "status": "candidate"
       },
       "metadataRevision": "7338ce4e58bed805b6baa057cc519d93d9d51c5d3249a6c488d1ae5f5b0509cb",
-      "currentVersionId": "version:cardgame:0c02503507a081fd91f22228dfa8816c9b3fb5a2d834a3555c70e71f41f52f10",
+      "currentVersionId": "version:cardgame:684692b25412aaf9cb2e4d31db8d963f862e56a16d53969416272dc7f62b9d32",
       "versions": [
         {
           "id": "version:cardgame:0c02503507a081fd91f22228dfa8816c9b3fb5a2d834a3555c70e71f41f52f10",
           "path": "public/assets/story/qa-fog/apothecary-interior-v1.png",
           "revision": "85deb945203676706bf2d8a754a33fcfdfcec2c0e5561fcc93497ab4fda6be90",
+          "mimeType": "image/png",
+          "metadata": {
+            "provider": "codex",
+            "purpose": "story-scene",
+            "styleProfile": "wenxin-v1",
+            "status": "candidate"
+          }
+        },
+        {
+          "id": "version:cardgame:684692b25412aaf9cb2e4d31db8d963f862e56a16d53969416272dc7f62b9d32",
+          "path": "public/assets/story/qa-fog/apothecary-interior-v1.png",
+          "revision": "f684f927a9423ca2cce607bbbad345a9de23d8004acb254d9c4d2d4c38a91638",
           "mimeType": "image/png",
           "metadata": {
             "provider": "codex",
@@ -251,12 +2015,22 @@
         "purpose": "story-portrait"
       },
       "metadataRevision": "bbf31061a14bc24493f68fb4240fc673ddec6916f86016997fe4e919a617aa32",
-      "currentVersionId": "version:cardgame:0be42cad9899be410070904acf403798fcd180e52af3e11da486eab832d3314c",
+      "currentVersionId": "version:cardgame:c9b5e8a50adac869443ac9164e3815805e7c2cce4be33cf9f973b9069e36335e",
       "versions": [
         {
           "id": "version:cardgame:0be42cad9899be410070904acf403798fcd180e52af3e11da486eab832d3314c",
           "path": "public/assets/story/qa-fog/fox-physician-v1.png",
           "revision": "5030978a64af28653e1551d9a32046f1335f7479d0c5263cc1c4f400e8ed14f1",
+          "mimeType": "image/png",
+          "metadata": {
+            "provider": "codex-imagegen",
+            "purpose": "story-portrait"
+          }
+        },
+        {
+          "id": "version:cardgame:c9b5e8a50adac869443ac9164e3815805e7c2cce4be33cf9f973b9069e36335e",
+          "path": "public/assets/story/qa-fog/fox-physician-v1.png",
+          "revision": "46102ce1658bcbe8eceb0bf726a440ccf8bd7d60bb4791e9470e37ef0085f05e",
           "mimeType": "image/png",
           "metadata": {
             "provider": "codex-imagegen",
@@ -276,12 +2050,24 @@
         "status": "candidate"
       },
       "metadataRevision": "7338ce4e58bed805b6baa057cc519d93d9d51c5d3249a6c488d1ae5f5b0509cb",
-      "currentVersionId": "version:cardgame:2179c15a0e29789bf5139ed82a4d3ae035125343b1299c17f2b388934be51361",
+      "currentVersionId": "version:cardgame:e5db0f7e3973a6e98d8f2e565acec2dd62c52d12241c89ac5fa5d6935246aede",
       "versions": [
         {
           "id": "version:cardgame:2179c15a0e29789bf5139ed82a4d3ae035125343b1299c17f2b388934be51361",
           "path": "public/assets/story/qa-fog/whiteleaf-clearing-v1.png",
           "revision": "7242018de5366e23ccf18d6cfb8c3fb2dbbc3d703b93c5e6ef010fd15d11e061",
+          "mimeType": "image/png",
+          "metadata": {
+            "provider": "codex",
+            "purpose": "story-scene",
+            "styleProfile": "wenxin-v1",
+            "status": "candidate"
+          }
+        },
+        {
+          "id": "version:cardgame:e5db0f7e3973a6e98d8f2e565acec2dd62c52d12241c89ac5fa5d6935246aede",
+          "path": "public/assets/story/qa-fog/whiteleaf-clearing-v1.png",
+          "revision": "8c785376a6156df5625ae93700a97955f0ee877405a83bd977e2720bb55e2a82",
           "mimeType": "image/png",
           "metadata": {
             "provider": "codex",
@@ -298,12 +2084,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:a3e2133f80c0f84d5be90fdad5dd237485459293aafb3775e759d695bd73c2c7",
+      "currentVersionId": "version:cardgame:a67988768f9db44ceac53b5e9bbc00dbc1c837b71a8b04432fea5a49c14b53bb",
       "versions": [
         {
           "id": "version:cardgame:a3e2133f80c0f84d5be90fdad5dd237485459293aafb3775e759d695bd73c2c7",
           "path": "public/assets/wenxin/disciple-reference-v2.png",
           "revision": "df9aa0963b43ff13089bfc29201664f19f5503e0a7cad4d54aba9dc3e0f0f526",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:a67988768f9db44ceac53b5e9bbc00dbc1c837b71a8b04432fea5a49c14b53bb",
+          "path": "public/assets/wenxin/disciple-reference-v2.png",
+          "revision": "b4523e452907b090c0e3bc84572c148c385d70a1762d8da11c8105f2f4808c0c",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -315,12 +2108,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:6cb56c057278c233be6f055262c251b190e682f3ce341bf5ba1c186b40f0f1a8",
+      "currentVersionId": "version:cardgame:cd1d7efc1c7f1115fae2cd1b9335fcaad6d2fab1c182be318c26ed7d556a182e",
       "versions": [
         {
           "id": "version:cardgame:6cb56c057278c233be6f055262c251b190e682f3ce341bf5ba1c186b40f0f1a8",
           "path": "public/assets/wenxin/frames/back.png",
           "revision": "ae3f3c9f6a01e4f59d50277ca5130d6a3e7847e5b7a430625649e339b5f23633",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:cd1d7efc1c7f1115fae2cd1b9335fcaad6d2fab1c182be318c26ed7d556a182e",
+          "path": "public/assets/wenxin/frames/back.png",
+          "revision": "418f49db319f6231a8eaae3efedcc19b82614197b28c0e7872ff38cd93c9c246",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -332,12 +2132,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:4565cf16e1d264e540881d3e79742ea6bc178e9045c1c7254fa376b146d5d3c3",
+      "currentVersionId": "version:cardgame:d2222abc489e06bdbcfc03d44e2fe5d6a54accbafde4b261521e18228968758b",
       "versions": [
         {
           "id": "version:cardgame:4565cf16e1d264e540881d3e79742ea6bc178e9045c1c7254fa376b146d5d3c3",
           "path": "public/assets/wenxin/frames/disc.png",
           "revision": "7c77def94a18422dc886d9d6929237f75fefb3e1798c8040fe8f33a1c66b90cb",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:d2222abc489e06bdbcfc03d44e2fe5d6a54accbafde4b261521e18228968758b",
+          "path": "public/assets/wenxin/frames/disc.png",
+          "revision": "5920db89205fae63a3421323c6a870d8e2c9bd10af10a23747ecea826e4813e6",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -349,12 +2156,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:f2e44631b73c50c0021ed50fc30ecf488d163e386128c5d0986f3768689f63ae",
+      "currentVersionId": "version:cardgame:724e3ca6e25f274313aaf925933527c4c98f4ae963f8371a9b0cfaa86294b3be",
       "versions": [
         {
           "id": "version:cardgame:f2e44631b73c50c0021ed50fc30ecf488d163e386128c5d0986f3768689f63ae",
           "path": "public/assets/wenxin/frames/eagle.png",
           "revision": "ce8fbaed34a7222613cb633926d459c62e897bf5308247b4f8c7c880a66a0b5d",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:724e3ca6e25f274313aaf925933527c4c98f4ae963f8371a9b0cfaa86294b3be",
+          "path": "public/assets/wenxin/frames/eagle.png",
+          "revision": "57b8103dd22ba1c04b44eb11a4369b5ac8373cb04a6a4f94ffd063a10ff25af7",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -366,12 +2180,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:0c7616e2fe37a159e27db9d9ed5006bdc9daee372485647668b498e361b1ea6f",
+      "currentVersionId": "version:cardgame:a27b0b2ba07445726e9cdd2fbfc50895e9943dc659b966d6497081086db1600b",
       "versions": [
         {
           "id": "version:cardgame:0c7616e2fe37a159e27db9d9ed5006bdc9daee372485647668b498e361b1ea6f",
           "path": "public/assets/wenxin/frames/fox.png",
           "revision": "0c3f0f79e8c44bc3cecff012f75c9bceddeff94a21a1ac32fef82be94482783d",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:a27b0b2ba07445726e9cdd2fbfc50895e9943dc659b966d6497081086db1600b",
+          "path": "public/assets/wenxin/frames/fox.png",
+          "revision": "ba5fce344eb9fe699309e117ab0b5fe03fe45a1e9568199c4efdcb4f28b4e85a",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -383,12 +2204,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:cdaddb87fcf58ba349c7b7451634e0baa0877fde9eca54b7a9b984d5a075e519",
+      "currentVersionId": "version:cardgame:702f6a6a5eceb202a2e8574c13590d5a45a170469fbf46db3fdbb785f6390e69",
       "versions": [
         {
           "id": "version:cardgame:cdaddb87fcf58ba349c7b7451634e0baa0877fde9eca54b7a9b984d5a075e519",
           "path": "public/assets/wenxin/frames/sage.png",
           "revision": "f6d73dfd515d6f26a5f63c9ae0d2d0fe526403bc683174d283abd9acb4281582",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:702f6a6a5eceb202a2e8574c13590d5a45a170469fbf46db3fdbb785f6390e69",
+          "path": "public/assets/wenxin/frames/sage.png",
+          "revision": "c8419a772d9e0ad92d115a8f594c102c28ad1ea0bfc9e1067712c5150820e45b",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -400,12 +2228,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:aadc6f4438835702a5e4b584ec9d788b93911b32742a7c7a4a9f73194dc05c76",
+      "currentVersionId": "version:cardgame:fe32c60259e02b83e1618ac58caf7e13c547154206a3e65de7a6230d6d818cb3",
       "versions": [
         {
           "id": "version:cardgame:aadc6f4438835702a5e4b584ec9d788b93911b32742a7c7a4a9f73194dc05c76",
           "path": "public/assets/wenxin/frames/sword.png",
           "revision": "9cfeb103d5a9ebe4852a8ac18c1cf61acd70411a3187614576b62b5630e70603",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:fe32c60259e02b83e1618ac58caf7e13c547154206a3e65de7a6230d6d818cb3",
+          "path": "public/assets/wenxin/frames/sword.png",
+          "revision": "c62b87547751c1792d53711b60201142620bc51e5d1facdd45525173adc0ecb1",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -417,12 +2252,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:d05e7667631a41b1b689d8526471b155d41cb936c8a4630192385a6a754c3fa7",
+      "currentVersionId": "version:cardgame:61d7a19518cbe65c5a0612e2ca22e5604b49182a7db8ad5cef40890ed42e0bd6",
       "versions": [
         {
           "id": "version:cardgame:d05e7667631a41b1b689d8526471b155d41cb936c8a4630192385a6a754c3fa7",
           "path": "public/assets/wenxin/frames/talis.png",
           "revision": "15a3ac9fb84c121984a908b673ed9a62abb79fc83359d7dc486db3379e9e6b0b",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:61d7a19518cbe65c5a0612e2ca22e5604b49182a7db8ad5cef40890ed42e0bd6",
+          "path": "public/assets/wenxin/frames/talis.png",
+          "revision": "0388ce824941a381ee43b4c9634c7b516bebda3006394d80db60a41945434642",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -434,12 +2276,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:7108f8390860662b270eac13d41fad5209f1846e4e2db81a207544c7a5d3819b",
+      "currentVersionId": "version:cardgame:78eb8649b01715940df9dbe26120deec7483e25e191fc1bd9dff091511adda39",
       "versions": [
         {
           "id": "version:cardgame:7108f8390860662b270eac13d41fad5209f1846e4e2db81a207544c7a5d3819b",
           "path": "public/assets/wenxin/series-bell.png",
           "revision": "47c375bb281377172d7210195d8cfa73fc57ef5a07be5d867af5c207e08d5506",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:78eb8649b01715940df9dbe26120deec7483e25e191fc1bd9dff091511adda39",
+          "path": "public/assets/wenxin/series-bell.png",
+          "revision": "cb21716d7801aec31a4b3f01db0a4ea16f369ce537e68d77d2140088b71e450a",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -451,12 +2300,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:42d5d18d64b8abaef7fd1cf992494dc19f5f311020ae52e3cbfbcb60d315a885",
+      "currentVersionId": "version:cardgame:0b617ec24bcdf944a432186c0c3686e8a8dc1c959880da052970d3d9107acbbc",
       "versions": [
         {
           "id": "version:cardgame:42d5d18d64b8abaef7fd1cf992494dc19f5f311020ae52e3cbfbcb60d315a885",
           "path": "public/assets/wenxin/series-casket.png",
           "revision": "dd6764dcb9927beb9dcf0c509b1f77bc9de0773a3fda274fdd3528685b06b286",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:0b617ec24bcdf944a432186c0c3686e8a8dc1c959880da052970d3d9107acbbc",
+          "path": "public/assets/wenxin/series-casket.png",
+          "revision": "9fb75bf1ff69d0f1eedde8140ab02373d18796bcaef840db32a2d9d8b2eb8f93",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -468,12 +2324,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:bec6a313f5e7da32a0e96c8e91db9146a63e18c147ddc074cb38462cfe436830",
+      "currentVersionId": "version:cardgame:80c989fdf801d444776d877226d002989dc5c46bad8b30c261f935a423a7957c",
       "versions": [
         {
           "id": "version:cardgame:bec6a313f5e7da32a0e96c8e91db9146a63e18c147ddc074cb38462cfe436830",
           "path": "public/assets/wenxin/series-cloud.png",
           "revision": "bf407fdee904e33b952f802f6992df34f5bc7b4039646b0066fa01d333adc21b",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:80c989fdf801d444776d877226d002989dc5c46bad8b30c261f935a423a7957c",
+          "path": "public/assets/wenxin/series-cloud.png",
+          "revision": "88d99f73ed7d3bbd96c2a104016b06f6cba3bade99c3de988b016e5fd67c009f",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -485,12 +2348,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:1660c6b1efcc4115a597b4a35a9011ac99424df146ae359bdbf7d1f05661542c",
+      "currentVersionId": "version:cardgame:2c181a8eec7ebc546174025fb54ba9342e25151b1daafe19c80a2f0e42b19ba4",
       "versions": [
         {
           "id": "version:cardgame:1660c6b1efcc4115a597b4a35a9011ac99424df146ae359bdbf7d1f05661542c",
           "path": "public/assets/wenxin/series-eagle.png",
           "revision": "9956bfb4213663b72bee8c9a117f85cd5dad65f6aafb719ecf43719982ca1af2",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:2c181a8eec7ebc546174025fb54ba9342e25151b1daafe19c80a2f0e42b19ba4",
+          "path": "public/assets/wenxin/series-eagle.png",
+          "revision": "3cc3c15adaba4475f1892e3e294bf9c07902cb5ab13a6ab099fee08b2b24b4b7",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -502,12 +2372,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:9cf9660aeed0933688656d22fa4d523fabb6cca995deac00e8181cfb7cb0ccf6",
+      "currentVersionId": "version:cardgame:6b1ec6bd5e1080b7821269d47ec8b2b3ca95e546673b1d9fc4dc8d093b08fcb3",
       "versions": [
         {
           "id": "version:cardgame:9cf9660aeed0933688656d22fa4d523fabb6cca995deac00e8181cfb7cb0ccf6",
           "path": "public/assets/wenxin/series-elder.png",
           "revision": "99fcac8c92bc3e4864f16df6920585a45ade3ff91e7d966a30f07298d8643785",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:6b1ec6bd5e1080b7821269d47ec8b2b3ca95e546673b1d9fc4dc8d093b08fcb3",
+          "path": "public/assets/wenxin/series-elder.png",
+          "revision": "3aeecb8c8d32ad7fcd1e9df7f8e49178e811ffb78de2a4ac8da838f6d3faf770",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -519,12 +2396,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:e9270223e1bd1ff5ad66581e9d6459517a5d4c23198b7be5a84ced5f30dca2cc",
+      "currentVersionId": "version:cardgame:72f62d1d325da8e7c39440ec7e944d3fe201028b99dc684d4bebb545ea09442d",
       "versions": [
         {
           "id": "version:cardgame:e9270223e1bd1ff5ad66581e9d6459517a5d4c23198b7be5a84ced5f30dca2cc",
           "path": "public/assets/wenxin/series-floor.png",
           "revision": "4599ddea43a57b27b5c8cebdeb6ebb0813fd2c466541caa58580a18f613ba218",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:72f62d1d325da8e7c39440ec7e944d3fe201028b99dc684d4bebb545ea09442d",
+          "path": "public/assets/wenxin/series-floor.png",
+          "revision": "d1ba398709933516c24cc2cde3e597968a38465b94b29dd80b27e3bae7fdf0fd",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -536,12 +2420,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:88578cb0327a72677e532fb14ddc77196273cfa79954b006d16c4dbb9838c409",
+      "currentVersionId": "version:cardgame:fe7493a8cbdb18233e315d743004bb4c3ee5691cb58a7e5c51bb2cc0f30cb8ff",
       "versions": [
         {
           "id": "version:cardgame:88578cb0327a72677e532fb14ddc77196273cfa79954b006d16c4dbb9838c409",
           "path": "public/assets/wenxin/series-fox.png",
           "revision": "c89abef8bb94dd07096a12db2b3ec37e85f297426286afa6dfdfdbdfbcc0e8cf",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:fe7493a8cbdb18233e315d743004bb4c3ee5691cb58a7e5c51bb2cc0f30cb8ff",
+          "path": "public/assets/wenxin/series-fox.png",
+          "revision": "5f628fdac6b48770f6efbe9d5915f6d98affdbe9131cc57b7aad5d7d5f68e946",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -553,12 +2444,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:f0541c206b2161be342734e36a7887742b007ebb178a543df52fae587fac9caa",
+      "currentVersionId": "version:cardgame:b409750e8d7888bace74925cf9dd64db0059ae5418f934b92c5b7897598e64db",
       "versions": [
         {
           "id": "version:cardgame:f0541c206b2161be342734e36a7887742b007ebb178a543df52fae587fac9caa",
           "path": "public/assets/wenxin/series-gallery.png",
           "revision": "346d15492ee2c535d14a2e375ac64fd5d081f5563663c7199bfd23dd7249a5f6",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:b409750e8d7888bace74925cf9dd64db0059ae5418f934b92c5b7897598e64db",
+          "path": "public/assets/wenxin/series-gallery.png",
+          "revision": "8fa5fcda440710cfcd5d924964af3e5edf69ccc524bbf48ec44a9c92f009c323",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -570,12 +2468,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:4d6d0e21d0949c21ed9f0035851cc3737d1fbb645b5347c373b4b28acc256e87",
+      "currentVersionId": "version:cardgame:0d6a30110c8562bfa21f9b9002de1409620f108b8a1192ff100722504e7b9117",
       "versions": [
         {
           "id": "version:cardgame:4d6d0e21d0949c21ed9f0035851cc3737d1fbb645b5347c373b4b28acc256e87",
           "path": "public/assets/wenxin/series-ghost.png",
           "revision": "907f2e5cfec44923c1ad0498083e64e9f453356ef08a88915b391271003fe05b",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:0d6a30110c8562bfa21f9b9002de1409620f108b8a1192ff100722504e7b9117",
+          "path": "public/assets/wenxin/series-ghost.png",
+          "revision": "81c4cbd2581445b141f219088d06dda194d09181c7bb1a38c57b7f8d3e769286",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -587,12 +2492,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:22dd2baf75c68f22d5c547fff876e6af5dda91c0d7f571a462a2876ba1cd9713",
+      "currentVersionId": "version:cardgame:25a4129d9ff9706dea11d0b7fad43babfa11d5ec804e8afd29a33db372bcb8d9",
       "versions": [
         {
           "id": "version:cardgame:22dd2baf75c68f22d5c547fff876e6af5dda91c0d7f571a462a2876ba1cd9713",
           "path": "public/assets/wenxin/series-girl.png",
           "revision": "73856fa442f82cbc64b5092f892c0a31bbd0e8d771adbe9075098a1b7e1c5949",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:25a4129d9ff9706dea11d0b7fad43babfa11d5ec804e8afd29a33db372bcb8d9",
+          "path": "public/assets/wenxin/series-girl.png",
+          "revision": "cccc199205ab29f8e1e6825f739a668f8412af7d3b0f593a877bee80137236e8",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -604,12 +2516,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:23e0684ecc33e6597238d2eab059d1ad4c1b2a870739ddbf57b032386058e547",
+      "currentVersionId": "version:cardgame:817881701cc159ce88a86c74cc50a69c34a2884ab7623536004f7ee0acdb1b1d",
       "versions": [
         {
           "id": "version:cardgame:23e0684ecc33e6597238d2eab059d1ad4c1b2a870739ddbf57b032386058e547",
           "path": "public/assets/wenxin/series-island.png",
           "revision": "fbf634758b7e2cbc1f419863d0bfb23d289425884f4b6cff24a5459ec377af1e",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:817881701cc159ce88a86c74cc50a69c34a2884ab7623536004f7ee0acdb1b1d",
+          "path": "public/assets/wenxin/series-island.png",
+          "revision": "d9ca3173f9452dfc6b4cd42df405280a86381cb9875316bd54a6810e5e4244eb",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -621,12 +2540,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:1b4faf1300ee2da3b85fd8fa771cb1adc30f674148026093c364b97ea1664a03",
+      "currentVersionId": "version:cardgame:12643ca48c27036bf28ba502ab02989b9e19c4c309bfb2e9837d16c978611abe",
       "versions": [
         {
           "id": "version:cardgame:1b4faf1300ee2da3b85fd8fa771cb1adc30f674148026093c364b97ea1664a03",
           "path": "public/assets/wenxin/series-prompts.json",
           "revision": "cbe3b22a0b94ace91c5f1aaf8b0876dede24694c3fa67cbda9c70222004b40e9",
+          "mimeType": "application/json",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:12643ca48c27036bf28ba502ab02989b9e19c4c309bfb2e9837d16c978611abe",
+          "path": "public/assets/wenxin/series-prompts.json",
+          "revision": "8f5e2aac442befd22a7544b05b4f4bebad14b948bb850df9f9a0c13e40abcd1b",
           "mimeType": "application/json",
           "metadata": {}
         }
@@ -638,12 +2564,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:b70a8a5287fdcb97f19315088b558d0241f6611814678efe2b1b910af62a0304",
+      "currentVersionId": "version:cardgame:f8b2acdba1c44536e2898eab01a9b21e20e40652381731b1cc5286d5455d4788",
       "versions": [
         {
           "id": "version:cardgame:b70a8a5287fdcb97f19315088b558d0241f6611814678efe2b1b910af62a0304",
           "path": "public/assets/wenxin/series-sky.png",
           "revision": "855f642063a0ef9b713c47776e6b531b418994dae6ba5513c1ddfa6341fe4f11",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:f8b2acdba1c44536e2898eab01a9b21e20e40652381731b1cc5286d5455d4788",
+          "path": "public/assets/wenxin/series-sky.png",
+          "revision": "1fda03964f35db92fc10c1eb2bd36c9a3193db41d2832d4e8e6f9a7fb0eebdad",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -655,12 +2588,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:483081a3cde1d80ea71e06142cce546374f434b849526bf84ba9b936f7cf9dea",
+      "currentVersionId": "version:cardgame:98519cd0784a893d5cc53e9e8a8888739483cc566f9746d06be33fcbd97a3f08",
       "versions": [
         {
           "id": "version:cardgame:483081a3cde1d80ea71e06142cce546374f434b849526bf84ba9b936f7cf9dea",
           "path": "public/assets/wenxin/series-story.png",
           "revision": "a36fe88cd32b87d1ddc1f3d626b1ac59cd8b041bbe932f2aadfe679ca7523af1",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:98519cd0784a893d5cc53e9e8a8888739483cc566f9746d06be33fcbd97a3f08",
+          "path": "public/assets/wenxin/series-story.png",
+          "revision": "e6fd1398df04d8b4f818fd713c1d80d3e9feb4623b67c1c5916a4c2863ae110a",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -672,12 +2612,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:c3d7726895d5c210fc41df08ab712e0b79373988d221f2ea68a9854ac0e7dbbc",
+      "currentVersionId": "version:cardgame:9c83c887c103639c184897e68e7f1d2e96ba0c2ffb9a0b60f36d4a018c7ec891",
       "versions": [
         {
           "id": "version:cardgame:c3d7726895d5c210fc41df08ab712e0b79373988d221f2ea68a9854ac0e7dbbc",
           "path": "public/assets/wenxin/series-sword.png",
           "revision": "7a213ffc6896a364790182b64896dbf31ca3919f21c75622fb6264f66e974d71",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:9c83c887c103639c184897e68e7f1d2e96ba0c2ffb9a0b60f36d4a018c7ec891",
+          "path": "public/assets/wenxin/series-sword.png",
+          "revision": "981737831bafb04d9918e6c262f3f9fbc12b09a8da8f144d06e2fa85003f7441",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -689,12 +2636,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:efd51f526cd594b7755354a7162ac4117b5b5f6dd408d7eb308032a8d23024da",
+      "currentVersionId": "version:cardgame:08b9fa46529dcd89ccca5abe0478f193e6215984a2b2897decf0abc9a146b333",
       "versions": [
         {
           "id": "version:cardgame:efd51f526cd594b7755354a7162ac4117b5b5f6dd408d7eb308032a8d23024da",
           "path": "public/assets/wenxin/series-talisman.png",
           "revision": "4733305d5ca6451aec3dc67a3ebefc52ad00b77e1223fb718cc0be2e21f609cb",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:08b9fa46529dcd89ccca5abe0478f193e6215984a2b2897decf0abc9a146b333",
+          "path": "public/assets/wenxin/series-talisman.png",
+          "revision": "acff31e95b5e3e7b8dce64904d04adc5ba4385345470ceae166b74e5fe309841",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -706,12 +2660,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:7b9d84f0340e21e3c548f71acdc84d83ea72b74fc2b3f9b9408d207bcfa799c2",
+      "currentVersionId": "version:cardgame:613971304177ef3a8c2d2ac70bf3e79f4889eabcffeaa146e2bd4e8dd2615eed",
       "versions": [
         {
           "id": "version:cardgame:7b9d84f0340e21e3c548f71acdc84d83ea72b74fc2b3f9b9408d207bcfa799c2",
           "path": "public/assets/wenxin/series-turtle-prompt.json",
           "revision": "f1dbd1478fd45b86cd351c3bfbc99d963d235ca07e8d99a5fe4e54ae19a8f4f8",
+          "mimeType": "application/json",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:613971304177ef3a8c2d2ac70bf3e79f4889eabcffeaa146e2bd4e8dd2615eed",
+          "path": "public/assets/wenxin/series-turtle-prompt.json",
+          "revision": "579b0c3c06c11c3cba6dee151c9b66d665b4528a80a7748a848dc7aae3b78cd1",
           "mimeType": "application/json",
           "metadata": {}
         }
@@ -723,12 +2684,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:f4b38952351537cb75a1a1e3a5dad3aad0d98616404bc1c54da33f6516f1fc80",
+      "currentVersionId": "version:cardgame:1c5b761495c35de393cbffc41d2f0ff584c6c0963b82ddc090e5236c8ee783f2",
       "versions": [
         {
           "id": "version:cardgame:f4b38952351537cb75a1a1e3a5dad3aad0d98616404bc1c54da33f6516f1fc80",
           "path": "public/assets/wenxin/series-turtle.png",
           "revision": "7ab25fcddc679c24b4e1036f080ad2012fb85c9f3668ba6f16e41f73c58d1a91",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:1c5b761495c35de393cbffc41d2f0ff584c6c0963b82ddc090e5236c8ee783f2",
+          "path": "public/assets/wenxin/series-turtle.png",
+          "revision": "222ed32562ad735b1bc9ae947132565efacb21b4ed920dacdf571233e903b5aa",
           "mimeType": "image/png",
           "metadata": {}
         }
@@ -740,12 +2708,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:6e33ba72eddfdfb2721071587cc928c869643ceea4fc638498decd7ccaa9066d",
+      "currentVersionId": "version:cardgame:dcca9b769961a9aaa5df58db18a5b88e8e978f2780b706f00a26c6f23d9916e6",
       "versions": [
         {
           "id": "version:cardgame:6e33ba72eddfdfb2721071587cc928c869643ceea4fc638498decd7ccaa9066d",
           "path": "public/assets/wenxin/series-wolf-prompt.json",
           "revision": "e78d14c7f5535f9bdace6891d1aac814daef2661d305ab04b14417497ec9ecd7",
+          "mimeType": "application/json",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:dcca9b769961a9aaa5df58db18a5b88e8e978f2780b706f00a26c6f23d9916e6",
+          "path": "public/assets/wenxin/series-wolf-prompt.json",
+          "revision": "7711ef73e9c518e97b7d4a39129342630e55f3c2a33ed2f373618a8a0761f31c",
           "mimeType": "application/json",
           "metadata": {}
         }
@@ -757,12 +2732,19 @@
       "tags": [],
       "metadata": {},
       "metadataRevision": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "currentVersionId": "version:cardgame:d2a19af127b136d8c5eee4565a54d92656fe69343fba51ee158d0dfe0a662351",
+      "currentVersionId": "version:cardgame:2b35d7a90a3d319b607945b2b4ad863318a662a372ab1c6e7ae28440efe8df1f",
       "versions": [
         {
           "id": "version:cardgame:d2a19af127b136d8c5eee4565a54d92656fe69343fba51ee158d0dfe0a662351",
           "path": "public/assets/wenxin/series-wolf.png",
           "revision": "163dd49fd40f70b4b5ff5adaaa2e678233bcda1176c4fed9c321c6594a79520e",
+          "mimeType": "image/png",
+          "metadata": {}
+        },
+        {
+          "id": "version:cardgame:2b35d7a90a3d319b607945b2b4ad863318a662a372ab1c6e7ae28440efe8df1f",
+          "path": "public/assets/wenxin/series-wolf.png",
+          "revision": "6e64b67832f628d66634b76d2f37e1bda05f9ce17a7154b011b157cea5c168c9",
           "mimeType": "image/png",
           "metadata": {}
         }

@@ -91,6 +91,7 @@ export class BattleUIManager {
      * 创建标题
      */
     private createTitle(): void {
+        if (this.isPortrait) return;
         const { width } = this.scene.scale;
         const title = this.scene.add.text(width / 2, this.isPortrait ? 35 : 36, '斗法', getSceneTextStyle('sceneTitle', {
             fontSize: '32px',
@@ -174,7 +175,7 @@ export class BattleUIManager {
     private createActionButtons(): void {
         const { width } = this.scene.scale;
         const buttonWidth = this.isPortrait ? 138 : 188;
-        const buttonHeight = this.isPortrait ? 54 : 62;
+        const buttonHeight = this.isPortrait ? 72 : 62;
         const buttonX = width - 154;
 
         const draw = createSceneButton(this.scene, {
@@ -242,22 +243,22 @@ export class BattleUIManager {
         });
         statusLine.objects.forEach((object) => this.setDepth(object, this.layout.depth.uiText));
         this.statsText = statusLine.text;
-        if (this.isPortrait) this.statsText.setFontSize(20);
+        if (this.isPortrait) statusLine.objects.forEach(object => (object as Phaser.GameObjects.Text).setVisible(false));
         this.trackObjects(...statusLine.objects);
 
         this.createHpHud();
 
         const turnBanner = this.scene.add.rectangle(
             width / 2,
-            this.isPortrait ? 246 : height * 0.30,
-            this.isPortrait ? 188 : 330,
+            this.isPortrait ? 122 : height * 0.30,
+            this.isPortrait ? width - 40 : 330,
             this.isPortrait ? 54 : 50,
             sceneTheme.colors.banner,
             0.84,
         );
         turnBanner.setStrokeStyle(2, sceneTheme.colors.gold, 0.38);
 
-        this.turnText = this.scene.add.text(width / 2, this.isPortrait ? 246 : height * 0.30, '', getSceneTextStyle('panelTitle', {
+        this.turnText = this.scene.add.text(width / 2, this.isPortrait ? 122 : height * 0.30, '', getSceneTextStyle('panelTitle', {
             fontSize: this.isPortrait ? '18px' : '24px',
             color: battleColorToHex(sceneTheme.colors.goldSoft),
         })).setOrigin(0.5);
@@ -386,7 +387,7 @@ export class BattleUIManager {
 
         if (this.turnText && this.turnText.active) {
             this.turnText.setText(
-                `第 ${this.battleState.turnNumber} 回合 · ${this.battleState.isPlayerTurn ? '我方执手' : '敌方行动'}`,
+                this.isPortrait ? `${this.battleState.isPlayerTurn ? '我方' : '敌方'} · 第${this.battleState.turnNumber}回合` : `第 ${this.battleState.turnNumber} 回合 · ${this.battleState.isPlayerTurn ? '我方执手' : '敌方行动'}`,
             );
         }
     }

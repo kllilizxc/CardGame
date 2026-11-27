@@ -12,8 +12,8 @@ import { wenxinCardTexture } from './WenxinArt';
 import { C } from '../palette';
 import { BattleFx } from '../battleFx';
 
-const stages = new WeakMap<Scene, WenxinBattleStage>();
-export function getWenxinBattleStage(scene: Scene) { return stages.get(scene); }
+import { battleStages as stages } from './battleStageRegistry';
+export { getWenxinBattleStage } from './battleStageRegistry';
 type Tween = (config: Phaser.Types.Tweens.TweenBuilderConfig) => Phaser.Tweens.Tween;
 let serial = 0;
 
@@ -173,8 +173,9 @@ export class WenxinBattleStage {
         if (this.slowmoTimer) window.clearTimeout(this.slowmoTimer);
         this.slowmoTimer = window.setTimeout(() => {
             if (!this.scene.sys.isActive()) return;
-            this.scene.tweens.add({ targets: this.scene.tweens, timeScale: base, duration: 200 });
-            this.scene.time.timeScale = base;
+            const currentSpeed = battle.battleState?.gameSpeed ?? base;
+            this.scene.tweens.timeScale = currentSpeed;
+            this.scene.time.timeScale = currentSpeed;
         }, ms);
     }
 
@@ -190,6 +191,8 @@ export class WenxinBattleStage {
             const x = this.portrait ? 90 + slot * 150 : p.x * this.scale;
             const y = this.portrait ? (side === 'foe' ? 398 : 575) : p.y * this.scale;
             card.setBaseScale(1);
+            card.stopMotion();
+            card.setRestAngle(0);
             card.setBattlePresentation(side);
             card.setAngle(0);
             card.setScale(card.getCardBaseScale()).setPosition(x, y).setOriginalPosition(x, y);
@@ -307,24 +310,27 @@ export class WenxinBattleStage {
 
     // ------------------------------------------------------------------ combat
     /** One real damage callback per attack, inside the existing animation accounting. */
-    attack(attacker: CardSprite, target: CardSprite, damage: number, delay: number, onDamage: (target: CardSprite, damage: number) => void, tween: Tween) {
+    attack(attacker: CardSprite, target: CardSprite, damage: number, delay: number, onDamage: (target: CardSprite, damage: number) => void, tween: Tween, onComplete?: () => void) {
         const view = attacker.battleView; if (!view) return false;
         const bird = view.artKey === 'eagle', sage = view.artKey === 'sage' || view.artKey === 'disc';
         const pose = view.pose, oldDepth = attacker.depth;
         // Include delay and return motion in the manager's pending animation count.
         tween({ targets: { value: 0 }, value: 1, duration: Math.max(1, delay), onComplete: () => {
-            if (!attacker.active || !target.active) return;
+            if (!attacker.active || !target.active) { onComplete?.(); return; }
             this.activeAttacks++;
             attacker.setDepth(90);
             view.setFocused(true);
+            target.battleView?.setAttackTarget(true);
             this.focus([attacker, target], { dolly: bird ? 7 : 5.5, pan: 0.5, ms: 300 });
             const dirX = Math.sign((target.x - attacker.x) || 1);
             const finish = () => {
-                pose.run = 0; pose.fast = false; pose.raise = 0;
+                pose.run = 0; pose.fast = false; pose.raise = 0; pose.reach = 0;
                 view.setFocused(false);
+                target.battleView?.setAttackTarget(false);
                 if (attacker.active) attacker.setDepth(oldDepth);
                 this.activeAttacks--;
                 if (!this.activeAttacks) this.release(480);
+                onComplete?.();
             };
             const strike = () => {
                 if (!target.active) { tween({ targets: pose, ox: 0, oy: 0, duration: 260, onComplete: finish }); return; }
@@ -351,10 +357,21 @@ export class WenxinBattleStage {
                 tween({ targets: pose, ox: 0, oy: 0, duration: bird ? 460 : 340, delay: lethal ? 260 : 90, ease: 'Sine.easeInOut', onComplete: finish });
             };
             if (sage) {
-                // gather qi, lift, and call a rain of flying swords
+                // Show who casts and follow the sword all the way to the selected victim.
                 const start = this.unitScreen(attacker);
                 this.fx.qiGather(start.x, start.y - 120, C.glow);
-                tween({ targets: pose, raise: 1, duration: 520, onComplete: strike });
+                tween({ targets: pose, raise: 1, reach: 1, duration: 320, onComplete: () => {
+                    const body = (card: CardSprite) => {
+                        if (card.active && card.battleView) {
+                            const bounds = card.getTargetBounds();
+                            return { x: bounds.centerX, y: bounds.centerY };
+                        }
+                        const feet = this.unitScreen(card);
+                        return { x: feet.x, y: feet.y - 130 };
+                    };
+                    this.fx.swordFlight(() => { const hand = body(attacker); return { x: hand.x + dirX * 42, y: hand.y + 24 }; },
+                        () => body(target), tween, strike, view.artKey === 'sage');
+                } });
             } else {
                 pose.run = 1; pose.fast = bird;
                 const anticipate = bird ? { oy: -204, duration: 360 } : { ox: -dirX * 34, oy: -14, duration: 200 };
@@ -376,8 +393,8 @@ export class WenxinBattleStage {
     }
 
     impact(target: CardSprite, color: number = C.paper, swords = false, damage = 1) {
-        const at = this.unitScreen(target);
-        const x = at.x, y = at.y - 130;
+        const bounds = target.getTargetBounds();
+        const x = bounds.centerX, y = bounds.centerY;
         const power = clamp(damage / 8, 0.4, 1.6);
         this.fx.impact(x, y, color, power, swords);
         this.punch(2 + power * 2.2, 160);

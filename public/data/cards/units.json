@@ -38,7 +38,8 @@
           "actions": [
             {
               "type": "modifyAttack",
-              "value": 1
+              "value": 1,
+              "duration": "turn"
             }
           ],
           "text": "登场时：若本回合你已召唤过其他灵兽，则本回合内本卡攻击力+1。",
@@ -107,7 +108,8 @@
           "actions": [
             {
               "type": "modifyAttack",
-              "value": 1
+              "value": 1,
+              "duration": "turn"
             }
           ],
           "text": "我方回合开始时：若你场上存在至少1张灵兽卡，则本回合内所有己方灵兽攻击力+1。",
@@ -631,6 +633,660 @@
         "gongfa.draw_filter_sword_cultivator",
         "gongfa.sword_intent_burst_aoe"
       ]
+    },
+    {
+      "id": "DRG_SAC_001",
+      "name": "苔纹龙卵",
+      "kind": "unit",
+      "description": "仍在卵壳中的初生龙族，能以薄甲承受第一道锋芒。",
+      "rarity": "common",
+      "labels": [
+        "龙族",
+        "龙族献祭",
+        "龙族低阶"
+      ],
+      "limitPerDeck": 3,
+      "realmId": "realm_mortal",
+      "race": "龙族",
+      "linggen": [
+        "木"
+      ],
+      "attack": 1,
+      "health": 8,
+      "effects": [],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "jade",
+        "artwork": "/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-art.png",
+        "fingerprint": "75e967bdd0fdc3a57fb5e7845a279bde355cc48e75e97177a45c38141c8534f4",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-jade-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-jade-preview.png",
+            "templateVersion": 4
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-scroll-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_001/75e967bdd0fdc3a57fb5-scroll-preview.png",
+            "templateVersion": 4
+          }
+        }
+      }
+    },
+    {
+      "id": "DRG_SAC_002",
+      "name": "云沫幼龙",
+      "kind": "unit",
+      "description": "吐息尚弱，却已懂得掠阵。登场时：本回合本卡攻击力+1。",
+      "rarity": "common",
+      "labels": [
+        "龙族",
+        "龙族献祭",
+        "龙族低阶"
+      ],
+      "limitPerDeck": 3,
+      "realmId": "realm_mortal",
+      "race": "龙族",
+      "linggen": [
+        "水"
+      ],
+      "attack": 2,
+      "health": 10,
+      "effects": [
+        {
+          "timing": "onSummon",
+          "target": {
+            "scope": "self"
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 1,
+              "duration": "turn"
+            }
+          ],
+          "text": "登场时：本回合本卡攻击力+1。",
+          "scriptId": "effect.DRG_SAC_002.onSummon"
+        }
+      ],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "jade",
+        "artwork": "/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-art.png",
+        "fingerprint": "fc65389e2226eb8c55d8d1f6e4d200cc0cf208faee110adafae1f4c1acabc811",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-jade-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-jade-preview.png",
+            "templateVersion": 4
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-scroll-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_002/fc65389e2226eb8c55d8-scroll-preview.png",
+            "templateVersion": 4
+          }
+        }
+      }
+    },
+    {
+      "id": "DRG_SAC_003",
+      "name": "碧脊龙驹",
+      "kind": "unit",
+      "description": "龙族常见的青鳞驹；若场上另有龙族，本回合本卡攻击力+2。",
+      "rarity": "common",
+      "labels": [
+        "龙族",
+        "龙族献祭",
+        "龙族低阶"
+      ],
+      "limitPerDeck": 3,
+      "realmId": "realm_qi_1",
+      "race": "龙族",
+      "linggen": [
+        "木"
+      ],
+      "attack": 5,
+      "health": 26,
+      "effects": [
+        {
+          "timing": "onSummon",
+          "target": {
+            "scope": "self"
+          },
+          "conditions": [
+            {
+              "type": "unitCountAtLeast",
+              "labels": [
+                "龙族"
+              ],
+              "value": 2
+            }
+          ],
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 2,
+              "duration": "turn"
+            }
+          ],
+          "text": "登场时：若你场上另有龙族单位，则本回合本卡攻击力+2。",
+          "scriptId": "effect.DRG_SAC_003.onSummon"
+        }
+      ],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "jade",
+        "artwork": "/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-art.png",
+        "fingerprint": "008a60c163864e75e1b636cc466d7a92be54235bb1e71108d176209431e43abc",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-jade-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-jade-preview.png",
+            "templateVersion": 4
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-scroll-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_003/008a60c163864e75e1b6-scroll-preview.png",
+            "templateVersion": 4
+          }
+        }
+      }
+    },
+    {
+      "id": "DRG_SAC_004",
+      "name": "玄潮飞龙",
+      "kind": "unit",
+      "description": "玄潮化翼，扑击时以鳞刃追伤。攻击时：对目标额外造成2点伤害。",
+      "rarity": "uncommon",
+      "labels": [
+        "龙族",
+        "龙族献祭",
+        "龙族低阶"
+      ],
+      "limitPerDeck": 2,
+      "realmId": "realm_qi_1",
+      "race": "龙族",
+      "linggen": [
+        "水"
+      ],
+      "attack": 6,
+      "health": 30,
+      "effects": [
+        {
+          "timing": "onAttack",
+          "target": {
+            "scope": "attackTarget"
+          },
+          "actions": [
+            {
+              "type": "dealDamage",
+              "value": 2
+            }
+          ],
+          "text": "攻击时：对目标额外造成2点伤害。",
+          "scriptId": "effect.DRG_SAC_004.onAttack"
+        }
+      ],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "jade",
+        "artwork": "/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-art.png",
+        "fingerprint": "8e4169209c9b543de9856457cbd4c887f1c8b789119f166be00b9881a3451116",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-jade-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-jade-preview.png",
+            "templateVersion": 4
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-scroll-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_004/8e4169209c9b543de985-scroll-preview.png",
+            "templateVersion": 4
+          }
+        }
+      }
+    },
+    {
+      "id": "DRG_SAC_005",
+      "name": "霄焰角龙",
+      "kind": "unit",
+      "description": "角鳞初成，献祭后可登临筑基。召唤需献祭1只2星及以上单位。登场时：本回合本卡攻击力+3。",
+      "rarity": "common",
+      "labels": [
+        "龙族",
+        "龙族献祭",
+        "龙族低阶"
+      ],
+      "limitPerDeck": 2,
+      "realmId": "realm_foundation_early",
+      "race": "龙族",
+      "linggen": [
+        "火"
+      ],
+      "attack": 10,
+      "health": 50,
+      "effects": [
+        {
+          "timing": "onSummon",
+          "target": {
+            "scope": "self"
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 3,
+              "duration": "turn"
+            }
+          ],
+          "text": "登场时：本回合本卡攻击力+3。",
+          "scriptId": "effect.DRG_SAC_005.onSummon"
+        }
+      ],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "jade",
+        "artwork": "/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-art.png",
+        "fingerprint": "9231572b7c7d20fa80c9241502d6ebc190f529f0a44d6618ee27ca05f530c8a2",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-jade-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-jade-preview.png",
+            "templateVersion": 4
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-scroll-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_005/9231572b7c7d20fa80c9-scroll-preview.png",
+            "templateVersion": 4
+          }
+        }
+      }
+    },
+    {
+      "id": "DRG_SAC_006",
+      "name": "鸣雷龙侍",
+      "kind": "unit",
+      "description": "以雷鸣守护族群。召唤需献祭1只2星及以上单位。登场时：对所有敌方单位造成4点伤害。",
+      "rarity": "uncommon",
+      "labels": [
+        "龙族",
+        "龙族献祭",
+        "龙族低阶"
+      ],
+      "limitPerDeck": 2,
+      "realmId": "realm_foundation_early",
+      "race": "龙族",
+      "linggen": [
+        "金"
+      ],
+      "attack": 14,
+      "health": 70,
+      "effects": [
+        {
+          "timing": "onSummon",
+          "target": {
+            "scope": "enemyUnits"
+          },
+          "actions": [
+            {
+              "type": "dealDamage",
+              "value": 4
+            }
+          ],
+          "text": "登场时：对所有敌方单位造成4点伤害。",
+          "scriptId": "effect.DRG_SAC_006.onSummon"
+        }
+      ],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "jade",
+        "artwork": "/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-art.png",
+        "fingerprint": "856ff62ea57bd23aa3562481f1b94a7c15c2f2c0f0048469d73decf7fdd89952",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-jade-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-jade-preview.png",
+            "templateVersion": 4
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-scroll-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_006/856ff62ea57bd23aa356-scroll-preview.png",
+            "templateVersion": 4
+          }
+        }
+      }
+    },
+    {
+      "id": "DRG_SAC_007",
+      "name": "凌云苍龙",
+      "kind": "unit",
+      "description": "苍龙破云，重击再撕开鳞甲。召唤需献祭1只3星及以上单位。攻击时：对目标额外造成8点伤害。",
+      "rarity": "rare",
+      "labels": [
+        "龙族",
+        "龙族献祭"
+      ],
+      "limitPerDeck": 2,
+      "realmId": "realm_golden_early",
+      "race": "龙族",
+      "linggen": [
+        "金",
+        "木"
+      ],
+      "attack": 22,
+      "health": 120,
+      "effects": [
+        {
+          "timing": "onAttack",
+          "target": {
+            "scope": "attackTarget"
+          },
+          "actions": [
+            {
+              "type": "dealDamage",
+              "value": 8
+            }
+          ],
+          "text": "攻击时：对目标额外造成8点伤害。",
+          "scriptId": "effect.DRG_SAC_007.onAttack"
+        }
+      ],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "jade",
+        "artwork": "/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-art.png",
+        "fingerprint": "d5ff774ddd49cf7fea52ad45ce069d84721c6398e7d5b7a3579c3231762931b8",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-jade-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-jade-preview.png",
+            "templateVersion": 4
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-scroll-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_007/d5ff774ddd49cf7fea52-scroll-preview.png",
+            "templateVersion": 4
+          }
+        }
+      }
+    },
+    {
+      "id": "DRG_SAC_008",
+      "name": "镇岳金龙",
+      "kind": "unit",
+      "description": "金鳞如山，龙吟鼓舞同族。召唤需献祭1只3星及以上单位。我方回合开始时：所有己方龙族单位本回合攻击力+1。",
+      "rarity": "rare",
+      "labels": [
+        "龙族",
+        "龙族献祭"
+      ],
+      "limitPerDeck": 2,
+      "realmId": "realm_golden_early",
+      "race": "龙族",
+      "linggen": [
+        "金",
+        "土"
+      ],
+      "attack": 30,
+      "health": 160,
+      "effects": [
+        {
+          "timing": "turnStart",
+          "target": {
+            "scope": "allyUnits",
+            "requiredLabelsAllOf": [
+              "龙族"
+            ]
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 1,
+              "duration": "turn"
+            }
+          ],
+          "text": "我方回合开始时：所有己方龙族单位本回合攻击力+1。",
+          "scriptId": "effect.DRG_SAC_008.turnStart"
+        }
+      ],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "jade",
+        "artwork": "/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-art.png",
+        "fingerprint": "7b33fbc93884683deebf3861eba7790b942553e9de2efaff17a4096572bde21c",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-jade-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-jade-preview.png",
+            "templateVersion": 4
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-scroll-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_008/7b33fbc93884683deebf-scroll-preview.png",
+            "templateVersion": 4
+          }
+        }
+      }
+    },
+    {
+      "id": "DRG_SAC_009",
+      "name": "碧宵真龙",
+      "kind": "unit",
+      "description": "碧色真龙承接祭礼余辉。召唤需献祭1只4星及以上单位。登场时：所有己方龙族单位本回合攻击力+2。",
+      "rarity": "rare",
+      "labels": [
+        "龙族",
+        "龙族献祭"
+      ],
+      "limitPerDeck": 2,
+      "realmId": "realm_nascent_early",
+      "race": "龙族",
+      "linggen": [
+        "木",
+        "水"
+      ],
+      "attack": 46,
+      "health": 260,
+      "effects": [
+        {
+          "timing": "onSummon",
+          "target": {
+            "scope": "allyUnits",
+            "requiredLabelsAllOf": [
+              "龙族"
+            ]
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 2,
+              "duration": "turn"
+            }
+          ],
+          "text": "登场时：所有己方龙族单位本回合攻击力+2。",
+          "scriptId": "effect.DRG_SAC_009.onSummon"
+        }
+      ],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "jade",
+        "artwork": "/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-art.png",
+        "fingerprint": "201fbefdc713c45ec88bbd871eccb2e525237fd16d72198920447977b004c4ab",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-jade-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-jade-preview.png",
+            "templateVersion": 4
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-scroll-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_009/201fbefdc713c45ec88b-scroll-preview.png",
+            "templateVersion": 4
+          }
+        }
+      }
+    },
+    {
+      "id": "DRG_SAC_010",
+      "name": "霜海龙姬",
+      "kind": "unit",
+      "description": "霜海龙姬踏浪而来，寒息削弱敌阵。召唤需献祭1只5星及以上单位。登场时：对所有敌方单位造成12点伤害。",
+      "rarity": "epic",
+      "labels": [
+        "龙族",
+        "龙族献祭"
+      ],
+      "limitPerDeck": 2,
+      "realmId": "realm_spirit_early",
+      "race": "龙族",
+      "linggen": [
+        "水",
+        "土"
+      ],
+      "attack": 100,
+      "health": 520,
+      "effects": [
+        {
+          "timing": "onSummon",
+          "target": {
+            "scope": "enemyUnits"
+          },
+          "actions": [
+            {
+              "type": "dealDamage",
+              "value": 12
+            }
+          ],
+          "text": "登场时：对所有敌方单位造成12点伤害。",
+          "scriptId": "effect.DRG_SAC_010.onSummon"
+        }
+      ],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "jade",
+        "artwork": "/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-art.png",
+        "fingerprint": "384d2512f6915698fbd7069f3d698758dfb0aacd8c103a0ba1c6e01993dabfea",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-jade-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-jade-preview.png",
+            "templateVersion": 4
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-scroll-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_010/384d2512f6915698fbd7-scroll-preview.png",
+            "templateVersion": 4
+          }
+        }
+      }
+    },
+    {
+      "id": "DRG_SAC_011",
+      "name": "青穹龙君",
+      "kind": "unit",
+      "description": "青穹之主振翼压阵。召唤需献祭1只6星及以上单位。登场时：本回合本卡攻击力+8。",
+      "rarity": "epic",
+      "labels": [
+        "龙族",
+        "龙族献祭"
+      ],
+      "limitPerDeck": 1,
+      "realmId": "realm_unity_early",
+      "race": "龙族",
+      "linggen": [
+        "木",
+        "火"
+      ],
+      "attack": 200,
+      "health": 1000,
+      "effects": [
+        {
+          "timing": "onSummon",
+          "target": {
+            "scope": "self"
+          },
+          "actions": [
+            {
+              "type": "modifyAttack",
+              "value": 8,
+              "duration": "turn"
+            }
+          ],
+          "text": "登场时：本回合本卡攻击力+8。",
+          "scriptId": "effect.DRG_SAC_011.onSummon"
+        }
+      ],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "jade",
+        "artwork": "/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-art.png",
+        "fingerprint": "bd84d9e29ffcc587fbf6a23399179a206d735aa599fa3dff4fa9b4ef1c6bc23b",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-jade-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-jade-preview.png",
+            "templateVersion": 4
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-scroll-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_011/bd84d9e29ffcc587fbf6-scroll-preview.png",
+            "templateVersion": 4
+          }
+        }
+      }
+    },
+    {
+      "id": "DRG_SAC_012",
+      "name": "澄霄白龙",
+      "kind": "unit",
+      "description": "澄霄降临，白鳞映出苍蓝天光。召唤需献祭1只7星及以上单位。登场时：对所有敌方单位造成24点伤害。",
+      "rarity": "legendary",
+      "labels": [
+        "龙族",
+        "龙族献祭"
+      ],
+      "limitPerDeck": 1,
+      "realmId": "realm_mahayana_early",
+      "race": "龙族",
+      "linggen": [
+        "金",
+        "水"
+      ],
+      "attack": 400,
+      "health": 2000,
+      "effects": [
+        {
+          "timing": "onSummon",
+          "target": {
+            "scope": "enemyUnits"
+          },
+          "actions": [
+            {
+              "type": "dealDamage",
+              "value": 24
+            }
+          ],
+          "text": "登场时：对所有敌方单位造成24点伤害。",
+          "scriptId": "effect.DRG_SAC_012.onSummon"
+        }
+      ],
+      "cardFace": {
+        "schemaVersion": 1,
+        "themeId": "jade",
+        "artwork": "/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-art.png",
+        "fingerprint": "bfe2c3eb7f264cd81bb248a33607d6b282d5ad07b298c56e6d6c6fcd4c50c90f",
+        "variants": {
+          "jade": {
+            "texture": "/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-jade-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-jade-preview.png",
+            "templateVersion": 4
+          },
+          "scroll": {
+            "texture": "/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-scroll-runtime.png",
+            "preview": "/assets/card-faces/DRG_SAC_012/bfe2c3eb7f264cd81bb2-scroll-preview.png",
+            "templateVersion": 4
+          }
+        }
+      }
     }
   ]
 }

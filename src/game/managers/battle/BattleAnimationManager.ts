@@ -22,18 +22,24 @@ export class BattleAnimationManager {
      */
     private addTweens(config: Phaser.Types.Tweens.TweenBuilderConfig): Phaser.Tweens.Tween {
         const originalOnComplete = config.onComplete;
+        const originalOnStop = config.onStop;
+        let settled = false;
+        const settle = () => {
+            if (settled) return;
+            settled = true;
+            this.pendingAnimations--;
+        };
         
         // 动画开始时计数
         this.pendingAnimations++;
         
         config.onComplete = (tween: Phaser.Tweens.Tween, targets: any, ...params: any[]) => {
             // 先调用原始回调
-            if (originalOnComplete) {
-                (originalOnComplete as any)(tween, targets, ...params);
+            try {
+                if (originalOnComplete) (originalOnComplete as any)(tween, targets, ...params);
+            } finally {
+                settle();
             }
-            
-            // 动画完成时减少计数
-            this.pendingAnimations--;
 
             // 如果所有动画都完成了，调用 tick
             if (this.pendingAnimations === 0) {
@@ -41,6 +47,13 @@ export class BattleAnimationManager {
                 if (battleScene.battleTickManager) {
                     battleScene.battleTickManager.tick();
                 }
+            }
+        };
+        config.onStop = (tween, targets, ...params) => {
+            try {
+                if (originalOnStop) (originalOnStop as any)(tween, targets, ...params);
+            } finally {
+                settle();
             }
         };
         
@@ -76,9 +89,10 @@ export class BattleAnimationManager {
         target: CardSprite,
         damage: number,
         delay: number,
-        onDamage: (target: CardSprite, damage: number) => void
+        onDamage: (target: CardSprite, damage: number) => void,
+        onComplete?: () => void,
     ): void {
-        if (getWenxinBattleStage(this.scene)?.attack(attacker, target, damage, delay, onDamage, config => this.addTweens(config))) return;
+        if (getWenxinBattleStage(this.scene)?.attack(attacker, target, damage, delay, onDamage, config => this.addTweens(config), onComplete)) return;
         const originalX = attacker.x;
         const originalY = attacker.y;
         const targetX = target.x;
@@ -130,7 +144,8 @@ export class BattleAnimationManager {
                                 y: originalY,
                                 scale: baseScale,
                                 duration: 250,
-                                ease: 'Back.easeOut'
+                                ease: 'Back.easeOut',
+                                onComplete,
                             });
                         }
                     });
@@ -353,7 +368,8 @@ export class BattleAnimationManager {
         attacker: CardSprite,
         damage: number,
         delay: number,
-        onDamage: (damage: number) => void
+        onDamage: (damage: number) => void,
+        onComplete?: () => void,
     ): void {
         if (attacker.battleView) {
             const view = attacker.battleView;
@@ -361,7 +377,7 @@ export class BattleAnimationManager {
             const stage = getWenxinBattleStage(this.scene);
             const { width, height } = this.scene.scale;
             this.addTweens({ targets: { t: 0 }, t: 1, duration: Math.max(1, delay), onComplete: () => {
-                if (!attacker.active) return;
+                if (!attacker.active) { onComplete?.(); return; }
                 pose.run = 1;
                 view.setFocused(true);
                 stage?.focus([attacker], { dolly: 6, pan: 0.6, ms: 300 });
@@ -376,6 +392,7 @@ export class BattleAnimationManager {
                         onDamage(damage); this.playPlayerHitEffect(damage);
                         this.addTweens({ targets: pose, ox: 0, oy: 0, duration: 420, delay: 100, ease: 'Sine.easeInOut', onComplete: () => {
                             pose.run = 0; view.setFocused(false); stage?.release(480);
+                            onComplete?.();
                         } });
                     } });
                 } });
@@ -433,7 +450,8 @@ export class BattleAnimationManager {
                                 y: originalY,
                                 scale: baseScale,
                                 duration: 250,
-                                ease: 'Back.easeOut'
+                                ease: 'Back.easeOut',
+                                onComplete,
                             });
                         }
                     });
@@ -726,6 +744,16 @@ export class BattleAnimationManager {
         targetY: number,
         onComplete?: () => void
     ): void {
+        // Attached equipment uses local coordinates; detach before flying in world space.
+        if (card.parentContainer) {
+            const world = card.getWorldTransformMatrix();
+            const position = { x: world.tx, y: world.ty };
+            card.parentContainer.remove(card);
+            this.scene.add.existing(card);
+            card.setPosition(position.x, position.y);
+        }
+        card.stopMotion();
+        card.disableInteractive();
         // 使用布局配置的深度
         const battleScene = this.scene as any;
         const depth = battleScene.layout?.depth?.cardToDiscardAnimation ?? 2000;

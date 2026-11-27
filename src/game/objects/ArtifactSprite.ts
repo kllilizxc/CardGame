@@ -93,7 +93,10 @@ export class ArtifactSprite extends BaseCardSprite {
 
         // 设置拖拽事件
         this.setupDragEvents({
+            onDragStart: () => this.scene.events.emit('artifactDragStart', this),
+            onDragging: () => this.scene.events.emit('artifactDragging', this),
             onDragEnd: () => {
+                this.scene.events.emit('artifactDragEnd', this);
                 // 拖拽结束后的处理
                 const battleScene = this.scene as BattleSceneArtifactDragBridge;
                 if (battleScene.tryEquipArtifact) {

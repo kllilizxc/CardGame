@@ -322,8 +322,9 @@ export class ExpeditionScene extends Scene {
     private createEntryShell(): void {
         const container = this.add.container(0, 0);
         const back = piconButton(this, PX * 16, PX * 16, 'map', () => this.returnToWorldMap(), 'slate');
-        const title = ptext(this, PX * 32, PX * 8, this.mapDefinition.name, { size: 2, color: INK.paper, fx: 'outline' });
+        const title = ptext(this, PX * 32, PX * 8, this.mapDefinition.name, { size: this.scale.width <= 700 ? 1 : 2, color: INK.paper, fx: 'outline' });
         const crumb = ptext(this, PX * 32, PX * 36, '', { color: INK.bone, fx: 'outline' });
+        if (this.scale.width <= 700) crumb.setVisible(false);
         container.add([back, title, crumb]);
         container.setDepth(1300);
         container.setVisible(false);
@@ -462,8 +463,8 @@ export class ExpeditionScene extends Scene {
         const [headMain, headSub] = summary.headline.split(' · ');
         const title = ptitle(this, width / 2, height / 2 - PX * 4, clip(headMain, 10), 3);
         if (headSub) badge.setText(`${summary.badgeLabel} · ${headSub}`);
-        const loadout = ptext(this, width / 2, height / 2 + PX * 24, clip(summary.loadoutLine, 40), { color: INK.bone, origin: [0.5, 0.5], fx: 'none' });
-        const footer = ptext(this, width / 2, height / 2 + PX * 62, '点按任意处或按 Enter / Space 继续。', { color: INK.mist, origin: [0.5, 0.5], fx: 'outline' });
+        const loadout = ptext(this, width / 2, height / 2 + PX * 24, clip(summary.loadoutLine, 40), { wrap: width <= 700 ? width - 48 : undefined, color: INK.bone, origin: [0.5, 0.5], fx: 'none' });
+        const footer = ptext(this, width / 2, height / 2 + PX * 62, width <= 700 ? '点按继续进入秘境' : '点按任意处或按 Enter / Space 继续。', { color: INK.mist, origin: [0.5, 0.5], fx: 'outline' });
         const enter = pbutton(this, { x: width / 2, y: height / 2 + PX * 82, width: PX * 80, height: PX * 22, label: '进入秘境', style: 'seal', onClick: () => acknowledge() });
         [badge, title, loadout, footer, enter].forEach((o) => o.setAlpha(0));
         container.add([overlay, band, lineTop, lineBot, badge, title, loadout, footer, enter]);

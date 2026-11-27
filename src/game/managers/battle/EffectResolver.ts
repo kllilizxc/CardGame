@@ -1,5 +1,7 @@
 import type { BattleContext } from '../../context/BattleContext';
 import type { CardSprite } from '../../objects/CardSprite';
+import { getUnitStateId } from './unitIdentity';
+import { getRealmConfig } from '../../utils/RealmHelper';
 import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 import type {
     LegacyCardEffect,
@@ -150,16 +152,17 @@ export class EffectResolver {
 
             case 'modifyHealth':
             case 'heal': {
-                const value = Math.abs(action.value ?? 0);
+                const value = action.type === 'heal' ? Math.abs(action.value ?? 0) : action.value ?? 0;
                 for (const unit of targets) {
                     const data = unit.getCardData();
-                    data.health += value;
+                    data.health = Math.max(0, data.health + value);
                     unit.updateStats();
                     battleLog.addLog(
-                        `【${sourceName}】为【${data.name}】恢复${value}点生命值`,
+                        `【${sourceName}】使【${data.name}】生命值${value >= 0 ? '+' : ''}${value}`,
                         sourceCard ? [sourceCard, unit] : [unit],
                     );
-                    animationManager.playHealAnimation(unit);
+                    if (value >= 0) animationManager.playHealAnimation(unit);
+                    else animationManager.playHitAnimation(unit);
                 }
                 break;
             }
@@ -168,11 +171,11 @@ export class EffectResolver {
                 const rawDamage = Math.abs(action.value ?? 0);
                 for (const unit of targets) {
                     const data = unit.getCardData();
-                    const finalDamage = statusManager.processDamage(data.id, rawDamage);
+                    const finalDamage = statusManager.processDamage(getUnitStateId(unit), rawDamage);
                     data.health -= finalDamage;
                     if (data.health < 0) data.health = 0;
                     unit.updateStats();
-                    const statuses = statusManager.getUnitStatuses(data.id);
+                    const statuses = statusManager.getUnitStatuses(getUnitStateId(unit));
                     unit.updateStatusDisplay(statuses);
                     battleLog.addLog(
                         `【${sourceName}】对【${data.name}】造成${finalDamage}点伤害`,
@@ -185,6 +188,10 @@ export class EffectResolver {
 
             case 'loseHealth': {
                 const value = Math.abs(action.value ?? 0);
+                if (targets.length === 0) {
+                    this.executeAction({ type: 'damagePlayer', value }, targets, context);
+                    break;
+                }
                 for (const unit of targets) {
                     const data = unit.getCardData();
                     data.health -= value;
@@ -225,7 +232,7 @@ export class EffectResolver {
             case 'removeDebuffs': {
                 for (const unit of targets) {
                     const data = unit.getCardData();
-                    statusManager.clearDebuffs(data.id);
+                    statusManager.clearDebuffs(getUnitStateId(unit));
                     battleLog.addLog(
                         `【${sourceName}】移除了【${data.name}】的减益状态`,
                         sourceCard ? [sourceCard, unit] : [unit],
@@ -299,14 +306,45 @@ export class EffectResolver {
             }
 
             default:
-                console.log(`EffectResolver: unhandled action type: ${(action as any).type}`);
+                // Older checked-in unit cards use this burn action before applyStatus was introduced.
+                if ((action as { type: string }).type === 'applyBurn') {
+                    const legacyBurn = action as unknown as { value?: number; duration?: number };
+                    for (const unit of targets) battleStatusController.applyStatusToUnit(
+                        getUnitStateId(unit), 'burn', legacyBurn.value ?? 1, unit, sourceName, legacyBurn.duration,
+                    );
+                } else console.log(`EffectResolver: unhandled action type: ${(action as any).type}`);
         }
+    }
+
+    private conditionsSatisfied(effect: LegacyCardEffect, context: EffectExecutionContext): boolean {
+        const hasLabels = (unit: CardSprite, labels: string[]) => labels.every(label => (unit.getCardData().labels ?? []).includes(label));
+        return (effect.conditions ?? []).every(condition => {
+            const labels = condition.labels ?? [];
+            switch (condition.type) {
+                case 'unitCountAtLeast':
+                    return context.playerField.filter(unit => unit.getCardData().health > 0 && hasLabels(unit, labels)).length >= (condition.value ?? 1);
+                case 'hasLabel':
+                    return !!context.triggerUnit && hasLabels(context.triggerUnit, labels);
+                case 'hasCardInHand':
+                    return (this.battleContext.battleState?.hand ?? []).filter(card =>
+                        labels.every(label => (card.getCardData().labels ?? []).includes(label))).length >= (condition.value ?? 1);
+                case 'realmDiffAtLeast': {
+                    const source = context.triggerUnit, target = context.attackTarget ?? context.damageSource;
+                    if (!source || !target) return false;
+                    const from = getRealmConfig(source.getCardData().realmId), to = getRealmConfig(target.getCardData().realmId);
+                    return !!from && !!to && from.value - to.value >= (condition.value ?? 1);
+                }
+                case 'custom':
+                    return false;
+            }
+        });
     }
 
     // ==================== 完整效果执行 ====================
 
     executeEffect(effect: LegacyCardEffect, context: EffectExecutionContext): void {
         if (!effect.actions || effect.actions.length === 0) return;
+        if (!this.conditionsSatisfied(effect, context)) return;
 
         const target = effect.target;
         const scope = target?.scope;
@@ -393,7 +431,7 @@ export class EffectResolver {
 
                 // 记录数值修改，用于移除场地时回退
                 for (const unit of targets) {
-                    const unitId = unit.getCardData().id;
+                    const unitId = getUnitStateId(unit);
                     let mod = this.activeFieldMods.get(unitId);
                     if (!mod) {
                         mod = { unitId, attackDelta: 0, healthDelta: 0, statusIds: [] };
@@ -429,7 +467,7 @@ export class EffectResolver {
 
         for (const [unitId, mod] of this.activeFieldMods) {
             const unit = [...context.playerField, ...context.enemyField].find(
-                (u) => u.getCardData().id === unitId,
+                (u) => getUnitStateId(u) === unitId,
             );
             if (!unit) continue;
 

@@ -19,7 +19,9 @@ describe('pixel viewport', () => {
         expect(pixelViewportForBrowser(1920, 1080)).toEqual({ width: 1920, height: 1080 });
         expect(pixelViewportForBrowser(1920, 960)).toEqual({ width: 2160, height: 1080 });
         expect(pixelViewportForBrowser(1440, 1080).width).toBe(1440);
-        expect(pixelViewportForBrowser(390, 844).width).toBe(1440);
+        expect(pixelViewportForBrowser(390, 844)).toBe(PORTRAIT_GAME_VIEWPORT);
+        expect(pixelViewportForBrowser(374, 606)).toBe(PORTRAIT_GAME_VIEWPORT);
+        expect(pixelViewportForBrowser(844, 390).height).toBe(1080);
         expect(pixelViewportForBrowser(4000, 900).width).toBe(2400);
         expect(pixelViewportForBrowser(1500, 1000).width % 6).toBe(0);
     });

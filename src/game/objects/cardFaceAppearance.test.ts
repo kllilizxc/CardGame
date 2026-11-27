@@ -50,3 +50,30 @@ test('missing or unsafe theme textures fall back to the original face', async ()
         expect(outputs).toEqual([undefined, undefined]); bad();
     } finally { (globalThis as any).window = saved; }
 });
+
+
+test('published original artwork loads even when the generic pixel fallback is already cached', async () => {
+    const savedWindow = globalThis.window, savedImage = globalThis.Image;
+    const images: Array<{ src: string; onload: () => void }> = [];
+    (globalThis as any).window = new EventTarget();
+    (globalThis as any).Image = class { src = ''; onload = () => {}; onerror = () => {}; constructor() { images.push(this); } };
+    try {
+        const cache = new Set(['pxcard:published-original:Fixture:unit']);
+        const scene = { textures: { exists: (key: string) => cache.has(key), addImage: (key: string) => cache.add(key) } } as any;
+        const card = { id: 'published-original', name: 'Fixture', kind: 'unit', cardFace: { schemaVersion: 1 as const, themeId: 'jade', artwork: '', fingerprint: 'current', variants: {
+            jade: { texture: '/assets/card-faces/Fixture/jade.png', preview: '/assets/card-faces/Fixture/preview.png', templateVersion: 4 },
+        } } };
+        const values: unknown[] = [];
+        const stop = watchCardFace(scene, card, key => values.push(key));
+        expect(images.map(image => image.src)).toEqual(['/assets/card-faces/Fixture/jade.png']);
+        expect(values).toEqual([]);
+        images[0]!.onload();
+        for (let i = 0; i < 5; i++) await Promise.resolve();
+        expect(values).toEqual(['card-face:/assets/card-faces/Fixture/jade.png']);
+        stop();
+        const fallback: unknown[] = [];
+        const release = watchCardFace(scene, { id: card.id, name: card.name, kind: card.kind } as any, key => fallback.push(key));
+        expect(fallback).toEqual(['pxcard:published-original:Fixture:unit']);
+        release();
+    } finally { (globalThis as any).window = savedWindow; (globalThis as any).Image = savedImage; }
+});

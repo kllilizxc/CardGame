@@ -58,6 +58,7 @@ export class UnitEffectManager {
     }
 
     public applyOnSummonEffects(unit: CardSprite, context: GongfaRuntimeContext): void {
+        this.battleContext.combatManager?.applyUnitTimingEffects?.(unit, 'onSummon');
         this.executeUnitGongfa(unit, EffectEventType.OnSummon, EffectEventSide.Ally, context);
     }
 

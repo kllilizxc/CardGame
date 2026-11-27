@@ -2,6 +2,7 @@ import type { CardSprite } from '../../objects/CardSprite';
 import type { StatusManager } from './StatusManager';
 import type { BattleLog } from '../../ui/battle/BattleLog';
 import type { BattleAnimationManager } from './BattleAnimationManager';
+import { getUnitStateId } from './unitIdentity';
 
 /**
  * 战斗状态控制器
@@ -34,7 +35,7 @@ export class BattleStatusController {
         
         for (const unit of allUnits) {
             const unitData = unit.getCardData();
-            const unitId = unitData.id;
+            const unitId = getUnitStateId(unit);
             
             // 触发回合开始状态
             const damage = this.statusManager.triggerStatuses(unitId, 'turnStart', {
@@ -73,7 +74,7 @@ export class BattleStatusController {
         
         for (const unit of allUnits) {
             const unitData = unit.getCardData();
-            const unitId = unitData.id;
+            const unitId = getUnitStateId(unit);
             
             // 触发回合结束状态
             const damage = this.statusManager.triggerStatuses(unitId, 'turnEnd');
@@ -113,6 +114,7 @@ export class BattleStatusController {
         sourceId?: string, 
         duration?: number
     ): void {
+        if (unit) unitId = getUnitStateId(unit);
         const success = this.statusManager.applyStatus(unitId, statusId, stacks, sourceId, duration);
         
         // 如果成功应用状态且提供了单位精灵，更新状态显示

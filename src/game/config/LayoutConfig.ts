@@ -88,8 +88,11 @@ export function createDefaultLayout(width: number, height: number): BattleLayout
             playerFieldZone: { x: width / 2, y: 555, width: width - 28, height: 160 },
             enemyFieldZone: { x: width / 2, y: 367, width: width - 28, height: 180 },
             fieldCardZone: { x: width / 2, y: 638, width: 112, height: 42 },
-            deckButton: { x: 76, y: 246, width: 112, height: 54 },
-            discardPileButton: { x: width - 76, y: 246, width: 112, height: 54 },
+            deckButton: { x: 76, y: 270, width: 112, height: 72 },
+            discardPileButton: { x: width - 76, y: 270, width: 112, height: 72 },
+            drawButton: { x: 92, y: 189, width: 138, height: 72 },
+            endTurnButton: { x: width / 2, y: 189, width: 138, height: 72 },
+            speedButton: { x: width - 92, y: 189, width: 138, height: 72 },
             pillSlots: { x: width / 2, y: 818 },
             skillUI: { x: width / 2, y: 713 },
             depth: {

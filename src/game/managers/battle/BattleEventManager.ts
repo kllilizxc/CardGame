@@ -5,6 +5,8 @@ import type { TalismanSprite } from '../../objects/TalismanSprite';
 import { FieldSprite } from '../../objects/FieldSprite';
 import type { BattleContext } from '../../context/BattleContext';
 import type { FieldManager } from './FieldManager';
+import { findArtifactEquipTarget } from '../../scenes/battle/artifactEquipTarget';
+import { C, T, PX } from '../../art/palette';
 
 /**
  * 战斗事件管理器
@@ -26,6 +28,9 @@ export class BattleEventManager {
     private highlightedTarget: CardSprite | null = null;
     private highlightedTargetSide: 'ally' | 'enemy' | null = null;
     private targetHighlight: Phaser.GameObjects.Graphics | null = null;
+    private artifactTarget: CardSprite | null = null;
+    private artifactHighlight?: Phaser.GameObjects.Graphics;
+    private artifactHint?: Phaser.GameObjects.Container;
 
     constructor(
         scene: Scene,
@@ -67,9 +72,60 @@ export class BattleEventManager {
      * 初始化所有事件监听
      */
     public setupAllEvents(): void {
+        this.setupArtifactEvents();
         this.setupTalismanEvents();
         this.setupFieldEvents();
         this.setupCleanupEvents();
+    }
+
+    private clearArtifactHighlight(): void {
+        this.artifactTarget?.battleView?.setEquipTarget(false);
+        this.artifactTarget = null;
+        this.artifactHighlight?.destroy();
+        this.artifactHighlight = undefined;
+        this.artifactHint?.destroy();
+        this.artifactHint = undefined;
+    }
+
+    private setupArtifactEvents(): void {
+        this.scene.events.on('artifactDragStart', () => this.clearArtifactHighlight());
+        this.scene.events.on('artifactDragEnd', () => this.clearArtifactHighlight());
+        this.scene.events.on('artifactDragging', (artifact: ArtifactSprite) => {
+            const battle = this.scene as Scene & {
+                canPlayerAct?: () => boolean;
+                artifactManager?: { getEquippedArtifacts: (unit: CardSprite) => ArtifactSprite[] };
+            };
+            const data = artifact.getCardData();
+            const target = this.hand.includes(artifact) && data.equipTarget === 'unit' && (!battle.canPlayerAct || battle.canPlayerAct())
+                ? findArtifactEquipTarget(artifact, this.playerField.filter(unit => unit.active && unit.getCardData().health > 0), unit => unit.getTargetBounds()) : null;
+            if (!target) { this.clearArtifactHighlight(); return; }
+            const bounds = target.getTargetBounds();
+            if (this.artifactTarget !== target) {
+                this.clearArtifactHighlight();
+                this.artifactTarget = target;
+                target.battleView?.setEquipTarget(true);
+                this.artifactHighlight = this.scene.add.graphics().setDepth(1600);
+                const replacing = (battle.artifactManager?.getEquippedArtifacts(target).length ?? 0) > 0;
+                const label = this.scene.add.text(0, 0, `${replacing ? '替换装备' : '松手装备'} · ${target.getCardData().name}`, {
+                    fontSize: '36px', color: T.gold, align: 'center', wordWrap: { width: Math.min(600, this.scene.scale.width - 54) },
+                }).setOrigin(0.5);
+                const background = this.scene.add.rectangle(0, 0, label.displayWidth + 30, label.displayHeight + 20, C.ink, 0.97)
+                    .setStrokeStyle(PX, C.gold);
+                this.artifactHint = this.scene.add.container(0, 0, [background, label]).setDepth(1601);
+            }
+            // Frame corners remain readable even when the dragged card covers the character.
+            const g = this.artifactHighlight!;
+            const x = bounds.x - 9, y = bounds.y - 9, w = bounds.width + 18, h = bounds.height + 18, corner = 32;
+            g.clear().lineStyle(PX * 2, C.gold, 1);
+            for (const [cx, cy, dx, dy] of [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]]) {
+                g.lineBetween(cx, cy, cx + corner * dx, cy);
+                g.lineBetween(cx, cy, cx, cy + corner * dy);
+            }
+            const hintWidth = this.artifactHint!.list[0] as Phaser.GameObjects.Rectangle;
+            const half = hintWidth.width / 2 + 8;
+            this.artifactHint!.setPosition(Math.max(half, Math.min(this.scene.scale.width - half, bounds.centerX)),
+                Math.max(hintWidth.height / 2 + 32, bounds.y - hintWidth.height / 2 - 18));
+        });
     }
 
     /**
@@ -155,7 +211,7 @@ export class BattleEventManager {
                     if (highlightAllUnits) {
                         const unitsToHighlight = targetSide === 'ally' ? this.playerField : this.enemyField;
                         unitsToHighlight.forEach(unit => {
-                            const bounds = unit.getBounds();
+                            const bounds = unit.getTargetBounds();
                             targetHighlight.strokeRoundedRect(
                                 bounds.x,
                                 bounds.y,
@@ -166,7 +222,7 @@ export class BattleEventManager {
                         });
                     } else {
                         // 单体目标，只高亮当前单位
-                        const bounds = target.getBounds();
+                        const bounds = target.getTargetBounds();
                         targetHighlight.strokeRoundedRect(
                             bounds.x,
                             bounds.y,
@@ -189,6 +245,13 @@ export class BattleEventManager {
 
         // 尝试使用符箓
         this.scene.events.on('tryUseTalisman', (talisman: TalismanSprite) => {
+            const battle = this.scene as Scene & { canPlayerAct?: () => boolean };
+            if (battle.canPlayerAct && !battle.canPlayerAct()) {
+                talisman.returnToOriginalPosition();
+                this.highlightedTarget = null;
+                this.highlightedTargetSide = null;
+                return;
+            }
             if (this.highlightedTarget && this.highlightedTargetSide) {
                 this.scene.events.emit('useTalisman', talisman, this.highlightedTarget, this.highlightedTargetSide);
             } else {
@@ -207,6 +270,11 @@ export class BattleEventManager {
             card: CardSprite | ArtifactSprite | TalismanSprite | FieldSprite
         ) => {
             if (!(card instanceof FieldSprite)) {
+                return;
+            }
+            const battle = this.scene as Scene & { canPlayerAct?: () => boolean };
+            if (!this.hand.includes(card) || (battle.canPlayerAct && !battle.canPlayerAct())) {
+                card.returnToOriginalPosition();
                 return;
             }
 
@@ -244,6 +312,10 @@ export class BattleEventManager {
      */
     private setupCleanupEvents(): void {
         this.scene.events.once('shutdown', () => {
+            this.clearArtifactHighlight();
+            this.scene.events.removeAllListeners('artifactDragStart');
+            this.scene.events.removeAllListeners('artifactDragging');
+            this.scene.events.removeAllListeners('artifactDragEnd');
             this.scene.events.removeAllListeners('talismanDragStart');
             this.scene.events.removeAllListeners('talismanDragging');
             this.scene.events.removeAllListeners('talismanDragEnd');
@@ -266,17 +338,7 @@ export class BattleEventManager {
     }
 
     private getUnitAtPosition(units: CardSprite[], x: number, y: number): CardSprite | null {
-        const expandRadius = 50;
-        
-        for (const unit of units) {
-            const bounds = unit.getBounds();
-            const expandedBounds = Phaser.Geom.Rectangle.Clone(bounds);
-            Phaser.Geom.Rectangle.Inflate(expandedBounds, expandRadius, expandRadius);
-            
-            if (Phaser.Geom.Rectangle.Contains(expandedBounds, x, y)) {
-                return unit;
-            }
-        }
-        return null;
+        return findArtifactEquipTarget({ x, y }, units.filter(unit => unit.active && unit.getCardData().health > 0),
+            unit => unit.getTargetBounds(), 50);
     }
 }

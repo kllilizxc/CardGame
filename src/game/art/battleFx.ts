@@ -6,6 +6,8 @@ import { C, FONT, hex, PX } from './palette';
 import { pxBurst, pxRing } from './fx';
 
 const snap = (v: number, u = PX) => Math.round(v / u) * u;
+type Point = { x: number; y: number };
+type CountedTween = (config: Phaser.Types.Tweens.TweenBuilderConfig) => Phaser.Tweens.Tween;
 let snapSerial = 0;
 
 /**
@@ -158,6 +160,45 @@ export class BattleFx {
                 s.tweens.add({ targets: c, a: 0, duration: 200, onUpdate: drawCrescent, onComplete: () => g.destroy() });
             } });
         }
+    }
+
+    /** A visible sword travels from the caster's hand to the victim before damage is applied. */
+    swordFlight(from: () => Point, to: () => Point, tween: CountedTween, onImpact: () => void, multiple = false) {
+        const s = this.scene;
+        const trail = s.add.graphics().setDepth(3023);
+        const swords = [0, ...(multiple ? [-1, 1] : [])].map(offset => {
+            const blade = s.add.graphics();
+            blade.fillStyle(C.gold, 0.32).fillRect(-48, -15, 126, 30);
+            blade.fillStyle(C.gold, 1).fillRect(-28, -6, 80, 12);
+            blade.fillStyle(C.paper, 1).fillRect(-18, -3, 72, 6);
+            blade.fillTriangle(52, -6, 76, 0, 52, 6);
+            blade.fillStyle(C.ember, 1).fillRect(-38, -18, 9, 36);
+            blade.fillStyle(C.gold, 1).fillRect(-57, -4, 22, 8);
+            return { offset, object: s.add.container(0, 0, [blade]).setDepth(3024).setScale(offset ? 0.72 : 1).setAlpha(offset ? 0.85 : 1) };
+        });
+        const progress = { t: 0 };
+        const draw = () => {
+            const start = from(), end = to();
+            const dx = end.x - start.x, dy = end.y - start.y;
+            const arc = Math.min(90, Math.abs(dx) * 0.12);
+            const point = (t: number) => ({ x: start.x + dx * t, y: start.y + dy * t - Math.sin(t * Math.PI) * arc });
+            const angle = Math.atan2(dy - Math.cos(progress.t * Math.PI) * Math.PI * arc, dx);
+            trail.clear();
+            for (let i = 0; i < 12; i++) {
+                const a = Math.max(0, progress.t - (12 - i) * 0.014), b = Math.max(0, progress.t - (11 - i) * 0.014);
+                const p = point(a), q = point(b);
+                trail.lineStyle(6 + i * 1.5, i > 8 ? C.paper : C.gold, 0.2 + i * 0.05);
+                trail.lineBetween(p.x, p.y, q.x, q.y);
+            }
+            for (const sword of swords) {
+                const p = point(Math.max(0, progress.t - Math.abs(sword.offset) * 0.045));
+                sword.object.setPosition(p.x - Math.sin(angle) * sword.offset * 34, p.y + Math.cos(angle) * sword.offset * 34).setRotation(angle);
+            }
+        };
+        const cleanup = () => { trail.destroy(); swords.forEach(sword => sword.object.destroy()); };
+        draw();
+        tween({ targets: progress, t: 1, duration: 380, ease: 'Sine.easeIn', onUpdate: draw,
+            onComplete: () => { cleanup(); onImpact(); }, onStop: cleanup });
     }
 
     deathBurst(x: number, y: number) {

@@ -4,6 +4,7 @@ import { CardSprite } from '../../objects/CardSprite';
 import { ArtifactSprite } from '../../objects/ArtifactSprite';
 import { TalismanSprite } from '../../objects/TalismanSprite';
 import { FieldSprite } from '../../objects/FieldSprite';
+import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 import type { UnitCard } from '../../../../public/data/types/cards/unit';
 import type { ArtifactCard } from '../../../../public/data/types/cards/artifact';
 import type { TalismanCard } from '../../../../public/data/types/cards/talisman';
@@ -64,7 +65,7 @@ export class CardManager {
             sprite = new FieldSprite(this.scene, 0, 0, cardData as FieldCard, this.cardScale);
             this.battleLog.addLog(`抽取了场地卡【${cardData.name}】`, [sprite]);
         } else {
-            console.warn(`不支持的卡牌类型: ${cardData.kind}`);
+            console.warn('不支持的卡牌类型', cardData);
             return { deck, hand };
         }
         
@@ -72,7 +73,6 @@ export class CardManager {
             // cards peel off the top of the deck pile and fly into the hand
             const from = this.layout.deckButton;
             sprite.setPosition(from.x, from.y).setScale(0.28).setAngle(-12).setDepth(5000);
-            this.scene.tweens.add({ targets: sprite, angle: 0, duration: 260, ease: 'Sine.easeOut' });
         }
         hand.push(sprite);
         return { deck, hand };
@@ -80,10 +80,9 @@ export class CardManager {
 
     // ---- hand fan -----------------------------------------------------------------
     private static readonly FAN_REST_SCALE = 1;
-    private fanHover: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite) | null = null;
-    private fanHand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[] = [];
+    private fanHover: BaseCardSprite | null = null;
+    private fanHand: BaseCardSprite[] = [];
     private fanBound = new WeakSet<object>();
-    private fanTween = new WeakMap<object, Phaser.Tweens.Tween>();
     private fanPose = new WeakMap<object, { x: number; y: number; angle: number; scale: number }>();
 
     private isFanLayout(): boolean {
@@ -91,7 +90,7 @@ export class CardManager {
     }
 
     /** Resting pose of every hand card on the arc, then the hover pose layered on top. */
-    private arrangeFan(hand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[]): void {
+    private arrangeFan(hand: BaseCardSprite[]): void {
         const zone = this.layout!.handZone;
         const rest = CardManager.FAN_REST_SCALE;
         const n = hand.length;
@@ -119,7 +118,7 @@ export class CardManager {
         this.applyFan(true);
     }
 
-    private setFanHover(card: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite) | null): void {
+    private setFanHover(card: BaseCardSprite | null): void {
         if (this.fanHover === card) return;
         this.fanHover = card;
         this.applyFan(false);
@@ -142,20 +141,20 @@ export class CardManager {
                     x += (i < hoverIndex ? -1 : 1) * Math.max(0, 62 - Math.abs(i - hoverIndex) * 14);
                 }
             }
+            card.stopMotion();
             card.setDepth(depth);
             if (count && this.animationManager) {
                 // initial layout / re-layout: counted, so combat ticks wait for the hand to settle
                 this.animationManager.playCardMoveAnimation(card, x, y, () => { card.setOriginalPosition(pose.x, pose.y); });
                 this.scene.tweens.add({ targets: card, angle, scale, duration: 300, ease: 'Back.easeOut' });
             } else {
-                this.fanTween.get(card)?.stop();
-                this.fanTween.set(card, this.scene.tweens.add({ targets: card, x, y, angle, scale, duration: 150, ease: 'Cubic.easeOut' }));
+                this.scene.tweens.add({ targets: card, x, y, angle, scale, duration: 150, ease: 'Cubic.easeOut' });
             }
         });
     }
 
     // 排列手牌
-    public arrangeHand(hand: (CardSprite | ArtifactSprite | TalismanSprite | FieldSprite)[]): void {
+    public arrangeHand(hand: BaseCardSprite[]): void {
         hand.forEach(card => { if (card instanceof CardSprite) card.setBattlePresentation(); });
         if (this.isFanLayout()) { this.arrangeFan(hand); return; }
         const layoutZone = this.layout?.handZone;
@@ -168,6 +167,10 @@ export class CardManager {
 
             hand.forEach((card, index) => {
                 const x = startX + index * spacing;
+                card.stopMotion();
+                card.setOriginalPosition(x, y);
+                card.setRestAngle(0);
+                card.setAngle(0);
                 // 设置手牌深度
                 const depth = this.layout?.depth?.handCards ?? 10;
                 card.setDepth(depth);
@@ -192,6 +195,10 @@ export class CardManager {
 
         hand.forEach((card, index) => {
             const x = startX + index * spacing;
+            card.stopMotion();
+            card.setOriginalPosition(x, handY);
+            card.setRestAngle(0);
+            card.setAngle(0);
             // 设置手牌深度（fallback 路径）
             const depth = this.layout?.depth?.handCards ?? 10;
             card.setDepth(depth);

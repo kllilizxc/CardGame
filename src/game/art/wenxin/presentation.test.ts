@@ -1,8 +1,17 @@
 import { describe, expect, test } from 'bun:test';
-import { BATTLE_SLOTS, project, slotPosition, unitArt } from './presentation';
+import { BATTLE_SLOTS, project, slotPosition, unitArt, unitFlipX } from './presentation';
 import units from '../../../../public/data/cards/units.json';
 
 describe('wenxin game presentation', () => {
+    test('disciple artwork faces into the battlefield without applying the beasts mirror rule', () => {
+        expect(unitArt('CR_004')).toBe('disc');
+        expect(unitFlipX('disc', 'me')).toBe(false);
+        expect(unitFlipX('disc', 'foe')).toBe(true);
+        for (const key of ['fox', 'eagle', 'sage', 'turtle', 'wolf', 'ghost'] as const) {
+            expect(unitFlipX(key, 'me')).toBe(true);
+            expect(unitFlipX(key, 'foe')).toBe(false);
+        }
+    });
     test('every shipped unit has a deliberate illustration mapping', () => {
         for (const card of units.units) expect(unitArt(card.id)).toBeDefined();
         expect(unitArt('future_unknown_beast')).toBeUndefined();

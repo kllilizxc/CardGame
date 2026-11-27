@@ -1,7 +1,9 @@
-import { getWenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
+import { getWenxinBattleStage } from '../../art/wenxin/battleStageRegistry';
 import type { CardSprite } from '../../objects/CardSprite';
 import type { ArtifactSprite } from '../../objects/ArtifactSprite';
 import type { BattleContext } from '../../context/BattleContext';
+import { getUnitStateId } from './unitIdentity';
+import { isLegacyCardEffect, type LegacyEffectTiming } from '@data/types/cards/effects';
 
 export class CombatManager {
     private battleContext: BattleContext;
@@ -18,84 +20,37 @@ export class CombatManager {
         onPlayerDamaged: (damage: number) => void,
         onComplete?: () => void
     ): number {
-        const attackers = isPlayerTurn ? playerField : enemyField;
-        const defenders = isPlayerTurn ? enemyField : playerField;
-
-        console.log(`${isPlayerTurn ? '玩家' : '敌人'}方进行攻击`);
-
-        // 创建攻击动画序列
-        let delay = 0;
-        const attackStep = getWenxinBattleStage(this.battleContext.scene) ? 1000 : 600;
-        
-        // 创建防御者的临时生命值映射，用于预判死亡
-        const tempHealth = new Map<CardSprite, number>();
-        defenders.forEach(d => tempHealth.set(d, d.getCardData().health));
-
-        attackers.forEach((attacker) => {
-            const attackValue = attacker.getCardData().attack;
-            
-            // 找到第一个还活着的敌方单位（基于临时生命值判断）
-            const aliveDefenders = defenders.filter(d => (tempHealth.get(d) || 0) > 0);
-            
-            if (aliveDefenders.length > 0) {
-                // 攻击第一个还活着的敌方单位
-                const target = aliveDefenders[0];
-                const targetCard = target.getCardData();
-                
-                // 预先扣除生命值（仅用于判断，实际伤害仍在动画回调中应用）
-                const currentTempHealth = tempHealth.get(target) || 0;
-                tempHealth.set(target, Math.max(0, currentTempHealth - attackValue));
-                
-                console.log(`${attacker.getCardData().name} 攻击 ${targetCard.name}，造成 ${attackValue} 点伤害`);
-                
-                // 记录攻击日志
-                this.battleContext.battleLog.addLog(
-                    `【${attacker.getCardData().name}】攻击【${targetCard.name}】，造成${attackValue}点伤害`,
-                    [attacker, target]
-                );
-                
-                // 复用 performSingleAttack
-                this.performSingleAttack(attacker, target, attackValue, delay, false);
-                delay += attackStep; // 每个攻击间隔600ms
+        const attackers = [...(isPlayerTurn ? playerField : enemyField)];
+        const estimate = attackers.length * (getWenxinBattleStage(this.battleContext.scene) ? 1000 : 600);
+        let index = 0;
+        const next = () => {
+            this.battleContext.battleTickManager.tick();
+            const state = this.battleContext.battleState;
+            const allies = state?.playerField ?? playerField;
+            const enemies = state?.enemyField ?? enemyField;
+            if (index >= attackers.length || (state && (state.playerHealth <= 0 || enemies.length === 0))) {
+                onComplete?.();
+                return;
+            }
+            const attacker = attackers[index++];
+            if (!attacker.active || attacker.getCardData().health <= 0 || !(isPlayerTurn ? allies : enemies).includes(attacker)) {
+                next();
+                return;
+            }
+            const target = (isPlayerTurn ? enemies : allies).find(unit => unit.active && unit.getCardData().health > 0);
+            const damage = attacker.getCardData().attack;
+            if (target) {
+                this.battleContext.battleLog.addLog(`【${attacker.getCardData().name}】攻击【${target.getCardData().name}】`, [attacker, target]);
+                this.performSingleAttack(attacker, target, damage, 0, false, next);
+            } else if (!isPlayerTurn) {
+                this.battleContext.battleLog.addLog(`【${attacker.getCardData().name}】直接攻击你，造成${damage}点伤害！`, [attacker]);
+                this.battleContext.animationManager.addAttackPlayerAnimation(attacker, damage, 0, onPlayerDamaged, next);
             } else {
-                // 没有存活的防御单位，直接攻击玩家本体（如果是敌人回合）
-                if (!isPlayerTurn) {
-                    console.log(`${attacker.getCardData().name} 直接攻击你，造成 ${attackValue} 点伤害`);
-                    
-                    // 记录直击玩家日志
-                    this.battleContext.battleLog.addLog(
-                        `【${attacker.getCardData().name}】直接攻击你，造成${attackValue}点伤害！`,
-                        [attacker]
-                    );
-                    
-                    // 添加攻击玩家的动画
-                    this.battleContext.animationManager.addAttackPlayerAnimation(
-                        attacker,
-                        attackValue,
-                        delay,
-                        onPlayerDamaged
-                    );
-                    delay += attackStep;
-                }
-                // 玩家方无目标时不造成伤害（敌人没有本体生命）
+                next();
             }
-        });
-
-        // 在所有攻击完成后调用回调
-        if (onComplete) {
-            const onCompleteWithTick = () => {
-                onComplete!()
-                this.battleContext.battleTickManager.tick()
-            }
-            if (delay > 0) {
-                this.battleContext.scene.time.delayedCall(delay + 200, onCompleteWithTick);
-            } else {
-                // 如果没有任何攻击动画，立即调用回调
-                this.battleContext.scene.time.delayedCall(100, onCompleteWithTick);
-            }
-        }
-
-        return delay; // 返回总动画时长
+        };
+        next();
+        return estimate;
     }
 
     // 对单位造成伤害
@@ -108,7 +63,7 @@ export class CombatManager {
         const cardData = unit.getCardData();
         
         // 通过 StatusManager 处理伤害（会先消耗护甲）
-        const finalDamage = this.battleContext.statusManager.processDamage(cardData.id, damage);
+        const finalDamage = this.battleContext.statusManager.processDamage(getUnitStateId(unit), damage);
         
         cardData.health -= finalDamage;
         
@@ -121,7 +76,7 @@ export class CombatManager {
         
         // 实时更新卡牌显示（包括护甲状态）
         unit.updateStats();
-        const statuses = this.battleContext.statusManager.getUnitStatuses(cardData.id);
+        const statuses = this.battleContext.statusManager.getUnitStatuses(getUnitStateId(unit));
         unit.updateStatusDisplay(statuses);
     }
 
@@ -138,33 +93,56 @@ export class CombatManager {
         target: CardSprite | CardSprite[],
         damage: number,
         delay: number = 0,
-        isAOE: boolean = false
+        isAOE: boolean = false,
+        onComplete?: () => void
     ): void {
-        if (isAOE && Array.isArray(target)) {
-            // AOE攻击：攻击所有目标
-            target.forEach((t, index) => {
-                const targetData = t.getCardData();
-                if (targetData.health > 0) {
-                    this.battleContext.animationManager.addAttackAnimation(
-                        attacker,
-                        t,
-                        damage,
-                        delay + index * 200, // 每个目标间隔200ms
-                        (unit, dmg) => this.damageUnit(unit, dmg)
-                    );
-                }
-            });
-        } else if (!Array.isArray(target)) {
-            // 单体攻击
-            const targetData = target.getCardData();
-            if (targetData.health > 0) {
-                this.battleContext.animationManager.addAttackAnimation(
-                    attacker,
-                    target,
-                    damage,
-                    delay,
-                    (unit, dmg) => this.damageUnit(unit, dmg)
-                );
+        const targets = (Array.isArray(target) ? (isAOE ? target : []) : [target])
+            .filter(unit => unit.active && unit.getCardData().health > 0);
+        if (!targets.length) { onComplete?.(); return; }
+        let remaining = targets.length;
+        targets.forEach((unit, index) => {
+            let applied = false;
+            this.battleContext.animationManager.addAttackAnimation(attacker, unit, damage, delay + index * 200,
+                (victim, amount) => {
+                    if (applied || !attacker.active || !victim.active || victim.getCardData().health <= 0) return;
+                    applied = true;
+                    const before = victim.getCardData().health;
+                    const battleScene = this.battleContext.scene as typeof this.battleContext.scene & {
+                        artifactManager?: { onUnitAttack: (unit: CardSprite, target: CardSprite) => void; onUnitDamaged: (unit: CardSprite, source: CardSprite) => void };
+                    };
+                    this.applyUnitTimingEffects(attacker, 'onAttack', victim);
+                    battleScene.artifactManager?.onUnitAttack(attacker, victim);
+                    if (victim.getCardData().health > 0) this.damageUnit(victim, amount);
+                    if (victim.getCardData().health < before) {
+                        this.applyUnitTimingEffects(victim, 'onDamaged', undefined, attacker);
+                        battleScene.artifactManager?.onUnitDamaged(victim, attacker);
+                    }
+                    if (before > 0 && victim.getCardData().health <= 0) {
+                        this.applyUnitTimingEffects(attacker, 'onKill', victim);
+                        const state = this.battleContext.battleState;
+                        const scene = this.battleContext.scene as typeof this.battleContext.scene & { playerField?: CardSprite[]; enemyField?: CardSprite[] };
+                        const allies = state?.playerField ?? scene.playerField ?? [];
+                        if (allies.includes(attacker)) this.battleContext.fieldManager?.onPlayerUnitKill(attacker, allies, state?.enemyField ?? scene.enemyField ?? []);
+                    }
+                },
+                () => { if (--remaining === 0) onComplete?.(); });
+        });
+    }
+
+    public applyUnitTimingEffects(unit: CardSprite, timing: LegacyEffectTiming, attackTarget?: CardSprite, damageSource?: CardSprite): void {
+        const state = this.battleContext.battleState;
+        const scene = this.battleContext.scene as typeof this.battleContext.scene & { playerField?: CardSprite[]; enemyField?: CardSprite[] };
+        const playerField = state?.playerField ?? scene.playerField ?? [];
+        const enemyField = state?.enemyField ?? scene.enemyField ?? [];
+        const ownSide = playerField.includes(unit);
+        for (const effect of unit.getCardData().effects ?? []) {
+            if (isLegacyCardEffect(effect) && effect.timing === timing) {
+                this.battleContext.effectResolver.executeEffect(effect, {
+                    playerField: ownSide ? playerField : enemyField,
+                    enemyField: ownSide ? enemyField : playerField,
+                    triggerUnit: unit, sourceCard: unit, sourceName: unit.getCardData().name,
+                    attackTarget, damageSource,
+                });
             }
         }
     }
@@ -195,6 +173,7 @@ export class CombatManager {
         // 检查玩家场地
         const newPlayerField = playerField.filter(unit => {
             if (this.isDead(unit)) {
+                this.battleContext.battleStatusController?.cleanupUnitStatuses(getUnitStateId(unit));
                 console.log(`${unit.getCardData().name} 被击败！`);
                 this.battleContext.battleLog.addLog(`【${unit.getCardData().name}】被击败！`);
                 
@@ -259,6 +238,7 @@ export class CombatManager {
         // 检查敌人场地（敌人的卡不进入弃牌堆）
         const newEnemyField = enemyField.filter(unit => {
             if (this.isDead(unit)) {
+                this.battleContext.battleStatusController?.cleanupUnitStatuses(getUnitStateId(unit));
                 console.log(`${unit.getCardData().name} 被击败！`);
                 this.battleContext.battleLog.addLog(`【${unit.getCardData().name}】被击败！`);
                 

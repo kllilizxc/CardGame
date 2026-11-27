@@ -21,6 +21,7 @@ export class ArtifactManager {
     private effectResolver: EffectResolver;
     private equippedArtifacts: Map<string, EquippedArtifact> = new Map(); // artifactId -> equipped info
     private unitEffectManager?: UnitEffectManager;
+    private artifactSerial = 0;
 
     constructor(scene: Scene, battleContext: BattleContext, effectResolver: EffectResolver) {
         this.scene = scene;
@@ -46,11 +47,11 @@ export class ArtifactManager {
         }
 
         // 检查是否已经装备了同一个法器
-        const artifactId = `${artifactData.id}_${artifact.getData('instanceId') || Date.now()}`;
-        if (this.equippedArtifacts.has(artifactId)) {
+        if (this.getArtifactId(artifact)) {
             console.warn('该法器已经被装备');
             return false;
         }
+        const artifactId = `${artifactData.id}_${++this.artifactSerial}`;
 
         // 检查该单位是否已经装备了其他法器（一个单位只能装备一个法器）
         const existingArtifacts = this.getEquippedArtifacts(target);
@@ -336,22 +337,27 @@ export class ArtifactManager {
         const worldY = artifact.y;
         
         // 将法器添加为单位的子对象，这样移动时会自动跟随
-        target.add(artifact);
+        const local = target.getWorldTransformMatrix().applyInverse(worldX, worldY);
+        // Follow the animated body and its camera offset as well as the foot anchor.
+        const host = target.battleView ?? target;
+        host.add(artifact);
         
         // 将世界坐标转换为相对于父对象的局部坐标
         // 法器现在是单位的子对象，所以坐标是相对于单位的
-        const localX = worldX - target.x;
-        const localY = worldY - target.y;
+        const localX = local.x - host.x * (host === target ? 0 : 1);
+        const localY = local.y - host.y * (host === target ? 0 : 1);
         
         // 先设置为当前位置（避免跳变）
         artifact.setPosition(localX, localY);
+        artifact.setAngle(0);
+        artifact.setRestAngle(0);
         
         // 提升深度确保在上层可以交互
         artifact.setDepth(100);
         
         // 目标相对位置（右上方偏移）
         const targetX = 80;
-        const targetY = -60;
+        const targetY = target.battleView ? -130 : -60;
         
         // 使用动画管理器播放附着动画
         const battleScene = this.scene as any;

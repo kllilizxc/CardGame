@@ -268,6 +268,23 @@ export class WorldMapScene extends Scene {
     private openCard(destination: WorldMapDestination): void {
         this.card?.destroy();
         const { width, height } = this.scale;
+        if (width <= 700) {
+            const w = snap(width - PX * 12), h = PX * 110;
+            const c = this.add.container(snap(width / 2), height + h).setDepth(80);
+            const hub = destination.kind === 'hub';
+            const left = -w / 2 + PX * 8;
+            const bg = panel(this, 0, 0, w, h, 'ink');
+            const name = ptext(this, left, -h / 2 + PX * 8, destination.label, { color: INK.paper, wrap: w - PX * 32 });
+            const kind = ptext(this, left, -h / 2 + PX * 27, `${hub ? '驻地' : '秘境'} · ${destination.presentation.regionLabel}`, { color: INK.amber, wrap: w - PX * 16 });
+            const desc = ptext(this, left, -h / 2 + PX * 45, clip(destination.description, 24), { color: INK.haze, wrap: w - PX * 16 });
+            const go = pbutton(this, { x: 0, y: h / 2 - PX * 19, width: w - PX * 16, height: PX * 24,
+                label: hub ? '前 往' : '出 发', style: 'seal', onClick: () => this.handleDestinationSelected(destination.id) });
+            const close = piconButton(this, w / 2 - PX * 10, -h / 2 + PX * 12, 'close', () => this.closeCard(), 'slate', 14);
+            c.add([bg, name, kind, desc, go, close]);
+            this.tweens.add({ targets: c, y: snap(height - h / 2 - PX * 8), duration: 240, ease: 'Back.easeOut' });
+            this.card = c;
+            return;
+        }
         const w = snap(Math.min(1200, width - PX * 40));
         const h = PX * 72;
         const c = this.add.container(snap(width / 2), height + h).setDepth(80);

@@ -61,7 +61,7 @@ const StartGame = (parent: string) => {
     let pending: { width: number; height: number } | null = null;
     window.addEventListener('resize', () => {
         const next = pixelViewportForBrowser(window.innerWidth, window.innerHeight);
-        pending = next.width !== game.scale.gameSize.width ? next : null;
+        pending = next.width !== game.scale.gameSize.width || next.height !== game.scale.gameSize.height ? next : null;
     });
     setBeforeSceneStart(() => {
         if (!pending) return;

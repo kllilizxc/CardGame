@@ -38,7 +38,7 @@ export interface PreparationPanelDeckSwitchFeedback {
  *
  * The chosen deck sits in the middle as a fanned stack of card backs with its name and size;
  * a single line says whether it can go. Three buttons: 管理卡组, 行囊, and the big 出发 seal.
- * Keys: ← → switch deck · Enter 出发 · M 管理卡组.
+ * Keys: ← → switch deck · 点击出发 · M 管理卡组.
  */
 export class PreparationPanel extends GameObjects.Container implements EntryPanelFrameProvider {
     private stash: PersistentStash;
@@ -94,8 +94,9 @@ export class PreparationPanel extends GameObjects.Container implements EntryPane
         const validation = validateExpeditionLoadout(this.stash);
         const ok = validation.valid;
         const summary = createPreparationSelectedLoadoutSummary(this.stash, this.metadata);
-        const cx = snap(W * 0.42);
-        const cy = snap(H * 0.46);
+        const phone = W <= 700;
+        const cx = snap(phone ? W / 2 : W * 0.42);
+        const cy = snap(H * (phone ? 0.37 : 0.46));
 
         // --- the deck: a fanned stack of card backs
         const back = bake(scene, 'px:cardback', () => paintCardBack());
@@ -103,14 +104,14 @@ export class PreparationPanel extends GameObjects.Container implements EntryPane
         for (let i = 0; i < shown; i++) {
             const t = shown === 1 ? 0 : i / (shown - 1) - 0.5;
             const card = scene.add.image(snap(cx + t * PX * 60), snap(cy + Math.abs(t) * PX * 10), back)
-                .setScale(PX).setAngle(t * 24).setOrigin(0.5, 0.8).setAlpha(summary.deckCount === 0 ? 0.3 : 1);
+                .setScale(phone ? 2 : PX).setAngle(t * 24).setOrigin(0.5, 0.8).setAlpha(summary.deckCount === 0 ? 0.3 : 1);
             this.add(card);
             scene.tweens.add({ targets: card, y: card.y - PX * 2, duration: 1100 + i * 90, yoyo: true, repeat: -1, ease: 'Stepped', easeParams: [2] });
         }
 
         // name + count
-        const nameY = cy + PX * 58;
-        this.add(ptext(scene, cx, nameY, clip(summary.selectedDeckName, 10), { size: 2, color: INK.paper, fx: 'outline', origin: [0.5, 0.5] }));
+        const nameY = cy + PX * (phone ? 43 : 58);
+        this.add(ptext(scene, cx, nameY, clip(summary.selectedDeckName, 10), { size: phone ? 1 : 2, color: INK.paper, fx: 'outline', origin: [0.5, 0.5] }));
         const count = pnum(scene, 0, 0, `${summary.deckCount}`, ok ? INK.paper : INK.vermilion, 2);
         const range = ptext(scene, 0, 0, ` / ${DECK_CARD_MIN}-${DECK_CARD_MAX} 张`, { color: INK.mist, fx: 'outline', origin: [0, 0.5] });
         const rowW = count.width + range.width;
@@ -118,39 +119,39 @@ export class PreparationPanel extends GameObjects.Container implements EntryPane
         range.setPosition(snap(cx - rowW / 2 + count.width), snap(nameY + PX * 24));
         this.add([count, range]);
         const status = ok ? '卡组符合要求，可以带入秘境。' : formatPreparationValidationLines(validation, this.metadata)[0] ?? '';
-        this.add(ptext(scene, cx, nameY + PX * 44, `${ok ? '✓' : '✗'} ${clip(status, 26)}`, { color: ok ? INK.spirit : INK.vermilion, fx: 'outline', origin: [0.5, 0.5] }));
+        this.add(ptext(scene, cx, nameY + PX * 44, phone ? `${ok ? '✓' : '✗'} ${ok ? '可以带入秘境' : clip(status, 10)}` : `${ok ? '✓' : '✗'} ${clip(status, 26)}`, { color: ok ? INK.spirit : INK.vermilion, fx: 'outline', origin: [0.5, 0.5] }));
 
         // deck switcher
         const decks = this.stash.savedDecks;
         if (decks.length > 1) {
             const idx = Math.max(0, decks.findIndex((d) => d.id === this.stash.selectedDeckId));
-            const left = piconButton(scene, cx - PX * 110, cy - PX * 10, 'back', () => this.switchDeck(-1), 'slate');
-            const right = piconButton(scene, cx + PX * 110, cy - PX * 10, 'back', () => this.switchDeck(1), 'slate');
+            const left = piconButton(scene, cx - PX * (phone ? 63 : 110), cy - PX * 10, 'back', () => this.switchDeck(-1), 'slate');
+            const right = piconButton(scene, cx + PX * (phone ? 63 : 110), cy - PX * 10, 'back', () => this.switchDeck(1), 'slate');
             (right.list[1] as Phaser.GameObjects.Container).list.forEach((o) => (o as Phaser.GameObjects.Image).setFlipX?.(true));
             this.add([left, right]);
             this.add(ptext(scene, cx, cy - PX * 104, `${idx + 1} / ${decks.length}`, { color: INK.mist, fx: 'outline', origin: [0.5, 0.5] }));
         }
 
         // --- right column: pouch + actions
-        const rx = snap(W * 0.78);
-        this.add(pchip(scene, rx - PX * 50, snap(H * 0.3), 'stone', `灵石 ${summary.spiritStones}`, INK.spirit));
-        this.add(pchip(scene, rx - PX * 50, snap(H * 0.3) + PX * 18, 'bag', `物资：${summary.itemCount} 件道具`, INK.bone));
+        const rx = snap(phone ? W / 2 : W * 0.78);
+        this.add(pchip(scene, rx - PX * (phone ? 60 : 50), snap(H * (phone ? 0.18 : 0.3)), 'stone', `灵石 ${summary.spiritStones}`, INK.spirit));
+        this.add(pchip(scene, rx - PX * (phone ? 60 : 50), snap(H * (phone ? 0.18 : 0.3)) + PX * 18, 'bag', `物资：${summary.itemCount} 件道具`, INK.bone));
 
         const bw = PX * 100;
         if (this.onOpenDeckManager) {
-            this.add(pbutton(scene, { x: rx, y: snap(H * 0.48), width: bw, height: PX * 22, label: '管理卡组', icon: 'deck', style: 'slate', onClick: () => this.onOpenDeckManager?.() }));
+            this.add(pbutton(scene, { x: rx, y: snap(H * (phone ? 0.68 : 0.48)), width: bw, height: PX * 22, label: '管理卡组', icon: 'deck', style: 'slate', onClick: () => this.onOpenDeckManager?.() }));
         }
         if (this.onOpenInventory) {
-            this.add(pbutton(scene, { x: rx, y: snap(H * 0.48) + PX * 28, width: bw, height: PX * 22, label: '行 囊', icon: 'bag', style: 'slate', onClick: () => this.onOpenInventory?.() }));
+            this.add(pbutton(scene, { x: rx, y: snap(H * (phone ? 0.68 : 0.48)) + PX * 28, width: bw, height: PX * 22, label: '行 囊', icon: 'bag', style: 'slate', onClick: () => this.onOpenInventory?.() }));
         }
         this.go = pbutton(scene, {
-            x: rx, y: snap(H * 0.72), width: bw, height: PX * 34, label: ok ? '出 发' : '暂不可出发', size: ok ? 2 : 1,
+            x: rx, y: snap(H * (phone ? 0.88 : 0.72)), width: bw, height: PX * 34, label: ok ? '出 发' : '暂不可出发', size: ok ? 2 : 1,
             style: ok ? 'seal' : 'grey', disabled: !ok, cursor: ok,
             onClick: () => this.confirm(),
         });
         this.add(this.go);
         if (ok) scene.tweens.add({ targets: this.go, scale: { from: 1, to: 1.03 }, duration: 700, yoyo: true, repeat: -1, ease: 'Stepped', easeParams: [2] });
-        this.add(ptext(scene, rx, snap(H * 0.72) + PX * 26, 'Enter 出发 · M 管理卡组', { color: INK.slate, fx: 'none', origin: [0.5, 0.5] }).setColor(hex(INK.mist)));
+        this.add(ptext(scene, rx, snap(H * (phone ? 0.88 : 0.72)) + PX * 26, '点击出发 · M 管理卡组', { color: INK.slate, fx: 'none', origin: [0.5, 0.5] }).setColor(hex(INK.mist)));
     }
 
     private confirm(): void {

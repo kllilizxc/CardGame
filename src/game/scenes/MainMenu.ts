@@ -4,8 +4,12 @@ import { EventBus } from '../EventBus';
 import { INK, PX } from '../art/palette';
 import { Pix, bake, snap } from '../art/pix';
 import { addBackdrop, addMotes, paintCrane, paintOrb, paintPagoda } from '../art/scenery';
-import { ptext, ptitle, stampText } from '../art/kit';
+import { panel, pbutton, ptext, ptitle, stampText } from '../art/kit';
 import { pxBurst } from '../art/fx';
+
+import { publishedDecks } from '../content/publishedDecks';
+
+const trialDecks = publishedDecks(import.meta.glob('../../../public/data/decks/*.json', { eager: true, import: 'default' }));
 
 interface MenuItem { label: string; hint: string; run: () => void }
 
@@ -61,6 +65,7 @@ export class MainMenu extends Scene {
         // menu
         const menu: MenuItem[] = [
             { label: '启 程', hint: '进入大地图', run: () => this.startWorldMapScene() },
+            { label: '牌组试炼', hint: '选择独立牌组，进行实战试炼', run: () => this.showDeckTrials() },
             { label: '全 屏', hint: '切换全屏显示', run: () => this.toggleFullscreen() },
         ];
         const menuY = snap(height * 0.62);
@@ -87,6 +92,33 @@ export class MainMenu extends Scene {
         kb?.on('keydown-SPACE', () => this.activate());
 
         EventBus.emit('current-scene-ready', this);
+    }
+
+    private showDeckTrials(): void {
+        const { width, height } = this.scale;
+        const overlay = this.add.container(0,0).setDepth(1000);
+        const shade = this.add.rectangle(width/2,height/2,width,height,INK.void,0.88).setInteractive();
+        overlay.add(shade);
+        overlay.add(panel(this,width/2,height/2,Math.min(width-80,1200),Math.min(height-80,800),'ink'));
+        overlay.add(ptext(this,width/2,height/2-310,'选择试炼牌组',{size:2,color:INK.paper,origin:[0.5,0.5]}));
+        let page = 0;
+        const rows = this.add.container(0,0); overlay.add(rows);
+        const draw = () => {
+            rows.removeAll(true);
+            trialDecks.slice(page*5,page*5+5).forEach((deck,i) => rows.add(pbutton(this,{
+                x:width/2,y:height/2-200+i*88,width:Math.min(width-140,1040),height:72,
+                label:`${deck.name} · ${deck.total} 张`,style:'seal',onClick:() => {
+                    overlay.destroy(true);
+                    this.scene.start('BattleScene',{mode:'deck-trial',deckId:deck.id,deckFile:deck.file});
+                },
+            })));
+        };
+        overlay.add(pbutton(this,{x:width/2,y:height/2+290,width:220,height:60,label:'返回',style:'slate',onClick:()=>overlay.destroy(true)}));
+        if (trialDecks.length>5) {
+            overlay.add(pbutton(this,{x:width/2-300,y:height/2+290,width:200,height:60,label:'上一页',style:'slate',onClick:()=>{page=Math.max(0,page-1);draw();}}));
+            overlay.add(pbutton(this,{x:width/2+300,y:height/2+290,width:200,height:60,label:'下一页',style:'slate',onClick:()=>{page=Math.min(Math.ceil(trialDecks.length/5)-1,page+1);draw();}}));
+        }
+        draw();
     }
 
     private select(i: number): void {

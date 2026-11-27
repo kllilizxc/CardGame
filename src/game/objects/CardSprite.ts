@@ -24,6 +24,8 @@ import { watchCardFace } from './cardFaceAppearance';
 import { isPortraitGameViewport } from '../layout/gameViewport';
 
 export class CardSprite extends BaseCardSprite {
+    private static battleSerial = 0;
+    public readonly battleInstanceId = `battle-unit:${++CardSprite.battleSerial}`;
     public battleView?: WenxinUnitView;
     private cardVisibility = new Map<GameObjects.GameObject, boolean>();
     private readonly palette = getBattleCardPalette('unit');
@@ -177,13 +179,20 @@ export class CardSprite extends BaseCardSprite {
             this.faceAtk?.destroy(); this.faceHp?.destroy();
             this.faceAtk = undefined; this.faceHp = undefined;
             if (key) {
-                // Pixel face: 60x86 art px at 3x. Live stats sit in the painted badges.
-                this.faceImage = scene.add.image(0, 0, key).setScale(3);
+                const published = key.startsWith('card-face:');
+                this.faceImage = scene.add.image(0, 0, key);
+                if (published) this.faceImage.setDisplaySize(this.CARD_WIDTH, this.CARD_HEIGHT);
+                else this.faceImage.setScale(3);
                 this.addAt(this.faceImage, 0);
+
+                if (published) {
+                    this.faceRealmText = scene.add.text(0, -104, '★'.repeat(getUnitStar(cardData)), { fontSize: '8px', color: '#c3a977', resolution: 3 }).setOrigin(0.5);
+                    this.add(this.faceRealmText);
+                }
                 for (const { object } of original) object.setVisible(false);
                 this.background.setVisible(true).setFillStyle(this.palette.shell, 0);
-                this.faceAtk = scene.add.bitmapText(-55, 108, numberFont(scene, INK.paper), '').setOrigin(0.5).setScale(3);
-                this.faceHp = scene.add.bitmapText(55, 108, numberFont(scene, INK.paper), '').setOrigin(0.5).setScale(3);
+                this.faceAtk = scene.add.bitmapText(published ? -53 : -55, published ? 113 : 108, numberFont(scene, INK.paper), '').setOrigin(0.5).setScale(published ? 2 : 3);
+                this.faceHp = scene.add.bitmapText(published ? 53 : 55, published ? 113 : 108, numberFont(scene, INK.paper), '').setOrigin(0.5).setScale(published ? 2 : 3);
                 this.faceAtk.setLetterSpacing(-1); this.faceHp.setLetterSpacing(-1);
                 this.add([this.faceAtk, this.faceHp]);
             } else {
@@ -215,11 +224,26 @@ export class CardSprite extends BaseCardSprite {
         this.add(this.battleView);
         const m = UNIT_ART[key];
         const artScale = isPortraitGameViewport(this.scene.scale.width, this.scene.scale.height) ? 1.6 : 3;
-        if (this.input) this.input.hitArea.setTo(90 - (side === 'me' ? m.w - m.ax : m.ax) * artScale, 130 - m.ay * artScale, m.w * artScale, m.h * artScale + 70);
+        if (this.input) this.input.hitArea.setTo(90 - (this.battleView.image.flipX ? m.w - m.ax : m.ax) * artScale, 130 - m.ay * artScale, m.w * artScale, m.h * artScale + 70);
     }
 
     public getCardData(): UnitCard {
         return this.cardData;
+    }
+
+    /** Visible body bounds in scene space, including the battle camera and recoil. */
+    public getTargetBounds(): Phaser.Geom.Rectangle {
+        return this.battleView?.image.getBounds() ?? this.getBounds();
+    }
+
+    public syncBattleHitArea(): void {
+        if (!this.battleView || !this.input) return;
+        const bounds = this.getTargetBounds();
+        const matrix = this.getWorldTransformMatrix();
+        const topLeft = matrix.applyInverse(bounds.x, bounds.y);
+        const bottomRight = matrix.applyInverse(bounds.right, bounds.bottom);
+        this.input.hitArea.setTo(topLeft.x + this.displayOriginX, topLeft.y + this.displayOriginY,
+            bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
     }
 
     // 更新卡牌数值显示
@@ -271,7 +295,7 @@ export class CardSprite extends BaseCardSprite {
         }
         if (this.faceImage) {
             for (const object of this.list) {
-                if (object === this.faceImage || object === this.faceAtk || object === this.faceHp || object === this.background) continue;
+                if (object === this.faceImage || object === this.faceRealmText || object === this.faceAtk || object === this.faceHp || object === this.background) continue;
                 if (object === this.statusContainer) continue;
                 if ('setVisible' in object) (object as GameObjects.Image).setVisible(false);
             }

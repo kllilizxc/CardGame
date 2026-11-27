@@ -46,8 +46,6 @@ export function watchCardFace(scene: Scene, card: { id: string; cardFace?: CardF
         const current = ++revision;
         const selected = selectedCardFace(card.id, card.cardFace);
         const explicit = preference.get(`${previewStoragePrefix() ?? ''}${card.id}`) ?? (() => { try { return gameStorage(localStorage).getItem(`cardgame.face.${card.id}`); } catch { return null; } })();
-        const defaultArt = !explicit ? wenxinCardTexture(scene, card) : undefined;
-        if (defaultArt) { apply(defaultArt); return; }
         const url = selected === 'original' ? undefined : card.cardFace?.variants[selected]?.texture;
         if (explicit === 'original') { apply(); return; }
         if (!url) { apply(wenxinCardTexture(scene, card)); return; }

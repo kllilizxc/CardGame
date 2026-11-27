@@ -1,7 +1,7 @@
 import { GameObjects, type Textures, type Scene } from 'phaser';
 import type { CardSprite } from '../../objects/CardSprite';
 import { NEAREST, getWenxinMaterials, pixelSurface } from './WenxinArt';
-import { UNIT_ART, type UnitArt, type BattleSide } from './presentation';
+import { UNIT_ART, unitFlipX, type UnitArt, type BattleSide } from './presentation';
 import { isPortraitGameViewport } from '../../layout/gameViewport';
 import { C, INK, PX } from '../palette';
 import { addIcon } from '../icons';
@@ -34,6 +34,8 @@ export class WenxinUnitView extends GameObjects.Container {
     private zoom = 1;
     private focused = false;
     private hovered = false;
+    private equipTarget = false;
+    private attackTarget = false;
     private lastFrame = -1;
     private elapsed = Math.random() * 3;
     private tintUntil = 0;
@@ -47,7 +49,8 @@ export class WenxinUnitView extends GameObjects.Container {
         this.baseScale = portrait ? 1.6 : scene.scale.width / 640;
         this.shadow = scene.add.ellipse(0, 0, 150, 27, C.void, 0.5);
         this.ring = scene.add.ellipse(0, 0, 192, 39).setStrokeStyle(PX, INK.gold, 1).setVisible(false);
-        this.image = scene.add.image(0, 0, this.texture.key).setOrigin(side === 'me' ? 1 - m.ax / m.w : m.ax / m.w, m.ay / m.h).setScale(this.baseScale).setFlipX(side === 'me');
+        const flip = unitFlipX(key, side);
+        this.image = scene.add.image(0, 0, this.texture.key).setOrigin(flip ? 1 - m.ax / m.w : m.ax / m.w, m.ay / m.h).setScale(this.baseScale).setFlipX(flip);
         const data = card.getCardData(); this.maxHealth = Math.max(1, data.health);
         this.hpShown = data.health; this.hpGhost = data.health;
 
@@ -93,16 +96,20 @@ export class WenxinUnitView extends GameObjects.Container {
         this.ring.setScale(z);
     }
     setFocused(on: boolean) { this.focused = on; this.syncRing(); }
+    setEquipTarget(on: boolean) { this.equipTarget = on; this.syncRing(); }
+    setAttackTarget(on: boolean) { this.attackTarget = on; this.syncRing(); }
     private syncRing() {
         if (!this.active) return;
-        const on = this.focused || this.hovered;
+        const on = this.focused || this.hovered || this.equipTarget || this.attackTarget;
+        const color = this.equipTarget ? INK.gold : this.attackTarget ? INK.vermilion : INK.gold;
+        this.ring.setStrokeStyle(this.equipTarget || this.attackTarget ? PX * 2 : PX, color, 1);
+        this.ring.setFillStyle(color, this.equipTarget ? 0.24 : this.attackTarget ? 0.16 : 0);
         this.ring.setVisible(on);
         this.plate.setAlpha(on ? 1 : 0.9);
     }
     hitFlash() {
         this.image.setTintFill(C.paper);
         this.tintUntil = this.scene.time.now + 90;
-        this.scene.time.delayedCall(90, () => { if (this.active && this.scene.time.now >= this.tintUntil - 5) this.image.clearTint(); });
         this.plate.setAlpha(1);
     }
     /** Falls from above and lands with dust. */
@@ -152,11 +159,18 @@ export class WenxinUnitView extends GameObjects.Container {
     private updateArt(_time: number, delta: number) {
         // A scene emitter may already have copied this listener before a death callback removes it.
         if (!this.active || !this.scene) return;
+        // Clock.now is unscaled; TimerEvent delays are scaled (including 2x and hit stop).
+        // Expire in update so a fast timer cannot leave the fill tint stuck forever.
+        if (this.tintUntil && this.scene.time.now >= this.tintUntil) {
+            this.image.clearTint();
+            this.tintUntil = 0;
+        }
         const dt = Math.min(delta, 100) / 1000 * this.scene.tweens.timeScale;
         this.elapsed += dt;
         if (this.hpGhost > this.hpShown) { this.hpGhost = Math.max(this.hpShown, this.hpGhost - this.maxHealth * dt * 0.5); this.drawBar(); }
         else if (this.hpGhost < this.hpShown) { this.hpGhost = this.hpShown; this.drawBar(); }
         this.setPosition(Math.round(this.pose.ox + this.pose.cameraX), Math.round(this.pose.oy + this.pose.cameraY));
+        this.card.syncBattleHitArea();
         this.ring.setScale(this.zoom * (1 + Math.sin(this.elapsed * 6) * 0.03));
         const frame = Math.floor(this.elapsed * 30);
         if (frame === this.lastFrame) return;

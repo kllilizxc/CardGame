@@ -1,3 +1,4 @@
+import { normalizeDeckTrial, type DeckTrialLaunch } from '../../content/publishedDecks';
 import { WenxinBattleStage } from '../../art/wenxin/WenxinBattleStage';
 import { ensureWenxinArt } from '../../art/wenxin/WenxinArt';
 import { Scene } from 'phaser';
@@ -5,7 +6,6 @@ import { EventBus, EXPEDITION_BATTLE_COMPLETE_EVENT, STORY_BATTLE_COMPLETE_EVENT
 import { CardSprite } from '../../objects/CardSprite';
 import { ArtifactSprite } from '../../objects/ArtifactSprite';
 import { TalismanSprite } from '../../objects/TalismanSprite';
-import { FieldSprite } from '../../objects/FieldSprite';
 import type { BaseCardSprite } from '../../objects/BaseCardSprite';
 import type { UnitCard } from '../../../../public/data/types/cards/unit';
 import type { ArtifactCard, ArtifactWeaponType } from '../../../../public/data/types/cards/artifact';
@@ -50,6 +50,8 @@ import type { StoryBattleSceneLaunchPayload } from '../../types/story';
 import { createExpeditionBattleCompleteEvent } from './battleCompletion';
 import { createStoryBattleCompleteEvent } from '../story/storyBattleRoundTrip';
 import { resolveBattleLoadout } from './battleLoadout';
+import { findArtifactEquipTarget } from './artifactEquipTarget';
+import { getUnitStateId } from '../../managers/battle/unitIdentity';
 import { sceneTheme } from '../shared/sceneTheme';
 import {
     BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
@@ -133,7 +135,9 @@ export class BattleScene extends Scene {
     private expeditionRuntimeResources: ExpeditionBattleRuntimeResources | null = null;
     private encounterCacheKey = 'currentEncounter';
     private deckCacheKey = 'starterDeck';
+    private deckTrial: DeckTrialLaunch | null = null;
     private battleEndHandled = false;
+    private isResolvingCard = false;
 
     constructor() {
         super('BattleScene');
@@ -142,6 +146,7 @@ export class BattleScene extends Scene {
     init(data?: unknown): void {
         resetRuntimeRealmConfig();
         resetRuntimeArtifactGradeConfig();
+        this.deckTrial = normalizeDeckTrial(data);
         this.launchPayload = normalizeBattleLaunchPayload(data);
         this.storyLaunchPayload = this.launchPayload ? null : normalizeStoryBattleLaunchPayload(data);
         this.sharedRuntimeResources = null;
@@ -149,25 +154,35 @@ export class BattleScene extends Scene {
         this.storyRuntimeResources = null;
         this.expeditionRuntimeResources = null;
         this.encounterCacheKey = getEncounterCacheKey(this.launchPayload, this.storyLaunchPayload);
-        this.deckCacheKey = getBattleDeckCacheKey(this.storyLaunchPayload);
+        this.deckCacheKey = this.deckTrial ? `trialDeck:${this.deckTrial.deckId}` : getBattleDeckCacheKey(this.storyLaunchPayload);
         this.battleEndHandled = false;
+        this.isResolvingCard = false;
+        this.time.timeScale = this.tweens.timeScale = 1;
     }
 
     // ===== Getter 方法，用于兼容现有代码 =====
     private get deck() { return this.battleState.deck; }
-    private set deck(value) { this.battleState.deck = value; }
+    private set deck(value) {
+        if (value !== this.battleState.deck) this.battleState.deck.splice(0, this.battleState.deck.length, ...value);
+    }
     
     private get discardPile() { return this.battleState.discardPile; }
     private set discardPile(value) { this.battleState.discardPile = value; }
     
     private get hand() { return this.battleState.hand; }
-    private set hand(value) { this.battleState.hand = value; }
+    private set hand(value) {
+        if (value !== this.battleState.hand) this.battleState.hand.splice(0, this.battleState.hand.length, ...value);
+    }
     
     private get playerField() { return this.battleState.playerField; }
-    private set playerField(value) { this.battleState.playerField = value; }
+    private set playerField(value) {
+        if (value !== this.battleState.playerField) this.battleState.playerField.splice(0, this.battleState.playerField.length, ...value);
+    }
     
     private get enemyField() { return this.battleState.enemyField; }
-    private set enemyField(value) { this.battleState.enemyField = value; }
+    private set enemyField(value) {
+        if (value !== this.battleState.enemyField) this.battleState.enemyField.splice(0, this.battleState.enemyField.length, ...value);
+    }
     
     private get playerHealth() { return this.battleState.playerHealth; }
     private set playerHealth(value) { this.battleState.playerHealth = value; }
@@ -270,7 +285,7 @@ export class BattleScene extends Scene {
             this.cache.json.get(CONTENT_CATALOG_CACHE_KEY),
             this.launchPayload,
         );
-        this.load.json(this.deckCacheKey, getBattleDeckFile(
+        this.load.json(this.deckCacheKey, this.deckTrial?.deckFile ?? getBattleDeckFile(
             this.storyLaunchPayload,
             this.storyRuntimeResources,
             this.defaultRuntimeResources,
@@ -296,6 +311,7 @@ export class BattleScene extends Scene {
         
         // 初始化游戏状态
         this.battleState = new BattleState();
+        this.battleState.isProcessingTurn = true;
         if (this.launchPayload?.playerHealth !== undefined) {
             this.battleState.playerHealth = this.launchPayload.playerHealth;
         }
@@ -393,7 +409,7 @@ export class BattleScene extends Scene {
             ? new BattleHud(this, this.layout, this.battleState)
             : new BattleUIManager(this, this.layout, this.battleState);
         this.uiManager.setCallbacks({
-            onDrawCard: () => this.drawCard(),
+            onDrawCard: () => { if (this.canPlayerAct()) this.drawCard(); },
             onEndTurn: () => this.endTurn(),
             onToggleSpeed: () => this.toggleGameSpeed(),
             onShowDeck: () => new CardListView(this, '卡组', [...this.deck]),
@@ -430,6 +446,13 @@ export class BattleScene extends Scene {
         
         // 设置符箓使用逻辑
         this.setupTalismanUsageLogic();
+        this.events.once('shutdown', () => {
+            for (const event of ['useTalisman', 'showCardPreviewFromData', 'clearCardPreviewContext', 'showPillTooltip', 'hidePillTooltip']) {
+                this.events.removeAllListeners(event);
+            }
+            this.hoverCard = undefined;
+            this.pillTooltipUI.destroy();
+        });
 
         this.battleLog.addLog('战斗开始！');
         
@@ -452,6 +475,10 @@ export class BattleScene extends Scene {
             target: CardSprite,
             targetSide: 'ally' | 'enemy'
         ) => {
+            if (!this.canPlayerAct() || !this.hand.includes(talisman) || !target.active || target.getCardData().health <= 0) {
+                talisman.returnToOriginalPosition();
+                return;
+            }
             // 先启动符箓选择状态
             this.talismanManager.startUseTalisman(talisman);
             
@@ -481,8 +508,6 @@ export class BattleScene extends Scene {
             } else {
                 // 使用失败，返回原位
                 talisman.returnToOriginalPosition();
-                talisman.setScale(talisman.scale / 1.2);
-                talisman.setDepth(0);
             }
         });
     }
@@ -512,6 +537,7 @@ export class BattleScene extends Scene {
      * 使用指定槽位的丹药
      */
     private usePillFromSlot(slotIndex: number): void {
+        if (!this.canPlayerAct()) return;
         const pill = this.pillManager.getPillAt(slotIndex);
         if (!pill) {
             return;
@@ -582,7 +608,9 @@ export class BattleScene extends Scene {
      * 使用技能
      */
     private useSkill(skillIndex: number): void {
+        if (!this.canPlayerAct()) return;
         this.skillManager.useSkill(skillIndex, (skill, onCancel) => {
+            this.events.emit('hideCardPreview');
             // 使用技能效果处理器执行技能效果，传入取消回调
             this.skillEffectHandler.applySkillEffect(skill, onCancel);
         });
@@ -658,6 +686,7 @@ export class BattleScene extends Scene {
      * 交换己方场地上的两张卡片位置
      */
     public swapPlayerFieldCards(draggedCard: CardSprite, x: number, y: number): boolean {
+        if (!this.canPlayerAct()) return false;
         // 检查拖拽的卡是否在己方场地中
         const draggedIndex = this.playerField.indexOf(draggedCard);
         if (draggedIndex === -1) {
@@ -670,32 +699,11 @@ export class BattleScene extends Scene {
             return false;
         }
 
-        // 找到最近的己方单位（而不是精确命中）
-        let targetCard: CardSprite | null = null;
-        let targetIndex = -1;
-        let minDistance = Infinity;
-
-        for (let i = 0; i < this.playerField.length; i++) {
-            if (i === draggedIndex) continue; // 跳过自己
-            
-            const card = this.playerField[i];
-            const cardX = card.x;
-            const cardY = card.y;
-            
-            // 计算到卡片中心的距离
-            const distance = Phaser.Math.Distance.Between(x, y, cardX, cardY);
-            
-            // 找到最近的卡片
-            if (distance < minDistance) {
-                minDistance = distance;
-                targetCard = card;
-                targetIndex = i;
-            }
-        }
-
-        // 如果找到目标卡片且距离合理（不是太远），交换位置
-        const maxDistance = 200; // 最大检测距离
-        if (targetCard && targetIndex !== -1 && minDistance < maxDistance) {
+        const targetCard = findArtifactEquipTarget({ x, y },
+            this.playerField.filter(unit => unit !== draggedCard && unit.active && unit.getCardData().health > 0),
+            unit => unit.getTargetBounds(), 200);
+        const targetIndex = targetCard ? this.playerField.indexOf(targetCard) : -1;
+        if (targetCard && targetIndex !== -1) {
             // 交换数组中的位置
             [this.playerField[draggedIndex], this.playerField[targetIndex]] = 
             [this.playerField[targetIndex], this.playerField[draggedIndex]];
@@ -712,6 +720,7 @@ export class BattleScene extends Scene {
     }
 
     public playCardToField(card: CardSprite): boolean {
+        if (!this.canPlayerAct()) return false;
         // 检查卡片是否在手牌中（只有手牌中的卡才能打出）
         if (!this.hand.includes(card)) {
             // 卡片不在手牌中（可能是场上的单位），不允许打出
@@ -724,16 +733,20 @@ export class BattleScene extends Scene {
         const sacrificeRequired = this.sacrificeManager.getSacrificeRequired(cardData);
         
         if (sacrificeRequired > 0) {
+            const candidates = this.sacrificeManager.getValidSacrifices(cardData, this.playerField);
             // 需要献祭
-            if (!this.sacrificeManager.canSacrifice(this.playerField, sacrificeRequired)) {
+            if (!this.sacrificeManager.canSacrifice(candidates, sacrificeRequired)) {
                 // 场上单位不足，无法召唤
-                this.battleLog.addLog(`需要${sacrificeRequired}只场上单位进行献祭，但场上单位不足！`);
+                this.battleLog.addLog(`${this.sacrificeManager.getSacrificeText(cardData, sacrificeRequired)}，当前没有足够的合格祭品。`);
                 return false;
             }
             
             // 显示献祭选择UI
+            this.isResolvingCard = true;
+            this.disablePlayerInteraction();
+            this.events.emit('hideCardPreview');
             this.sacrificeUI.show(
-                this.playerField,
+                candidates,
                 sacrificeRequired,
                 (selectedUnits: CardSprite[]) => {
                     // 献祭完成，执行召唤
@@ -742,7 +755,10 @@ export class BattleScene extends Scene {
                 () => {
                     // 取消献祭，卡牌返回原位
                     card.returnToOriginalPosition();
-                }
+                    this.isResolvingCard = false;
+                    this.enablePlayerInteraction();
+                },
+                this.sacrificeManager.getSacrificeText(cardData, sacrificeRequired),
             );
             
             return false; // 暂时返回false，等待献祭完成
@@ -783,10 +799,22 @@ export class BattleScene extends Scene {
      * 执行献祭并召唤单位
      */
     private performSacrificeAndSummon(card: CardSprite, sacrificeTargets: CardSprite[]): void {
+        const required = this.sacrificeManager.getSacrificeRequired(card.getCardData());
+        if (!this.hand.includes(card) || sacrificeTargets.length !== required || new Set(sacrificeTargets).size !== required
+            || !sacrificeTargets.every(unit => this.playerField.includes(unit) && unit.active && unit.getCardData().health > 0)
+            || !this.sacrificeManager.validateSacrificeStars(card.getCardData(), sacrificeTargets)) {
+            this.isResolvingCard = false;
+            this.enablePlayerInteraction();
+            card.returnToOriginalPosition();
+            return;
+        }
         // 先将被献祭的单位加入弃牌堆
         sacrificeTargets.forEach(unit => {
             const unitData = unit.getCardData();
             this.addToDiscardPile(unitData);
+            this.artifactManager.getEquippedArtifacts(unit).forEach(artifact => this.addToDiscardPile(artifact.getCardData()));
+            this.artifactManager.cleanupUnitArtifacts(unit);
+            this.battleStatusController.cleanupUnitStatuses(getUnitStateId(unit));
         });
         
         // 执行献祭
@@ -840,22 +868,17 @@ export class BattleScene extends Scene {
                     const star = cardData.kind === 'unit' ? getUnitStar(cardData) : 0;
                     this.animationManager.playSummonAnimation(card, star);
                 }
+                this.isResolvingCard = false;
+                this.enablePlayerInteraction();
+                this.battleTickManager.tick();
             }
         );
     }
 
     public tryEquipArtifact(artifact: ArtifactSprite): boolean {
-        // 检查是否拖到某个场上单位附近
-        let targetUnit: CardSprite | null = null;
-        let minDistance = 150; // 最大装备距离
-
-        for (const unit of this.playerField) {
-            const distance = Phaser.Math.Distance.Between(artifact.x, artifact.y, unit.x, unit.y);
-            if (distance < minDistance) {
-                minDistance = distance;
-                targetUnit = unit;
-            }
-        }
+        if (!this.canPlayerAct() || !this.hand.includes(artifact)) return false;
+        const targetUnit = findArtifactEquipTarget(artifact,
+            this.playerField.filter(unit => unit.active && unit.getCardData().health > 0), unit => unit.getTargetBounds());
 
         if (targetUnit) {
             // 尝试装备
@@ -870,6 +893,7 @@ export class BattleScene extends Scene {
 
                 const artifactData = artifact.getCardData() as ArtifactCard;
                 this.recordArtifactUsage(artifactData.weaponType);
+                this.battleTickManager.tick();
                 return true;
             }
         }
@@ -908,7 +932,8 @@ export class BattleScene extends Scene {
     }
 
     private drawInitialHand() {
-        for (let i = 0; i < Math.min(5, this.deck.length); i++) {
+        const count = Math.min(5, this.deck.length);
+        for (let i = 0; i < count; i++) {
             this.drawCard();
         }
     }
@@ -973,6 +998,7 @@ export class BattleScene extends Scene {
      * 启用玩家交互（玩家回合）
      */
     private enablePlayerInteraction() {
+        if (!this.canPlayerAct()) return;
         // 启用手牌交互
         this.hand.forEach(card => {
             if (card.input) {
@@ -1025,6 +1051,11 @@ export class BattleScene extends Scene {
             onPlayerDamaged: (damage: number) => { this.playerHealth -= damage; },
             onRemoveUnit: (unit: CardSprite, isPlayer: boolean) => this.removeUnitFromField(unit, isPlayer),
             onDrawCard: () => this.drawCard(),
+            onPlayerTurnStart: () => this.skillManager.onTurnStart(),
+            onArrangeField: () => {
+                this.cardManager.arrangePlayerField(this.playerField);
+                this.cardManager.arrangeEnemyField(this.enemyField);
+            },
             onEnablePlayerInteraction: () => this.enablePlayerInteraction(),
             onDisablePlayerInteraction: () => this.disablePlayerInteraction(),
             onApplyPlayerTurnEndEffects: () => this.applyPlayerTurnEndEffects(),
@@ -1035,6 +1066,7 @@ export class BattleScene extends Scene {
     }
 
     private endTurn() {
+        if (!this.canPlayerAct()) return;
         console.log('endTurn 被调用', {
             isPlayerTurn: this.isPlayerTurn,
             isProcessingTurn: this.isProcessingTurn
@@ -1042,6 +1074,12 @@ export class BattleScene extends Scene {
         
         // 委托给 TurnManager（TurnManager 会设置 isProcessingTurn）
         this.turnManager.endTurn(this.getTurnContext());
+    }
+
+    public canPlayerAct(): boolean {
+        return !!this.battleState && this.isPlayerTurn && !this.isProcessingTurn && !this.isResolvingCard
+            && !this.deckSelectionUI?.visible
+            && !this.battleEndHandled && this.playerHealth > 0 && this.enemyField.length > 0;
     }
 
     // 已移除：playerTurn、enemyTurn、startPlayerTurn、startEnemyTurn
@@ -1077,8 +1115,7 @@ export class BattleScene extends Scene {
      */
     private removeUnitFromField(unit: CardSprite, isPlayer: boolean): void {
         // 清理状态
-        const unitData = unit.getCardData();
-        this.battleStatusController.cleanupUnitStatuses(unitData.id);
+        this.battleStatusController.cleanupUnitStatuses(getUnitStateId(unit));
         
         // 从场上移除
         if (isPlayer) {

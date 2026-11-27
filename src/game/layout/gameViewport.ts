@@ -29,6 +29,7 @@ export const PIXEL_GAME_MAX_WIDTH = 2400;
  * of 6 so the 3px art grid (and centre lines) never land between pixels.
  */
 export function pixelViewportForBrowser(width: number, height: number): GameViewportSize {
+    if (isPortraitBrowserViewport(width, height)) return PORTRAIT_GAME_VIEWPORT;
     const aspect = width > 0 && height > 0 ? width / height : 16 / 9;
     const raw = PIXEL_GAME_HEIGHT * aspect;
     const clamped = Math.min(PIXEL_GAME_MAX_WIDTH, Math.max(PIXEL_GAME_MIN_WIDTH, raw));

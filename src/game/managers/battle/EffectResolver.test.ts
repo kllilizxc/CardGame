@@ -593,3 +593,52 @@ describe('EffectResolver — 场地永续效果', () => {
         expect(a1.getCardData().attack).toBe(5);
     });
 });
+
+describe('unit card effect regressions', () => {
+    it('negative modifyHealth reduces health instead of healing', () => {
+        const bc = createMockBattleContext();
+        const resolver = new EffectResolver(bc);
+        const target = createMockCardSprite('target', '敌人', 4, 3);
+        resolver.executeAction({ type: 'modifyHealth', value: -5 }, [target], makeContext());
+        expect(target.getCardData().health).toBe(0);
+        expect(bc.animationManager.playHitAnimation).toHaveBeenCalledWith(target);
+        expect(bc.animationManager.playHealAnimation).not.toHaveBeenCalled();
+    });
+
+    it('unit-count conditions require enough living units with the requested labels', () => {
+        const bc = createMockBattleContext();
+        const resolver = new EffectResolver(bc);
+        const beast = createMockCardSprite('beast', '灵兽');
+        const dead = createMockCardSprite('dead', '灵兽', 1, 0);
+        beast.getCardData().labels = ['灵兽'];
+        dead.getCardData().labels = ['灵兽'];
+        const effect: LegacyCardEffect = { target: { scope: 'self' },
+            conditions: [{ type: 'unitCountAtLeast', labels: ['灵兽'], value: 2 }],
+            actions: [{ type: 'modifyAttack', value: 1, duration: 'turn' }] };
+        const ctx = makeContext({ triggerUnit: beast, playerField: [beast, dead] });
+        resolver.executeEffect(effect, ctx);
+        expect(beast.getCardData().attack).toBe(5);
+        dead.getCardData().health = 1;
+        resolver.executeEffect(effect, ctx);
+        expect(beast.getCardData().attack).toBe(6);
+        resolver.clearTurnAttackMods();
+        expect(beast.getCardData().attack).toBe(5);
+    });
+
+    it('owner-player loseHealth changes player health instead of silently targeting no units', () => {
+        const bc = createMockBattleContext();
+        Object.assign(bc, { battleState: new BattleState() });
+        const before = bc.battleState.playerHealth;
+        new EffectResolver(bc).executeEffect({ target: { scope: 'ownerPlayer' }, actions: [{ type: 'loseHealth', value: 3 }] }, makeContext());
+        expect(bc.battleState.playerHealth).toBe(before - 3);
+    });
+
+    it('legacy applyBurn cards apply burn to the specific battle instance', () => {
+        const bc = createMockBattleContext();
+        const target = createMockCardSprite('same-card', '敌人');
+        target.battleInstanceId = 'copy-two';
+        const effect = { target: { scope: 'attackTarget' }, actions: [{ type: 'applyBurn', value: 2, duration: 2 }] } as unknown as LegacyCardEffect;
+        new EffectResolver(bc).executeEffect(effect, makeContext({ attackTarget: target }));
+        expect(bc.battleStatusController.applyStatusToUnit).toHaveBeenCalledWith('copy-two', 'burn', 2, target, '测试卡牌', 2);
+    });
+});
