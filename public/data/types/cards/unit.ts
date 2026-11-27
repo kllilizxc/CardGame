@@ -17,6 +17,8 @@ export interface UnitCard extends BaseCard {
   /** 所属势力 ID，如 "sect_qingyun"、某国家/家族等 */
   factionId?: string;
 
+  sacrificeSubstituteLabel?: string;
+
   /** 攻击力：自动攻击时造成的伤害值 */
   attack: number;
 

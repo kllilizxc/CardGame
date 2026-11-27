@@ -1,6 +1,22 @@
 {
   "artifacts": [
     {
+      "id": "AR_QY_TIDE_SEAL",
+      "name": "合潮印",
+      "kind": "artifact",
+      "description": "守堰铜钥，只能装备给镇脊龙：攻＋4、命＋4。借螭召龙的下一回合起，每场可开闸一次取回祭品；开闸当回合龙不自动攻击。",
+      "rarity": "rare",
+      "labels": ["sect_qingyun", "堰器"],
+      "weaponType": "印",
+      "limitPerDeck": 2,
+      "gradeId": "grade_earth_lower",
+      "equipTarget": "unit",
+      "equipRequiresLabel": "回潮镇脊龙",
+      "elements": ["水"],
+      "attackBonus": 4,
+      "healthBonus": 4
+    },
+    {
       "id": "AR_001",
       "name": "青云剑",
       "kind": "artifact",

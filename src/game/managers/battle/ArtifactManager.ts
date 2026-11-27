@@ -45,6 +45,10 @@ export class ArtifactManager {
             console.warn('该法器不能装备到单位上');
             return false;
         }
+        if (artifactData.equipRequiresLabel && !targetData.labels?.includes(artifactData.equipRequiresLabel)) {
+            this.battleContext.battleLog.addLog(`【${artifactData.name}】仅可装备给「${artifactData.equipRequiresLabel}」。`);
+            return false;
+        }
 
         // 检查是否已经装备了同一个法器
         if (this.getArtifactId(artifact)) {

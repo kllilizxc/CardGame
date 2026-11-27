@@ -42,6 +42,8 @@ export interface ArtifactCard extends BaseCard {
   /** 装备对象：通常是单位，将来可扩展到玩家本体 */
   equipTarget: "unit" | "player";
 
+  equipRequiresLabel?: string;
+
   /** 武器类型：仅对武器类法器必填，用于判定剑器等逻辑 */
   weaponType?: ArtifactWeaponType;
 

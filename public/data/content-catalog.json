@@ -2,6 +2,18 @@
   "schemaVersion": 1,
   "resources": [
     {
+      "resourceId": "deck.qingyun-tide-dragon",
+      "kind": "deck",
+      "schemaVersion": 1,
+      "publicPath": "data/decks/qingyun-tide-dragon.json"
+    },
+    {
+      "resourceId": "encounter.qingyun-tide-dragon",
+      "kind": "encounter",
+      "schemaVersion": 1,
+      "publicPath": "data/encounters/qingyun-tide-dragon.json"
+    },
+    {
       "resourceId": "worldmap.qingyun-region",
       "kind": "worldMap",
       "schemaVersion": 1,

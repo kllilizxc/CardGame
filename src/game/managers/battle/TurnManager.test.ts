@@ -132,3 +132,21 @@ test('lethal turn-start effects finish battle before drawing or unlocking player
     expect(f.context.onEnablePlayerInteraction).not.toHaveBeenCalled();
     expect(f.context.onSetIsProcessingTurn).not.toHaveBeenCalledWith(false);
 });
+
+test('holding a unit at the gate skips its auto attack but leaves it on the field to defend', () => {
+    const enemy = unit('enemy');
+    const holding = unit('holding');
+    const striking = unit('striking');
+    const f = fixture([enemy]);
+    f.state.playerField = [holding, striking];
+    f.context.shouldUnitAutoAttack = (unit) => unit !== holding;
+    const fields: CardSprite[][] = [];
+    f.context.combatManager.resolveCombat = mock((player: boolean, allies: CardSprite[], _enemies: CardSprite[],
+        _damage: (amount: number) => void, done?: () => void) => {
+        fields.push(allies);
+        if (player) done?.();
+        return 0;
+    });
+    f.manager.executePlayerTurn(f.context);
+    expect(fields).toEqual([[striking], [holding, striking]]);
+});

@@ -52,7 +52,9 @@ import { createStoryBattleCompleteEvent } from '../story/storyBattleRoundTrip';
 import { resolveBattleLoadout } from './battleLoadout';
 import { findArtifactEquipTarget } from './artifactEquipTarget';
 import { getUnitStateId } from '../../managers/battle/unitIdentity';
-import { sceneTheme } from '../shared/sceneTheme';
+import { createSceneButton, createScenePanel, getSceneTextStyle, sceneTheme } from '../shared/sceneTheme';
+import { loadPracticeBattle, type PracticeBattle } from './practiceBattle';
+import { TideGate, TIDE_SEAL_ID } from './tideGate';
 import {
     BATTLE_ARTIFACT_GRADE_CONFIG_CACHE_KEY,
     BATTLE_COMBAT_BASELINE_CONFIG_CACHE_KEY,
@@ -138,6 +140,9 @@ export class BattleScene extends Scene {
     private deckTrial: DeckTrialLaunch | null = null;
     private battleEndHandled = false;
     private isResolvingCard = false;
+    private practiceBattle: PracticeBattle | null = null;
+    private tideGate = new TideGate<CardSprite>();
+    private showingTideGate = false;
 
     constructor() {
         super('BattleScene');
@@ -158,6 +163,9 @@ export class BattleScene extends Scene {
         this.battleEndHandled = false;
         this.isResolvingCard = false;
         this.time.timeScale = this.tweens.timeScale = 1;
+        this.practiceBattle = null;
+        this.tideGate = new TideGate<CardSprite>();
+        this.showingTideGate = false;
     }
 
     // ===== Getter 方法，用于兼容现有代码 =====
@@ -305,8 +313,13 @@ export class BattleScene extends Scene {
 
         this.cardScale = this.calculateCardScale();
         this.cameras.main.setBackgroundColor(sceneTheme.colors.night);
-        await ensureWenxinArt(this);
+        const [, practiceBattle] = await Promise.all([
+            ensureWenxinArt(this),
+            loadPracticeBattle(this.cache.json.get(CONTENT_CATALOG_CACHE_KEY), this.launchPayload,
+                this.cache.json.get(this.encounterCacheKey)),
+        ]);
         if (!this.sys.isActive()) return;
+        this.practiceBattle = practiceBattle;
         new WenxinBattleStage(this);
         
         // 初始化游戏状态
@@ -361,7 +374,7 @@ export class BattleScene extends Scene {
         const skillCardsData = this.getRequiredSharedRuntimeJson('skillCards') as { skills: SkillCard[] };
         const initialLoadout = resolveBattleLoadout(this.getOptionalSharedRuntimeJson(BATTLE_LOADOUT_CONFIG_CACHE_KEY), pillCardsData.pills as PillCard[], skillCardsData.skills);
         const starterDeckData = this.cache.json.get(this.deckCacheKey) as { cards: Array<{ id: string; count: number }> };
-        const deckStartupPlan = createBattleDeckStartupPlan(
+        const deckStartupPlan = this.practiceBattle?.deckPlan ?? createBattleDeckStartupPlan(
             this.launchPayload,
             this.storyLaunchPayload,
             starterDeckData,
@@ -417,6 +430,18 @@ export class BattleScene extends Scene {
         });
         this.uiManager.createAll();
         if (this.uiManager instanceof BattleHud) this.uiManager.attachLog(this.battleLog);
+        if (this.practiceBattle) {
+            const depth = this.layout.depth.uiButtons;
+            const panelWidth = Math.min(940, width - 40);
+            const y = this.isLandscape() ? 121 : 164;
+            createScenePanel(this, { x: width / 2, y, width: panelWidth, height: 60 })
+                .forEach(object => (object as Phaser.GameObjects.Rectangle).setDepth(depth));
+            this.add.text(width / 2, y, this.practiceBattle.guide, getSceneTextStyle('support', {
+                fontSize: this.isLandscape() ? '18px' : '15px',
+                align: 'center',
+                wordWrap: { width: panelWidth - 32 },
+            })).setOrigin(0.5).setDepth(depth + 1);
+        }
 
         // 初始化卡牌预览和丹药提示框
         this.cardPreviewManager = new CardPreviewManager(this);
@@ -809,6 +834,8 @@ export class BattleScene extends Scene {
             return;
         }
         // 先将被献祭的单位加入弃牌堆
+        const tributes = sacrificeTargets.map(unit => unit.getCardData());
+        const summonedTurn = this.turnNumber;
         sacrificeTargets.forEach(unit => {
             const unitData = unit.getCardData();
             this.addToDiscardPile(unitData);
@@ -836,6 +863,9 @@ export class BattleScene extends Scene {
                 );
                 
                 if (result.success) {
+                    if (this.tideGate.bindSacrifice(card, card.getCardData().id, tributes, summonedTurn)) {
+                        this.battleLog.addLog('借螭渡潮：镇脊龙已上场，但这回合不能自动攻击。', [card]);
+                    }
                     // 从手牌中移除
                     const cardIndex = this.hand.indexOf(card);
                     if (cardIndex > -1) {
@@ -884,6 +914,10 @@ export class BattleScene extends Scene {
             // 尝试装备
             const success = this.artifactManager.equipArtifact(artifact, targetUnit);
             if (success) {
+                if (artifact.getCardData().id === TIDE_SEAL_ID && !this.showingTideGate) {
+                    this.showingTideGate = true;
+                    this.createTideGateControl();
+                }
                 // 从手牌移除
                 const index = this.hand.indexOf(artifact);
                 if (index > -1) {
@@ -1059,10 +1093,69 @@ export class BattleScene extends Scene {
             onEnablePlayerInteraction: () => this.enablePlayerInteraction(),
             onDisablePlayerInteraction: () => this.disablePlayerInteraction(),
             onApplyPlayerTurnEndEffects: () => this.applyPlayerTurnEndEffects(),
+            shouldUnitAutoAttack: (unit: CardSprite) => !this.tideGate.skipsAttack(unit, this.turnNumber),
             onSetIsPlayerTurn: (value: boolean) => { this.isPlayerTurn = value; },
             onSetTurnNumber: (value: number) => { this.turnNumber = value; },
             onSetIsProcessingTurn: (value: boolean) => { this.isProcessingTurn = value; }
         };
+    }
+
+    private hasTideSeal(unit: CardSprite): boolean {
+        return this.artifactManager.getEquippedArtifacts(unit).some(artifact => artifact.getCardData().id === TIDE_SEAL_ID);
+    }
+
+    private findTideGateDragon(): CardSprite | undefined {
+        if (!this.isPlayerTurn || this.isProcessingTurn) return;
+        return this.playerField.find(unit => unit.active && unit.getCardData().health > 0
+            && this.tideGate.canOpen(unit, this.discardPile, this.hasTideSeal(unit), this.turnNumber));
+    }
+
+    private openTideGate(): void {
+        const dragon = this.findTideGateDragon();
+        if (!dragon) return;
+        const scout = this.tideGate.open(dragon, this.discardPile, this.hasTideSeal(dragon), this.turnNumber);
+        if (!scout) return;
+        const { x, y } = this.layout.discardPileButton;
+        this.hand.push(new CardSprite(this, x, y, scout, this.cardScale));
+        this.cardManager.arrangeHand(this.hand);
+        this.battleLog.addLog('开闸回潮：取回了献祭的听潮螭。镇脊龙本回合不参加自动攻击。', [dragon]);
+    }
+
+    private createTideGateControl(): void {
+        const { width } = this.scale;
+        const landscape = this.isLandscape();
+        const y = landscape ? 202 : 252;
+        const depth = this.layout.depth.uiButtons;
+        const button = createSceneButton(this, {
+            x: width / 2, y, width: Math.min(width - 54, 410), height: 54,
+            label: '开闸回潮 · 取回听潮螭',
+            variant: 'primary',
+            onClick: () => this.openTideGate(),
+        });
+        button.objects.forEach(object => (object as Phaser.GameObjects.Rectangle).setDepth(depth));
+        const note = this.add.text(width / 2, y + 41, '', getSceneTextStyle('support', {
+            fontSize: landscape ? '18px' : '15px', align: 'center',
+            backgroundColor: '#17231f', color: '#f3ead3',
+            padding: { x: 12, y: 6 }, wordWrap: { width: width - 44 },
+        })).setOrigin(0.5).setDepth(depth + 1);
+        const update = () => {
+            const ready = this.findTideGateDragon() !== undefined;
+            button.objects.forEach(object => (object as Phaser.GameObjects.Rectangle).setVisible(ready));
+            if (button.background.input) button.background.input.enabled = ready;
+            const waiting = this.playerField.some(unit => this.tideGate.skipsAttack(unit, this.turnNumber));
+            const crossing = this.playerField.some(unit => this.tideGate.isCrossing(unit, this.turnNumber));
+            const sealed = this.playerField.some(unit => this.hasTideSeal(unit));
+            const text = crossing
+                ? '借螭渡潮｜龙本回合可以挡伤，下一回合才能出击或开闸。'
+                : waiting ? '已取回听潮螭｜镇脊龙本回合不自动攻击'
+                    : this.tideGate.wasOpened() ? '本场已开闸｜镇脊龙可以照常出击'
+                        : ready ? '本场限一次：开闸则龙本回合不自动攻击；也可先出击，下回合再开。'
+                            : '合潮印｜用听潮螭献祭召龙，才能开闸回收。';
+            note.setText(text).setVisible((sealed || waiting) && this.isPlayerTurn && !this.isProcessingTurn);
+        };
+        update();
+        this.events.on('update', update);
+        this.events.once('shutdown', () => this.events.off('update', update));
     }
 
     private endTurn() {
@@ -1138,6 +1231,11 @@ export class BattleScene extends Scene {
 
         this.battleEndHandled = true;
         this.input.resetPointers();
+
+        if (this.practiceBattle && this.launchPayload) {
+            this.scene.restart(this.launchPayload);
+            return;
+        }
 
         if (this.storyLaunchPayload) {
             const result = createStoryBattleCompleteEvent(this.storyLaunchPayload, victory);

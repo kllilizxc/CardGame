@@ -1,0 +1,14 @@
+{
+  "id": "encounter.qingyun-tide-dragon",
+  "name": "青云宗 · 守堰演武",
+  "description": "堰师借山门问心钟凝出两道魔物幻影，检验新弟子能否以螭引龙、合印御水。",
+  "difficulty": 2,
+  "practice": {
+    "deckResourceId": "deck.qingyun-tide-dragon",
+    "guide": "守堰演武｜用听潮螭献祭召龙，再给龙装备合潮印。早召时先守一回合，下一回合选出击或开闸。"
+  },
+  "enemies": [
+    { "cardId": "CR_006", "position": 0 },
+    { "cardId": "CR_005", "position": 1 }
+  ]
+}

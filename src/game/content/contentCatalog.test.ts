@@ -45,6 +45,8 @@ import {
 } from './contentCatalogWorldSeed';
 
 const expectedCheckedInResources = [
+    ['deck', 'data/decks/qingyun-tide-dragon.json'],
+    ['encounter', 'data/encounters/qingyun-tide-dragon.json'],
     ['worldMap', 'data/world/world-map.json'],
     ['worldMap', 'data/world/tutorial-qingyun-world-map.json'],
     ['hub', 'data/hub/qingyun-sect-gate.json'],

@@ -68,15 +68,15 @@ export class SacrificeManager {
             return true;
         }
         
-        // 祭品必须是低一星或更高星级的卡
-        const minSacrificeStar = targetStar - 1;
-        
         return sacrificeTargets.length === this.getSacrificeRequired(cardData)
-            && new Set(sacrificeTargets).size === sacrificeTargets.length && sacrificeTargets.every(sacrifice => {
-            const sacrificeData = sacrifice.getCardData();
-            const sacrificeStar = getUnitStar(sacrificeData);
-            return sacrificeStar >= minSacrificeStar;
-        });
+            && new Set(sacrificeTargets).size === sacrificeTargets.length
+            && sacrificeTargets.every(sacrifice => this.isValidSacrifice(cardData, sacrifice.getCardData()));
+    }
+
+    private isValidSacrifice(cardData: UnitCard, sacrifice: UnitCard): boolean {
+        return getUnitStar(sacrifice) >= getUnitStar(cardData) - 1
+            || (cardData.sacrificeSubstituteLabel !== undefined
+                && sacrifice.labels?.includes(cardData.sacrificeSubstituteLabel) === true);
     }
 
     /**
@@ -148,7 +148,8 @@ export class SacrificeManager {
         const targetStar = getUnitStar(cardData);
         const minSacrificeStar = targetStar - 1;
         
-        return `需要献祭${requiredCount}只${minSacrificeStar}星及以上单位`;
+        const substitute = cardData.sacrificeSubstituteLabel ? `或「${cardData.sacrificeSubstituteLabel}」` : '';
+        return `需要献祭${requiredCount}只${minSacrificeStar}星及以上单位${substitute}`;
     }
     
     /**
@@ -164,13 +165,7 @@ export class SacrificeManager {
             return [];
         }
         
-        const minSacrificeStar = targetStar - 1;
-        
-        return playerField.filter(unit => {
-            const unitData = unit.getCardData();
-            const unitStar = getUnitStar(unitData);
-            // 可以使用低一星或更高星级的卡
-            return unit.active && unitData.health > 0 && unitStar >= minSacrificeStar;
-        });
+        return playerField.filter(unit => unit.active && unit.getCardData().health > 0
+            && this.isValidSacrifice(cardData, unit.getCardData()));
     }
 }
